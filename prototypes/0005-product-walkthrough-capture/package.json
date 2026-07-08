@@ -1,0 +1,16 @@
+{
+  "name": "product-walkthrough-capture-spike",
+  "private": true,
+  "type": "module",
+  "description": "THROWAWAY spike for wayfinder #5 — validates the product-walkthrough capture pipeline (rrweb + screenshots of a running app, agent-driven). Delete or fold into the real capture pipeline once its data model is designed.",
+  "scripts": {
+    "capture": "node capture.mjs",
+    "replay": "node build-replay.mjs",
+    "validate": "node validate-replay.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.61.1",
+    "rrweb": "^2.1.0",
+    "rrweb-player": "^2.1.0"
+  }
+}
