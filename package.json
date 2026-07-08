@@ -1,13 +1,19 @@
 {
   "name": "docent",
-  "module": "index.ts",
-  "type": "module",
   "private": true,
+  "type": "module",
+  "module": "index.ts",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check": "ultracite check",
+    "fix": "ultracite fix",
+    "prepare": "husky"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@biomejs/biome": "2.5.2",
+    "@types/bun": "latest",
+    "husky": "^9.1.7",
+    "ultracite": "7.9.3"
   },
   "peerDependencies": {
     "typescript": "^5"

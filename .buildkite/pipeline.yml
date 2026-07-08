@@ -7,6 +7,11 @@ x-plugins: &plugins
   - mise#v1.1.3: ~
   
 steps:
+  - label: ":biome: check"
+    key: check
+    command: mise ci && mise check
+    plugins: *plugins
+
   - label: ":typescript: typecheck"
     key: typecheck
     command: mise ci && mise typecheck
