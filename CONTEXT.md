@@ -1,33 +1,38 @@
-# docent — domain model
+# docent
 
-Ubiquitous language for the agent-first review tool. Use these terms as defined
-here in code, schemas, issues, and prose.
+An interactive, local-first tool for reviewing code changes — especially
+agent-authored ones — on GitHub pull requests. This glossary is the ubiquitous
+language; the Change / PR model is pinned by
+[#3](https://github.com/angusfretwell/docent/issues/3), which holds its schemas.
 
-Decisions, rationale, and data schemas live in their originating tickets, not in
-this glossary. The Change / PR model below is pinned by
-[#3](https://github.com/angusfretwell/docent/issues/3) (which holds the on-disk
-schemas and the reconciliation with [#2](https://github.com/angusfretwell/docent/issues/2)).
+## Language
 
-## Glossary
+**Change**:
+An immutable snapshot of a diff, identified by its resolved `(baseSha, headSha)`
+with `base` at the merge-base. A new Change is minted when the branch is revised,
+never edited in place.
+_Avoid_: Diff, Snapshot, Revision
 
-**Change** — an immutable snapshot of a diff, identified by its resolved
-`(baseSha, headSha)`. `base` is the **merge-base** (three-dot, matching GitHub's
-"Files changed"). Frozen once captured; revising the branch produces a new
-Change, never an edit. Refs are labels; SHAs are identity.
+**Review**:
+The durable entity a human conducts against one pull request, holding its
+comments, walkthroughs, and append-only history of Changes.
+_Avoid_: Session
 
-**Review** — the durable entity a human conducts over time against a single pull
-request. Identified by its **target**, the PR (`owner/repo#N`). Holds the
-comments and walkthroughs plus an append-only history of Changes. One PR ↔ one
-Review.
+**Target**:
+The pull request a Review is bound to (`owner/repo#N`) — its stable identity,
+unmoved by force-push or rebase.
+_Avoid_: Subject
 
-**Round** — one iteration of a Review: each time the PR head moves, a new Change
-is minted and appended to the Review's history.
+**Round**:
+One iteration of a Review: the Change minted when the target's head moves.
+_Avoid_: Iteration, Revision
 
-**Drift** — a comment's status relative to the *current* Change, given that it
-was born anchored to an earlier one: **live** (anchor unchanged), **shifted**
-(lines moved, still valid), or **outdated** (anchored lines changed). Computed at
-render time, not stored.
+**Drift**:
+A comment's standing against the current Change, given it was born on an earlier
+one — live, shifted, or outdated.
+_Avoid_: Staleness
 
-**Source** — where a Change came from. A pull request is a Change source (not its
-own entity); its metadata rides on the source. Only PRs are supported in the
-initial build (`git` refs reserved).
+**Source**:
+Where a Change came from. A pull request is a Change's source, carrying its
+metadata — not a first-class entity of its own.
+_Avoid_: PullRequest, Provider
