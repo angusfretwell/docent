@@ -1,4 +1,4 @@
-# review-tool
+# docent
 
 ## Agent skills
 
