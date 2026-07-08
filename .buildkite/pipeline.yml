@@ -1,7 +1,7 @@
-cache: ".bun-cache"
+cache: "/tmp/.bun-cache"
 
 env:
-  BUN_INSTALL_CACHE_DIR: ".bun-cache"
+  BUN_INSTALL_CACHE_DIR: "/tmp/.bun-cache"
 
 x-plugins: &plugins
   - mise#v1.1.3: ~
