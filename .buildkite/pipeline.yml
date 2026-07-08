@@ -1,0 +1,18 @@
+cache: ".bun-cache"
+
+env:
+  BUN_INSTALL_CACHE_DIR: ".bun-cache"
+
+x-plugins: &plugins
+  - mise#v1.1.3: ~
+  
+steps:
+  - label: ":typescript: typecheck"
+    key: typecheck
+    command: mise ci && mise typecheck
+    plugins: *plugins
+
+  - label: ":bun: test"
+    key: test
+    command: mise ci && mise test
+    plugins: *plugins
