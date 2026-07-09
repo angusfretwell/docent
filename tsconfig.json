@@ -26,5 +26,9 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
-  }
+  },
+
+  // Prototypes are throwaway code (see .agents/skills/prototype/SKILL.md) and
+  // are excluded from the repo typecheck.
+  "exclude": ["prototypes"]
 }
