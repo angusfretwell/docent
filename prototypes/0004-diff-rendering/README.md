@@ -17,8 +17,8 @@ runnable evidence; delete once the diff-viewer build starts.
   as static assets the app fetches at runtime.
 - `bench.mjs` — Playwright driver: render timing, shadow-DOM node counts,
   scroll frame sampling, screenshots.
-- `results/` — `results.json` + screenshots (gitignored; regenerate with the
-  steps in `FINDINGS.md`).
+- `results/` — `results.json` + screenshots, committed as runnable evidence;
+  regenerate with the steps in `FINDINGS.md`.
 
 ## Run
 

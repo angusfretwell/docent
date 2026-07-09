@@ -12,30 +12,27 @@
       "totalLines": 17582,
       "fileCount": 178,
       "diffLines": 39170,
-      "t0": 157
+      "t0": 70.29999995231628
     },
-    "firstRowsMs": 178,
-    "settledMs": 1073,
-    "deepNodes": 502,
+    "firstRowsMs": 89,
+    "settledMs": 797,
+    "deepNodes": 501,
     "rowNodes": 53,
-    "scrollHeight": 359600,
+    "scrollHeight": 359616,
     "clientHeight": 900,
     "heapMB": 8,
     "scroll": {
-      "medianFrameMs": 16.7,
-      "p95FrameMs": 16.8,
-      "maxFrameMs": 16.9,
+      "medianFrameMs": 8.3,
+      "p95FrameMs": 16,
+      "maxFrameMs": 21.7,
       "longFrames": 0,
-      "nodesWhileScrolling": [
-        502,
-        502,
-        502,
-        502
-      ]
+      "nodesWhileScrolling": [323, 398, 342, 540],
+      "scrolledPx": 358716,
+      "rangeTop": [1, 53],
+      "rangeBottom": [122, 334],
+      "virtualizationFollows": true
     },
-    "errors": [
-      "Failed to load resource: the server responded with a status of 404 (Not Found)"
-    ]
+    "errors": []
   },
   {
     "label": "three·worker=0·unified",
@@ -50,26 +47,25 @@
       "totalLines": 17582,
       "fileCount": 178,
       "diffLines": 39170,
-      "t0": 172.10000000009313
+      "t0": 71.80000007152557
     },
-    "firstRowsMs": 420,
-    "settledMs": 1034,
-    "deepNodes": 400,
+    "firstRowsMs": 169,
+    "settledMs": 777,
+    "deepNodes": 399,
     "rowNodes": 53,
-    "scrollHeight": 359600,
+    "scrollHeight": 359616,
     "clientHeight": 900,
-    "heapMB": 11,
+    "heapMB": 12,
     "scroll": {
-      "medianFrameMs": 16.7,
-      "p95FrameMs": 16.8,
-      "maxFrameMs": 16.8,
-      "longFrames": 0,
-      "nodesWhileScrolling": [
-        400,
-        400,
-        400,
-        400
-      ]
+      "medianFrameMs": 24.2,
+      "p95FrameMs": 225.4,
+      "maxFrameMs": 929.5,
+      "longFrames": 15,
+      "nodesWhileScrolling": [367, 451, 59, 103],
+      "scrolledPx": 358716,
+      "rangeTop": [1, 53],
+      "rangeBottom": [122, 334],
+      "virtualizationFollows": true
     },
     "errors": []
   },
@@ -86,26 +82,25 @@
       "totalLines": 35117,
       "fileCount": 319,
       "diffLines": 62703,
-      "t0": 217.5
+      "t0": 91.30000007152557
     },
-    "firstRowsMs": 240,
-    "settledMs": 854,
-    "deepNodes": 302,
+    "firstRowsMs": 99,
+    "settledMs": 1060,
+    "deepNodes": 546,
     "rowNodes": 53,
-    "scrollHeight": 721048,
+    "scrollHeight": 721064,
     "clientHeight": 900,
     "heapMB": 10,
     "scroll": {
-      "medianFrameMs": 16.7,
-      "p95FrameMs": 16.8,
-      "maxFrameMs": 28.6,
+      "medianFrameMs": 8.4,
+      "p95FrameMs": 25,
+      "maxFrameMs": 26.5,
       "longFrames": 0,
-      "nodesWhileScrolling": [
-        547,
-        547,
-        547,
-        547
-      ]
+      "nodesWhileScrolling": [378, 425, 581, 286],
+      "scrolledPx": 720164,
+      "rangeTop": [1, 53],
+      "rangeBottom": [41, 120],
+      "virtualizationFollows": true
     },
     "errors": []
   },
@@ -122,26 +117,25 @@
       "totalLines": 35117,
       "fileCount": 319,
       "diffLines": 59283,
-      "t0": 226
+      "t0": 92.89999997615814
     },
-    "firstRowsMs": 243,
-    "settledMs": 854,
-    "deepNodes": 307,
+    "firstRowsMs": 106,
+    "settledMs": 1049,
+    "deepNodes": 551,
     "rowNodes": 53,
-    "scrollHeight": 652648,
+    "scrollHeight": 652664,
     "clientHeight": 900,
     "heapMB": 10,
     "scroll": {
-      "medianFrameMs": 16.7,
-      "p95FrameMs": 17.1,
-      "maxFrameMs": 23.9,
+      "medianFrameMs": 11.1,
+      "p95FrameMs": 29.7,
+      "maxFrameMs": 48.3,
       "longFrames": 0,
-      "nodesWhileScrolling": [
-        552,
-        552,
-        552,
-        552
-      ]
+      "nodesWhileScrolling": [664, 704, 474, 291],
+      "scrolledPx": 651764,
+      "rangeTop": [1, 53],
+      "rangeBottom": [40, 120],
+      "virtualizationFollows": true
     },
     "errors": []
   }
