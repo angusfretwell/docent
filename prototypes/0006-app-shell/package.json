@@ -1,0 +1,11 @@
+{
+  "name": "review-tool",
+  "version": "0.0.0-prototype",
+  "private": true,
+  "type": "module",
+  "bin": { "review-tool": "./bin.ts" },
+  "scripts": {
+    "dev": "bun run bin.ts sample",
+    "compile": "bun build --compile bin.ts --outfile review-tool"
+  }
+}
