@@ -101,8 +101,17 @@ function streamBytes<E, R>(stream: Stream.Stream<Uint8Array, E, R>) {
   });
 }
 
-/** Run a git command, succeeding with its trimmed stdout. */
-const git = Effect.fn("git")(function* git(cwd: string, args: readonly string[]) {
+/**
+ * Run a git command and succeed with its trimmed stdout when `accepts` approves
+ * the exit code; otherwise fail with the stderr. The exit predicate is the only
+ * thing that varies across call sites — a plain command wants exactly 0, while
+ * `git diff --no-index` reports a difference with exit 1.
+ */
+const gitText = Effect.fn("gitText")(function* gitText(
+  cwd: string,
+  args: readonly string[],
+  accepts: (exitCode: number) => boolean,
+) {
   const handle = yield* ChildProcess.make("git", args, { cwd, env: GIT_ENV, extendEnv: true });
   // Drain stdout/stderr concurrently with the exit wait so a large diff
   // can't deadlock the pipe.
@@ -110,11 +119,16 @@ const git = Effect.fn("git")(function* git(cwd: string, args: readonly string[])
     [streamText(handle.stdout), streamText(handle.stderr), handle.exitCode],
     { concurrency: "unbounded" },
   );
-  if (exitCode !== 0) {
+  if (!accepts(exitCode)) {
     return yield* Effect.fail(GitCommandFailed.make({ args, exitCode, stderr }));
   }
   return stdout.replace(TRAILING_NEWLINE, "");
 }, Effect.scoped);
+
+/** Run a git command, succeeding with its trimmed stdout (exit 0 only). */
+function git(cwd: string, args: readonly string[]) {
+  return gitText(cwd, args, (exitCode) => exitCode === 0);
+}
 
 /**
  * Run `git diff --no-index`, which is git's way to diff arbitrary files and
@@ -122,20 +136,9 @@ const git = Effect.fn("git")(function* git(cwd: string, args: readonly string[])
  * feed it `/dev/null` against a real untracked file to render it as an add. A
  * genuine failure (exit ≥ 2) still fails. stdout is returned trimmed.
  */
-const gitDiffNoIndex = Effect.fn("gitDiffNoIndex")(function* gitDiffNoIndex(
-  cwd: string,
-  args: readonly string[],
-) {
-  const handle = yield* ChildProcess.make("git", args, { cwd, env: GIT_ENV, extendEnv: true });
-  const [stdout, stderr, exitCode] = yield* Effect.all(
-    [streamText(handle.stdout), streamText(handle.stderr), handle.exitCode],
-    { concurrency: "unbounded" },
-  );
-  if (exitCode > 1) {
-    return yield* Effect.fail(GitCommandFailed.make({ args, exitCode, stderr }));
-  }
-  return stdout.replace(TRAILING_NEWLINE, "");
-}, Effect.scoped);
+function gitDiffNoIndex(cwd: string, args: readonly string[]) {
+  return gitText(cwd, args, (exitCode) => exitCode <= 1);
+}
 
 /**
  * Run a git command, succeeding with its raw stdout bytes — verbatim, with no
@@ -320,6 +323,13 @@ export const resolveWorktreeFile = Effect.fn("resolveWorktreeFile")(function* re
   const resolved = path.resolve(root, relPath);
   const prefix = root.endsWith(path.sep) ? root : `${root}${path.sep}`;
   if (path.isAbsolute(relPath) || !resolved.startsWith(prefix)) {
+    return yield* Effect.fail(InvalidWorktreePath.make({ path: relPath }));
+  }
+  // Follow symlinks before trusting containment: a symlink inside the repo can
+  // still point outside it, which the lexical check above cannot catch. A
+  // missing file has no real path and falls through to a 404 at the read.
+  const real = yield* fs.realPath(resolved).pipe(Effect.orElseSucceed(() => resolved));
+  if (!real.startsWith(prefix)) {
     return yield* Effect.fail(InvalidWorktreePath.make({ path: relPath }));
   }
   return yield* fs.readFile(resolved);

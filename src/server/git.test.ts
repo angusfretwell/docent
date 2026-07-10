@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { BunServices } from "@effect/platform-bun";
 import { ManagedRuntime } from "effect";
@@ -245,6 +245,17 @@ describe("resolveWorktreeFile", () => {
     const repo = repoWithOneCommit();
 
     await expect(worktree(repo, "/etc/passwd")).rejects.toThrow(/path/i);
+  });
+
+  test("rejects a symlink inside the repo that points outside it", async () => {
+    const repo = repoWithOneCommit();
+    const outside = scratchDir("docent-outside-");
+    writeFileSync(path.join(outside, "secret.txt"), "top secret\n");
+    // A symlink that lives in the repo but resolves outside — the lexical guard
+    // passes, so only following the link catches the escape.
+    symlinkSync(path.join(outside, "secret.txt"), path.join(repo, "link.txt"));
+
+    await expect(worktree(repo, "link.txt")).rejects.toThrow(/path/i);
   });
 });
 

@@ -12,6 +12,10 @@ _Avoid_: Review (names the act, as in the `/review` skill, never the artifact), 
 An immutable snapshot of a diff, identified by its resolved `(baseSha, headSha)` with `base` at the merge-base. Minted lazily on first reference — when a Finding, Walkthrough, or review pass must refer to the branch's current head — and never edited in place; the diff itself always renders live from git.
 _Avoid_: Diff, Snapshot, Revision, Round
 
+**Pending**:
+A read-only preview of the dirty working tree — a Change-shaped view whose head side is the live working tree, letting a reviewer eyeball an uncommitted edit before it is committed. Not a Change: no identity, no persistence, no Finding anchors. Surfaces at the top of the Diff tab's Change selector while the working tree is dirty and hides when clean; owns no lifecycle logic, since on commit its incremental diff simply empties. Pinned by [#23](https://github.com/angusfretwell/docent/issues/23) as amended by [#24](https://github.com/angusfretwell/docent/issues/24).
+_Avoid_: Draft, Staged, Uncommitted Change
+
 **Drift**:
 A Finding anchor's standing against the newest Change, given it was born on an earlier one — live, shifted, or outdated.
 _Avoid_: Staleness

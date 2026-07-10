@@ -222,27 +222,29 @@ export function App() {
         }
       }
     }
-    async function loadPending() {
+    // Best-effort read: on any failure keep the last good value until the next
+    // event, so a transient error never blanks the Pending preview or dossier.
+    async function loadBestEffort<T>(
+      url: string,
+      decode: (value: unknown) => T,
+      apply: (value: T) => void,
+    ) {
       try {
-        const res = await fetch(`/api/pending?range=${range}`);
+        const res = await fetch(url);
         if (res.ok && !cancelled) {
-          // oxlint-disable-next-line react-compiler
-          setPending(decodePending(await res.json()));
+          apply(decode(await res.json()));
         }
       } catch {
-        // Best-effort: keep the last good preview until the next event.
+        // Ignored by design (see above).
       }
     }
-    async function loadDossier() {
-      try {
-        const res = await fetch("/api/dossier");
-        if (res.ok && !cancelled) {
-          // oxlint-disable-next-line react-compiler
-          setDossier(decodeSnapshot(await res.json()));
-        }
-      } catch {
-        // Best-effort: keep the last good snapshot until the next event.
-      }
+    function loadPending() {
+      // oxlint-disable-next-line react-compiler
+      return loadBestEffort(`/api/pending?range=${range}`, decodePending, setPending);
+    }
+    function loadDossier() {
+      // oxlint-disable-next-line react-compiler
+      return loadBestEffort("/api/dossier", decodeSnapshot, setDossier);
     }
     function refetchAll() {
       void loadChange();

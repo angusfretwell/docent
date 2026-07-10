@@ -41,6 +41,3 @@ export class Pending extends Schema.Class<Pending>("Pending")({
   /** Absolute repo root (git rev-parse --show-toplevel). */
   root: Schema.String,
 }) {}
-
-/** The `GET /api/pending` failure body (HTTP 500). */
-export const PendingError = Schema.Struct({ error: Schema.String });
