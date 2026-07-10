@@ -14,6 +14,7 @@ import { Console, Effect, Schema } from "effect";
 import open from "open";
 import type { ClientAssets } from "../client/assets.ts";
 import { runFinding } from "./cli.ts";
+import { runCapture, runWalkthrough } from "./cli-walkthrough.ts";
 import { resolveChange } from "./git.ts";
 import { layer as serveLayer, serverUrl } from "./serve.ts";
 
@@ -66,18 +67,28 @@ function crash(error: unknown) {
   );
 }
 
+// The non-serve CLI subcommands, each an argv → effect the binary runs against
+// git + fs (architecture.md §5). `finding` is the review loop's I/O; `walkthrough`
+// and `capture` the walkthrough write path — one binary, one write implementation.
+const CLI = {
+  capture: runCapture,
+  finding: runFinding,
+  walkthrough: runWalkthrough,
+} as const;
+
 /**
  * The process entry: dispatch the subcommand and run it. `serve` — the default
- * when no subcommand is given — boots the server; `finding` is the non-serve
- * CLI (list / add / reply / resolve). Every subcommand is served by this one
- * binary (architecture.md §5).
+ * when no subcommand is given — boots the server; the non-serve subcommands
+ * (`finding`, `walkthrough`, `capture`) are the CLI write path. Every subcommand
+ * is served by this one binary (architecture.md §5).
  */
 export function runMain(assets: ClientAssets): void {
   const subcommand = process.argv[2] ?? "serve";
 
-  if (subcommand === "finding") {
+  const cli = (CLI as Record<string, (typeof CLI)[keyof typeof CLI] | undefined>)[subcommand];
+  if (cli !== undefined) {
     BunRuntime.runMain(
-      runFinding(process.cwd(), process.argv.slice(3)).pipe(
+      cli(process.cwd(), process.argv.slice(3)).pipe(
         Effect.provide(BunServices.layer),
         Effect.catch(crash),
       ),
@@ -86,7 +97,8 @@ export function runMain(assets: ClientAssets): void {
   }
 
   if (subcommand !== "serve") {
-    console.error(`unknown subcommand: ${subcommand} (expected "serve" or "finding")`);
+    const known = ["serve", ...Object.keys(CLI)].map((name) => `"${name}"`).join(", ");
+    console.error(`unknown subcommand: ${subcommand} (expected one of ${known})`);
     process.exit(1);
   }
 

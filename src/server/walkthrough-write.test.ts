@@ -83,7 +83,13 @@ describe("addWalkthroughSection", () => {
       }),
     );
     const second = await run(
-      addWalkthroughSection({ ...base, body: "Then dispatch.", root, title: "Dispatch", walkthroughId }),
+      addWalkthroughSection({
+        ...base,
+        body: "Then dispatch.",
+        root,
+        title: "Dispatch",
+        walkthroughId,
+      }),
     );
 
     expect(first.sectionId).toMatch(/^sec_/);

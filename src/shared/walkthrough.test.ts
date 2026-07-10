@@ -144,8 +144,22 @@ describe("schema — code and product arms", () => {
     const manifest = decodeManifest({
       bornChangeId: "chg_002",
       captures: [
-        { dims: [1280, 2400], id: "cap_a", kind: "screenshot", media: "sha1", route: "/signup", viewport: [1280, 800] },
-        { durationMs: 8200, id: "cap_b", kind: "recording", media: "sha2", route: "/signup", viewport: [1280, 800] },
+        {
+          dims: [1280, 2400],
+          id: "cap_a",
+          kind: "screenshot",
+          media: "sha1",
+          route: "/signup",
+          viewport: [1280, 800],
+        },
+        {
+          durationMs: 8200,
+          id: "cap_b",
+          kind: "recording",
+          media: "sha2",
+          route: "/signup",
+          viewport: [1280, 800],
+        },
       ],
       id: "wlk_01B",
       kind: "product",
@@ -171,7 +185,10 @@ describe("schema — code and product arms", () => {
   test("a product section decodes captures and annotations", () => {
     const section = decodeSection({
       annotations: [
-        { anchor: { capture: "cap_a", kind: "screenshot-region", rect: [0.1, 0.2, 0.3, 0.1] }, body: "The upload control." },
+        {
+          anchor: { capture: "cap_a", kind: "screenshot-region", rect: [0.1, 0.2, 0.3, 0.1] },
+          body: "The upload control.",
+        },
       ],
       body: "Drag a file {{capture:0}}.",
       captures: ["cap_a", "cap_b"],
