@@ -4,9 +4,7 @@ import { assetsFromManifest, contentTypeFor, lookupAsset } from "./assets.ts";
 describe("contentTypeFor", () => {
   test("maps known extensions and defaults to octet-stream", () => {
     expect(contentTypeFor("/index.html")).toBe("text/html; charset=utf-8");
-    expect(contentTypeFor("/assets/index-abc.js")).toBe(
-      "text/javascript; charset=utf-8",
-    );
+    expect(contentTypeFor("/assets/index-abc.js")).toBe("text/javascript; charset=utf-8");
     expect(contentTypeFor("/assets/app.CSS")).toBe("text/css; charset=utf-8");
     expect(contentTypeFor("/assets/font.woff2")).toBe("font/woff2");
     expect(contentTypeFor("/assets/blob")).toBe("application/octet-stream");

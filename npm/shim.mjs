@@ -8,32 +8,24 @@
  */
 
 import { spawn } from "node:child_process";
-import {
-  chmodSync,
-  createWriteStream,
-  existsSync,
-  mkdirSync,
-  renameSync,
-} from "node:fs";
+import { chmodSync, createWriteStream, existsSync, mkdirSync, renameSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { get } from "node:https";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import path from "node:path";
 import { assetNameFor, downloadUrl } from "./lib.mjs";
 
-const here = dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
 async function version() {
-  const pkg = await readFile(join(here, "package.json"), "utf8");
+  const pkg = await readFile(path.join(here, "package.json"), "utf-8");
   return JSON.parse(pkg).version;
 }
 
 /** Where the downloaded binary for `version` is cached, per platform. */
 function cachePath(v, assetName) {
-  const base =
-    process.env.DOCENT_CACHE_DIR ?? join(homedir(), ".cache", "docent", "bin");
-  return join(base, `${v}-${assetName}`);
+  const base = process.env.DOCENT_CACHE_DIR ?? path.join(homedir(), ".cache", "docent", "bin");
+  return path.join(base, `${v}-${assetName}`);
 }
 
 /**
@@ -43,12 +35,15 @@ function cachePath(v, assetName) {
 function download(url, dest) {
   return new Promise((resolve, reject) => {
     const tmp = `${dest}.${process.pid}.tmp`;
-    mkdirSync(dirname(dest), { recursive: true });
-    const req = get(url, (res) => {
+    mkdirSync(path.dirname(dest), { recursive: true });
+    function onClosed() {
+      resolve(tmp);
+    }
+    function onResponse(res) {
       const { statusCode = 0, headers } = res;
       if (statusCode >= 300 && statusCode < 400 && headers.location) {
         res.resume();
-        download(headers.location, dest).then(resolve, reject);
+        download(headers.location, dest).then(resolve).catch(reject);
         return;
       }
       if (statusCode !== 200) {
@@ -58,10 +53,10 @@ function download(url, dest) {
       }
       const file = createWriteStream(tmp);
       res.pipe(file);
-      file.on("finish", () => file.close(() => resolve(tmp)));
+      file.on("finish", () => file.close(onClosed));
       file.on("error", reject);
-    });
-    req.on("error", reject);
+    }
+    get(url, onResponse).on("error", reject);
   });
 }
 

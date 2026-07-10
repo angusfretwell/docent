@@ -52,9 +52,7 @@ export function contentTypeFor(path: string): string {
 }
 
 /** Build the served asset map from a generated manifest. */
-export function assetsFromManifest(
-  entries: readonly ManifestEntry[],
-): ClientAssets {
+export function assetsFromManifest(entries: readonly ManifestEntry[]): ClientAssets {
   const map = new Map<string, Asset>();
   for (const entry of entries) {
     map.set(entry.path, {
@@ -70,9 +68,6 @@ export function assetsFromManifest(
  * Returns undefined for anything not in the map — the natural 404, and the
  * reason path traversal can't escape (only mapped keys are ever served).
  */
-export function lookupAsset(
-  assets: ClientAssets,
-  pathname: string,
-): Asset | undefined {
+export function lookupAsset(assets: ClientAssets, pathname: string): Asset | undefined {
   return assets.get(pathname === "/" ? "/index.html" : pathname);
 }

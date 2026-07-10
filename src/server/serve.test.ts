@@ -1,8 +1,9 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
-import { join } from "node:path";
+import path from "node:path";
 import { ManagedRuntime, Schema } from "effect";
-import { assetsFromManifest, type ClientAssets } from "../client/assets.ts";
+import { assetsFromManifest } from "../client/assets.ts";
+import type { ClientAssets } from "../client/assets.ts";
 import { Change, DiffError } from "../shared/change.ts";
 import { layer, serverUrl } from "./serve.ts";
 import {
@@ -28,7 +29,7 @@ afterAll(async () => {
 function featureRepo(): string {
   const dir = scratchRepo("docent-serve-test-");
   git(dir, "checkout", "-b", "feature");
-  writeFileSync(join(dir, "feature.txt"), "new file\n");
+  writeFileSync(path.join(dir, "feature.txt"), "new file\n");
   git(dir, "add", ".");
   git(dir, "commit", "-m", "add feature file");
   return dir;
@@ -37,11 +38,11 @@ function featureRepo(): string {
 /** A stub built-client asset map backed by real files (what `Bun.file` reads). */
 function scratchClientAssets(): ClientAssets {
   const dir = scratchDir("docent-client-test-");
-  const indexPath = join(dir, "index.html");
-  const appPath = join(dir, "app.js");
+  const indexPath = path.join(dir, "index.html");
+  const appPath = path.join(dir, "app.js");
   writeFileSync(indexPath, "<!doctype html><title>docent</title>");
   writeFileSync(appPath, "console.log('app');\n");
-  writeFileSync(join(dir, "secret.txt"), "top secret\n");
+  writeFileSync(path.join(dir, "secret.txt"), "top secret\n");
   return assetsFromManifest([
     { file: indexPath, path: "/index.html" },
     { file: appPath, path: "/assets/app.js" },
@@ -50,9 +51,7 @@ function scratchClientAssets(): ClientAssets {
 
 /** Boot the server layer and return its base URL; torn down in afterAll. */
 async function serve(repo: string): Promise<{ url: string }> {
-  const runtime = ManagedRuntime.make(
-    layer({ assets: scratchClientAssets(), cwd: repo }),
-  );
+  const runtime = ManagedRuntime.make(layer({ assets: scratchClientAssets(), cwd: repo }));
   disposers.push(() => runtime.dispose());
   const url = await runtime.runPromise(serverUrl);
   return { url };
@@ -76,13 +75,12 @@ describe("server layer", () => {
     const repo = featureRepo();
     const { url } = await serve(repo);
     await fetch(new URL("/api/diff", url));
-    writeFileSync(join(repo, "second.txt"), "second\n");
+    writeFileSync(path.join(repo, "second.txt"), "second\n");
     git(repo, "add", ".");
     git(repo, "commit", "-m", "second commit");
 
-    const body = decodeChange(
-      await (await fetch(new URL("/api/diff", url))).json(),
-    );
+    const res = await fetch(new URL("/api/diff", url));
+    const body = decodeChange(await res.json());
 
     expect(body.patch).toContain("second.txt");
   });

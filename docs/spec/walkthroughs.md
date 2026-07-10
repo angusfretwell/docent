@@ -18,8 +18,8 @@ Invariants, both kinds ([#14](https://github.com/angusfretwell/docent/issues/14)
 
 - **Bound to `bornChangeId`** — the Change the walkthrough was authored against. A Walkthrough referencing the branch head is a first-reference event that mints a Change if none exists for that head (see [data-model.md](data-model.md); lazy minting per [#24](https://github.com/angusfretwell/docent/issues/24)).
 - **Durable + immutable.** Walkthroughs live in the Dossier alongside Findings and Changes; viewing one against a later Change never mutates it. Regeneration **mints a new `wlk_` id** bound to the new Change; the old walkthrough persists, immutable and greppable. Throwaway/regenerate-in-place was rejected — it orphans narrative Findings and discards the durable tour ([#14](https://github.com/angusfretwell/docent/issues/14)).
-- **One walkthrough per Change per pillar in v1.** Each walkthrough tab shows *the* walkthrough, no picker. Identity is **multiplicity-ready**: the `wlk_`/`sec_` ids and the `walkthroughId`-carrying anchor arm mean multiple walkthroughs later (an "architecture tour" + a "security tour") is an additive layout + tab-subselector change, never a data or anchor migration ([#14](https://github.com/angusfretwell/docent/issues/14)).
-- **Order = manifest array order, full stop.** No `rank`/`priority` field — array position *is* the rank; a second field would be a source of truth that can disagree with the array. "High-signal first" is the generator's editorial call made when it chooses the order, not a data-model concept. Numeric filename prefixes (`s01-`) are cosmetic; reordering edits the manifest, not filenames ([#14](https://github.com/angusfretwell/docent/issues/14)).
+- **One walkthrough per Change per pillar in v1.** Each walkthrough tab shows _the_ walkthrough, no picker. Identity is **multiplicity-ready**: the `wlk_`/`sec_` ids and the `walkthroughId`-carrying anchor arm mean multiple walkthroughs later (an "architecture tour" + a "security tour") is an additive layout + tab-subselector change, never a data or anchor migration ([#14](https://github.com/angusfretwell/docent/issues/14)).
+- **Order = manifest array order, full stop.** No `rank`/`priority` field — array position _is_ the rank; a second field would be a source of truth that can disagree with the array. "High-signal first" is the generator's editorial call made when it chooses the order, not a data-model concept. Numeric filename prefixes (`s01-`) are cosmetic; reordering edits the manifest, not filenames ([#14](https://github.com/angusfretwell/docent/issues/14)).
 - **Human-editable after.** A walkthrough is plain files; a human edits prose or order directly and the tool re-renders — no special affordance ([#14](https://github.com/angusfretwell/docent/issues/14), [#15](https://github.com/angusfretwell/docent/issues/15)).
 
 The product spine is **prose-primary**: an ordered list of authored sections, each narration + embedded captures + annotations. A capture-timeline spine was rejected as under-curated for review, which wants "look here, in this order, because…" ([#15](https://github.com/angusfretwell/docent/issues/15)).
@@ -54,23 +54,45 @@ One schema, `kind`-discriminated (upgrades the provisional `@1` draft; [#14](htt
 **`kind: code`:**
 
 ```jsonc
-{ "schema": "docent/walkthrough@2", "id": "wlk_…", "kind": "code",
+{
+  "schema": "docent/walkthrough@2",
+  "id": "wlk_…",
+  "kind": "code",
   "title": "…",
-  "bornChangeId": "chg_002",               // the Change this tour was authored against
-  "sections": ["s01-entry.md", "s02-dispatch.md"] }  // array order IS the order
+  "bornChangeId": "chg_002", // the Change this tour was authored against
+  "sections": ["s01-entry.md", "s02-dispatch.md"],
+} // array order IS the order
 ```
 
 **`kind: product`** — the shared envelope plus a product-only `captures[]` registry (code manifests omit it):
 
 ```jsonc
-{ "schema": "docent/walkthrough@2", "id": "wlk_…", "kind": "product",
-  "title": "…", "bornChangeId": "chg_002",
+{
+  "schema": "docent/walkthrough@2",
+  "id": "wlk_…",
+  "kind": "product",
+  "title": "…",
+  "bornChangeId": "chg_002",
   "sections": ["s01-upload.md", "s02-validation.md"],
   "captures": [
-    { "id": "cap_a", "kind": "screenshot", "media": "<sha>",
-      "route": "/signup", "viewport": [1280, 800], "dims": [1280, 2400] },
-    { "id": "cap_b", "kind": "recording", "media": "<sha>",
-      "route": "/signup", "viewport": [1280, 800], "durationMs": 8200 } ] }
+    {
+      "id": "cap_a",
+      "kind": "screenshot",
+      "media": "<sha>",
+      "route": "/signup",
+      "viewport": [1280, 800],
+      "dims": [1280, 2400],
+    },
+    {
+      "id": "cap_b",
+      "kind": "recording",
+      "media": "<sha>",
+      "route": "/signup",
+      "viewport": [1280, 800],
+      "durationMs": 8200,
+    },
+  ],
+}
 ```
 
 ## 5. Section — `docent/walkthrough-section@2`
@@ -85,7 +107,7 @@ schema: docent/walkthrough-section@2
 id: sec_<ulid>
 title: "Entry point & dispatch"
 ranges:
-  - { file: src/index.ts,  side: head, blobSha: 9c2a…, lines: [10, 24] }
+  - { file: src/index.ts, side: head, blobSha: 9c2a…, lines: [10, 24] }
   - { file: src/parser.ts, side: head, blobSha: a1b2…, lines: [40, 88] }
 ---
 The request enters here {{range:0}} and is handed to the parser {{range:1}}.
@@ -113,7 +135,7 @@ Drag a file onto the dropzone {{capture:0}} and the upload begins {{capture:1}}.
 
 **Literate interleave**, both kinds ([#14](https://github.com/angusfretwell/docent/issues/14), [#15](https://github.com/angusfretwell/docent/issues/15)):
 
-- The body may place inline `{{range:i}}` (code) / `{{capture:i}}` (product) markers to narrate *between* targets (prose → target → prose → target). Indices refer to positions in the frontmatter list.
+- The body may place inline `{{range:i}}` (code) / `{{capture:i}}` (product) markers to narrate _between_ targets (prose → target → prose → target). Indices refer to positions in the frontmatter list.
 - The frontmatter list (`ranges` / `captures`) is **canonical** — the machine-readable source for drift, deep-linking, and order; markers are pure presentation.
 - **No markers ⇒ targets render in order after the prose** (the flat fallback).
 
@@ -130,16 +152,16 @@ A **capture** is one media artifact — one screenshot **or** one recording. It 
 
 Two distinct acts point at walkthrough content, kept as **separate mechanisms sharing one pointer vocabulary** ([#15](https://github.com/angusfretwell/docent/issues/15)):
 
-- **Annotation** — the generation agent's authored callout; lives *in the section* (frontmatter `annotations[]`), rendered as a pin overlaid on its capture; durable; not a thread; not resolvable.
+- **Annotation** — the generation agent's authored callout; lives _in the section_ (frontmatter `annotations[]`), rendered as a pin overlaid on its capture; durable; not a thread; not resolvable.
 - **Finding** — a reviewer's anchored, append-only thread; lives in the Dossier's Finding records; replied-to, resolved, drifts ([data-model.md](data-model.md)).
 
 Both render through the same overlay framework, but they are different data with different lifecycles — which also keeps a section a self-contained authored artifact ([#15](https://github.com/angusfretwell/docent/issues/15)).
 
 The anchor arms themselves are **owned by [data-model.md](data-model.md)** — this document only records which arms the pillars exercise:
 
-- `walkthrough-section` — `{ walkthroughId, sectionId }`; identity-based, narrative-only; anchors a Finding on the section *as an authored unit* ("this explanation is misleading"). Pillar-agnostic — the same arm serves code and product sections ([#14](https://github.com/angusfretwell/docent/issues/14)).
+- `walkthrough-section` — `{ walkthroughId, sectionId }`; identity-based, narrative-only; anchors a Finding on the section _as an authored unit_ ("this explanation is misleading"). Pillar-agnostic — the same arm serves code and product sections ([#14](https://github.com/angusfretwell/docent/issues/14)).
 - `screenshot-region`, `recording-timestamp`, `text-span` — the product arms (normalized rect; ms offsets from recording start; quote-based into section prose). A whole-capture Finding is the fine arm with its coordinate omitted; there is no `side` on capture anchors ([#15](https://github.com/angusfretwell/docent/issues/15)).
-- **Findings on code inside a code section fall through to the existing `line`/`file` arms** (content-addressed). Payoff: a Finding on *code* surfaces in **both** the Diff tab and the walkthrough (one source of truth); a Finding on the *narrative* surfaces only in the walkthrough ([#14](https://github.com/angusfretwell/docent/issues/14)).
+- **Findings on code inside a code section fall through to the existing `line`/`file` arms** (content-addressed). Payoff: a Finding on _code_ surfaces in **both** the Diff tab and the walkthrough (one source of truth); a Finding on the _narrative_ surfaces only in the walkthrough ([#14](https://github.com/angusfretwell/docent/issues/14)).
 
 ## 8. Drift and staleness
 
@@ -147,7 +169,7 @@ Walkthroughs drift as later Changes are minted, using the Drift vocabulary — `
 
 **Code — per-range re-anchor, worst-of rollup** ([#14](https://github.com/angusfretwell/docent/issues/14)):
 
-- Per-range drift is the **blob-to-blob re-anchor reused verbatim** from the Finding drift algorithm ([data-model.md](data-model.md)) — a range *is* a `line` anchor, so each range independently resolves to live / shifted / outdated. No second drift algorithm.
+- Per-range drift is the **blob-to-blob re-anchor reused verbatim** from the Finding drift algorithm ([data-model.md](data-model.md)) — a range _is_ a `line` anchor, so each range independently resolves to live / shifted / outdated. No second drift algorithm.
 - **Section state = worst-of rollup** of its ranges (`outdated > shifted > live`) → a section badge ("the code here changed since this tour was written"); per-range states stay available to pinpoint the stale hunk.
 - Findings anchored to a section via `walkthrough-section` drift on **identity**: live while the section exists, outdated if it's gone — no `shifted` (there's no line-number movement for a whole section).
 
@@ -159,7 +181,7 @@ Walkthroughs drift as later Changes are minted, using the Drift vocabulary — `
 **Walkthrough staleness**, both kinds ([#14](https://github.com/angusfretwell/docent/issues/14), [#15](https://github.com/angusfretwell/docent/issues/15)):
 
 - A walkthrough is a **pinned snapshot**, never auto-refreshed (agent-driven capture is expensive). Staleness = `bornChangeId` vs the current head — a per-walkthrough signal ("this tour depicts the product as of N Changes ago"), **surfaced, never hidden**.
-- The tool can only *surface* staleness; it never auto-regenerates. **Regeneration is triggered by the human running `/docent`**, which reconciles existence + drift per pillar and mints a fresh immutable `wlk_` for stale or missing pillars only ([#21](https://github.com/angusfretwell/docent/issues/21) — the skill contract is owned by [agent-integration.md](agent-integration.md)).
+- The tool can only _surface_ staleness; it never auto-regenerates. **Regeneration is triggered by the human running `/docent`**, which reconciles existence + drift per pillar and mints a fresh immutable `wlk_` for stale or missing pillars only ([#21](https://github.com/angusfretwell/docent/issues/21) — the skill contract is owned by [agent-integration.md](agent-integration.md)).
 - Finding resolution stays orthogonal to drift throughout ([data-model.md](data-model.md)).
 
 ## 9. The capture pipeline
@@ -188,7 +210,7 @@ Validated end-to-end by spike ([#5](https://github.com/angusfretwell/docent/issu
 Generation is performed by agent skills that **drop plain files** under `walkthroughs/{code,product}/wlk_<ulid>/` in the shapes above — filesystem-is-the-interface; the running tool's watcher re-renders live; no bespoke write path ([#14](https://github.com/angusfretwell/docent/issues/14), [#15](https://github.com/angusfretwell/docent/issues/15); see [architecture.md](architecture.md) for the watcher). The skill contracts — inputs, invocation, delivery — are **owned by [agent-integration.md](agent-integration.md)**; this document pins only the decomposition and the artifact:
 
 - **Code = one skill**, `/author-code-walkthrough` — code has no capture phase ([#14](https://github.com/angusfretwell/docent/issues/14), [#21](https://github.com/angusfretwell/docent/issues/21)).
-- **Product = three skills** ([#15](https://github.com/angusfretwell/docent/issues/15), [#21](https://github.com/angusfretwell/docent/issues/21)): `/capture-product-walkthrough` (drives the browser, §9; authors nothing), `/author-product-walkthrough` (the editorial half; touches no browser), and a wrapper entry point orchestrating capture → assemble — realized in the catalogue as the invokable `/docent` reconciler, which composes the reference skills ([#21](https://github.com/angusfretwell/docent/issues/21)). The split exists because **capture is expensive and separable from authoring** — assemble re-runs standalone against existing captures, so structure and narration iterate cheaply without re-driving the browser, and the capture skill is reusable beyond walkthroughs. This is a conscious divergence from the code pillar on skill *decomposition* only — **the data model produced is identical** to a single skill's.
+- **Product = three skills** ([#15](https://github.com/angusfretwell/docent/issues/15), [#21](https://github.com/angusfretwell/docent/issues/21)): `/capture-product-walkthrough` (drives the browser, §9; authors nothing), `/author-product-walkthrough` (the editorial half; touches no browser), and a wrapper entry point orchestrating capture → assemble — realized in the catalogue as the invokable `/docent` reconciler, which composes the reference skills ([#21](https://github.com/angusfretwell/docent/issues/21)). The split exists because **capture is expensive and separable from authoring** — assemble re-runs standalone against existing captures, so structure and narration iterate cheaply without re-driving the browser, and the capture skill is reusable beyond walkthroughs. This is a conscious divergence from the code pillar on skill _decomposition_ only — **the data model produced is identical** to a single skill's.
 
 Properties both pillars share ([#14](https://github.com/angusfretwell/docent/issues/14), [#15](https://github.com/angusfretwell/docent/issues/15)):
 
@@ -201,13 +223,13 @@ Properties both pillars share ([#14](https://github.com/angusfretwell/docent/iss
 
 Recorded as the tickets flagged them; none are v1 work.
 
-| Deferred item | Seam preserved | Source |
-| --- | --- | --- |
-| Multiple walkthroughs per Change per pillar (e.g. an "architecture tour" + a "security tour") | `wlk_`/`sec_` ids + `walkthroughId`-carrying anchor; additive layout + tab-subselector change only | [#14](https://github.com/angusfretwell/docent/issues/14) |
-| Before/after captures across refs in one tour | a per-capture `capturedAgainst` field would be additive | [#15](https://github.com/angusfretwell/docent/issues/15) |
-| Factoring `text-span` out of the pillars if the code side wants prose anchoring too | shape-identical arm already defined | [#15](https://github.com/angusfretwell/docent/issues/15) |
-| Selective capture-reuse on regeneration (v1 re-drives capture wholesale; content-addressing dedups byte-identical screens) | the per-capture `route` field | [#21](https://github.com/angusfretwell/docent/issues/21) |
-| Human-driven / hybrid capture | the seam is "who calls the driver" | [#5](https://github.com/angusfretwell/docent/issues/5) |
-| rrweb live from first paint | agent-browser `--init-script` | [#12](https://github.com/angusfretwell/docent/issues/12) |
-| Capture in CI / without a system Chrome | out of scope per the map; Lightpanda/cloud fallbacks exist | [#12](https://github.com/angusfretwell/docent/issues/12) |
-| An optional walkthrough/branch description field for intent | additive field | [#24](https://github.com/angusfretwell/docent/issues/24) |
+| Deferred item                                                                                                              | Seam preserved                                                                                     | Source                                                   |
+| -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Multiple walkthroughs per Change per pillar (e.g. an "architecture tour" + a "security tour")                              | `wlk_`/`sec_` ids + `walkthroughId`-carrying anchor; additive layout + tab-subselector change only | [#14](https://github.com/angusfretwell/docent/issues/14) |
+| Before/after captures across refs in one tour                                                                              | a per-capture `capturedAgainst` field would be additive                                            | [#15](https://github.com/angusfretwell/docent/issues/15) |
+| Factoring `text-span` out of the pillars if the code side wants prose anchoring too                                        | shape-identical arm already defined                                                                | [#15](https://github.com/angusfretwell/docent/issues/15) |
+| Selective capture-reuse on regeneration (v1 re-drives capture wholesale; content-addressing dedups byte-identical screens) | the per-capture `route` field                                                                      | [#21](https://github.com/angusfretwell/docent/issues/21) |
+| Human-driven / hybrid capture                                                                                              | the seam is "who calls the driver"                                                                 | [#5](https://github.com/angusfretwell/docent/issues/5)   |
+| rrweb live from first paint                                                                                                | agent-browser `--init-script`                                                                      | [#12](https://github.com/angusfretwell/docent/issues/12) |
+| Capture in CI / without a system Chrome                                                                                    | out of scope per the map; Lightpanda/cloud fallbacks exist                                         | [#12](https://github.com/angusfretwell/docent/issues/12) |
+| An optional walkthrough/branch description field for intent                                                                | additive field                                                                                     | [#24](https://github.com/angusfretwell/docent/issues/24) |

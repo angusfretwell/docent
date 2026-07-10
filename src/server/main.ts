@@ -33,8 +33,8 @@ const openBrowser = Effect.fn("openBrowser")(
   (effect) => Effect.ignore(effect),
 );
 
-const serve = (assets: ClientAssets) =>
-  Effect.gen(function* () {
+function serve(assets: ClientAssets) {
+  return Effect.gen(function* serveApp() {
     if (assets.size === 0) {
       return yield* Effect.fail(ClientAssetsMissing.make({}));
     }
@@ -44,9 +44,7 @@ const serve = (assets: ClientAssets) =>
     const change = yield* resolveChange(process.cwd());
     const url = yield* serverUrl;
 
-    yield* Console.log(
-      `docent  ·  ${change.branch} → ${change.defaultBranch} @ ${change.root}`,
-    );
+    yield* Console.log(`docent  ·  ${change.branch} → ${change.defaultBranch} @ ${change.root}`);
     yield* Console.log(`        ·  ${url}`);
 
     if (process.stdout.isTTY) {
@@ -56,6 +54,7 @@ const serve = (assets: ClientAssets) =>
     // Serve until interrupted (Ctrl+C); the layer's scope stops the server.
     return yield* Effect.never;
   }).pipe(Effect.provide(serveLayer({ assets, cwd: process.cwd() })));
+}
 
 /**
  * The process entry: dispatch the subcommand and run it. `serve` is the

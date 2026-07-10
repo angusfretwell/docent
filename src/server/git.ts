@@ -41,11 +41,12 @@ export class DefaultBranchNotFound extends Schema.TaggedErrorClass<DefaultBranch
   }
 }
 
-const streamText = <E, R>(stream: Stream.Stream<Uint8Array, E, R>) =>
-  Stream.mkString(Stream.decodeText(stream));
+function streamText<E, R>(stream: Stream.Stream<Uint8Array, E, R>) {
+  return Stream.mkString(Stream.decodeText(stream));
+}
 
 /** Run a git command, succeeding with its trimmed stdout. */
-const git = Effect.fn("git")(function* (cwd: string, args: readonly string[]) {
+const git = Effect.fn("git")(function* git(cwd: string, args: readonly string[]) {
   const handle = yield* ChildProcess.make("git", args, { cwd });
   // Drain stdout/stderr concurrently with the exit wait so a large diff
   // can't deadlock the pipe.
@@ -54,9 +55,7 @@ const git = Effect.fn("git")(function* (cwd: string, args: readonly string[]) {
     { concurrency: "unbounded" },
   );
   if (exitCode !== 0) {
-    return yield* Effect.fail(
-      GitCommandFailed.make({ args, exitCode, stderr }),
-    );
+    return yield* Effect.fail(GitCommandFailed.make({ args, exitCode, stderr }));
   }
   return stdout.replace(TRAILING_NEWLINE, "");
 }, Effect.scoped);
@@ -65,23 +64,20 @@ const git = Effect.fn("git")(function* (cwd: string, args: readonly string[]) {
  * The default branch, as { name, ref }: origin's HEAD branch when the repo
  * has an origin, else the local `main`/`master` branch.
  */
-const resolveDefaultBranch = Effect.fn("resolveDefaultBranch")(function* (
+const resolveDefaultBranch = Effect.fn("resolveDefaultBranch")(function* resolveDefaultBranch(
   root: string,
 ) {
-  const originHead = yield* git(root, [
-    "symbolic-ref",
-    "refs/remotes/origin/HEAD",
-  ]).pipe(Effect.catchTag("GitCommandFailed", () => Effect.succeed(null)));
+  const originHead = yield* git(root, ["symbolic-ref", "refs/remotes/origin/HEAD"]).pipe(
+    Effect.catchTag("GitCommandFailed", () => Effect.succeed(null)),
+  );
   if (originHead !== null) {
     const name = originHead.replace("refs/remotes/origin/", "");
     return { name, ref: `origin/${name}` };
   }
   for (const name of ["main", "master"]) {
-    const sha = yield* git(root, [
-      "rev-parse",
-      "--verify",
-      `refs/heads/${name}`,
-    ]).pipe(Effect.catchTag("GitCommandFailed", () => Effect.succeed(null)));
+    const sha = yield* git(root, ["rev-parse", "--verify", `refs/heads/${name}`]).pipe(
+      Effect.catchTag("GitCommandFailed", () => Effect.succeed(null)),
+    );
     if (sha !== null) {
       return { name, ref: name };
     }
@@ -90,13 +86,9 @@ const resolveDefaultBranch = Effect.fn("resolveDefaultBranch")(function* (
 });
 
 /** Resolve the checked-out branch's live Change against the default branch. */
-export const resolveChange = Effect.fn("resolveChange")(function* (
-  cwd: string,
-) {
+export const resolveChange = Effect.fn("resolveChange")(function* resolveChange(cwd: string) {
   const root = yield* git(cwd, ["rev-parse", "--show-toplevel"]).pipe(
-    Effect.catchTag("GitCommandFailed", () =>
-      Effect.fail(NotAGitRepository.make({ path: cwd })),
-    ),
+    Effect.catchTag("GitCommandFailed", () => Effect.fail(NotAGitRepository.make({ path: cwd }))),
   );
   const [branch, headSha, defaultBranch] = yield* Effect.all(
     [
@@ -110,13 +102,7 @@ export const resolveChange = Effect.fn("resolveChange")(function* (
   const patch =
     baseSha === headSha
       ? ""
-      : yield* git(root, [
-          "diff",
-          "--no-color",
-          "--find-renames",
-          baseSha,
-          headSha,
-        ]);
+      : yield* git(root, ["diff", "--no-color", "--find-renames", baseSha, headSha]);
   return Change.make({
     baseSha,
     branch,
