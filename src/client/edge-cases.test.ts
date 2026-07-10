@@ -3,6 +3,7 @@ import {
   autoViewed,
   bodyReplaced,
   classifyFiles,
+  formatBytes,
   isGeneratedPath,
   parsePatchBlocks,
 } from "./edge-cases.ts";
@@ -266,5 +267,19 @@ describe("classifyFiles — keying", () => {
   test("keys each class by the CodeView item id (name#index)", () => {
     const map = classifyFiles(BINARY + NORMAL, []);
     expect([...map.keys()]).toEqual(["data.bin#0", "text.txt#1"]);
+  });
+});
+
+describe("formatBytes", () => {
+  test.each([
+    [0, "0 B"],
+    [512, "512 B"],
+    [1024, "1 KB"],
+    [1536, "1.5 KB"],
+    [1_048_576, "1 MB"],
+    [2_411_724, "2.3 MB"],
+    [1_073_741_824, "1 GB"],
+  ])("formats %i bytes as %s", (bytes, expected) => {
+    expect(formatBytes(bytes)).toBe(expected);
   });
 });

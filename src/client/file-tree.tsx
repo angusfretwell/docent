@@ -14,6 +14,8 @@ export interface RowState {
   viewed: boolean;
   /** The head blob changed since a prior content of this file was viewed. */
   changed: boolean;
+  /** Generated/lockfile/vendored — de-emphasized in the tree (diff-review.md §5). */
+  generated: boolean;
 }
 
 const BADGE_COLOR: Record<FileEntry["changeType"], string> = {
@@ -87,7 +89,10 @@ function FileRow({
         className="tree-file-row"
         onClick={() => onSelect(entry.id)}
         ref={ref}
-        style={{ opacity: state?.viewed ? 0.55 : 1 }}
+        style={{
+          fontStyle: state?.generated ? "italic" : "normal",
+          opacity: state?.viewed || state?.generated ? 0.55 : 1,
+        }}
         type="button"
       >
         <span
@@ -100,6 +105,7 @@ function FileRow({
           {basename(entry.path)}
         </span>
         <Badge type={entry.changeType} />
+        {state?.generated ? <span className="tree-generated">generated</span> : null}
         <span style={{ flex: 1 }} />
         {state?.changed ? (
           <span className="viewed-changed" style={{ marginLeft: "0.4rem" }}>

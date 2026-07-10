@@ -201,3 +201,18 @@ export function bodyReplaced(file: FileClass): boolean {
     file.binary === true || file.image === true || file.modeOnly === true || file.submodule === true
   );
 }
+
+// Powers-of-1024 units; binaries are byte-counted, so KB/MB read naturally.
+const BYTE_UNITS = ["B", "KB", "MB", "GB"] as const;
+
+/** Human-readable byte size for the binary size-delta chrome, e.g. `1.2 KB`. */
+export function formatBytes(bytes: number): string {
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < BYTE_UNITS.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  const rounded = unit === 0 ? value : Math.round(value * 10) / 10;
+  return `${rounded} ${BYTE_UNITS[unit]}`;
+}

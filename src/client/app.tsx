@@ -191,6 +191,7 @@ function ChangeBody({
   return (
     <DiffView
       findings={dossier?.findings ?? NO_FINDINGS}
+      generated={change.generated}
       patch={change.patch}
       ref={diffRef}
       viewed={dossier?.viewed ?? NO_VIEWED}
