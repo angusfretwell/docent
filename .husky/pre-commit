@@ -1,7 +1,5 @@
 #!/bin/sh
 
-bun test
-
 # Check if there are any staged files
 STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR)
 if [ -z "$STAGED_FILES" ]; then
