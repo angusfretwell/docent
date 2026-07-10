@@ -1,42 +1,31 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { ManagedRuntime } from "effect";
-import type { RepoDiff } from "./git.ts";
+import { ManagedRuntime, Schema } from "effect";
+import { Change, DiffError } from "../shared/change.ts";
 import { layer, serverUrl } from "./serve.ts";
+import {
+  cleanupScratchDirs,
+  git,
+  NOT_A_GIT_REPO,
+  scratchDir,
+  scratchRepo,
+} from "./test-fixtures.ts";
 
-const scratchDirs: string[] = [];
 const disposers: (() => Promise<void>)[] = [];
 
-const NOT_A_GIT_REPO = /not a git repository/i;
+// Sync decode boundary: bun:test assertions are synchronous by design.
+const decodeChange = Schema.decodeUnknownSync(Change);
+const decodeDiffError = Schema.decodeUnknownSync(DiffError);
 
 afterAll(async () => {
   await Promise.all(disposers.map((dispose) => dispose()));
-  for (const dir of scratchDirs) {
-    rmSync(dir, { force: true, recursive: true });
-  }
+  cleanupScratchDirs();
 });
 
-function git(cwd: string, ...args: string[]): void {
-  const result = Bun.spawnSync(["git", ...args], { cwd });
-  if (result.exitCode !== 0) {
-    throw new Error(
-      `git ${args.join(" ")} failed: ${result.stderr.toString()}`
-    );
-  }
-}
-
 /** A scratch repo on branch `feature` with one committed change off `main`. */
-function scratchRepo(): string {
-  const dir = mkdtempSync(join(tmpdir(), "docent-serve-test-"));
-  scratchDirs.push(dir);
-  git(dir, "init", "-b", "main");
-  git(dir, "config", "user.email", "test@example.com");
-  git(dir, "config", "user.name", "Test");
-  writeFileSync(join(dir, "hello.txt"), "hello\n");
-  git(dir, "add", ".");
-  git(dir, "commit", "-m", "initial");
+function featureRepo(): string {
+  const dir = scratchRepo("docent-serve-test-");
   git(dir, "checkout", "-b", "feature");
   writeFileSync(join(dir, "feature.txt"), "new file\n");
   git(dir, "add", ".");
@@ -46,8 +35,7 @@ function scratchRepo(): string {
 
 /** A stub built-client directory. */
 function scratchClientDir(): string {
-  const dir = mkdtempSync(join(tmpdir(), "docent-client-test-"));
-  scratchDirs.push(dir);
+  const dir = scratchDir("docent-client-test-");
   writeFileSync(
     join(dir, "index.html"),
     "<!doctype html><title>docent</title>"
@@ -70,35 +58,35 @@ async function serve(repo: string): Promise<{ url: string }> {
 
 describe("server layer", () => {
   test("GET /api/diff returns the live branch diff as JSON", async () => {
-    const repo = scratchRepo();
+    const repo = featureRepo();
     const { url } = await serve(repo);
 
     const res = await fetch(new URL("/api/diff", url));
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as RepoDiff;
+    const body = decodeChange(await res.json());
     expect(body.branch).toBe("feature");
     expect(body.defaultBranch).toBe("main");
     expect(body.patch).toContain("+new file");
   });
 
   test("the diff renders live from git on every load", async () => {
-    const repo = scratchRepo();
+    const repo = featureRepo();
     const { url } = await serve(repo);
     await fetch(new URL("/api/diff", url));
     writeFileSync(join(repo, "second.txt"), "second\n");
     git(repo, "add", ".");
     git(repo, "commit", "-m", "second commit");
 
-    const body = (await (
-      await fetch(new URL("/api/diff", url))
-    ).json()) as RepoDiff;
+    const body = decodeChange(
+      await (await fetch(new URL("/api/diff", url))).json()
+    );
 
     expect(body.patch).toContain("second.txt");
   });
 
   test("serves the client index at / and static assets by path", async () => {
-    const { url } = await serve(scratchRepo());
+    const { url } = await serve(featureRepo());
 
     const index = await fetch(url);
     const asset = await fetch(new URL("/assets/app.js", url));
@@ -110,7 +98,7 @@ describe("server layer", () => {
   });
 
   test("404s unknown paths and blocks path traversal out of the client dir", async () => {
-    const { url } = await serve(scratchRepo());
+    const { url } = await serve(featureRepo());
 
     const missing = await fetch(new URL("/nope.js", url));
     const traversal = await fetch(`${url}assets/%2e%2e/%2e%2e/secret.txt`);
@@ -120,14 +108,13 @@ describe("server layer", () => {
   });
 
   test("500s /api/diff with the error when the cwd is not a git repo", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "docent-serve-test-"));
-    scratchDirs.push(dir);
+    const dir = scratchDir("docent-serve-test-");
     const { url } = await serve(dir);
 
     const res = await fetch(new URL("/api/diff", url));
 
     expect(res.status).toBe(500);
-    const body = (await res.json()) as { error: string };
+    const body = decodeDiffError(await res.json());
     expect(body.error).toMatch(NOT_A_GIT_REPO);
   });
 });

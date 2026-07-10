@@ -12,6 +12,7 @@
 
 import { join } from "node:path";
 import { chromium } from "playwright";
+import { Change } from "../src/shared/change.ts";
 
 const repoRoot = join(import.meta.dir, "..");
 const fixturePath =
@@ -33,14 +34,16 @@ const server = Bun.serve({
   async fetch(req) {
     const { pathname } = new URL(req.url);
     if (pathname === "/api/diff") {
-      return Response.json({
-        baseSha: "0".repeat(40),
-        branch: "bench-fixture",
-        defaultBranch: "main",
-        headSha: "1".repeat(40),
-        patch,
-        root: repoRoot,
-      });
+      return Response.json(
+        Change.make({
+          baseSha: "0".repeat(40),
+          branch: "bench-fixture",
+          defaultBranch: "main",
+          headSha: "1".repeat(40),
+          patch,
+          root: repoRoot,
+        })
+      );
     }
     const file = Bun.file(
       join(clientDir, pathname === "/" ? "index.html" : pathname.slice(1))

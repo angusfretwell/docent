@@ -6,9 +6,7 @@
 
 import { Effect, Schema, Stream } from "effect";
 import { ChildProcess } from "effect/unstable/process";
-import type { RepoDiff } from "../shared/diff.ts";
-
-export type { RepoDiff } from "../shared/diff.ts";
+import { Change } from "../shared/change.ts";
 
 const TRAILING_NEWLINE = /\n$/;
 
@@ -91,8 +89,8 @@ const resolveDefaultBranch = Effect.fn("resolveDefaultBranch")(function* (
   return yield* Effect.fail(DefaultBranchNotFound.make({}));
 });
 
-/** Resolve the checked-out branch's live diff against the default branch. */
-export const resolveRepoDiff = Effect.fn("resolveRepoDiff")(function* (
+/** Resolve the checked-out branch's live Change against the default branch. */
+export const resolveChange = Effect.fn("resolveChange")(function* (
   cwd: string
 ) {
   const root = yield* git(cwd, ["rev-parse", "--show-toplevel"]).pipe(
@@ -119,13 +117,12 @@ export const resolveRepoDiff = Effect.fn("resolveRepoDiff")(function* (
           baseSha,
           headSha,
         ]);
-  const diff: RepoDiff = {
+  return Change.make({
     baseSha,
     branch,
     defaultBranch: defaultBranch.name,
     headSha,
     patch,
     root,
-  };
-  return diff;
+  });
 });

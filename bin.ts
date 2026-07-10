@@ -8,10 +8,19 @@
 
 import { join } from "node:path";
 import { BunRuntime } from "@effect/platform-bun";
-import { Console, Effect, FileSystem } from "effect";
+import { Console, Effect, FileSystem, Schema } from "effect";
 import open from "open";
-import { resolveRepoDiff } from "./src/server/git.ts";
+import { resolveChange } from "./src/server/git.ts";
 import { layer as serveLayer, serverUrl } from "./src/server/serve.ts";
+
+class ClientAssetsMissing extends Schema.TaggedErrorClass<ClientAssetsMissing>()(
+  "ClientAssetsMissing",
+  { clientDir: Schema.String }
+) {
+  override get message(): string {
+    return "client assets not built — run `bun run build` first";
+  }
+}
 
 const subcommand = process.argv[2] ?? "serve";
 if (subcommand !== "serve") {
@@ -34,18 +43,16 @@ const openBrowser = Effect.fn("openBrowser")(
 const main = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   if (!(yield* fs.exists(join(clientDir, "index.html")))) {
-    return yield* Effect.fail(
-      new Error("client assets not built — run `bun run build` first")
-    );
+    return yield* Effect.fail(ClientAssetsMissing.make({ clientDir }));
   }
 
   // Fail fast (and get the log line) before announcing the server; requests
   // still re-resolve the diff live from git on every load.
-  const diff = yield* resolveRepoDiff(process.cwd());
+  const change = yield* resolveChange(process.cwd());
   const url = yield* serverUrl;
 
   yield* Console.log(
-    `docent  ·  ${diff.branch} → ${diff.defaultBranch} @ ${diff.root}`
+    `docent  ·  ${change.branch} → ${change.defaultBranch} @ ${change.root}`
   );
   yield* Console.log(`        ·  ${url}`);
 

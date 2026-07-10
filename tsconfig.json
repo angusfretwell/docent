@@ -31,7 +31,7 @@
   },
 
   // Prototypes are throwaway code (see .agents/skills/prototype/SKILL.md) and
-  // are excluded from the repo typecheck. The browser client typechecks under
-  // its own config (src/client/tsconfig.json) with DOM libs.
+  // are excluded from the repo typecheck. DOM libs are global for now — the
+  // client has no separate tsconfig, so server code typechecks with DOM types.
   "exclude": ["prototypes"]
 }

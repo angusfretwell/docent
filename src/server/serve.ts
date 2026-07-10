@@ -13,15 +13,13 @@ import {
   HttpServerResponse,
   HttpStaticServer,
 } from "effect/unstable/http";
-import { resolveRepoDiff } from "./git.ts";
+import { resolveChange } from "./git.ts";
 
 export interface ServeOptions {
   /** Directory of built client assets (Vite output). */
   clientDir: string;
   /** Directory to resolve the git repo from (any path inside the repo). */
   cwd: string;
-  /** 0 (default) picks an ephemeral port. */
-  port?: number;
 }
 
 /** The running server's base URL (with trailing slash), e.g. for printing. */
@@ -35,8 +33,8 @@ const diffRoute = (cwd: string) =>
   HttpRouter.add(
     "GET",
     "/api/diff",
-    resolveRepoDiff(cwd).pipe(
-      Effect.flatMap((diff) => HttpServerResponse.json(diff)),
+    resolveChange(cwd).pipe(
+      Effect.flatMap((change) => HttpServerResponse.json(change)),
       Effect.catch((error) =>
         Effect.succeed(
           HttpServerResponse.jsonUnsafe(
@@ -62,7 +60,8 @@ export const layer = (options: ServeOptions) => {
     disableLogger: true,
   }).pipe(
     Layer.provideMerge(
-      BunHttpServer.layer({ hostname: "localhost", port: options.port ?? 0 })
+      // Port 0: the OS picks an ephemeral port; read it back via `serverUrl`.
+      BunHttpServer.layer({ hostname: "localhost", port: 0 })
     )
   );
 };

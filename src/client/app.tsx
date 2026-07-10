@@ -1,11 +1,24 @@
+import { Schema } from "effect";
 import { useEffect, useState } from "react";
-import type { RepoDiff } from "../shared/diff.ts";
+import { Change, DiffError } from "../shared/change.ts";
 import { DiffView } from "./diff-view.tsx";
+
+// Sync decode boundary: the fetch handler below owns the try/catch.
+const decodeChange = Schema.decodeUnknownSync(Change);
+const decodeDiffError = Schema.decodeUnknownSync(DiffError);
+
+function failureMessage(body: unknown, status: number): string {
+  try {
+    return decodeDiffError(body).error;
+  } catch {
+    return `HTTP ${status}`;
+  }
+}
 
 type LoadState =
   | { kind: "loading" }
   | { kind: "error"; message: string }
-  | { kind: "loaded"; diff: RepoDiff };
+  | { kind: "loaded"; change: Change };
 
 function Notice({ children }: { children: React.ReactNode }) {
   return <p style={{ opacity: 0.7, padding: "1rem" }}>{children}</p>;
@@ -19,12 +32,13 @@ export function App() {
     (async () => {
       try {
         const res = await fetch("/api/diff");
-        const body = (await res.json()) as RepoDiff & { error?: string };
+        const body: unknown = await res.json();
         if (!res.ok) {
-          throw new Error(body.error ?? `HTTP ${res.status}`);
+          throw new Error(failureMessage(body, res.status));
         }
+        const change = decodeChange(body);
         if (!cancelled) {
-          setState({ diff: body, kind: "loaded" });
+          setState({ change, kind: "loaded" });
         }
       } catch (error) {
         if (!cancelled) {
@@ -46,14 +60,14 @@ export function App() {
   if (state.kind === "error") {
     return <Notice>Could not load the diff: {state.message}</Notice>;
   }
-  const { diff } = state;
-  if (diff.patch === "") {
+  const { change } = state;
+  if (change.patch === "") {
     return (
       <Notice>
-        <code>{diff.branch}</code> has no changes against{" "}
-        <code>{diff.defaultBranch}</code>.
+        <code>{change.branch}</code> has no changes against{" "}
+        <code>{change.defaultBranch}</code>.
       </Notice>
     );
   }
-  return <DiffView patch={diff.patch} />;
+  return <DiffView patch={change.patch} />;
 }
