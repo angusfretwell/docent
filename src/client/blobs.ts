@@ -47,12 +47,7 @@ export function expandedFileDiff(
   );
 }
 
-/**
- * Lazily fetch a file's base and head blobs and build its full, expandable
- * diff. Both sides (split view) resolve through the same `/api/blob/:sha`
- * endpoint; the file's own `prevObjectId`/`newObjectId` from the patch's index
- * line make each blob addressable. Callers gate this behind `isExpandable`.
- */
+/** Fetch a single blob's text from the content-addressed `/api/blob/:sha` endpoint. */
 async function fetchBlobText(sha: string): Promise<string> {
   const url = blobUrl(sha);
   const res = await fetch(url);
@@ -62,6 +57,12 @@ async function fetchBlobText(sha: string): Promise<string> {
   return res.text();
 }
 
+/**
+ * Lazily fetch a file's base and head blobs and build its full, expandable
+ * diff. Both sides (split view) resolve through the same `/api/blob/:sha`
+ * endpoint; the file's own `prevObjectId`/`newObjectId` from the patch's index
+ * line make each blob addressable. Callers gate this behind `isExpandable`.
+ */
 export async function fetchExpandedFileDiff(fileDiff: FileDiffMetadata): Promise<FileDiffMetadata> {
   const { prevObjectId, newObjectId } = fileDiff;
   if (prevObjectId === undefined || newObjectId === undefined) {
