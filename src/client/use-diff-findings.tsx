@@ -12,6 +12,7 @@ import type { FindingEntry } from "../shared/dossier.ts";
 import type { FindingWrite } from "../shared/finding-write.ts";
 import { foldFinding } from "../shared/finding.ts";
 import { DiffAnnotationView } from "./diff-annotation-view.tsx";
+import type { DriftResult } from "./drift.ts";
 import type { Annotation } from "./diff-annotations.ts";
 import { buildDiffItems } from "./diff-annotations.ts";
 import type { FileEntry } from "./nav.ts";
@@ -34,6 +35,8 @@ export function useDiffFindings(params: {
   isEdgeCollapsed: (id: string) => boolean;
   codeRef: React.RefObject<CodeViewHandle<Annotation> | null>;
   onWrite?: (write: FindingWrite) => Promise<void>;
+  /** Per-Finding drift; absent on Pending, where the sync fast path stands in. */
+  drift?: ReadonlyMap<string, DriftResult>;
 }) {
   const byName = new Map(processPatch(params.patch).files.map((f, i) => [`${f.name}#${i}`, f]));
   function fileDiffFor(id: string) {
@@ -46,8 +49,10 @@ export function useDiffFindings(params: {
     onWrite: params.onWrite ?? noWrite,
   });
   const folded = params.findings.map((finding) => foldFinding(finding.id, finding.records));
+  const { drift } = params;
   const items = buildDiffItems({
     composing: compose.composing,
+    ...(drift === undefined ? {} : { driftFor: (id: string) => drift.get(id) }),
     entries: params.entries,
     fileDiffFor,
     findings: folded,

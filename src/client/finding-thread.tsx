@@ -8,10 +8,12 @@
  */
 
 import { useState } from "react";
+import type { DriftState } from "../shared/drift.ts";
 import type { FindingWrite } from "../shared/finding-write.ts";
 import type { Author, Disposition, FoldedFinding } from "../shared/finding.ts";
 import { WHATS_NEXT_LABEL } from "../shared/finding.ts";
 import { Composer } from "./composer.tsx";
+import { DriftPill } from "./drift-badge.tsx";
 
 const DISPOSITION_LABEL: Record<Disposition, string> = {
   actioned: "actioned",
@@ -64,9 +66,12 @@ function Record({ author, body, tag }: { author: Author; body: string; tag?: str
 }
 
 export function FindingThread({
+  drift,
   finding,
   onWrite,
 }: {
+  /** The drift standing shown as a pill beside the open/resolved state (inline only). */
+  drift?: DriftState;
   finding: FoldedFinding;
   onWrite: (write: FindingWrite) => Promise<void>;
 }) {
@@ -87,7 +92,10 @@ export function FindingThread({
   return (
     <div>
       <div style={{ ...actionBarStyle, justifyContent: "space-between", opacity: 0.85 }}>
-        <span style={badgeStyle}>{finding.resolved ? "Resolved" : "Open"}</span>
+        <span style={{ alignItems: "center", display: "flex", gap: "0.4rem" }}>
+          <span style={badgeStyle}>{finding.resolved ? "Resolved" : "Open"}</span>
+          {drift ? <DriftPill resolved={finding.resolved} state={drift} /> : null}
+        </span>
         <span style={{ fontSize: "0.75rem" }}>{WHATS_NEXT_LABEL[finding.whatsNext]}</span>
       </div>
 

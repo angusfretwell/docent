@@ -1,5 +1,7 @@
 import { useState } from "react";
 import type { FindingEntry } from "../shared/dossier.ts";
+import type { DriftState } from "../shared/drift.ts";
+import { changeHistoryLabel } from "../shared/drift.ts";
 import type { FindingWrite } from "../shared/finding-write.ts";
 import type { FoldedFinding } from "../shared/finding.ts";
 import {
@@ -10,6 +12,8 @@ import {
   WHATS_NEXT_LABEL,
 } from "../shared/finding.ts";
 import { Composer } from "./composer.tsx";
+import { DRIFT_SIGNAL, DriftPill } from "./drift-badge.tsx";
+import type { DriftResult } from "./drift.ts";
 import { FindingThread } from "./finding-thread.tsx";
 
 // The Dossier-global Findings panel (diff-review.md §7): a flat list of every
@@ -61,23 +65,51 @@ const locationStyle: React.CSSProperties = {
 };
 
 const metaStyle: React.CSSProperties = {
+  alignItems: "center",
   display: "flex",
   gap: "0.5rem",
   marginTop: "0.25rem",
   opacity: 0.7,
 };
 
+// The cross-Change timeline ("opened on chg_001 · resolved on chg_004") — labels,
+// not navigation (diff-review.md §7), from each record's own changeId.
+const historyStyle: React.CSSProperties = {
+  fontSize: "0.7rem",
+  marginTop: "0.2rem",
+  opacity: 0.55,
+};
+
+// An outdated Finding detaches from the diff and renders against its born text
+// (data-model.md §6.1) — shown in place so the reviewer keeps the original
+// context without navigating to the birth Change.
+const bornTextStyle: React.CSSProperties = {
+  background: "rgba(128,128,128,0.08)",
+  borderLeft: `2px solid rgba(${DRIFT_SIGNAL},0.5)`,
+  fontFamily: "ui-monospace, monospace",
+  fontSize: "0.72rem",
+  margin: "0 0.5rem",
+  overflowX: "auto",
+  padding: "0.4rem 0.5rem",
+  whiteSpace: "pre",
+};
+
 function FindingRow({
+  drift,
   expanded,
   finding,
+  history,
   onToggle,
   onWrite,
 }: {
+  drift?: DriftResult;
   expanded: boolean;
   finding: FoldedFinding;
+  history: string;
   onToggle: () => void;
   onWrite: (write: FindingWrite) => Promise<void>;
 }) {
+  const state: DriftState = drift?.state ?? "live";
   return (
     <div style={{ borderBottom: "1px solid rgba(128,128,128,0.15)" }}>
       <button onClick={onToggle} style={rowStyle} type="button">
@@ -86,8 +118,13 @@ function FindingRow({
           <span>{finding.resolved ? "Resolved" : "Open"}</span>
           <span>·</span>
           <span>{WHATS_NEXT_LABEL[finding.whatsNext]}</span>
+          <DriftPill resolved={finding.resolved} state={state} />
         </div>
+        {history === "" ? null : <div style={historyStyle}>{history}</div>}
       </button>
+      {expanded && state === "outdated" && drift?.bornText ? (
+        <pre style={bornTextStyle}>{drift.bornText}</pre>
+      ) : null}
       {expanded ? <FindingThread finding={finding} onWrite={onWrite} /> : null}
     </div>
   );
@@ -101,10 +138,12 @@ function FindingRow({
  * re-fetches the snapshot on every SSE change event.
  */
 export function FindingsPanel({
+  drift,
   findings,
   onJump,
   onWrite,
 }: {
+  drift: ReadonlyMap<string, DriftResult>;
   findings: readonly FindingEntry[];
   onJump: (file: string, line: number) => void;
   onWrite: (write: FindingWrite) => Promise<void>;
@@ -114,6 +153,11 @@ export function FindingsPanel({
   const [changeComposerOpen, setChangeComposerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  // Keep each Finding's records beside its fold so the row can render the
+  // cross-Change timeline (which reads per-record changeId) without re-walking.
+  const historyById = new Map(
+    findings.map((finding) => [finding.id, changeHistoryLabel(finding.records)]),
+  );
   const folded = sortFoldedFindings(
     findings.map((finding) => foldFinding(finding.id, finding.records)),
   );
@@ -170,8 +214,10 @@ export function FindingsPanel({
       ) : (
         visible.map((finding) => (
           <FindingRow
+            drift={drift.get(finding.id)}
             expanded={expandedId === finding.id}
             finding={finding}
+            history={historyById.get(finding.id) ?? ""}
             key={finding.id}
             onToggle={() => toggle(finding)}
             onWrite={onWrite}
