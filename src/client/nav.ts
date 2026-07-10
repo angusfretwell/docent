@@ -19,6 +19,12 @@ export interface FileEntry {
   path: string;
   /** Previous path, present only for renames. */
   prevPath?: string;
+  /**
+   * Head-blob object id — the key mark-as-viewed asserts against ("I've seen
+   * this file's resulting content", diff-review.md §3). Empty for a deletion,
+   * which has no head blob; the file's own path still scopes its viewed state.
+   */
+  blobSha: string;
   changeType: ChangeType;
   additions: number;
   deletions: number;
@@ -76,6 +82,7 @@ function toEntry(file: FileDiffMetadata, index: number): FileEntry {
   }
   return {
     additions,
+    blobSha: file.newObjectId ?? "",
     changeType: CHANGE_TYPE[file.type],
     deletions,
     hunkStarts,
