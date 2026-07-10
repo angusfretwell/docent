@@ -277,6 +277,36 @@ describe("server layer", () => {
     );
   });
 
+  test("POST /api/viewed appends an event the dossier snapshot then reports", async () => {
+    const repo = featureRepo();
+    const { url } = await serve(repo);
+
+    const post = await fetch(new URL("/api/viewed", url), {
+      body: JSON.stringify({ blobSha: "9c2a1f0", path: "feature.txt" }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+
+    expect(post.status).toBe(200);
+    const event = await post.json();
+    expect(event).toMatchObject({ blobSha: "9c2a1f0", path: "feature.txt" });
+    const dossier = await fetch(new URL("/api/dossier", url));
+    const snap = decodeSnapshot(await dossier.json());
+    expect(snap.viewed).toEqual([{ blobSha: "9c2a1f0", path: "feature.txt", ts: event.ts }]);
+  });
+
+  test("POST /api/viewed 400s a malformed body", async () => {
+    const { url } = await serve(featureRepo());
+
+    const res = await fetch(new URL("/api/viewed", url), {
+      body: JSON.stringify({ nope: true }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+
+    expect(res.status).toBe(400);
+  });
+
   test("GET /api/events pushes a change when .docent/ is written externally", async () => {
     const repo = featureRepo();
     const { url } = await serve(repo);

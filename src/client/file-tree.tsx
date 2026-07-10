@@ -1,12 +1,20 @@
 /**
  * The Diff tab's navigation chrome: a compact-folder tree beside the single
- * scroll, its substring filter, and the layout/order toggles. The tree is a
- * position indicator — the active file (driven by the scroll) highlights and
- * auto-reveals here, and clicking a row jumps the stream.
+ * scroll, its substring filter, the layout/order toggles, the review-progress
+ * read-out, and the viewed / has-findings quick filters. The tree is a position
+ * indicator — the active file (driven by the scroll) highlights and auto-reveals
+ * here, and each row carries the mark-as-viewed checkbox (diff-review.md §3).
  */
 
 import { useEffect, useRef } from "react";
 import type { FileEntry, FileOrder, TreeNode } from "./nav.ts";
+
+/** Per-file viewed read-out for a tree row (folded upstream in DiffView). */
+export interface RowState {
+  viewed: boolean;
+  /** The head blob changed since a prior content of this file was viewed. */
+  changed: boolean;
+}
 
 const BADGE_COLOR: Record<FileEntry["changeType"], string> = {
   A: "#3fb950",
@@ -41,12 +49,16 @@ function FileRow({
   entry,
   depth,
   active,
+  state,
   onSelect,
+  onToggleViewed,
 }: {
   entry: FileEntry;
   depth: number;
   active: boolean;
+  state: RowState | undefined;
   onSelect: (id: string) => void;
+  onToggleViewed: (id: string) => void;
 }) {
   const ref = useRef<HTMLButtonElement>(null);
   // Auto-reveal: when the scroll makes this the active file, bring its row
@@ -57,29 +69,46 @@ function FileRow({
     }
   }, [active]);
   return (
-    <button
-      className="tree-file-row"
-      onClick={() => onSelect(entry.id)}
-      ref={ref}
+    <div
+      className="tree-file-row-wrap"
       style={{
         background: active ? "rgba(56,139,253,0.15)" : "transparent",
         paddingLeft: `${0.5 + depth * 0.85}rem`,
       }}
-      type="button"
     >
-      <span
-        style={{
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
+      <input
+        aria-label={`Mark ${entry.path} viewed`}
+        checked={state?.viewed ?? false}
+        className="tree-viewed-check"
+        onChange={() => onToggleViewed(entry.id)}
+        type="checkbox"
+      />
+      <button
+        className="tree-file-row"
+        onClick={() => onSelect(entry.id)}
+        ref={ref}
+        style={{ opacity: state?.viewed ? 0.55 : 1 }}
+        type="button"
       >
-        {basename(entry.path)}
-      </span>
-      <Badge type={entry.changeType} />
-      <span style={{ flex: 1 }} />
-      <Counts entry={entry} />
-    </button>
+        <span
+          style={{
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {basename(entry.path)}
+        </span>
+        <Badge type={entry.changeType} />
+        <span style={{ flex: 1 }} />
+        {state?.changed ? (
+          <span className="viewed-changed" style={{ marginLeft: "0.4rem" }}>
+            changed
+          </span>
+        ) : null}
+        <Counts entry={entry} />
+      </button>
+    </div>
   );
 }
 
@@ -88,15 +117,19 @@ function Row({
   depth,
   collapsed,
   activeId,
+  rowStates,
   onToggle,
   onSelect,
+  onToggleViewed,
 }: {
   node: TreeNode;
   depth: number;
   collapsed: ReadonlySet<string>;
   activeId: string | undefined;
+  rowStates: ReadonlyMap<string, RowState>;
   onToggle: (path: string) => void;
   onSelect: (id: string) => void;
+  onToggleViewed: (id: string) => void;
 }) {
   if (node.kind === "file") {
     return (
@@ -105,6 +138,8 @@ function Row({
         depth={depth}
         entry={node.entry}
         onSelect={onSelect}
+        onToggleViewed={onToggleViewed}
+        state={rowStates.get(node.entry.id)}
       />
     );
   }
@@ -129,9 +164,57 @@ function Row({
             node={child}
             onSelect={onSelect}
             onToggle={onToggle}
+            onToggleViewed={onToggleViewed}
+            rowStates={rowStates}
           />
         ))}
     </>
+  );
+}
+
+/** A toggle button for one tree quick filter (unviewed-only, has-findings). */
+function QuickFilter({
+  label,
+  active,
+  onToggle,
+}: {
+  label: string;
+  active: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      aria-pressed={active}
+      className={active ? "quick-filter is-active" : "quick-filter"}
+      onClick={onToggle}
+      type="button"
+    >
+      {label}
+    </button>
+  );
+}
+
+/** The review-progress read-out: viewed / total files plus a thin bar. */
+function Progress({ viewed, total }: { viewed: number; total: number }) {
+  const pct = total === 0 ? 0 : Math.round((viewed / total) * 100);
+  return (
+    <div className="viewed-progress">
+      <div
+        style={{
+          display: "flex",
+          fontVariantNumeric: "tabular-nums",
+          justifyContent: "space-between",
+        }}
+      >
+        <span>Review progress</span>
+        <span>
+          {viewed} / {total} viewed
+        </span>
+      </div>
+      <div className="viewed-bar">
+        <div className="viewed-bar-fill" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
   );
 }
 
@@ -142,11 +225,18 @@ export function FileTree({
   order,
   split,
   collapsed,
+  rowStates,
+  progress,
+  unviewedOnly,
+  findingsOnly,
   onFilterChange,
   onOrderChange,
   onSplitChange,
   onToggleDir,
   onSelect,
+  onToggleViewed,
+  onUnviewedOnlyChange,
+  onFindingsOnlyChange,
   onJump,
 }: {
   nodes: TreeNode[];
@@ -155,11 +245,18 @@ export function FileTree({
   order: FileOrder;
   split: boolean;
   collapsed: ReadonlySet<string>;
+  rowStates: ReadonlyMap<string, RowState>;
+  progress: { viewed: number; total: number };
+  unviewedOnly: boolean;
+  findingsOnly: boolean;
   onFilterChange: (value: string) => void;
   onOrderChange: (order: FileOrder) => void;
   onSplitChange: (split: boolean) => void;
   onToggleDir: (path: string) => void;
   onSelect: (id: string) => void;
+  onToggleViewed: (id: string) => void;
+  onUnviewedOnlyChange: (value: boolean) => void;
+  onFindingsOnlyChange: (value: boolean) => void;
   onJump: (kind: "file" | "change", direction: 1 | -1) => void;
 }) {
   return (
@@ -182,6 +279,7 @@ export function FileTree({
           padding: "0.5rem",
         }}
       >
+        <Progress total={progress.total} viewed={progress.viewed} />
         <input
           onChange={(event) => onFilterChange(event.target.value)}
           placeholder="Filter files…"
@@ -196,6 +294,18 @@ export function FileTree({
           type="search"
           value={filter}
         />
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem" }}>
+          <QuickFilter
+            active={unviewedOnly}
+            label="Unviewed"
+            onToggle={() => onUnviewedOnlyChange(!unviewedOnly)}
+          />
+          <QuickFilter
+            active={findingsOnly}
+            label="Has findings"
+            onToggle={() => onFindingsOnlyChange(!findingsOnly)}
+          />
+        </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem" }}>
           <button onClick={() => onOrderChange(order === "size" ? "path" : "size")} type="button">
             {order === "size" ? "Sort: size" : "Sort: path"}
@@ -231,6 +341,8 @@ export function FileTree({
               node={node}
               onSelect={onSelect}
               onToggle={onToggleDir}
+              onToggleViewed={onToggleViewed}
+              rowStates={rowStates}
             />
           ))
         )}

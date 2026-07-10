@@ -2,12 +2,17 @@ import { Schema } from "effect";
 import { useEffect, useRef, useState } from "react";
 import { Change, DiffError } from "../shared/change.ts";
 import { DossierSnapshot } from "../shared/dossier.ts";
+import type { FindingEntry, ViewedEvent } from "../shared/dossier.ts";
 import type { PendingRange } from "../shared/pending.ts";
 import { Pending } from "../shared/pending.ts";
 import { fetchPendingExpandedFileDiff, isPendingExpandable } from "./blobs.ts";
 import type { DiffViewHandle } from "./diff-view.tsx";
 import { DiffView } from "./diff-view.tsx";
 import { FindingsPanel } from "./findings-panel.tsx";
+
+// Stable empties so the pre-snapshot render doesn't churn DiffView's effects.
+const NO_VIEWED: readonly ViewedEvent[] = [];
+const NO_FINDINGS: readonly FindingEntry[] = [];
 
 // Sync decode boundary: the fetch handlers below own the try/catch.
 const decodeChange = Schema.decodeUnknownSync(Change);
@@ -155,8 +160,20 @@ function ChangeSelector({
   );
 }
 
-/** The committed-Change body: loading / error / empty / the rendered diff. */
-function ChangeBody({ state, diffRef }: { state: LoadState; diffRef: React.Ref<DiffViewHandle> }) {
+/**
+ * The committed-Change body: loading / error / empty / the rendered diff. This
+ * is the mark-as-viewed surface — the Dossier's viewed events and findings fold
+ * into the diff here (Pending is a read-only preview, so it carries neither).
+ */
+function ChangeBody({
+  state,
+  dossier,
+  diffRef,
+}: {
+  state: LoadState;
+  dossier: DossierSnapshot | null;
+  diffRef: React.Ref<DiffViewHandle>;
+}) {
   if (state.kind === "loading") {
     return <Notice>Loading diff…</Notice>;
   }
@@ -171,7 +188,14 @@ function ChangeBody({ state, diffRef }: { state: LoadState; diffRef: React.Ref<D
       </Notice>
     );
   }
-  return <DiffView patch={change.patch} ref={diffRef} />;
+  return (
+    <DiffView
+      findings={dossier?.findings ?? NO_FINDINGS}
+      patch={change.patch}
+      ref={diffRef}
+      viewed={dossier?.viewed ?? NO_VIEWED}
+    />
+  );
 }
 
 /** The Pending body: the working-tree preview, with worktree-sourced expansion. */
@@ -188,9 +212,11 @@ function PendingBody({
   return (
     <DiffView
       expandFile={fetchPendingExpandedFileDiff}
+      findings={NO_FINDINGS}
       isFileExpandable={isPendingExpandable}
       patch={pending.patch}
       ref={diffRef}
+      viewed={NO_VIEWED}
     />
   );
 }
@@ -293,7 +319,7 @@ export function App() {
           {effective === "pending" && pending ? (
             <PendingBody diffRef={diffRef} pending={pending} />
           ) : (
-            <ChangeBody diffRef={diffRef} state={change} />
+            <ChangeBody diffRef={diffRef} dossier={dossier} state={change} />
           )}
         </div>
         {dossier ? (

@@ -1,10 +1,13 @@
-import type { CodeViewItem, FileDiffMetadata } from "@pierre/diffs";
+import type { CodeViewDiffItem, CodeViewItem, FileDiffMetadata } from "@pierre/diffs";
 import { processPatch } from "@pierre/diffs";
 import type { CodeViewHandle } from "@pierre/diffs/react";
 import { CodeView, WorkerPoolContextProvider } from "@pierre/diffs/react";
+import { sift } from "radashi";
 import { useEffect, useImperativeHandle, useRef, useState } from "react";
+import type { FindingEntry, ViewedEvent } from "../shared/dossier.ts";
 import { fetchExpandedFileDiff, isExpandable } from "./blobs.ts";
 import { FileTree } from "./file-tree.tsx";
+import type { RowState } from "./file-tree.tsx";
 import {
   buildTree,
   changeAnchors,
@@ -15,7 +18,8 @@ import {
   stepChange,
   stepFile,
 } from "./nav.ts";
-import type { FileOrder } from "./nav.ts";
+import type { FileEntry, FileOrder } from "./nav.ts";
+import { computeViewed, viewedStateFor } from "./viewed.ts";
 
 const themes = { dark: "github-dark", light: "github-light" } as const;
 
@@ -59,9 +63,138 @@ export interface DiffViewHandle {
 }
 
 /**
+ * The sticky file-header metadata (diff-review.md §3): the "changed since
+ * viewed" flag, the context-expansion affordance for a both-sided partial file,
+ * and the manual Viewed checkbox that collapses the body when checked.
+ */
+function HeaderMetadata({
+  item,
+  row,
+  busy,
+  isFileExpandable,
+  onToggleViewed,
+  onExpandContext,
+}: {
+  item: CodeViewDiffItem;
+  row: RowState | undefined;
+  busy: boolean;
+  isFileExpandable: (fileDiff: FileDiffMetadata) => boolean;
+  onToggleViewed: (id: string) => void;
+  onExpandContext: (id: string, fileDiff: FileDiffMetadata) => void;
+}) {
+  return (
+    <span style={{ alignItems: "center", display: "inline-flex", gap: "0.6rem" }}>
+      {row?.changed ? <span className="viewed-changed">changed since viewed</span> : null}
+      {isFileExpandable(item.fileDiff) ? (
+        <button
+          className="expand-context"
+          disabled={busy}
+          onClick={() => onExpandContext(item.id, item.fileDiff)}
+          type="button"
+        >
+          {busy ? "Expanding…" : "Expand context"}
+        </button>
+      ) : null}
+      <label className="viewed-toggle">
+        <input
+          checked={row?.viewed ?? false}
+          onChange={() => onToggleViewed(item.id)}
+          type="checkbox"
+        />
+        Viewed
+      </label>
+    </span>
+  );
+}
+
+/** Post a mark-as-viewed toggle, throwing on a non-2xx so the caller can roll back. */
+async function postViewed(entry: FileEntry): Promise<void> {
+  const res = await fetch("/api/viewed", {
+    body: JSON.stringify({ blobSha: entry.blobSha, path: entry.path }),
+    headers: { "content-type": "application/json" },
+    method: "POST",
+  });
+  if (!res.ok) {
+    throw new Error(`POST /api/viewed failed: HTTP ${res.status}`);
+  }
+}
+
+/**
+ * The right-hand diff pane: the whole-branch diff rendered as one continuous
+ * virtualized cross-file scroll. Split out of DiffView so the tab's model/nav
+ * logic and the renderer plumbing stay separately legible; all state still lives
+ * in DiffView and reaches here as props.
+ */
+function DiffScroll({
+  codeRef,
+  expanding,
+  isFileExpandable,
+  items,
+  onExpandContext,
+  onScroll,
+  onToggleViewed,
+  rowStates,
+  split,
+}: {
+  codeRef: React.RefObject<CodeViewHandle<undefined> | null>;
+  expanding: ReadonlySet<string>;
+  isFileExpandable: (fileDiff: FileDiffMetadata) => boolean;
+  items: CodeViewItem[];
+  onExpandContext: (id: string, fileDiff: FileDiffMetadata) => void;
+  onScroll: (
+    scrollTop: number,
+    viewer: NonNullable<ReturnType<CodeViewHandle<undefined>["getInstance"]>>,
+  ) => void;
+  onToggleViewed: (id: string) => void;
+  rowStates: Map<string, { viewed: boolean; changed: boolean }>;
+  split: "unified" | "split";
+}) {
+  return (
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <WorkerPoolContextProvider
+        highlighterOptions={{ theme: themes, useTokenTransformer: true }}
+        poolOptions={{
+          poolSize: Math.min(8, navigator.hardwareConcurrency || 4),
+          workerFactory,
+        }}
+      >
+        <CodeView
+          items={items}
+          onScroll={onScroll}
+          options={{ diffStyle: split, stickyHeaders: true, theme: themes }}
+          ref={codeRef}
+          renderHeaderMetadata={(item) =>
+            item.type === "diff" ? (
+              <HeaderMetadata
+                busy={expanding.has(item.id)}
+                isFileExpandable={isFileExpandable}
+                item={item}
+                onExpandContext={onExpandContext}
+                onToggleViewed={onToggleViewed}
+                row={rowStates.get(item.id)}
+              />
+            ) : null
+          }
+          // CodeView must be its own scroll container: its virtualizer reads
+          // this element's scrollTop, not an ancestor's. An outer scrolling
+          // wrapper breaks both scrolling and virtualization.
+          style={{ height: "100%", overflow: "auto" }}
+        />
+      </WorkerPoolContextProvider>
+    </div>
+  );
+}
+
+/**
  * The Diff tab: the compact-folder navigation tree beside the whole branch
  * diff rendered as one continuous virtualized cross-file scroll. The tree and
  * the scroll share a single ordered file model, so position stays in sync.
+ *
+ * Mark-as-viewed (diff-review.md §3) rides on that same model: each file's
+ * head-blob SHA folds the Dossier's append-only viewed events into per-file
+ * viewed state, which collapses the file body, checks the tree row, and drives
+ * the progress read-model. Toggling posts an event and optimistically overlays
+ * the fold until the SSE snapshot catches up.
  *
  * Context expansion is pluggable so the same surface renders both a committed
  * Change (both sides from `/api/blob/:sha`) and the Pending working-tree preview
@@ -69,16 +202,22 @@ export interface DiffViewHandle {
  */
 export function DiffView({
   patch,
+  viewed,
+  findings,
   ref,
   expandFile = fetchExpandedFileDiff,
   isFileExpandable = isExpandable,
 }: {
   patch: string;
+  viewed: readonly ViewedEvent[];
+  findings: readonly FindingEntry[];
   ref?: React.Ref<DiffViewHandle>;
   expandFile?: (fileDiff: FileDiffMetadata) => Promise<FileDiffMetadata>;
   isFileExpandable?: (fileDiff: FileDiffMetadata) => boolean;
 }) {
   const [filter, setFilter] = useState("");
+  const [unviewedOnly, setUnviewedOnly] = useState(false);
+  const [findingsOnly, setFindingsOnly] = useState(false);
   const [order, setOrder] = usePersisted<FileOrder>("docent:fileOrder", "path", (raw) =>
     raw === "size" || raw === "path" ? raw : undefined,
   );
@@ -89,6 +228,15 @@ export function DiffView({
   );
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [activeId, setActiveId] = useState<string | undefined>();
+  // Optimistic viewed overrides, keyed by file id and stamped with the head
+  // blob the toggle asserted against, so the checkbox and collapse respond
+  // instantly ahead of the watch → SSE → re-fetch round trip. Blob-stamping
+  // makes the override self-invalidating: once a new Change gives the file a
+  // different head blob, the stamp no longer matches and the fold's cleared /
+  // changed-since-viewed state shows through — no reconcile pass needed.
+  const [viewedOverlay, setViewedOverlay] = useState<
+    ReadonlyMap<string, { viewed: boolean; blobSha: string }>
+  >(new Map());
   // Files whose full base/head blobs have been lazily fetched, keyed by item
   // id. A present entry is a non-partial diff that the renderer can expand;
   // `expanding` holds ids with a fetch in flight so the affordance can't
@@ -98,22 +246,86 @@ export function DiffView({
 
   const codeRef = useRef<CodeViewHandle<undefined>>(null);
 
-  // The single ordered file model both surfaces read from. Filtering rebuilds
-  // the tree; flattening it is the scroll order, so the two always agree.
-  // React Compiler memoizes these derivations, so no manual useMemo is needed.
-  const sorted = sortEntries(parseFiles(patch), order);
-  const visible = filterEntries(sorted, filter);
+  // The single ordered file model both surfaces read from. `allEntries` is every
+  // file in the Change (the viewed read-model and progress span all of them);
+  // filtering narrows what the tree and scroll show. React Compiler memoizes
+  // these derivations, so no manual useMemo is needed.
+  const allEntries = sortEntries(parseFiles(patch), order);
+  const entryById = new Map(allEntries.map((entry) => [entry.id, entry]));
+  const model = computeViewed(viewed, allEntries);
+  // Anchored files, from the finding fold — the has-findings quick filter.
+  const findingPaths = new Set(sift(findings.map((finding) => finding.anchorFile)));
+
+  function isViewed(id: string): boolean {
+    const override = viewedOverlay.get(id);
+    if (override !== undefined && override.blobSha === entryById.get(id)?.blobSha) {
+      return override.viewed;
+    }
+    return viewedStateFor(model, id).viewed;
+  }
+
+  // Substring filter first (nav's own), then the viewed / findings quick
+  // filters. Filtering both the tree and the scroll keeps them in agreement.
+  const visible = filterEntries(allEntries, filter).filter((entry) => {
+    if (unviewedOnly && isViewed(entry.id)) {
+      return false;
+    }
+    if (findingsOnly && !findingPaths.has(entry.path)) {
+      return false;
+    }
+    return true;
+  });
   const tree = buildTree(visible);
   const entries = flattenFiles(tree);
   const anchors = changeAnchors(entries);
 
+  // Per-row viewed state for the tree, spanning every file (rows for hidden
+  // files are simply never rendered). `changed` shows only while unviewed.
+  const rowStates = new Map<string, { viewed: boolean; changed: boolean }>(
+    allEntries.map((entry) => {
+      const state = viewedStateFor(model, entry.id);
+      const viewedNow = isViewed(entry.id);
+      return [entry.id, { changed: state.changedSinceViewed && !viewedNow, viewed: viewedNow }];
+    }),
+  );
+  const viewedCount = allEntries.reduce((total, entry) => total + (isViewed(entry.id) ? 1 : 0), 0);
+
   const byName = new Map(processPatch(patch).files.map((f, i) => [`${f.name}#${i}`, f]));
   // The lazily-fetched full diff wins over the patch-only one, so an expanded
-  // file renders with context available.
+  // file renders with context available. A viewed file collapses its body; the
+  // version encodes both axes so CodeView re-renders the item on either change.
   const items: CodeViewItem[] = entries.flatMap((entry) => {
     const fileDiff = expanded.get(entry.id) ?? byName.get(entry.id);
-    return fileDiff ? [{ fileDiff, id: entry.id, type: "diff" as const }] : [];
+    if (!fileDiff) {
+      return [];
+    }
+    const collapsedBody = isViewed(entry.id);
+    // CodeView only re-renders an item when its version changes, so give each
+    // (expanded, collapsed) combination a distinct version number.
+    const expandedStep = expanded.has(entry.id) ? 1 : 0;
+    const collapsedStep = collapsedBody ? 2 : 0;
+    const version = expandedStep + collapsedStep;
+    return [{ collapsed: collapsedBody, fileDiff, id: entry.id, type: "diff" as const, version }];
   });
+
+  function toggleViewed(id: string) {
+    const entry = entryById.get(id);
+    if (entry === undefined) {
+      return;
+    }
+
+    const next = !isViewed(id);
+    setViewedOverlay((prev) => new Map(prev).set(id, { blobSha: entry.blobSha, viewed: next }));
+    void postViewed(entry).catch(() => {
+      // The write failed, so nothing persisted: drop the override and let the
+      // checkbox fall back to the fold rather than lie about a saved toggle.
+      setViewedOverlay((prev) => {
+        const rolledBack = new Map(prev);
+        rolledBack.delete(id);
+        return rolledBack;
+      });
+    });
+  }
 
   function scrollToId(id: string) {
     codeRef.current?.scrollTo({ behavior: "smooth", id, type: "item" });
@@ -208,23 +420,6 @@ export function DiffView({
       });
   }
 
-  function renderExpandContext(item: CodeViewItem) {
-    if (item.type !== "diff" || !isFileExpandable(item.fileDiff)) {
-      return null;
-    }
-    const busy = expanding.has(item.id);
-    return (
-      <button
-        className="expand-context"
-        disabled={busy}
-        onClick={() => expandContext(item.id, item.fileDiff)}
-        type="button"
-      >
-        {busy ? "Expanding…" : "Expand context"}
-      </button>
-    );
-  }
-
   function toggleDir(path: string) {
     setCollapsed((prev) => {
       const next = new Set(prev);
@@ -266,37 +461,34 @@ export function DiffView({
         activeId={activeId}
         collapsed={collapsed}
         filter={filter}
+        findingsOnly={findingsOnly}
         nodes={tree}
         onFilterChange={setFilter}
+        onFindingsOnlyChange={setFindingsOnly}
         onJump={jump}
         onOrderChange={setOrder}
         onSelect={scrollToId}
         onSplitChange={(next) => setSplit(next ? "split" : "unified")}
         onToggleDir={toggleDir}
+        onToggleViewed={toggleViewed}
+        onUnviewedOnlyChange={setUnviewedOnly}
         order={order}
+        progress={{ total: allEntries.length, viewed: viewedCount }}
+        rowStates={rowStates}
         split={split === "split"}
+        unviewedOnly={unviewedOnly}
       />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <WorkerPoolContextProvider
-          highlighterOptions={{ theme: themes, useTokenTransformer: true }}
-          poolOptions={{
-            poolSize: Math.min(8, navigator.hardwareConcurrency || 4),
-            workerFactory,
-          }}
-        >
-          <CodeView
-            items={items}
-            onScroll={handleScroll}
-            options={{ diffStyle: split, stickyHeaders: true, theme: themes }}
-            ref={codeRef}
-            renderHeaderMetadata={renderExpandContext}
-            // CodeView must be its own scroll container: its virtualizer reads
-            // this element's scrollTop, not an ancestor's. An outer scrolling
-            // wrapper breaks both scrolling and virtualization.
-            style={{ height: "100%", overflow: "auto" }}
-          />
-        </WorkerPoolContextProvider>
-      </div>
+      <DiffScroll
+        codeRef={codeRef}
+        expanding={expanding}
+        isFileExpandable={isFileExpandable}
+        items={items}
+        onExpandContext={expandContext}
+        onScroll={handleScroll}
+        onToggleViewed={toggleViewed}
+        rowStates={rowStates}
+        split={split}
+      />
     </div>
   );
 }

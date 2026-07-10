@@ -44,13 +44,29 @@ export class ViewedEvent extends Schema.Class<ViewedEvent>("ViewedEvent")({
 }) {}
 
 /**
- * A Finding as walked in this slice: its record-dir id plus its append-only
- * records, each parsed from a `NNN-<type>.md` file (frontmatter envelope over a
- * markdown body). Records are carried whole — folding them into
- * anchor/what's-next/participants is a pure client-side read (see
- * `foldFinding`), so the panel and future agent surfaces share one derivation.
+ * The `POST /api/viewed` request body: the file the reviewer toggled and its
+ * head-blob SHA. The server stamps `ts` and appends the `{path, blobSha, ts}`
+ * event — the client never authors the timestamp.
+ */
+export class ViewedRequest extends Schema.Class<ViewedRequest>("ViewedRequest")({
+  blobSha: Schema.String,
+  path: Schema.String,
+}) {}
+
+/**
+ * A Finding as walked in this slice: its record-dir id, its append-only records
+ * (each parsed from a `NNN-<type>.md` file — a frontmatter envelope over a
+ * markdown body), and a light fold of the root record's anchored file. Records
+ * are carried whole — folding them into anchor/what's-next/participants is a
+ * pure client-side read (see `foldFinding`), so the panel and future agent
+ * surfaces share one derivation. On top of that, we lift the anchored file of
+ * the `line`/`file` code arms so the Diff tab's has-findings tree filter can key
+ * on it (diff-review.md §2). Best-effort: an unparseable anchor just omits the
+ * field.
  */
 export class FindingEntry extends Schema.Class<FindingEntry>("FindingEntry")({
+  /** The root anchor's file path — present only for `line`/`file` code arms. */
+  anchorFile: Schema.optional(Schema.String),
   id: Schema.String,
   records: Schema.Array(FindingRecord),
 }) {}

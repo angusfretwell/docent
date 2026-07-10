@@ -19,6 +19,7 @@ import {
   ViewedEvent,
   WalkthroughEntry,
 } from "../shared/dossier.ts";
+import type { ViewedRequest } from "../shared/dossier.ts";
 import { FindingRecord, RECORD_TYPES } from "../shared/finding.ts";
 
 const STATE_ROOT = ".docent";
@@ -31,8 +32,12 @@ export function branchSlug(branch: string): string {
 
 const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
-/** A ULID-shaped opaque id: 10 time chars + 16 random chars, Crockford base32. */
-const makeDossierId = Effect.fn("makeDossierId")(function* makeDossierId() {
+/**
+ * A ULID-shaped opaque id under `prefix`: `<prefix>_` + 10 time chars + 16
+ * random chars, Crockford base32. The time head keeps ids lexically sortable by
+ * mint order — which is also the append-only `viewed/` file order.
+ */
+const makeId = Effect.fn("makeId")(function* makeId(prefix: string) {
   const now = yield* Clock.currentTimeMillis;
   let time = now;
   let head = "";
@@ -46,7 +51,7 @@ const makeDossierId = Effect.fn("makeDossierId")(function* makeDossierId() {
   for (const byte of bytes) {
     tail += CROCKFORD.charAt(byte % 32);
   }
-  return `dsr_${head}${tail}`;
+  return `${prefix}_${head}${tail}`;
 });
 
 /** Decode a JSON file against a schema; `None` on any read/parse/decode failure. */
@@ -92,7 +97,7 @@ const ensureDossier = Effect.fn("ensureDossier")(function* ensureDossier(params:
     return existing.value;
   }
 
-  const id = yield* makeDossierId();
+  const id = yield* makeId("dsr");
   const dossier = Dossier.make({
     base: params.base,
     branch: params.branch,
@@ -146,7 +151,44 @@ const readFindingRecord = Effect.fn("readFindingRecord")(function* readFindingRe
   });
 }, Effect.option);
 
-/** Walk one finding's directory, parsing each record and skipping malformed ones. */
+const ANCHOR_FILE = /\bfile:\s*(?<file>[^,}\n]+)/;
+const SURROUNDING_QUOTES = /^["']|["']$/g;
+
+/**
+ * Lift the anchored `file` of a Finding root record, best-effort. The anchor is
+ * an inline flow map in the frontmatter (data-model.md §5.3), e.g.
+ * `anchor: { kind: line, file: src/app.ts, side: head, ... }`. Only the `line`/
+ * `file` code arms carry a `file`; every other arm (or an unparseable record)
+ * yields no `anchorFile`. This is deliberately a lightweight extractor, not a
+ * YAML parse — the full record fold belongs to the Findings panel.
+ */
+export function parseAnchor(markdown: string): { anchorFile?: string } {
+  const frontmatter = FRONTMATTER.exec(markdown)?.groups?.frontmatter;
+  if (frontmatter === undefined) {
+    return {};
+  }
+  const start = frontmatter.indexOf("anchor:");
+  if (start === -1) {
+    return {};
+  }
+  // Bound the scan to the anchor's own flow map so a later key can't leak in.
+  const rest = frontmatter.slice(start);
+  const close = rest.indexOf("}");
+  const scope = close === -1 ? (rest.split("\n")[0] ?? rest) : rest.slice(0, close + 1);
+
+  const rawFile = ANCHOR_FILE.exec(scope)?.groups?.file?.trim();
+  const file = rawFile?.replaceAll(SURROUNDING_QUOTES, "");
+  return file ? { anchorFile: file } : {};
+}
+
+/** Read and parse a finding root record's anchor; empty on any read failure. */
+const readAnchor = Effect.fn("readAnchor")(function* readAnchor(file: string) {
+  const fs = yield* FileSystem;
+  const text = yield* fs.readFileString(file).pipe(Effect.orElseSucceed(() => ""));
+  return parseAnchor(text);
+});
+
+/** Walk one finding's directory, parsing each record and folding its anchor. */
 const readFinding = Effect.fn("readFinding")(function* readFinding(dir: string, id: string) {
   const path = yield* Path;
   const names = (yield* listDir(path.join(dir, id)))
@@ -157,7 +199,10 @@ const readFinding = Effect.fn("readFinding")(function* readFinding(dir: string, 
     (name) => readFindingRecord(path.join(dir, id, name), name),
     { concurrency: "unbounded" },
   );
-  return FindingEntry.make({ id, records: somes(parsed) });
+  // The root record carries the anchor: the `*-open.md`, else the first record.
+  const root = names.find((name) => name.endsWith("-open.md")) ?? names[0];
+  const anchor = root === undefined ? {} : yield* readAnchor(path.join(dir, id, root));
+  return FindingEntry.make({ id, records: somes(parsed), ...anchor });
 });
 
 const readFindings = Effect.fn("readFindings")(function* readFindings(dossierDir: string) {
@@ -236,6 +281,44 @@ export const readDossierSnapshot = Effect.fn("readDossierSnapshot")(
       viewed,
       walkthroughs,
     });
+  },
+);
+
+/**
+ * Append one mark-as-viewed event to the Dossier's `viewed/` directory
+ * (data-model.md §8). Directory-of-files, append-only: every toggle is a new
+ * `vew_*.json`, never a rewrite — so there is no lock and no read-modify-write.
+ * The server stamps `ts`; the Dossier auto-creates on first use so the very
+ * first mark has a home. The write trips the `.docent/` watch, which re-pushes
+ * the snapshot over SSE — the client's viewed state and progress refresh live.
+ */
+export const appendViewedEvent = Effect.fn("appendViewedEvent")(
+  function* appendViewedEvent(params: {
+    root: string;
+    branch: string;
+    base: string;
+    request: ViewedRequest;
+  }) {
+    const fs = yield* FileSystem;
+    const path = yield* Path;
+    const dossierDir = path.join(params.root, STATE_ROOT, "dossiers", branchSlug(params.branch));
+    yield* ensureDossier({ base: params.base, branch: params.branch, dossierDir });
+
+    const viewedDir = path.join(dossierDir, "viewed");
+    yield* fs.makeDirectory(viewedDir, { recursive: true });
+
+    const now = yield* Clock.currentTimeMillis;
+    const event = ViewedEvent.make({
+      blobSha: params.request.blobSha,
+      path: params.request.path,
+      ts: new Date(now).toISOString(),
+    });
+    const id = yield* makeId("vew");
+    yield* fs.writeFileString(
+      path.join(viewedDir, `${id}.json`),
+      `${JSON.stringify(event, null, 2)}\n`,
+    );
+    return event;
   },
 );
 

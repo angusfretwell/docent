@@ -23,6 +23,7 @@ const UNTRACKED = "?? ";
 // (and don't trip the no-duplicate-string lint).
 const DIFF = "diff";
 const NO_COLOR = "--no-color";
+const FULL_INDEX = "--full-index";
 const FIND_RENAMES = "--find-renames";
 
 // Keep every git read inert: `GIT_OPTIONAL_LOCKS=0` stops git from taking the
@@ -211,8 +212,14 @@ export const resolveChange = Effect.fn("resolveChange")(function* resolveChange(
   const { root, branch, defaultBranch } = yield* resolveRepo(cwd);
   const headSha = yield* git(root, ["rev-parse", "HEAD"]);
   const baseSha = yield* git(root, ["merge-base", defaultBranch.ref, "HEAD"]);
+  // `--full-index` emits the full blob object ids on each index line. The Diff
+  // tab keys mark-as-viewed on the head-blob SHA (diff-review.md §3); an
+  // abbreviated id's length grows with the repo, so a full id is what stays
+  // byte-comparable across Changes.
   const patch =
-    baseSha === headSha ? "" : yield* git(root, [DIFF, NO_COLOR, FIND_RENAMES, baseSha, headSha]);
+    baseSha === headSha
+      ? ""
+      : yield* git(root, [DIFF, NO_COLOR, FULL_INDEX, FIND_RENAMES, baseSha, headSha]);
   return Change.make({
     baseSha,
     branch,

@@ -3,7 +3,14 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { BunServices } from "@effect/platform-bun";
 import { ManagedRuntime } from "effect";
-import { branchSlug, ensureGitignore, readDossierSnapshot } from "./dossier.ts";
+import { ViewedRequest } from "../shared/dossier.ts";
+import {
+  appendViewedEvent,
+  branchSlug,
+  ensureGitignore,
+  parseAnchor,
+  readDossierSnapshot,
+} from "./dossier.ts";
 import { cleanupScratchDirs, scratchDir } from "./test-fixtures.ts";
 
 const runtime = ManagedRuntime.make(BunServices.layer);
@@ -162,6 +169,30 @@ describe("readDossierSnapshot", () => {
     ]);
   });
 
+  test("folds the root record's anchored file for the has-findings filter", async () => {
+    const root = scratchDir("docent-dossier-");
+    await snapshot(root, "feature");
+    const fndDir = path.join(root, ".docent", "dossiers", "feature", "findings", "fnd_ANCHORED");
+    mkdirSync(fndDir, { recursive: true });
+    writeFileSync(
+      path.join(fndDir, "001-open.md"),
+      `---
+schema: docent/finding@3
+anchor: { kind: line, file: src/parser/stream.ts, side: head, blobSha: 9c2a1f0, lines: [42, 47] }
+---
+
+body
+`,
+    );
+
+    const snap = await snapshot(root, "feature");
+
+    expect(snap.findings[0]).toMatchObject({
+      anchorFile: "src/parser/stream.ts",
+      id: "fnd_ANCHORED",
+    });
+  });
+
   test("degrades gracefully: a malformed record is skipped, its finding survives", async () => {
     const root = scratchDir("docent-dossier-");
     await snapshot(root, "feature");
@@ -234,6 +265,73 @@ describe("readDossierSnapshot", () => {
       throw new Error("expected a finding");
     }
     expect(finding.records.map((record) => record.type)).toEqual(["reply"]);
+  });
+});
+
+describe("parseAnchor", () => {
+  test("lifts the file from a line-arm anchor", () => {
+    const md = "---\nanchor: { kind: line, file: src/app.ts, side: head, lines: [1, 2] }\n---\n";
+
+    expect(parseAnchor(md)).toEqual({ anchorFile: "src/app.ts" });
+  });
+
+  test("a change-arm anchor has no file", () => {
+    expect(parseAnchor("---\nanchor: { kind: change }\n---\n")).toEqual({});
+  });
+
+  test("no frontmatter or no anchor yields empty", () => {
+    expect(parseAnchor("just a body")).toEqual({});
+    expect(parseAnchor("---\nschema: docent/finding@3\n---\nbody")).toEqual({});
+  });
+
+  test("does not leak a file key from beyond the anchor object", () => {
+    const md = "---\nanchor: { kind: change }\nother: { file: nope.ts }\n---\n";
+
+    expect(parseAnchor(md)).toEqual({});
+  });
+});
+
+describe("appendViewedEvent", () => {
+  function mark(root: string, branch: string, filePath: string, blobSha: string) {
+    return runtime.runPromise(
+      appendViewedEvent({
+        base: "main",
+        branch,
+        request: ViewedRequest.make({ blobSha, path: filePath }),
+        root,
+      }),
+    );
+  }
+
+  test("writes a {path, blobSha, ts} event that the snapshot reads back", async () => {
+    const root = scratchDir("docent-dossier-");
+
+    const event = await mark(root, "feature", "src/app.ts", "9c2a1f0");
+
+    expect(event.path).toBe("src/app.ts");
+    expect(event.blobSha).toBe("9c2a1f0");
+    expect(event.ts).not.toBe("");
+    const snap = await snapshot(root, "feature");
+    expect(snap.viewed).toEqual([{ blobSha: "9c2a1f0", path: "src/app.ts", ts: event.ts }]);
+  });
+
+  test("is append-only: a re-mark adds a second event (parity toggle)", async () => {
+    const root = scratchDir("docent-dossier-");
+
+    await mark(root, "feature", "src/app.ts", "9c2a1f0");
+    await mark(root, "feature", "src/app.ts", "9c2a1f0");
+
+    const snap = await snapshot(root, "feature");
+    const forFile = snap.viewed.filter((event) => event.path === "src/app.ts");
+    expect(forFile).toHaveLength(2);
+  });
+
+  test("auto-creates the Dossier so the first mark has a home", async () => {
+    const root = scratchDir("docent-dossier-");
+
+    await mark(root, "fresh", "a.ts", "aaa");
+
+    expect(existsSync(path.join(root, ".docent", "dossiers", "fresh", "dossier.json"))).toBe(true);
   });
 });
 

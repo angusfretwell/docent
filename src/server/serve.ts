@@ -13,11 +13,17 @@
 
 import { BunHttpServer } from "@effect/platform-bun";
 import { Effect, Layer, Stream } from "effect";
-import { HttpRouter, HttpServer, HttpServerResponse } from "effect/unstable/http";
+import {
+  HttpRouter,
+  HttpServer,
+  HttpServerRequest,
+  HttpServerResponse,
+} from "effect/unstable/http";
 import { lookupAsset } from "../client/assets.ts";
 import type { ClientAssets } from "../client/assets.ts";
+import { ViewedRequest } from "../shared/dossier.ts";
 import type { PendingRange } from "../shared/pending.ts";
-import { readDossierSnapshot } from "./dossier.ts";
+import { appendViewedEvent, readDossierSnapshot } from "./dossier.ts";
 import {
   resolveBlob,
   resolveChange,
@@ -190,6 +196,38 @@ function dossierRoute(cwd: string) {
   );
 }
 
+/**
+ * `POST /api/viewed` — append one mark-as-viewed toggle to the active Dossier's
+ * `viewed/` log (diff-review.md §3). The body is `{ path, blobSha }`; the server
+ * stamps the timestamp and writes the event, then the `.docent/` watch re-pushes
+ * the snapshot over SSE so every client's progress refreshes. A malformed body
+ * 400s; a git/write failure 500s. Returns the stored event.
+ */
+function viewedRoute(cwd: string) {
+  return HttpRouter.add(
+    "POST",
+    "/api/viewed",
+    Effect.gen(function* postViewed() {
+      const request = yield* HttpServerRequest.schemaBodyJson(ViewedRequest);
+      const repo = yield* resolveRepo(cwd);
+      const event = yield* appendViewedEvent({
+        base: repo.defaultBranch.name,
+        branch: repo.branch,
+        request,
+        root: repo.root,
+      });
+      return yield* HttpServerResponse.json(event);
+    }).pipe(
+      Effect.catchTag("SchemaError", (error) =>
+        Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 400 })),
+      ),
+      Effect.catch((error) =>
+        Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 500 })),
+      ),
+    ),
+  );
+}
+
 // SSE frames: an opening comment on connect, then a coarse change event per push.
 const encoder = new TextEncoder();
 function sseFrame(payload: string) {
@@ -234,6 +272,7 @@ export function layer(options: ServeOptions) {
     pendingRoute(options.cwd),
     worktreeRoute(options.cwd),
     dossierRoute(options.cwd),
+    viewedRoute(options.cwd),
     eventsRoute,
     assetRoute(options.assets),
   );
