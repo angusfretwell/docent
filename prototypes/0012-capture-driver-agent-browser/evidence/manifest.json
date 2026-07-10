@@ -1,0 +1,28 @@
+{
+  "capturedAt": "2026-07-10T07:03:24.910Z",
+  "source": "http://localhost:5599/",
+  "driver": "agent-browser 0.31.1 (system Chrome via CDP, headless, agent-driven)",
+  "rrwebEvents": 24,
+  "screenshots": [
+    {
+      "name": "01-initial",
+      "file": "01-initial.png",
+      "at": 0
+    },
+    {
+      "name": "02-password-too-short",
+      "file": "02-password-too-short.png",
+      "at": 1
+    },
+    {
+      "name": "03-valid-ready-to-submit",
+      "file": "03-valid-ready-to-submit.png",
+      "at": 2
+    },
+    {
+      "name": "04-success-toast",
+      "file": "04-success-toast.png",
+      "at": 3
+    }
+  ]
+}
