@@ -1,0 +1,13 @@
+{
+  "name": "capture-driver-agent-browser-spike",
+  "private": true,
+  "type": "module",
+  "description": "THROWAWAY spike for wayfinder #12 — evaluates agent-browser as the capture driver (vs Playwright in #5). Note the dependency list: no Playwright, no bundled browser. agent-browser drives system Chrome over CDP; rrweb is the injected/replay asset, not a driver. Delete or fold into the real capture pipeline once the driver is chosen.",
+  "scripts": {
+    "serve": "node serve.mjs",
+    "replay": "node build-replay.mjs"
+  },
+  "dependencies": {
+    "rrweb": "^2.1.0"
+  }
+}
