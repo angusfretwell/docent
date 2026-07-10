@@ -100,15 +100,16 @@ function HeaderMetadata({
   );
 }
 
-/** Post a mark-as-viewed toggle; best-effort — the SSE snapshot is the truth. */
-function postViewed(entry: FileEntry): void {
-  void fetch("/api/viewed", {
+/** Post a mark-as-viewed toggle, throwing on a non-2xx so the caller can roll back. */
+async function postViewed(entry: FileEntry): Promise<void> {
+  const res = await fetch("/api/viewed", {
     body: JSON.stringify({ blobSha: entry.blobSha, path: entry.path }),
     headers: { "content-type": "application/json" },
     method: "POST",
-  }).catch(() => {
-    // The optimistic overlay is reconciled from the next snapshot regardless.
   });
+  if (!res.ok) {
+    throw new Error(`POST /api/viewed failed: HTTP ${res.status}`);
+  }
 }
 
 /**
@@ -232,7 +233,15 @@ export function DiffView({
 
     const next = !isViewed(id);
     setViewedOverlay((prev) => new Map(prev).set(id, { blobSha: entry.blobSha, viewed: next }));
-    postViewed(entry);
+    void postViewed(entry).catch(() => {
+      // The write failed, so nothing persisted: drop the override and let the
+      // checkbox fall back to the fold rather than lie about a saved toggle.
+      setViewedOverlay((prev) => {
+        const rolledBack = new Map(prev);
+        rolledBack.delete(id);
+        return rolledBack;
+      });
+    });
   }
 
   function scrollToId(id: string) {
