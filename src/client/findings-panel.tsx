@@ -12,8 +12,8 @@ import {
   WHATS_NEXT_LABEL,
 } from "../shared/finding.ts";
 import { Composer } from "./composer.tsx";
+import { DRIFT_SIGNAL, DriftPill } from "./drift-badge.tsx";
 import type { DriftResult } from "./drift.ts";
-import { DriftPill } from "./drift-badge.tsx";
 import { FindingThread } from "./finding-thread.tsx";
 
 // The Dossier-global Findings panel (diff-review.md §7): a flat list of every
@@ -85,7 +85,7 @@ const historyStyle: React.CSSProperties = {
 // context without navigating to the birth Change.
 const bornTextStyle: React.CSSProperties = {
   background: "rgba(128,128,128,0.08)",
-  borderLeft: "2px solid rgba(224,108,32,0.5)",
+  borderLeft: `2px solid rgba(${DRIFT_SIGNAL},0.5)`,
   fontFamily: "ui-monospace, monospace",
   fontSize: "0.72rem",
   margin: "0 0.5rem",

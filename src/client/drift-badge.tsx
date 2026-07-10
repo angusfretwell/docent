@@ -9,10 +9,13 @@
 import type { DriftState } from "../shared/drift.ts";
 import { driftBadge } from "../shared/drift.ts";
 
+/** The re-check accent — shared with the panel's detached born-text rail so one restyle moves both. */
+export const DRIFT_SIGNAL = "224,108,32";
+
 const TONE_STYLE: Record<"info" | "signal" | "muted", React.CSSProperties> = {
   info: { background: "rgba(56,132,255,0.18)", color: "#4c8dff" },
   muted: { background: "rgba(128,128,128,0.18)", opacity: 0.75 },
-  signal: { background: "rgba(224,108,32,0.2)", color: "#e0863c" },
+  signal: { background: `rgba(${DRIFT_SIGNAL},0.2)`, color: "#e0863c" },
 };
 
 const baseStyle: React.CSSProperties = {

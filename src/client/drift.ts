@@ -89,6 +89,16 @@ interface ReanchorJob {
   range: [number, number];
 }
 
+// A line anchor whose current side is gone (a deletion, or the base of an add)
+// is settled outdated with no blob to re-anchor against — but its born blob is
+// still addressable, so we fetch just that to detach against its born text
+// (data-model.md §6.1: "renders against its born text, recoverable via blobSha").
+interface ExcerptJob {
+  bornSha: string;
+  id: string;
+  range: [number, number];
+}
+
 /** Line range carried straight through for a line anchor; nothing for other arms. */
 function anchorLines(anchor: Anchor): [number, number] | undefined {
   return anchor.kind === "line" ? [anchor.lines[0], anchor.lines[1]] : undefined;
@@ -97,6 +107,7 @@ function anchorLines(anchor: Anchor): [number, number] | undefined {
 function planFindings(findings: readonly FindingEntry[], files: ReadonlyMap<string, DiffFile>) {
   const base = new Map<string, DriftResult>();
   const jobs: ReanchorJob[] = [];
+  const excerpts: ExcerptJob[] = [];
   for (const finding of findings) {
     const { anchor } = foldFinding(finding.id, finding.records);
     if (anchor === undefined) {
@@ -106,15 +117,19 @@ function planFindings(findings: readonly FindingEntry[], files: ReadonlyMap<stri
     if (plan.kind === "resolved") {
       const lines = anchorLines(anchor);
       base.set(finding.id, { state: plan.state, ...(lines === undefined ? {} : { lines }) });
-    } else if (isRealObjectId(plan.bornSha) && isRealObjectId(plan.currentSha)) {
+    } else if (isRealObjectId(plan.currentSha)) {
       jobs.push({ ...plan, id: finding.id });
+    } else if (isRealObjectId(plan.bornSha)) {
+      // The current side is gone (a deletion), so the Finding is outdated — read
+      // as outdated at once, then detach against its still-addressable born text
+      // once fetched.
+      base.set(finding.id, { lines: plan.range, state: "outdated" });
+      excerpts.push({ bornSha: plan.bornSha, id: finding.id, range: plan.range });
     } else {
-      // A null-sha side (a deletion, or a base side of an add) has no blob to
-      // diff against — the anchored code is gone, so the Finding is outdated.
       base.set(finding.id, { lines: plan.range, state: "outdated" });
     }
   }
-  return { base, jobs };
+  return { base, excerpts, jobs };
 }
 
 /**
@@ -128,45 +143,57 @@ export function useDrift(params: {
   patch: string;
 }): ReadonlyMap<string, DriftResult> {
   const files = indexDiffFiles(params.patch);
-  const { base, jobs } = planFindings(params.findings, files);
+  const { base, excerpts, jobs } = planFindings(params.findings, files);
   const [resolved, setResolved] = useState<ReadonlyMap<string, DriftResult>>(new Map());
 
-  // A stable key so the fetch effect only re-runs when the set of re-anchor jobs
+  // A stable key so the fetch effect only re-runs when the set of fetch jobs
   // actually changes, not on every render.
-  const jobsKey = jobs.map((job) => `${job.id}:${job.bornSha}:${job.currentSha}`).join("|");
+  const jobsKey = [
+    ...jobs.map((job) => `r:${job.id}:${job.bornSha}:${job.currentSha}`),
+    ...excerpts.map((job) => `e:${job.id}:${job.bornSha}`),
+  ].join("|");
 
   useEffect(() => {
     let cancelled = false;
-    async function run() {
-      for (const job of jobs) {
-        try {
-          const [bornText, currentText] = await Promise.all([
-            fetchBlobText(job.bornSha),
-            fetchBlobText(job.currentSha),
-          ]);
-          if (cancelled) {
-            return;
-          }
-          const reanchor = reanchorRange(splitLines(bornText), splitLines(currentText), job.range);
-          const result: DriftResult = {
-            lines: reanchor.lines,
-            state: reanchor.state,
-            ...(reanchor.state === "outdated"
-              ? { bornText: excerptLines(bornText, job.range) }
-              : {}),
-          };
-          setResolved((prev) => new Map(prev).set(job.id, result));
-        } catch {
-          // Leave the Finding out of the inline diff until a later render can
-          // re-anchor it; a fetch failure never mis-pins.
-        }
+    function publish(id: string, result: DriftResult) {
+      if (!cancelled) {
+        setResolved((prev) => new Map(prev).set(id, result));
       }
     }
-    void run();
+    async function reanchor(job: ReanchorJob) {
+      try {
+        const [bornText, currentText] = await Promise.all([
+          fetchBlobText(job.bornSha),
+          fetchBlobText(job.currentSha),
+        ]);
+        const result = reanchorRange(splitLines(bornText), splitLines(currentText), job.range);
+        publish(job.id, {
+          lines: result.lines,
+          state: result.state,
+          ...(result.state === "outdated" ? { bornText: excerptLines(bornText, job.range) } : {}),
+        });
+      } catch {
+        // Leave the Finding out of the inline diff until a later render can
+        // re-anchor it; a fetch failure never mis-pins.
+      }
+    }
+    async function excerpt(job: ExcerptJob) {
+      try {
+        const bornText = await fetchBlobText(job.bornSha);
+        publish(job.id, {
+          bornText: excerptLines(bornText, job.range),
+          lines: job.range,
+          state: "outdated",
+        });
+      } catch {
+        // The born blob is unreachable; the row still reads outdated via base.
+      }
+    }
+    void Promise.all([...jobs.map(reanchor), ...excerpts.map(excerpt)]);
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- jobsKey encodes jobs
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- jobsKey encodes jobs + excerpts
   }, [jobsKey]);
 
   // A re-anchor job carries no synchronous base entry, so it is simply absent
