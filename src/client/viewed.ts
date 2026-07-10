@@ -65,8 +65,21 @@ function isOdd(count: number | undefined): boolean {
   return count !== undefined && count % 2 === 1;
 }
 
-/** Fold one file's viewed state from its per-blob event counts. */
-function foldFile(counts: Map<string, number> | undefined, blobSha: string): ViewedState {
+/**
+ * Fold one file's viewed state from its per-blob event counts. `autoViewed`
+ * files (generated, pure renames) start from a viewed baseline: zero events
+ * reads as viewed, and the first appended event un-views (parity flipped). The
+ * default re-applies at each new head blob, so they never flag changed-since-
+ * viewed — they carry nothing to re-review.
+ */
+function foldFile(
+  counts: Map<string, number> | undefined,
+  blobSha: string,
+  autoViewed: boolean,
+): ViewedState {
+  if (autoViewed) {
+    return { changedSinceViewed: false, viewed: !isOdd(counts?.get(blobSha)) };
+  }
   const viewed = isOdd(counts?.get(blobSha));
   if (viewed || counts === undefined) {
     return { changedSinceViewed: false, viewed };
@@ -89,12 +102,13 @@ function foldFile(counts: Map<string, number> | undefined, blobSha: string): Vie
 export function computeViewed(
   events: readonly ViewedEvent[],
   entries: readonly FileEntry[],
+  isAutoViewed?: (entry: FileEntry) => boolean,
 ): ViewedModel {
   const byPath = countByPath(events);
   const states = new Map<string, ViewedState>();
   let viewed = 0;
   for (const entry of entries) {
-    const state = foldFile(byPath.get(entry.path), entry.blobSha);
+    const state = foldFile(byPath.get(entry.path), entry.blobSha, isAutoViewed?.(entry) ?? false);
     states.set(entry.id, state);
     if (state.viewed) {
       viewed += 1;
