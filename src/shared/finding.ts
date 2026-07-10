@@ -125,6 +125,15 @@ export type WhatsNext =
   | "needs-decision"
   | "closed";
 
+/** Human labels for each what's-next state — one source for every surface. */
+export const WHATS_NEXT_LABEL: Record<WhatsNext, string> = {
+  closed: "Closed",
+  "needs-action": "Needs action",
+  "needs-answer": "Needs answer",
+  "needs-decision": "Needs decision",
+  "needs-verify": "Needs verify",
+};
+
 export interface Reply {
   author: Author;
   body: string;

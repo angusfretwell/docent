@@ -9,16 +9,9 @@
 
 import { useState } from "react";
 import type { FindingWrite } from "../shared/finding-write.ts";
-import type { Author, Disposition, FoldedFinding, WhatsNext } from "../shared/finding.ts";
+import type { Author, Disposition, FoldedFinding } from "../shared/finding.ts";
+import { WHATS_NEXT_LABEL } from "../shared/finding.ts";
 import { Composer } from "./composer.tsx";
-
-const WHATS_NEXT_LABEL: Record<WhatsNext, string> = {
-  closed: "Closed",
-  "needs-action": "Needs action",
-  "needs-answer": "Needs answer",
-  "needs-decision": "Needs decision",
-  "needs-verify": "Needs verify",
-};
 
 const DISPOSITION_LABEL: Record<Disposition, string> = {
   actioned: "actioned",

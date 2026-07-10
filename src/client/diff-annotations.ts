@@ -48,9 +48,19 @@ function hashString(input: string): number {
 // Existing Findings anchored into a file, as diff-line annotations. Line anchors
 // pin to their born line; file anchors render at line 0 (above the first line).
 // Change- and non-code anchors show only in the panel, so they are skipped.
+//
+// Only a *live* line anchor renders inline: one whose born `blobSha` still
+// equals the diff's blob on the anchor's own side (head → `newObjectId`, base →
+// `prevObjectId`) is byte-identical, so its line numbers are trustworthy — the
+// data-model.md §6.1 live fast path. Once that blob changes the anchor has
+// drifted; rather than pin to possibly-wrong code (§6 "never pins to wrong
+// code") it drops to the panel until re-anchoring (deferred) lands. File anchors
+// carry no line numbers and §6.1 has them "drift only on delete/rename", so a
+// present file's file-level Finding stays inline regardless of content edits.
 function findingAnnotations(
   findings: readonly FoldedFinding[],
   entry: FileEntry,
+  fileDiff: FileDiffMetadata,
 ): DiffLineAnnotation<Annotation>[] {
   return findings.flatMap((finding): DiffLineAnnotation<Annotation>[] => {
     const { anchor } = finding;
@@ -59,6 +69,12 @@ function findingAnnotations(
     }
     if (anchor.file !== entry.path && anchor.file !== entry.prevPath) {
       return [];
+    }
+    if (anchor.kind === "line") {
+      const sideBlob = anchor.side === "head" ? fileDiff.newObjectId : fileDiff.prevObjectId;
+      if (anchor.blobSha !== sideBlob) {
+        return [];
+      }
     }
     return [
       {
@@ -75,9 +91,10 @@ function findingAnnotations(
 function itemAnnotations(
   findings: readonly FoldedFinding[],
   entry: FileEntry,
+  fileDiff: FileDiffMetadata,
   composing: Composing | null,
 ): DiffLineAnnotation<Annotation>[] {
-  const annotations = findingAnnotations(findings, entry);
+  const annotations = findingAnnotations(findings, entry, fileDiff);
   if (composing !== null && composing.itemId === entry.id) {
     annotations.push({
       lineNumber: composing.lineNumber,
@@ -124,7 +141,7 @@ export function buildDiffItems(params: {
       return [];
     }
     const collapsed = params.isViewed(entry.id);
-    const annotations = itemAnnotations(params.findings, entry, params.composing);
+    const annotations = itemAnnotations(params.findings, entry, fileDiff, params.composing);
     const version = hashString(itemKey(annotations, params.isExpanded(entry.id), collapsed));
     return [{ annotations, collapsed, fileDiff, id: entry.id, type: "diff" as const, version }];
   });

@@ -1,12 +1,13 @@
 import { useState } from "react";
 import type { FindingEntry } from "../shared/dossier.ts";
 import type { FindingWrite } from "../shared/finding-write.ts";
-import type { FoldedFinding, WhatsNext } from "../shared/finding.ts";
+import type { FoldedFinding } from "../shared/finding.ts";
 import {
   findingJumpTarget,
   findingLocation,
   foldFinding,
   sortFoldedFindings,
+  WHATS_NEXT_LABEL,
 } from "../shared/finding.ts";
 import { Composer } from "./composer.tsx";
 import { FindingThread } from "./finding-thread.tsx";
@@ -17,14 +18,6 @@ import { FindingThread } from "./finding-thread.tsx";
 // which have no line in the diff to pin to. Rows expand to a thread in place, so
 // replies, resolves and reopens are authorable here as well as inline. Records
 // arrive folded here so the panel and future agent surfaces share one derivation.
-
-const WHATS_NEXT_LABEL: Record<WhatsNext, string> = {
-  closed: "Closed",
-  "needs-action": "Needs action",
-  "needs-answer": "Needs answer",
-  "needs-decision": "Needs decision",
-  "needs-verify": "Needs verify",
-};
 
 const panelStyle: React.CSSProperties = {
   borderLeft: "1px solid rgba(128,128,128,0.25)",
@@ -118,7 +111,7 @@ export function FindingsPanel({
 }) {
   const [showResolved, setShowResolved] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [changeNote, setChangeNote] = useState(false);
+  const [changeComposerOpen, setChangeComposerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const folded = sortFoldedFindings(
@@ -134,10 +127,10 @@ export function FindingsPanel({
     }
   }
 
-  function submitChangeNote(body: string) {
+  function submitChangeFinding(body: string) {
     setBusy(true);
     void onWrite({ anchor: { kind: "change" }, body, op: "open" })
-      .then(() => setChangeNote(false))
+      .then(() => setChangeComposerOpen(false))
       .finally(() => setBusy(false));
   }
 
@@ -157,16 +150,16 @@ export function FindingsPanel({
         </div>
         <button
           className="expand-context"
-          onClick={() => setChangeNote((open) => !open)}
+          onClick={() => setChangeComposerOpen((open) => !open)}
           type="button"
         >
-          {changeNote ? "Cancel" : "Comment on whole change"}
+          {changeComposerOpen ? "Cancel" : "Comment on whole change"}
         </button>
-        {changeNote ? (
+        {changeComposerOpen ? (
           <Composer
             autoFocus
             busy={busy}
-            onSubmit={submitChangeNote}
+            onSubmit={submitChangeFinding}
             placeholder="A finding about the whole change…"
             submitLabel="Comment"
           />

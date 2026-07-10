@@ -5,21 +5,31 @@
  * the compose lifecycle (data-model.md §5.3).
  */
 
-import type { FileDiffMetadata } from "@pierre/diffs";
+import type { CodeViewLineSelection, FileDiffMetadata } from "@pierre/diffs";
 import type { CodeViewHandle } from "@pierre/diffs/react";
 import { useState } from "react";
 import type { FindingWrite } from "../shared/finding-write.ts";
 import type { Annotation, Composing } from "./diff-annotations.ts";
 import { annotationSide } from "./diff-annotations.ts";
 
+// The content-addressed anchor target on one side of a file: the born blob and
+// the path to freeze into the anchor. A side with no blob (e.g. an add's base
+// side) can't be anchored, so it yields nothing.
+function anchorTarget(fileDiff: FileDiffMetadata, side: "base" | "head") {
+  const blobSha = side === "head" ? fileDiff.newObjectId : fileDiff.prevObjectId;
+  if (blobSha === undefined) {
+    return;
+  }
+  const file = side === "head" ? fileDiff.name : (fileDiff.prevName ?? fileDiff.name);
+  return { blobSha, file };
+}
+
 export interface FindingCompose {
   composing: Composing | null;
   busy: boolean;
   cancel: () => void;
   submit: (body: string) => void;
-  selectLines: (
-    selection: { id: string; range: { start: number; end: number; side?: string } } | null,
-  ) => void;
+  selectLines: (selection: CodeViewLineSelection | null) => void;
   commentOnFile: (itemId: string, fileDiff: FileDiffMetadata) => void;
 }
 
@@ -54,9 +64,7 @@ export function useFindingCompose(params: {
   // exact blob bytes on the selected side (content-addressed born anchor); a
   // side with no blob (e.g. an add's base side) can't be anchored, so it opens
   // nothing.
-  function selectLines(
-    selection: { id: string; range: { start: number; end: number; side?: string } } | null,
-  ) {
+  function selectLines(selection: CodeViewLineSelection | null) {
     if (selection === null) {
       setComposing(null);
       return;
@@ -66,15 +74,14 @@ export function useFindingCompose(params: {
       return;
     }
     const side = selection.range.side === "deletions" ? "base" : "head";
-    const blobSha = side === "head" ? fileDiff.newObjectId : fileDiff.prevObjectId;
-    if (blobSha === undefined) {
+    const target = anchorTarget(fileDiff, side);
+    if (target === undefined) {
       return;
     }
-    const file = side === "head" ? fileDiff.name : (fileDiff.prevName ?? fileDiff.name);
     setComposing({
       anchor: {
-        blobSha,
-        file,
+        blobSha: target.blobSha,
+        file: target.file,
         kind: "line",
         lines: [selection.range.start, selection.range.end],
         side,
@@ -89,14 +96,13 @@ export function useFindingCompose(params: {
   // fall back to base for a deletion). Its composer renders at line 0.
   function commentOnFile(itemId: string, fileDiff: FileDiffMetadata) {
     const side = fileDiff.newObjectId === undefined ? "base" : "head";
-    const blobSha = side === "head" ? fileDiff.newObjectId : fileDiff.prevObjectId;
-    if (blobSha === undefined) {
+    const target = anchorTarget(fileDiff, side);
+    if (target === undefined) {
       return;
     }
-    const file = side === "head" ? fileDiff.name : (fileDiff.prevName ?? fileDiff.name);
     codeRef.current?.clearSelectedLines();
     setComposing({
-      anchor: { blobSha, file, kind: "file", side },
+      anchor: { blobSha: target.blobSha, file: target.file, kind: "file", side },
       annotationSide: annotationSide(side),
       itemId,
       lineNumber: 0,
