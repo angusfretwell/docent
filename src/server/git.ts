@@ -89,23 +89,32 @@ const resolveDefaultBranch = Effect.fn("resolveDefaultBranch")(function* (
   return yield* Effect.fail(DefaultBranchNotFound.make({}));
 });
 
-/** Resolve the checked-out branch's live Change against the default branch. */
-export const resolveChange = Effect.fn("resolveChange")(function* (
-  cwd: string,
-) {
+/**
+ * Resolve the repo root, checked-out branch, and default branch — the light
+ * identity the Dossier store keys on, without minting the (expensive) diff.
+ */
+export const resolveRepo = Effect.fn("resolveRepo")(function* (cwd: string) {
   const root = yield* git(cwd, ["rev-parse", "--show-toplevel"]).pipe(
     Effect.catchTag("GitCommandFailed", () =>
       Effect.fail(NotAGitRepository.make({ path: cwd })),
     ),
   );
-  const [branch, headSha, defaultBranch] = yield* Effect.all(
+  const [branch, defaultBranch] = yield* Effect.all(
     [
       git(root, ["rev-parse", "--abbrev-ref", "HEAD"]),
-      git(root, ["rev-parse", "HEAD"]),
       resolveDefaultBranch(root),
     ],
     { concurrency: "unbounded" },
   );
+  return { root, branch, defaultBranch };
+});
+
+/** Resolve the checked-out branch's live Change against the default branch. */
+export const resolveChange = Effect.fn("resolveChange")(function* (
+  cwd: string,
+) {
+  const { root, branch, defaultBranch } = yield* resolveRepo(cwd);
+  const headSha = yield* git(root, ["rev-parse", "HEAD"]);
   const baseSha = yield* git(root, ["merge-base", defaultBranch.ref, "HEAD"]);
   const patch =
     baseSha === headSha
