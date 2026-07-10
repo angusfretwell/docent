@@ -22,7 +22,7 @@ Starting route is deliberately **absent** — it is a per-capture concern the sk
 ## Serving
 
 - Base URL: http://localhost:5173
-- Start command: `npm run dev`   <!-- omit if the human runs the server themselves -->
+- Start command: `npm run dev` <!-- omit if the human runs the server themselves -->
 
 ## Reaching a usable state
 

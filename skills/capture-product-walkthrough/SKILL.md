@@ -44,6 +44,7 @@ Get the app to a verified-rendered state before capturing. **Never emit a broken
   ```
 
   `curl -s` (no `-f`) exits 0 on any HTTP response and non-zero only on a failed connection — exactly the gate §4.4 specifies. Once it answers, navigate and verify real DOM as above.
+
 - **On failure** → **hard stop** with an actionable message, e.g. `app not reachable at <url> — is your dev server up?`. Do not proceed to capture.
 
 ## 3. Stage viewport and route
