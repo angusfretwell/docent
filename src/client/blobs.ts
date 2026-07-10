@@ -15,6 +15,16 @@ export function blobUrl(sha: string): string {
   return `/api/blob/${sha}`;
 }
 
+/** The uncached working-tree endpoint for a repo-relative path (Pending head side). */
+export function worktreeUrl(path: string): string {
+  return `/api/worktree?path=${encodeURIComponent(path)}`;
+}
+
+/** Whether an object id names real content — a null id (all zeros) has no blob. */
+function isRealObjectId(id: string | undefined): id is string {
+  return id !== undefined && !/^0+$/.test(id);
+}
+
 /**
  * Whether a file's unchanged context can be lazily expanded. The renderer only
  * expands when fed a full (non-partial) diff, which needs both the base and
@@ -25,6 +35,22 @@ export function blobUrl(sha: string): string {
 export function isExpandable(fileDiff: FileDiffMetadata): boolean {
   return (
     fileDiff.isPartial && fileDiff.prevObjectId !== undefined && fileDiff.newObjectId !== undefined
+  );
+}
+
+/**
+ * Whether a Pending file's context can be expanded. Same as `isExpandable`, but
+ * the head side is the mutable working tree (fetched by path, not by SHA), so
+ * the null head id `git diff HEAD` prints is expected — we require only that
+ * both sides name real content: a modify has a committed base blob and a live
+ * head file. Untracked adds (null base) and deletions (null head) have nothing
+ * to expand around.
+ */
+export function isPendingExpandable(fileDiff: FileDiffMetadata): boolean {
+  return (
+    fileDiff.isPartial &&
+    isRealObjectId(fileDiff.prevObjectId) &&
+    isRealObjectId(fileDiff.newObjectId)
   );
 }
 
@@ -57,6 +83,16 @@ async function fetchBlobText(sha: string): Promise<string> {
   return res.text();
 }
 
+/** Fetch a working-tree file's live text from the uncached `/api/worktree` endpoint. */
+async function fetchWorktreeText(path: string): Promise<string> {
+  const url = worktreeUrl(path);
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`GET ${url} failed: HTTP ${res.status}`);
+  }
+  return res.text();
+}
+
 /**
  * Lazily fetch a file's base and head blobs and build its full, expandable
  * diff. Both sides (split view) resolve through the same `/api/blob/:sha`
@@ -71,6 +107,27 @@ export async function fetchExpandedFileDiff(fileDiff: FileDiffMetadata): Promise
   const [baseText, headText] = await Promise.all([
     fetchBlobText(prevObjectId),
     fetchBlobText(newObjectId),
+  ]);
+  return expandedFileDiff(fileDiff, baseText, headText);
+}
+
+/**
+ * Lazily build a Pending file's full, expandable diff. The base side is the
+ * committed blob (cached, content-addressed `/api/blob/:sha`); the head side is
+ * the live working-tree file read by path from the uncached `/api/worktree`
+ * endpoint — the Pending diff's head has no stable SHA to cache against
+ * (diff-review.md §6). Callers gate this behind `isPendingExpandable`.
+ */
+export async function fetchPendingExpandedFileDiff(
+  fileDiff: FileDiffMetadata,
+): Promise<FileDiffMetadata> {
+  const { prevObjectId } = fileDiff;
+  if (prevObjectId === undefined) {
+    throw new Error(`file ${fileDiff.name} has no base blob to expand`);
+  }
+  const [baseText, headText] = await Promise.all([
+    fetchBlobText(prevObjectId),
+    fetchWorktreeText(fileDiff.name),
   ]);
   return expandedFileDiff(fileDiff, baseText, headText);
 }
