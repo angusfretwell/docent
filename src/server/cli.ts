@@ -64,11 +64,11 @@ const DISPOSITION_VALUES: readonly Disposition[] = ["actioned", "declined", "que
 /**
  * Assert a flag value is one of a closed set, or throw a usage error naming the
  * allowed values — the one shape shared by `--side`, `--disposition`, and
- * `--whats-next`. Membership is a `Set` so the check stays constant-time when
- * called across a list.
+ * `--whats-next`. The sets are tiny (2–5 members), so a linear membership check
+ * is fine.
  */
 function parseEnum<T extends string>(flag: string, value: string, values: readonly T[]): T {
-  if (!new Set<string>(values).has(value)) {
+  if (!values.includes(value as T)) {
     throw new CliUsageError({
       reason: `unknown --${flag}: ${value} (one of ${values.join(", ")})`,
     });
@@ -319,7 +319,7 @@ export function parseAnchorSpec(args: ParsedArgs): Effect.Effect<AnchorSpec, Cli
 }
 
 /** Parse the shared `--agent`/`--display`/`--model` attribution overrides. */
-export function parseAuthorOpts(args: ParsedArgs): AuthorOpts {
+function parseAuthorOpts(args: ParsedArgs): AuthorOpts {
   return { agent: one(args, "agent"), display: one(args, "display"), model: one(args, "model") };
 }
 
