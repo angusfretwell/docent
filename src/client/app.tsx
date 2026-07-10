@@ -7,6 +7,7 @@ import type { FindingWrite } from "../shared/finding-write.ts";
 import type { PendingRange } from "../shared/pending.ts";
 import { Pending } from "../shared/pending.ts";
 import { fetchPendingExpandedFileDiff, isPendingExpandable } from "./blobs.ts";
+import { useDrift } from "./drift.ts";
 import type { DiffViewHandle } from "./diff-view.tsx";
 import { DiffView } from "./diff-view.tsx";
 import { writeFinding } from "./findings-client.ts";
@@ -308,6 +309,15 @@ export function App() {
     };
   }, [range]);
 
+  // Drift is judged against the committed Change (Pending carries no Findings),
+  // computed lazily from each Finding's born anchor (data-model.md §6). The map
+  // feeds both the panel's (drift × resolved) badges and the inline diff's
+  // shifted re-anchoring.
+  const drift = useDrift({
+    findings: dossier?.findings ?? NO_FINDINGS,
+    patch: change.kind === "loaded" ? change.change.patch : "",
+  });
+
   // Derived, not stored: Pending shows only while dirty, so a clean tree (e.g.
   // after commit) falls back to the committed Change with no lifecycle logic.
   const dirty = pending?.dirty ?? false;
@@ -335,6 +345,7 @@ export function App() {
         </div>
         {dossier ? (
           <FindingsPanel
+            drift={drift}
             findings={dossier.findings}
             onJump={(file, line) => diffRef.current?.scrollToLine(file, line)}
             onWrite={handleWrite}

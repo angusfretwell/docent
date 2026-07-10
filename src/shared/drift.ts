@@ -96,6 +96,17 @@ export function reanchorRange(
   return { lines: [newStart, newStart + block.length - 1], state: "shifted" };
 }
 
+/**
+ * The born text for a line range — the anchored lines of the born blob, which an
+ * outdated Finding detaches and renders against (data-model.md §6.1). The range
+ * is clamped so a stale range never throws.
+ */
+export function excerptLines(text: string, range: readonly [number, number]): string {
+  const lines = splitLines(text);
+  const [start, end] = range;
+  return lines.slice(Math.max(0, start - 1), Math.max(0, end)).join("\n");
+}
+
 /** The current-Change facts a code anchor is judged against — all synchronous from the patch. */
 export interface AnchorContext {
   /** The blob sha on the anchor's own side in the current Change; absent ⇒ file unchanged base..head. */

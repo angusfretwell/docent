@@ -99,7 +99,7 @@ export function expandedFileDiff(
 }
 
 /** Fetch a single blob's text from the content-addressed `/api/blob/:sha` endpoint. */
-async function fetchBlobText(sha: string): Promise<string> {
+export async function fetchBlobText(sha: string): Promise<string> {
   const url = blobUrl(sha);
   const res = await fetch(url);
   if (!res.ok) {

@@ -4,6 +4,7 @@ import {
   changeHistory,
   changeHistoryLabel,
   driftBadge,
+  excerptLines,
   planDrift,
   reanchorRange,
   splitLines,
@@ -69,6 +70,18 @@ describe("reanchorRange", () => {
 
   test("an out-of-bounds range is outdated", () => {
     expect(reanchorRange(born, born, [10, 12])).toEqual({ lines: [10, 12], state: "outdated" });
+  });
+});
+
+describe("excerptLines", () => {
+  const text = "one\ntwo\nthree\nfour\n";
+
+  test("extracts the anchored line range as born text", () => {
+    expect(excerptLines(text, [2, 3])).toBe("two\nthree");
+  });
+
+  test("clamps a range that runs past the end", () => {
+    expect(excerptLines(text, [3, 99])).toBe("three\nfour");
   });
 });
 
