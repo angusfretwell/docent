@@ -1,11 +1,13 @@
 import { Schema } from "effect";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Change, DiffError } from "../shared/change.ts";
 import { DossierSnapshot } from "../shared/dossier.ts";
 import type { PendingRange } from "../shared/pending.ts";
 import { Pending } from "../shared/pending.ts";
 import { fetchPendingExpandedFileDiff, isPendingExpandable } from "./blobs.ts";
+import type { DiffViewHandle } from "./diff-view.tsx";
 import { DiffView } from "./diff-view.tsx";
+import { FindingsPanel } from "./findings-panel.tsx";
 
 // Sync decode boundary: the fetch handlers below own the try/catch.
 const decodeChange = Schema.decodeUnknownSync(Change);
@@ -154,7 +156,7 @@ function ChangeSelector({
 }
 
 /** The committed-Change body: loading / error / empty / the rendered diff. */
-function ChangeBody({ state }: { state: LoadState }) {
+function ChangeBody({ state, diffRef }: { state: LoadState; diffRef: React.Ref<DiffViewHandle> }) {
   if (state.kind === "loading") {
     return <Notice>Loading diff…</Notice>;
   }
@@ -169,11 +171,17 @@ function ChangeBody({ state }: { state: LoadState }) {
       </Notice>
     );
   }
-  return <DiffView patch={change.patch} />;
+  return <DiffView patch={change.patch} ref={diffRef} />;
 }
 
 /** The Pending body: the working-tree preview, with worktree-sourced expansion. */
-function PendingBody({ pending }: { pending: Pending }) {
+function PendingBody({
+  pending,
+  diffRef,
+}: {
+  pending: Pending;
+  diffRef: React.Ref<DiffViewHandle>;
+}) {
   if (pending.patch === "") {
     return <Notice>The working tree is clean — nothing pending.</Notice>;
   }
@@ -182,6 +190,7 @@ function PendingBody({ pending }: { pending: Pending }) {
       expandFile={fetchPendingExpandedFileDiff}
       isFileExpandable={isPendingExpandable}
       patch={pending.patch}
+      ref={diffRef}
     />
   );
 }
@@ -192,6 +201,7 @@ export function App() {
   const [dossier, setDossier] = useState<DossierSnapshot | null>(null);
   const [selected, setSelected] = useState<Selection>("change");
   const [range, setRange] = useState<PendingRange>("incremental");
+  const diffRef = useRef<DiffViewHandle>(null);
 
   // One live loop for the whole tab: fetch the Change, the Pending preview (at
   // the current range), and the dossier once, then re-fetch all three on every
@@ -278,12 +288,20 @@ export function App() {
         range={range}
         selected={effective}
       />
-      <div style={{ flex: 1, minHeight: 0 }}>
-        {effective === "pending" && pending ? (
-          <PendingBody pending={pending} />
-        ) : (
-          <ChangeBody state={change} />
-        )}
+      <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {effective === "pending" && pending ? (
+            <PendingBody diffRef={diffRef} pending={pending} />
+          ) : (
+            <ChangeBody diffRef={diffRef} state={change} />
+          )}
+        </div>
+        {dossier ? (
+          <FindingsPanel
+            findings={dossier.findings}
+            onJump={(file, line) => diffRef.current?.scrollToLine(file, line)}
+          />
+        ) : null}
       </div>
     </div>
   );
