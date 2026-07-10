@@ -14,6 +14,7 @@ import { useEffect, useImperativeHandle, useRef, useState } from "react";
 import type { FindingEntry, ViewedEvent } from "../shared/dossier.ts";
 import type { FindingWrite } from "../shared/finding-write.ts";
 import { fetchExpandedFileDiff, isExpandable } from "./blobs.ts";
+import { themes, workerFactory } from "./code-view.ts";
 import type { Annotation } from "./diff-annotations.ts";
 import type { DriftResult } from "./drift.ts";
 import { EdgeChrome } from "./edge-chrome.tsx";
@@ -35,8 +36,6 @@ import type { FileEntry, FileOrder } from "./nav.ts";
 import { useDiffFindings } from "./use-diff-findings.tsx";
 import { computeViewed, viewedStateFor } from "./viewed.ts";
 import type { ViewedModel } from "./viewed.ts";
-
-const themes = { dark: "github-dark", light: "github-light" } as const;
 
 // Keyboard jumps — [ ] step files, , . step changes.
 const KEY_ACTIONS: Record<string, ["file" | "change", 1 | -1]> = {
@@ -91,15 +90,6 @@ function useJumpKeys(jump: (kind: "file" | "change", direction: 1 | -1) => void)
   }, []);
 }
 
-// One Shiki-tokenizing worker per hardware thread (capped). Tokenization must
-// stay off the main thread: the #4 re-benchmark measured worker-off scroll at
-// p95 225 ms with 15 long frames vs. zero with the pool on.
-function workerFactory() {
-  return new Worker(new URL("@pierre/diffs/worker/worker.js", import.meta.url), {
-    type: "module",
-  });
-}
-
 /** A localStorage-backed preference, so layout/order survive reloads. */
 function usePersisted<T extends string>(
   key: string,
@@ -117,9 +107,10 @@ function usePersisted<T extends string>(
   return [value, set];
 }
 
-/** The imperative surface the Findings panel drives to jump into the diff. */
+/** The imperative surface the Findings panel and the walkthrough tab drive to jump into the diff. */
 export interface DiffViewHandle {
-  scrollToLine: (file: string, line: number) => void;
+  /** Scroll to a file's line on the given side (default head/additions). */
+  scrollToLine: (file: string, line: number, side?: "base" | "head") => void;
 }
 
 // A stable empty generated list, so the pre-snapshot render doesn't churn the
@@ -512,13 +503,20 @@ export function DiffView({
   // file's index in the patch (`name#index`), so a Finding anchor — which knows
   // only the path — is resolved against the parsed patch here, where that index
   // lives. A file the diff no longer contains (an outdated Finding) is a no-op.
-  function scrollToLine(file: string, line: number) {
+  function scrollToLine(file: string, line: number, side: "base" | "head" = "head") {
     const index = processPatch(patch).files.findIndex((fileDiff) => fileDiff.name === file);
     if (index === -1) {
       return;
     }
     const id = `${file}#${index}`;
-    codeRef.current?.scrollTo({ behavior: "smooth", id, lineNumber: line, type: "line" });
+    // git side → renderer column: base ⇒ deletions, head ⇒ additions.
+    codeRef.current?.scrollTo({
+      behavior: "smooth",
+      id,
+      lineNumber: line,
+      side: side === "base" ? "deletions" : "additions",
+      type: "line",
+    });
     setActiveId(id);
   }
   useImperativeHandle(ref, () => ({ scrollToLine }));
