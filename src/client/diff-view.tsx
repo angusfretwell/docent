@@ -18,6 +18,14 @@ import {
 
 const themes = { dark: "github-dark", light: "github-light" } as const;
 
+// Keyboard jumps — [ ] step files, , . step changes.
+const KEY_ACTIONS: Record<string, ["file" | "change", 1 | -1]> = {
+  "[": ["file", -1],
+  "]": ["file", 1],
+  ",": ["change", -1],
+  ".": ["change", 1],
+};
+
 // One Shiki-tokenizing worker per hardware thread (capped). Tokenization must
 // stay off the main thread: the #4 re-benchmark measured worker-off scroll at
 // p95 225 ms with 15 long frames vs. zero with the pool on.
@@ -38,7 +46,7 @@ function usePersisted<T extends string>(
 ): [T, (value: T) => void] {
   const [value, setValue] = useState<T>(() => {
     const raw = globalThis.localStorage?.getItem(key);
-    return (raw !== null && raw !== undefined && decode(raw)) || initial;
+    return (raw == null ? undefined : decode(raw)) ?? initial;
   });
   const set = useCallback(
     (next: T) => {
@@ -171,7 +179,6 @@ export function DiffView({ patch }: { patch: string }) {
     });
   }, []);
 
-  // Keyboard jumps — [ ] step files, , . step changes.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target;
@@ -181,13 +188,7 @@ export function DiffView({ patch }: { patch: string }) {
       ) {
         return;
       }
-      const map: Record<string, ["file" | "change", 1 | -1]> = {
-        "[": ["file", -1],
-        "]": ["file", 1],
-        ",": ["change", -1],
-        ".": ["change", 1],
-      };
-      const action = map[event.key];
+      const action = KEY_ACTIONS[event.key];
       if (action) {
         event.preventDefault();
         jump(action[0], action[1]);
