@@ -35,3 +35,11 @@ _Avoid_: Tour, Guide, Narrative
 **Section**:
 One step of a Walkthrough: a titled unit of prose interleaved with its targets — diff ranges for a code walkthrough, capture annotations for a product one. The unit a narrative comment anchors to (the `walkthrough-section` arm of the comment anchor union).
 _Avoid_: Step, Slide
+
+**Finding**:
+A comment thread ([#7](https://github.com/angusfretwell/docent/issues/7)) in its role as an item on a Review's queue — the unit `write-findings` appends and `fetch-findings` reads. Authored by any actor: reviewing, fixing, and resolving are roles, not actors, and a human (via the docent UI) or an agent (via a skill) can fill any of them, so attribution is metadata, never permission. Its state is open/resolved plus, while open, a _what's-next_ read off the latest record's Disposition — actor-blind. The delivery convention is pinned by [#18](https://github.com/angusfretwell/docent/issues/18).
+_Avoid_: Issue, Ticket, Note
+
+**Disposition**:
+The kind of turn-hand-back a reply on a Finding carries — `actioned`, `declined`, or `question` — from which the Finding's what's-next state (needs verify, needs decision, needs answer) is derived. Actor-agnostic; a fresh finding or plain comment carries none (it simply needs action).
+_Avoid_: Status, Resolution
