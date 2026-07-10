@@ -15,7 +15,7 @@ import { layer as serveLayer, serverUrl } from "./src/server/serve.ts";
 
 class ClientAssetsMissing extends Schema.TaggedErrorClass<ClientAssetsMissing>()(
   "ClientAssetsMissing",
-  { clientDir: Schema.String }
+  { clientDir: Schema.String },
 ) {
   override get message(): string {
     return "client assets not built — run `bun run build` first";
@@ -37,7 +37,7 @@ const clientDir = join(import.meta.dir, "dist", "client");
 const openBrowser = Effect.fn("openBrowser")(
   (url: string) => Effect.tryPromise(() => open(url)),
   // No opener available — the URL is printed above.
-  (effect) => Effect.ignore(effect)
+  (effect) => Effect.ignore(effect),
 );
 
 const main = Effect.gen(function* () {
@@ -52,7 +52,7 @@ const main = Effect.gen(function* () {
   const url = yield* serverUrl;
 
   yield* Console.log(
-    `docent  ·  ${change.branch} → ${change.defaultBranch} @ ${change.root}`
+    `docent  ·  ${change.branch} → ${change.defaultBranch} @ ${change.root}`,
   );
   yield* Console.log(`        ·  ${url}`);
 
@@ -70,8 +70,8 @@ BunRuntime.runMain(
     Effect.catch((error) =>
       Effect.andThen(
         Console.error(error instanceof Error ? error.message : String(error)),
-        Effect.sync(() => process.exit(1))
-      )
-    )
-  )
+        Effect.sync(() => process.exit(1)),
+      ),
+    ),
+  ),
 );

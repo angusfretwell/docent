@@ -6,8 +6,8 @@
     "build": "vite build",
     "serve": "bun run build && bun bin.ts",
     "typecheck": "tsc --noEmit",
-    "check": "ultracite check",
-    "fix": "ultracite fix",
+    "check": "biome check",
+    "fix": "biome check --write",
     "prepare": "husky"
   },
   "devDependencies": {
@@ -23,7 +23,6 @@
     "playwright": "^1.61.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "ultracite": "7.9.3",
     "vite": "^8.1.4"
   },
   "peerDependencies": {

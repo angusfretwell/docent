@@ -13,7 +13,7 @@ function workerFactory() {
     new URL("@pierre/diffs/worker/worker.js", import.meta.url),
     {
       type: "module",
-    }
+    },
   );
 }
 

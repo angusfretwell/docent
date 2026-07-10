@@ -26,7 +26,7 @@ export interface ServeOptions {
 export const serverUrl: Effect.Effect<string, never, HttpServer.HttpServer> =
   Effect.map(
     Effect.service(HttpServer.HttpServer),
-    (server) => new URL(HttpServer.formatAddress(server.address)).href
+    (server) => new URL(HttpServer.formatAddress(server.address)).href,
   );
 
 const diffRoute = (cwd: string) =>
@@ -39,11 +39,11 @@ const diffRoute = (cwd: string) =>
         Effect.succeed(
           HttpServerResponse.jsonUnsafe(
             { error: error.message },
-            { status: 500 }
-          )
-        )
-      )
-    )
+            { status: 500 },
+          ),
+        ),
+      ),
+    ),
   );
 
 /**
@@ -53,7 +53,7 @@ const diffRoute = (cwd: string) =>
 export const layer = (options: ServeOptions) => {
   const routes = Layer.mergeAll(
     diffRoute(options.cwd),
-    HttpStaticServer.layer({ root: options.clientDir })
+    HttpStaticServer.layer({ root: options.clientDir }),
   );
   return HttpRouter.serve(routes, {
     disableListenLog: true,
@@ -61,7 +61,7 @@ export const layer = (options: ServeOptions) => {
   }).pipe(
     Layer.provideMerge(
       // Port 0: the OS picks an ephemeral port; read it back via `serverUrl`.
-      BunHttpServer.layer({ hostname: "localhost", port: 0 })
-    )
+      BunHttpServer.layer({ hostname: "localhost", port: 0 }),
+    ),
   );
 };

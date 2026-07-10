@@ -38,7 +38,7 @@ function scratchClientDir(): string {
   const dir = scratchDir("docent-client-test-");
   writeFileSync(
     join(dir, "index.html"),
-    "<!doctype html><title>docent</title>"
+    "<!doctype html><title>docent</title>",
   );
   mkdirSync(join(dir, "assets"));
   writeFileSync(join(dir, "assets", "app.js"), "console.log('app');\n");
@@ -49,7 +49,7 @@ function scratchClientDir(): string {
 /** Boot the server layer and return its base URL; torn down in afterAll. */
 async function serve(repo: string): Promise<{ url: string }> {
   const runtime = ManagedRuntime.make(
-    layer({ clientDir: scratchClientDir(), cwd: repo })
+    layer({ clientDir: scratchClientDir(), cwd: repo }),
   );
   disposers.push(() => runtime.dispose());
   const url = await runtime.runPromise(serverUrl);
@@ -79,7 +79,7 @@ describe("server layer", () => {
     git(repo, "commit", "-m", "second commit");
 
     const body = decodeChange(
-      await (await fetch(new URL("/api/diff", url))).json()
+      await (await fetch(new URL("/api/diff", url))).json(),
     );
 
     expect(body.patch).toContain("second.txt");

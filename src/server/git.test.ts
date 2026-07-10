@@ -75,7 +75,7 @@ describe("resolveChange", () => {
 
     // macOS tmpdir is a symlink (/tmp → /private/tmp); compare resolved paths.
     expect(git(change.root, "rev-parse", "--show-toplevel")).toBe(
-      git(repo, "rev-parse", "--show-toplevel")
+      git(repo, "rev-parse", "--show-toplevel"),
     );
     expect(change.patch).toContain("change.txt");
   });

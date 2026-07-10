@@ -16,7 +16,7 @@ export class GitCommandFailed extends Schema.TaggedErrorClass<GitCommandFailed>(
     args: Schema.Array(Schema.String),
     exitCode: Schema.Number,
     stderr: Schema.String,
-  }
+  },
 ) {
   override get message(): string {
     return `git ${this.args.join(" ")} failed: ${this.stderr.trim()}`;
@@ -25,7 +25,7 @@ export class GitCommandFailed extends Schema.TaggedErrorClass<GitCommandFailed>(
 
 export class NotAGitRepository extends Schema.TaggedErrorClass<NotAGitRepository>()(
   "NotAGitRepository",
-  { path: Schema.String }
+  { path: Schema.String },
 ) {
   override get message(): string {
     return `not a git repository: ${this.path}`;
@@ -34,7 +34,7 @@ export class NotAGitRepository extends Schema.TaggedErrorClass<NotAGitRepository
 
 export class DefaultBranchNotFound extends Schema.TaggedErrorClass<DefaultBranchNotFound>()(
   "DefaultBranchNotFound",
-  {}
+  {},
 ) {
   override get message(): string {
     return "could not resolve the default branch: no origin/HEAD, main, or master";
@@ -51,11 +51,11 @@ const git = Effect.fn("git")(function* (cwd: string, args: readonly string[]) {
   // can't deadlock the pipe.
   const [stdout, stderr, exitCode] = yield* Effect.all(
     [streamText(handle.stdout), streamText(handle.stderr), handle.exitCode],
-    { concurrency: "unbounded" }
+    { concurrency: "unbounded" },
   );
   if (exitCode !== 0) {
     return yield* Effect.fail(
-      GitCommandFailed.make({ args, exitCode, stderr })
+      GitCommandFailed.make({ args, exitCode, stderr }),
     );
   }
   return stdout.replace(TRAILING_NEWLINE, "");
@@ -66,7 +66,7 @@ const git = Effect.fn("git")(function* (cwd: string, args: readonly string[]) {
  * has an origin, else the local `main`/`master` branch.
  */
 const resolveDefaultBranch = Effect.fn("resolveDefaultBranch")(function* (
-  root: string
+  root: string,
 ) {
   const originHead = yield* git(root, [
     "symbolic-ref",
@@ -91,12 +91,12 @@ const resolveDefaultBranch = Effect.fn("resolveDefaultBranch")(function* (
 
 /** Resolve the checked-out branch's live Change against the default branch. */
 export const resolveChange = Effect.fn("resolveChange")(function* (
-  cwd: string
+  cwd: string,
 ) {
   const root = yield* git(cwd, ["rev-parse", "--show-toplevel"]).pipe(
     Effect.catchTag("GitCommandFailed", () =>
-      Effect.fail(NotAGitRepository.make({ path: cwd }))
-    )
+      Effect.fail(NotAGitRepository.make({ path: cwd })),
+    ),
   );
   const [branch, headSha, defaultBranch] = yield* Effect.all(
     [
@@ -104,7 +104,7 @@ export const resolveChange = Effect.fn("resolveChange")(function* (
       git(root, ["rev-parse", "HEAD"]),
       resolveDefaultBranch(root),
     ],
-    { concurrency: "unbounded" }
+    { concurrency: "unbounded" },
   );
   const baseSha = yield* git(root, ["merge-base", defaultBranch.ref, "HEAD"]);
   const patch =

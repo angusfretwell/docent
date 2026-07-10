@@ -19,7 +19,7 @@ const fixturePath =
   process.argv[2] ??
   join(
     repoRoot,
-    "prototypes/0004-diff-rendering/public/fixtures/three-xl.diff"
+    "prototypes/0004-diff-rendering/public/fixtures/three-xl.diff",
   );
 const clientDir = join(repoRoot, "dist", "client");
 
@@ -42,11 +42,11 @@ const server = Bun.serve({
           headSha: "1".repeat(40),
           patch,
           root: repoRoot,
-        })
+        }),
       );
     }
     const file = Bun.file(
-      join(clientDir, pathname === "/" ? "index.html" : pathname.slice(1))
+      join(clientDir, pathname === "/" ? "index.html" : pathname.slice(1)),
     );
     return (await file.exists())
       ? new Response(file)
@@ -118,7 +118,6 @@ const measured = await page.evaluate(async () => {
     if (window.__rows() > 0) {
       firstRowsMs = performance.now() - t0;
     }
-    // biome-ignore lint/performance/noAwaitInLoops: polling frame-by-frame is the point
     await new Promise((r) => requestAnimationFrame(() => r(null)));
     if (performance.now() - t0 > 30_000) {
       break;
@@ -171,7 +170,6 @@ const scroll = await page.evaluate(async () => {
   let last = performance.now();
   for (let i = 1; i <= steps; i += 1) {
     el.scrollTop = (max * i) / steps;
-    // biome-ignore lint/performance/noAwaitInLoops: measuring per-frame timing requires sequential frames
     await new Promise((r) => requestAnimationFrame(() => r(null)));
     const now = performance.now();
     frames.push(now - last);
@@ -226,7 +224,7 @@ if (measured.firstRowsMs < 0 || measured.firstRowsMs > 2000) {
 }
 if (measured.deepNodesAtRest > 1500) {
   failures.push(
-    `live DOM at rest ${measured.deepNodesAtRest} nodes (bar: ≤1500)`
+    `live DOM at rest ${measured.deepNodesAtRest} nodes (bar: ≤1500)`,
   );
 }
 if (scroll) {
@@ -246,7 +244,7 @@ if (scroll) {
   }
   if (Math.max(...scroll.nodesWhileScrolling) > 2000) {
     failures.push(
-      `live DOM while scrolling peaked at ${Math.max(...scroll.nodesWhileScrolling)} nodes (bar: ≤2000)`
+      `live DOM while scrolling peaked at ${Math.max(...scroll.nodesWhileScrolling)} nodes (bar: ≤2000)`,
     );
   }
 } else {
