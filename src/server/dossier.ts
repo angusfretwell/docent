@@ -21,6 +21,7 @@ import {
 } from "../shared/dossier.ts";
 import type { ViewedRequest } from "../shared/dossier.ts";
 import { FindingRecord, RECORD_TYPES } from "../shared/finding.ts";
+import { Walkthrough, WalkthroughSection } from "../shared/walkthrough.ts";
 
 const STATE_ROOT = ".docent";
 const GITIGNORE_ENTRY = `${STATE_ROOT}/`;
@@ -217,15 +218,53 @@ const readFindings = Effect.fn("readFindings")(function* readFindings(dossierDir
   return yield* Effect.forEach(ids, (id) => readFinding(dir, id), { concurrency: "unbounded" });
 });
 
-/** Walk one walkthrough's directory into its file listing. */
+/**
+ * Parse one `docent/walkthrough-section@2` file: the same frontmatter/body
+ * envelope split as a Finding record (YAML frontmatter over a markdown body).
+ * The lifted `body` rides the decoded section so the client renders prose and
+ * ranges from one record. `None` on any read/parse/decode failure — the
+ * best-effort walk (architecture.md §3).
+ */
+const readWalkthroughSection = Effect.fn("readWalkthroughSection")(function* readWalkthroughSection(
+  file: string,
+) {
+  const fs = yield* FileSystem;
+  const text = yield* fs.readFileString(file);
+  const match = FRONTMATTER.exec(text);
+  const frontmatter = match?.groups?.frontmatter ?? "";
+  const body = (match?.groups?.body ?? "").trim();
+  const meta = yield* Effect.try(() => Bun.YAML.parse(frontmatter) ?? {});
+  return yield* Schema.decodeUnknownEffect(WalkthroughSection)({ ...(meta as object), body });
+}, Effect.option);
+
+/**
+ * Walk one walkthrough's directory: parse its `manifest.json`, then parse its
+ * sections in the manifest's array order (the order IS the tour, walkthroughs.md
+ * §4). The manifest's `kind` wins over the dir-derived one; sections that fail
+ * to parse are dropped, keeping the rest. A manifest-less dir yields no sections
+ * (order is undefined without one).
+ */
 const readWalkthrough = Effect.fn("readWalkthrough")(function* readWalkthrough(
   dir: string,
   kind: "code" | "product",
   id: string,
 ) {
   const path = yield* Path;
-  const files = (yield* listDir(path.join(dir, id))).toSorted();
-  return WalkthroughEntry.make({ files, id, kind });
+  const wlkDir = path.join(dir, id);
+  const manifest = yield* readRecord(path.join(wlkDir, "manifest.json"), Walkthrough);
+  const manifestValue = Option.getOrUndefined(manifest);
+  const names = manifestValue?.sections ?? [];
+  const parsed = yield* Effect.forEach(
+    names,
+    (name) => readWalkthroughSection(path.join(wlkDir, name)),
+    { concurrency: "unbounded" },
+  );
+  return WalkthroughEntry.make({
+    id,
+    kind: manifestValue?.kind ?? kind,
+    sections: somes(parsed),
+    ...(manifestValue === undefined ? {} : { manifest: manifestValue }),
+  });
 });
 
 /** Walk one walkthrough kind (`code`/`product`) into its entries. */

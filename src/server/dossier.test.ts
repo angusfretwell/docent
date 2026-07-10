@@ -268,6 +268,136 @@ body
   });
 });
 
+function writeWalkthrough(
+  root: string,
+  branch: string,
+  id: string,
+  manifest: string,
+  sections: Record<string, string>,
+) {
+  const dir = path.join(root, ".docent", "dossiers", branch, "walkthroughs", "code", id);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(path.join(dir, "manifest.json"), manifest);
+  for (const [name, body] of Object.entries(sections)) {
+    writeFileSync(path.join(dir, name), body);
+  }
+}
+
+function sectionFile(id: string, title: string, ranges: string, body: string) {
+  return [
+    "---",
+    "schema: docent/walkthrough-section@2",
+    `id: ${id}`,
+    `title: "${title}"`,
+    ranges,
+    "---",
+    "",
+    body,
+    "",
+  ].join("\n");
+}
+
+describe("readDossierSnapshot walkthroughs", () => {
+  test("parses the manifest and its sections in array order", async () => {
+    const root = scratchDir("docent-dossier-");
+    await snapshot(root, "feature");
+    writeWalkthrough(
+      root,
+      "feature",
+      "wlk_01ABC",
+      JSON.stringify({
+        bornChangeId: "chg_002",
+        id: "wlk_01ABC",
+        kind: "code",
+        schema: "docent/walkthrough@2",
+        sections: ["s02-dispatch.md", "s01-entry.md"],
+        title: "Entry tour",
+      }),
+      {
+        "s01-entry.md": sectionFile(
+          "sec_entry",
+          "Entry",
+          "ranges:\n  - { file: src/index.ts, side: head, blobSha: 9c2a, lines: [10, 24] }",
+          "The request enters here {{range:0}}.",
+        ),
+        "s02-dispatch.md": sectionFile(
+          "sec_dispatch",
+          "Dispatch",
+          "ranges:\n  - { file: src/dispatch.ts, side: head, blobSha: a1b2, lines: [1, 8] }",
+          "Then it dispatches.",
+        ),
+      },
+    );
+
+    const snap = await snapshot(root, "feature");
+
+    const walkthrough = snap.walkthroughs.find((entry) => entry.id === "wlk_01ABC");
+    if (walkthrough === undefined) {
+      throw new Error("expected the walkthrough");
+    }
+    expect(walkthrough.kind).toBe("code");
+    expect(walkthrough.manifest?.bornChangeId).toBe("chg_002");
+    // Manifest array order wins over filename order.
+    expect(walkthrough.sections.map((s) => s.id)).toEqual(["sec_dispatch", "sec_entry"]);
+    expect(walkthrough.sections[0]?.ranges).toMatchObject([
+      { blobSha: "a1b2", file: "src/dispatch.ts", lines: [1, 8], side: "head" },
+    ]);
+    expect(walkthrough.sections[1]?.body).toBe("The request enters here {{range:0}}.");
+  });
+
+  test("degrades gracefully: a malformed section is dropped, the rest survive", async () => {
+    const root = scratchDir("docent-dossier-");
+    await snapshot(root, "feature");
+    writeWalkthrough(
+      root,
+      "feature",
+      "wlk_01DEF",
+      JSON.stringify({
+        bornChangeId: "chg_001",
+        id: "wlk_01DEF",
+        kind: "code",
+        schema: "docent/walkthrough@2",
+        sections: ["s01-broken.md", "s02-ok.md"],
+        title: "Partial",
+      }),
+      {
+        "s01-broken.md": "no frontmatter here\n",
+        "s02-ok.md": sectionFile("sec_ok", "OK", "ranges: []", "still here"),
+      },
+    );
+
+    const snap = await snapshot(root, "feature");
+
+    const walkthrough = snap.walkthroughs.find((entry) => entry.id === "wlk_01DEF");
+    expect(walkthrough?.sections.map((s) => s.id)).toEqual(["sec_ok"]);
+  });
+
+  test("a walkthrough dir with no manifest yields an entry with no sections", async () => {
+    const root = scratchDir("docent-dossier-");
+    await snapshot(root, "feature");
+    const dir = path.join(
+      root,
+      ".docent",
+      "dossiers",
+      "feature",
+      "walkthroughs",
+      "code",
+      "wlk_bare",
+    );
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      path.join(dir, "s01-entry.md"),
+      sectionFile("sec_x", "X", "ranges: []", "orphan"),
+    );
+
+    const snap = await snapshot(root, "feature");
+
+    const walkthrough = snap.walkthroughs.find((entry) => entry.id === "wlk_bare");
+    expect(walkthrough).toMatchObject({ id: "wlk_bare", kind: "code", sections: [] });
+    expect(walkthrough?.manifest).toBeUndefined();
+  });
+});
+
 describe("parseAnchor", () => {
   test("lifts the file from a line-arm anchor", () => {
     const md = "---\nanchor: { kind: line, file: src/app.ts, side: head, lines: [1, 2] }\n---\n";

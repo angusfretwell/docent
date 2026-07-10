@@ -12,6 +12,7 @@
 
 import { Schema } from "effect";
 import { FindingRecord } from "./finding.ts";
+import { Walkthrough, WalkthroughSection } from "./walkthrough.ts";
 
 /** `docent/dossier@3` — the `dossier.json` identity record (data-model.md §3). */
 export class Dossier extends Schema.Class<Dossier>("Dossier")({
@@ -71,11 +72,19 @@ export class FindingEntry extends Schema.Class<FindingEntry>("FindingEntry")({
   records: Schema.Array(FindingRecord),
 }) {}
 
-/** A Walkthrough as walked in this slice: pillar, id, and its file names. */
+/**
+ * A Walkthrough as walked off disk: its dir id and pillar, its parsed
+ * `manifest.json` (absent when unreadable), and its sections parsed in the
+ * manifest's array order — the order IS the tour (walkthroughs.md §4). The code
+ * tab folds these; a product walkthrough carries a manifest but no code
+ * sections here (its capture rendering is a separate tab). Best-effort: an
+ * unparseable manifest or section is dropped, never fatal.
+ */
 export class WalkthroughEntry extends Schema.Class<WalkthroughEntry>("WalkthroughEntry")({
-  files: Schema.Array(Schema.String),
   id: Schema.String,
   kind: Schema.Literals(["code", "product"]),
+  manifest: Schema.optional(Walkthrough),
+  sections: Schema.Array(WalkthroughSection),
 }) {}
 
 /**
