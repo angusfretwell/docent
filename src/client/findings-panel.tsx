@@ -1,7 +1,12 @@
 import { useState } from "react";
 import type { FindingEntry } from "../shared/dossier.ts";
 import type { FoldedFinding, WhatsNext } from "../shared/finding.ts";
-import { findingLocation, foldFinding, sortFoldedFindings } from "../shared/finding.ts";
+import {
+  findingJumpTarget,
+  findingLocation,
+  foldFinding,
+  sortFoldedFindings,
+} from "../shared/finding.ts";
 
 // The Dossier-global Findings panel (diff-review.md §7): a flat list of every
 // Finding sorted by location, with a show-resolved toggle (off by default).
@@ -62,14 +67,6 @@ const metaStyle: React.CSSProperties = {
   opacity: 0.7,
 };
 
-/** The line/file a Finding can jump to in the diff, or nothing when detached. */
-function jumpTarget(finding: FoldedFinding): { file: string; line: number } | undefined {
-  if (finding.anchor?.kind === "line") {
-    return { file: finding.anchor.file, line: finding.anchor.lines[0] };
-  }
-  return undefined;
-}
-
 function FindingRow({
   finding,
   onJump,
@@ -77,7 +74,7 @@ function FindingRow({
   finding: FoldedFinding;
   onJump: (file: string, line: number) => void;
 }) {
-  const target = jumpTarget(finding);
+  const target = findingJumpTarget(finding.anchor);
 
   return (
     <button

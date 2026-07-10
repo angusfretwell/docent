@@ -229,6 +229,20 @@ export function foldFinding(id: string, records: readonly FindingRecord[]): Fold
   };
 }
 
+/**
+ * The file and line a Finding jumps to in the diff, or nothing when it has no
+ * line anchor. Kept beside the other anchor readers so anchor internals live in
+ * one module (the panel drives this through `DiffViewHandle.scrollToLine`).
+ */
+export function findingJumpTarget(
+  anchor: Anchor | undefined,
+): { file: string; line: number } | undefined {
+  if (anchor?.kind === ANCHOR_KIND.line) {
+    return { file: anchor.file, line: anchor.lines[0] };
+  }
+  return undefined;
+}
+
 /** A one-line human location for a Finding's anchor (diff-review.md §7). */
 export function findingLocation(anchor: Anchor | undefined): string {
   if (anchor === undefined) {

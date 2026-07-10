@@ -191,6 +191,50 @@ describe("readDossierSnapshot", () => {
     }
     expect(finding.records.map((record) => record.type)).toEqual(["reply"]);
   });
+
+  test("degrades gracefully: a record with the wrong schema is skipped", async () => {
+    const root = scratchDir("docent-dossier-");
+    await snapshot(root, "feature");
+    const fndDir = path.join(root, ".docent", "dossiers", "feature", "findings", "fnd_03");
+    mkdirSync(fndDir, { recursive: true });
+    writeFileSync(
+      path.join(fndDir, "001-open.md"),
+      [
+        "---",
+        "schema: docent/finding@2",
+        'author: { kind: human, id: angusfretwell@me.com, display: "Angus" }',
+        "changeId: chg_001",
+        "createdAt: 2026-07-10T02:14:00Z",
+        "anchor: { kind: change }",
+        "---",
+        "",
+        "wrong envelope version",
+        "",
+      ].join("\n"),
+    );
+    writeFileSync(
+      path.join(fndDir, "002-reply.md"),
+      [
+        "---",
+        "schema: docent/finding@3",
+        'author: { kind: human, id: angusfretwell@me.com, display: "Angus" }',
+        "changeId: chg_001",
+        "createdAt: 2026-07-10T03:02:11Z",
+        "---",
+        "",
+        "still here",
+        "",
+      ].join("\n"),
+    );
+
+    const snap = await snapshot(root, "feature");
+
+    const finding = snap.findings.at(0);
+    if (finding === undefined) {
+      throw new Error("expected a finding");
+    }
+    expect(finding.records.map((record) => record.type)).toEqual(["reply"]);
+  });
 });
 
 describe("ensureGitignore", () => {
