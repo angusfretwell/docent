@@ -95,31 +95,21 @@ const ensureDossier = Effect.fn("ensureDossier")(function* (params: {
   return dossier;
 });
 
-const readChanges = (dossierDir: string) =>
+/** Decode every `*.json` in `<dossierDir>/<sub>`, skipping records that fail. */
+const readJsonRecords = <S extends Schema.Constraint>(
+  dossierDir: string,
+  sub: string,
+  schema: S,
+) =>
   Effect.gen(function* () {
     const path = yield* Path;
-    const dir = path.join(dossierDir, "changes");
+    const dir = path.join(dossierDir, sub);
     const names = (yield* listDir(dir))
       .filter((name) => name.endsWith(".json"))
       .sort();
     const records = yield* Effect.forEach(
       names,
-      (name) => readRecord(path.join(dir, name), ChangeRecord),
-      { concurrency: "unbounded" },
-    );
-    return somes(records);
-  });
-
-const readViewed = (dossierDir: string) =>
-  Effect.gen(function* () {
-    const path = yield* Path;
-    const dir = path.join(dossierDir, "viewed");
-    const names = (yield* listDir(dir))
-      .filter((name) => name.endsWith(".json"))
-      .sort();
-    const records = yield* Effect.forEach(
-      names,
-      (name) => readRecord(path.join(dir, name), ViewedEvent),
+      (name) => readRecord(path.join(dir, name), schema),
       { concurrency: "unbounded" },
     );
     return somes(records);
@@ -194,10 +184,10 @@ export const readDossierSnapshot = Effect.fn("readDossierSnapshot")(
     });
     const [changes, findings, walkthroughs, viewed] = yield* Effect.all(
       [
-        readChanges(dossierDir),
+        readJsonRecords(dossierDir, "changes", ChangeRecord),
         readFindings(dossierDir),
         readWalkthroughs(dossierDir),
-        readViewed(dossierDir),
+        readJsonRecords(dossierDir, "viewed", ViewedEvent),
       ],
       { concurrency: "unbounded" },
     );
