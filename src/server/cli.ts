@@ -21,6 +21,7 @@
 import { Console, Effect, Schema } from "effect";
 import { Anchor, foldFinding, sortFoldedFindings } from "../shared/finding.ts";
 import type { Disposition, FoldedFinding, WhatsNext } from "../shared/finding.ts";
+import { FindingWrite } from "../shared/finding-write.ts";
 import { readDossierSnapshot } from "./dossier.ts";
 import type { AuthorInput } from "./findings-write.ts";
 import { writeFindingRecord } from "./findings-write.ts";
@@ -58,9 +59,22 @@ const WHATS_NEXT_VALUES: readonly WhatsNext[] = [
   "needs-decision",
   "closed",
 ];
-const WHATS_NEXT_SET = new Set<string>(WHATS_NEXT_VALUES);
 const DISPOSITION_VALUES: readonly Disposition[] = ["actioned", "declined", "question"];
-const DISPOSITION_SET = new Set<string>(DISPOSITION_VALUES);
+
+/**
+ * Assert a flag value is one of a closed set, or throw a usage error naming the
+ * allowed values — the one shape shared by `--side`, `--disposition`, and
+ * `--whats-next`. Membership is a `Set` so the check stays constant-time when
+ * called across a list.
+ */
+function parseEnum<T extends string>(flag: string, value: string, values: readonly T[]): T {
+  if (!new Set<string>(values).has(value)) {
+    throw new CliUsageError({
+      reason: `unknown --${flag}: ${value} (one of ${values.join(", ")})`,
+    });
+  }
+  return value as T;
+}
 
 // A parsed argv: repeated `--flag value` / `--flag=value` accumulate under the
 // key; a valueless `--flag` (at the end or before another `--flag`) is a bool.
@@ -156,20 +170,15 @@ export function parseListArgs(args: readonly string[]): FindingFilter {
     status = wantsOpen ? "open" : "resolved";
   }
 
-  const whatsNext = many(parsed, "whats-next");
-  for (const value of whatsNext) {
-    if (!WHATS_NEXT_SET.has(value)) {
-      throw new CliUsageError({
-        reason: `unknown --whats-next: ${value} (one of ${WHATS_NEXT_VALUES.join(", ")})`,
-      });
-    }
-  }
+  const whatsNext = many(parsed, "whats-next").map((value) =>
+    parseEnum("whats-next", value, WHATS_NEXT_VALUES),
+  );
 
   return {
     anchorFile: one(parsed, "anchor-file"),
     author: one(parsed, "author"),
     status,
-    whatsNext: whatsNext as WhatsNext[],
+    whatsNext,
   };
 }
 
@@ -250,13 +259,7 @@ export interface AuthorOpts {
 }
 
 function parseSide(value: string | undefined): Side {
-  if (value === undefined) {
-    return "head";
-  }
-  if (!SIDES.includes(value as Side)) {
-    throw new CliUsageError({ reason: `unknown --side: ${value} (base | head)` });
-  }
-  return value as Side;
+  return value === undefined ? "head" : parseEnum("side", value, SIDES);
 }
 
 // A line spec is `N`, `N:M`, or `N-M` (1-based, inclusive) — a single line
@@ -370,6 +373,13 @@ const buildAnchor = Effect.fn("buildAnchor")(function* buildAnchor(params: {
 });
 
 /** The resolved refs a write mints against, plus the read scope for a write. */
+interface WriteContext {
+  base: string;
+  branch: string;
+  refs: { baseRef: string; baseSha: string; headRef: string; headSha: string };
+  root: string;
+}
+
 const writeContext = Effect.fn("writeContext")(function* writeContext(cwd: string) {
   const refs = yield* resolveChangeRefs(cwd);
   return {
@@ -382,7 +392,32 @@ const writeContext = Effect.fn("writeContext")(function* writeContext(cwd: strin
       headSha: refs.headSha,
     },
     root: refs.root,
-  };
+  } satisfies WriteContext;
+});
+
+/**
+ * The shared write tail for every write subcommand: validate the assembled
+ * record against the same `FindingWrite` schema the server decodes `POST
+ * /api/findings` bodies with, then append it through the shared
+ * `writeFindingRecord`. Both surfaces validate and write identically — one
+ * implementation, no divergence (agent-integration.md §3.3).
+ */
+const commitWrite = Effect.fn("commitWrite")(function* commitWrite(
+  context: WriteContext,
+  author: AuthorInput,
+  draft: FindingWrite,
+) {
+  const write = yield* Schema.decodeUnknownEffect(FindingWrite)(draft).pipe(
+    Effect.mapError((error) => new CliUsageError({ reason: `invalid finding write: ${error}` })),
+  );
+  return yield* writeFindingRecord({
+    author,
+    base: context.base,
+    branch: context.branch,
+    refs: context.refs,
+    root: context.root,
+    write,
+  });
 });
 
 /** write-findings `open`: mint an anchored Finding via the shared write path. */
@@ -398,14 +433,7 @@ export const addFinding = Effect.fn("addFinding")(function* addFinding(
     root: context.root,
     spec: params.anchor,
   });
-  return yield* writeFindingRecord({
-    author,
-    base: context.base,
-    branch: context.branch,
-    refs: context.refs,
-    root: context.root,
-    write: { anchor, body: params.body, op: "open" },
-  });
+  return yield* commitWrite(context, author, { anchor, body: params.body, op: "open" });
 });
 
 /** write-findings `reply`, optionally closing the turn with a disposition. */
@@ -415,18 +443,11 @@ export const replyFinding = Effect.fn("replyFinding")(function* replyFinding(
 ) {
   const context = yield* writeContext(cwd);
   const author = yield* buildAuthor(context.root, params.author);
-  return yield* writeFindingRecord({
-    author,
-    base: context.base,
-    branch: context.branch,
-    refs: context.refs,
-    root: context.root,
-    write: {
-      body: params.body,
-      findingId: params.findingId,
-      op: "reply",
-      ...(params.disposition === undefined ? {} : { disposition: params.disposition }),
-    },
+  return yield* commitWrite(context, author, {
+    body: params.body,
+    findingId: params.findingId,
+    op: "reply",
+    ...(params.disposition === undefined ? {} : { disposition: params.disposition }),
   });
 });
 
@@ -437,17 +458,10 @@ export const resolveFinding = Effect.fn("resolveFinding")(function* resolveFindi
 ) {
   const context = yield* writeContext(cwd);
   const author = yield* buildAuthor(context.root, params.author);
-  return yield* writeFindingRecord({
-    author,
-    base: context.base,
-    branch: context.branch,
-    refs: context.refs,
-    root: context.root,
-    write: {
-      findingId: params.findingId,
-      op: "resolve",
-      ...(params.body === undefined ? {} : { body: params.body }),
-    },
+  return yield* commitWrite(context, author, {
+    findingId: params.findingId,
+    op: "resolve",
+    ...(params.body === undefined ? {} : { body: params.body }),
   });
 });
 
@@ -462,15 +476,7 @@ function requireFinding(args: ParsedArgs): string {
 }
 
 function parseDisposition(value: string | undefined): Disposition | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-  if (!DISPOSITION_SET.has(value)) {
-    throw new CliUsageError({
-      reason: `unknown --disposition: ${value} (one of ${DISPOSITION_VALUES.join(", ")})`,
-    });
-  }
-  return value as Disposition;
+  return value === undefined ? undefined : parseEnum("disposition", value, DISPOSITION_VALUES);
 }
 
 /**
@@ -500,6 +506,11 @@ const resolveBody = Effect.fn("resolveBody")(function* resolveBody(
   return "";
 });
 
+/** Print a value as pretty JSON on stdout — the machine-readable result shape. */
+function printJson(value: unknown) {
+  return Console.log(JSON.stringify(value, null, 2));
+}
+
 /**
  * Run one `docent finding <op> …` invocation: parse, execute against git + fs,
  * and print the result as JSON (a `list` array, or the write's `{ changeId,
@@ -514,38 +525,41 @@ export const runFinding = Effect.fn("runFinding")(function* runFinding(
   if (op === "list") {
     const filter = yield* attempt(() => parseListArgs(rest));
     const findings = yield* listFindings(cwd, filter);
-    return yield* Console.log(JSON.stringify({ findings }, null, 2));
+    return yield* printJson({ findings });
   }
   if (op === "add") {
     const args = yield* attempt(() => parseArgs(rest, new Set(["change"])));
     const anchor = yield* parseAnchorSpec(args);
     const body = yield* resolveBody(args, true);
-    const result = yield* addFinding(cwd, { anchor, author: parseAuthorOpts(args), body });
-    return yield* Console.log(JSON.stringify(result, null, 2));
+    return yield* printJson(
+      yield* addFinding(cwd, { anchor, author: parseAuthorOpts(args), body }),
+    );
   }
   if (op === "reply") {
     const args = yield* attempt(() => parseArgs(rest, new Set()));
     const findingId = yield* attempt(() => requireFinding(args));
     const disposition = yield* attempt(() => parseDisposition(one(args, "disposition")));
     const body = yield* resolveBody(args, true);
-    const result = yield* replyFinding(cwd, {
-      author: parseAuthorOpts(args),
-      body,
-      findingId,
-      ...(disposition === undefined ? {} : { disposition }),
-    });
-    return yield* Console.log(JSON.stringify(result, null, 2));
+    return yield* printJson(
+      yield* replyFinding(cwd, {
+        author: parseAuthorOpts(args),
+        body,
+        findingId,
+        ...(disposition === undefined ? {} : { disposition }),
+      }),
+    );
   }
   if (op === "resolve") {
     const args = yield* attempt(() => parseArgs(rest, new Set()));
     const findingId = yield* attempt(() => requireFinding(args));
     const body = yield* resolveBody(args, false);
-    const result = yield* resolveFinding(cwd, {
-      author: parseAuthorOpts(args),
-      findingId,
-      ...(body === "" ? {} : { body }),
-    });
-    return yield* Console.log(JSON.stringify(result, null, 2));
+    return yield* printJson(
+      yield* resolveFinding(cwd, {
+        author: parseAuthorOpts(args),
+        findingId,
+        ...(body === "" ? {} : { body }),
+      }),
+    );
   }
 
   return yield* Effect.fail(

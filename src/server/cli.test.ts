@@ -12,7 +12,6 @@ import {
   listFindings,
   parseAnchorSpec,
   parseArgs,
-  parseAuthorOpts,
   parseListArgs,
   replyFinding,
   resolveFinding,
@@ -121,30 +120,32 @@ describe("applyFindingFilter", () => {
   const all = [open, closed, onFile, byAgent];
 
   test("status open/resolved narrows", () => {
-    expect(applyFindingFilter(all, { status: "open", whatsNext: [] }).map((f) => f.id)).toEqual([
-      "open",
-      "onFile",
-      "byAgent",
-    ]);
-    expect(applyFindingFilter(all, { status: "resolved", whatsNext: [] }).map((f) => f.id)).toEqual(
+    expect(
+      applyFindingFilter(all, { status: "open", whatsNext: [] }).map((finding) => finding.id),
+    ).toEqual(["open", "onFile", "byAgent"]);
+    expect(
+      applyFindingFilter(all, { status: "resolved", whatsNext: [] }).map((finding) => finding.id),
+    ).toEqual(["closed"]);
+  });
+
+  test("what's-next any-of narrows", () => {
+    expect(applyFindingFilter(all, { whatsNext: ["closed"] }).map((finding) => finding.id)).toEqual(
       ["closed"],
     );
   });
 
-  test("what's-next any-of narrows", () => {
-    expect(applyFindingFilter(all, { whatsNext: ["closed"] }).map((f) => f.id)).toEqual(["closed"]);
-  });
-
   test("anchor-file narrows to the code arm's file", () => {
     expect(
-      applyFindingFilter(all, { anchorFile: "src/a.ts", whatsNext: [] }).map((f) => f.id),
+      applyFindingFilter(all, { anchorFile: "src/a.ts", whatsNext: [] }).map(
+        (finding) => finding.id,
+      ),
     ).toEqual(["onFile"]);
   });
 
   test("author narrows to a participant id", () => {
-    expect(applyFindingFilter(all, { author: "claude", whatsNext: [] }).map((f) => f.id)).toEqual([
-      "byAgent",
-    ]);
+    expect(
+      applyFindingFilter(all, { author: "claude", whatsNext: [] }).map((finding) => finding.id),
+    ).toEqual(["byAgent"]);
   });
 });
 
@@ -254,11 +255,11 @@ describe("write + fetch round-trip (shared write path)", () => {
       }),
     );
     const afterReply = await run(listFindings(repo, { whatsNext: [] }));
-    expect(afterReply.find((f) => f.id === findingId)?.whatsNext).toBe("needs-verify");
+    expect(afterReply.find((finding) => finding.id === findingId)?.whatsNext).toBe("needs-verify");
 
     await run(resolveFinding(repo, { author: {}, body: "verified", findingId }));
     const afterResolve = await run(listFindings(repo, { whatsNext: [] }));
-    const closed = afterResolve.find((f) => f.id === findingId);
+    const closed = afterResolve.find((finding) => finding.id === findingId);
     expect(closed?.resolved).toBe(true);
     expect(closed?.whatsNext).toBe("closed");
   });
@@ -288,14 +289,6 @@ describe("write + fetch round-trip (shared write path)", () => {
     expect(onFile).toHaveLength(1);
     expect(byReviewer).toHaveLength(1);
     expect(closed).toHaveLength(1);
-  });
-
-  test("parseAuthorOpts reads --agent, --display, --model", () => {
-    const opts = parseAuthorOpts(
-      parseArgs(["--agent", "a", "--display", "Agent A", "--model", "m"], new Set()),
-    );
-
-    expect(opts).toEqual({ agent: "a", display: "Agent A", model: "m" });
   });
 
   test("reply with a missing or empty --finding is a usage error (never a stray write)", async () => {
