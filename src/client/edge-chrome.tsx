@@ -8,11 +8,21 @@
  * only the rendering.
  */
 
-import type { FileDiffMetadata } from "@pierre/diffs";
+import type { ChangeTypes, FileDiffMetadata } from "@pierre/diffs";
 import { useEffect, useState } from "react";
 import { blobUrl, fetchBlobSize, isRealObjectId } from "./blobs.ts";
 import { formatBytes } from "./edge-cases.ts";
 import type { FileClass } from "./edge-cases.ts";
+
+// Human-readable change type for the binary row (diff-review.md §5:
+// "change type + size delta").
+const CHANGE_TYPE_LABEL: Record<ChangeTypes, string> = {
+  change: "Modified",
+  deleted: "Deleted",
+  new: "Added",
+  "rename-changed": "Renamed",
+  "rename-pure": "Renamed",
+};
 
 /** A signed byte-delta, e.g. `+2.2 KB` / `−1.0 KB`, or empty when unchanged. */
 function formatDelta(delta: number): string {
@@ -59,15 +69,15 @@ function BinarySizeRow({ item }: { item: FileDiffMetadata }) {
     };
   }, [prevObjectId, newObjectId]);
 
+  const delta = sizes ? formatDelta(sizes.after - sizes.before) : "";
   return (
     <span className="edge-row">
       <span className="edge-chip">Binary</span>
+      <span>{CHANGE_TYPE_LABEL[item.type]}</span>
       {sizes ? (
         <span className="edge-mono">
           {formatBytes(sizes.before)} → {formatBytes(sizes.after)}
-          {formatDelta(sizes.after - sizes.before) === ""
-            ? null
-            : ` (${formatDelta(sizes.after - sizes.before)})`}
+          {delta === "" ? null : ` (${delta})`}
         </span>
       ) : null}
     </span>

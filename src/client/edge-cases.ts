@@ -37,8 +37,8 @@ export interface FileClass {
   generated: boolean;
 }
 
-// Collapse the body past this many rendered lines (diff-review.md §5: "e.g.
-// >2k changed lines"). unifiedLineCount is the renderer's own row count.
+// Collapse the body past this many changed lines (diff-review.md §5: "e.g.
+// >2k changed lines") — additions plus deletions, excluding context.
 const LARGE_LINES = 2000;
 // A single line this wide is minified/not human-readable — collapse regardless
 // of line count ("a minified megabyte-wide line").
@@ -125,6 +125,15 @@ function isImagePath(path: string): boolean {
   return IMAGE_EXTENSIONS.has(extension(path));
 }
 
+/** Changed-line count — additions plus deletions across the file's hunks. */
+function changedLineCount(file: FileDiffMetadata): number {
+  let count = 0;
+  for (const hunk of file.hunks) {
+    count += hunk.additionLines + hunk.deletionLines;
+  }
+  return count;
+}
+
 function maxLineLength(file: FileDiffMetadata): number {
   let max = 0;
   for (const line of file.additionLines) {
@@ -149,7 +158,7 @@ function classifyFile(file: FileDiffMetadata, block: string, generated: boolean)
   const large =
     !binary &&
     !submodule &&
-    (file.unifiedLineCount > LARGE_LINES || maxLineLength(file) > MINIFIED_COLS);
+    (changedLineCount(file) > LARGE_LINES || maxLineLength(file) > MINIFIED_COLS);
   return {
     binary,
     generated,
