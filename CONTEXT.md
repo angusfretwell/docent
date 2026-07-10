@@ -36,3 +36,18 @@ _Avoid_: Staleness
 Where a Change came from. A pull request is a Change's source, carrying its
 metadata — not a first-class entity of its own.
 _Avoid_: PullRequest, Provider
+
+**Walkthrough**:
+A curated, ordered tour of a Change authored for a reader — prose woven through
+selected diff ranges (code) or captures (product). Durable and bound to the
+Change it was born on; drifts as later Changes are minted, and is superseded (not
+mutated) by regeneration. Held by a Review; the code walkthrough model is pinned
+by [#14](https://github.com/angusfretwell/docent/issues/14).
+_Avoid_: Tour, Guide, Narrative
+
+**Section**:
+One step of a Walkthrough: a titled unit of prose interleaved with its targets —
+diff ranges for a code walkthrough, capture annotations for a product one. The
+unit a narrative comment anchors to (the `walkthrough-section` arm of the comment
+anchor union).
+_Avoid_: Step, Slide
