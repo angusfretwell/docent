@@ -2,7 +2,12 @@ import { Schema } from "effect";
 import { useEffect, useState } from "react";
 import { Change, DiffError } from "../shared/change.ts";
 import { DossierSnapshot } from "../shared/dossier.ts";
+import type { FindingEntry, ViewedEvent } from "../shared/dossier.ts";
 import { DiffView } from "./diff-view.tsx";
+
+// Stable empties so the pre-snapshot render doesn't churn DiffView's effects.
+const NO_VIEWED: readonly ViewedEvent[] = [];
+const NO_FINDINGS: readonly FindingEntry[] = [];
 
 // Sync decode boundary: the fetch handler below owns the try/catch.
 const decodeChange = Schema.decodeUnknownSync(Change);
@@ -154,7 +159,11 @@ export function App() {
   return (
     <>
       {live}
-      <DiffView patch={change.patch} />
+      <DiffView
+        findings={dossier?.findings ?? NO_FINDINGS}
+        patch={change.patch}
+        viewed={dossier?.viewed ?? NO_VIEWED}
+      />
     </>
   );
 }
