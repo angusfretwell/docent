@@ -2,8 +2,9 @@
   "name": "docent",
   "private": true,
   "type": "module",
-  "module": "index.ts",
   "scripts": {
+    "build": "vite build",
+    "serve": "bun run build && bun bin.ts",
     "typecheck": "tsc --noEmit",
     "check": "biome check",
     "fix": "biome check --write",
@@ -12,13 +13,25 @@
   "devDependencies": {
     "@ai-hero/sandcastle": "^0.12.0",
     "@biomejs/biome": "2.5.2",
+    "@effect/language-service": "^0.86.6",
+    "@pierre/diffs": "1.2.12",
     "@types/bun": "latest",
-    "husky": "^9.1.7"
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "husky": "^9.1.7",
+    "playwright": "^1.61.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "vite": "^8.1.4"
   },
   "peerDependencies": {
     "typescript": "^5"
   },
   "dependencies": {
+    "@effect/platform-bun": "^4.0.0-beta.97",
+    "effect": "^4.0.0-beta.97",
+    "open": "^11.0.0",
     "zod": "^4.4.3"
   }
 }
