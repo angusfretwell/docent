@@ -2,8 +2,6 @@
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "extends": ["ultracite/biome/core", "ultracite/biome/vitest"],
   "files": {
-    // Prototypes are throwaway code (see .agents/skills/prototype/SKILL.md) —
-    // exempt from linting/formatting so the "skip the polish" rule holds.
-    "includes": ["!prototypes"]
+    "includes": ["!prototypes", "!.sandcastle"]
   }
 }
