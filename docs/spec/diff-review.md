@@ -14,7 +14,7 @@ The adoption was validated against real large diffs (178-file / ≈39k-row and 3
 
 - **Virtualization is size-independent**: live DOM stays at roughly **300–550 nodes at any diff size** (~400–550 at rest, ~300–700 during active scroll), and the materialized line window tracks the scroll.
 - **First paint under 250 ms**: first rows at 89–106 ms, fully-highlighted settle around 0.8–1.1 s on the corrected benchmark (Apple M1 Pro, headless Chromium).
-- **~60 fps scroll with zero long frames** (>50 ms) on both fixtures, unified and split — *with the Web Worker tokenization pool on*. Worker off janks the scroll (p95 225 ms, 15 long frames): **the worker pool ships enabled**.
+- **~60 fps scroll with zero long frames** (>50 ms) on both fixtures, unified and split — _with the Web Worker tokenization pool on_. Worker off janks the scroll (p95 225 ms, 15 long frames): **the worker pool ships enabled**.
 - Bounded 8–11 MB heap; correct Shiki highlighting; large single files (2.8k lines), adds, deletes, and renames all handled.
 
 These numbers are the bar the built Diff tab is held to.
@@ -67,10 +67,10 @@ Exact key bindings are build detail. **Jump-to-next-unresolved-Finding** belongs
 
 - An explicit per-file **"Viewed" checkbox** in the sticky file header. Checking it **collapses** the file's body in the scroll (thinning the stream as review progresses) and checks it in the tree.
 - **Manual only** — no auto-mark-on-scroll-past. The value of "viewed" is that the reviewer asserted it.
-- **Keyed on the file's head-blob SHA.** "Viewed" asserts *I've seen this file's resulting content*. Across Changes:
+- **Keyed on the file's head-blob SHA.** "Viewed" asserts _I've seen this file's resulting content_. Across Changes:
   - head blob **byte-identical** → viewed **persists**;
   - head blob **changed** → viewed **clears**, and the file flags as **"changed since viewed."**
-  - A pure rebase that leaves head content identical **keeps** the marks. The rare edge — the base moved so a line is *framed* as newly-changed though its head bytes are unchanged — is accepted: those bytes were seen.
+  - A pure rebase that leaves head content identical **keeps** the marks. The rare edge — the base moved so a line is _framed_ as newly-changed though its head bytes are unchanged — is accepted: those bytes were seen.
 - Persisted as **append-only viewed events** in `.docent/` — the storage shape is owned by [data-model.md](data-model.md).
 - Viewed is **orthogonal to Finding resolution** — its own axis, exactly as resolution is orthogonal to drift. Solo tool → single reviewer; no multi-user viewed state.
 - **Progress = viewed files / total files** in the Change — file-granular, shown as a count plus a thin bar in the panel header. It is a pure read-model over the viewed events and recomputes automatically: a new Change that clears marks drops progress to reflect the re-review owed.
@@ -87,17 +87,17 @@ Patch-only input leaves the renderer `isPartial`, which disables hunk expansion 
 
 ## 5. Edge-case chrome
 
-([#9](https://github.com/angusfretwell/docent/issues/9)) The renderer handles the diff *body* (renames, adds/deletes, very large files all validated in [#4](https://github.com/angusfretwell/docent/issues/4)); this is the surrounding chrome:
+([#9](https://github.com/angusfretwell/docent/issues/9)) The renderer handles the diff _body_ (renames, adds/deletes, very large files all validated in [#4](https://github.com/angusfretwell/docent/issues/4)); this is the surrounding chrome:
 
-| Case | Chrome | Body | Viewed / progress |
-| --- | --- | --- | --- |
-| **Binary** (non-image) | row: change type + size delta | none (placeholder) | viewable at file granularity |
-| **Image** | change type | **side-by-side before/after** (both blobs via `/api/blob/:sha`) | viewable |
-| **Pure rename** (100% similarity) | `old → new` header | collapsed — nothing to review | auto-viewable |
-| **Rename + modify** | `old → new` header | normal diff | normal |
-| **Very large / minified** | normal header | **collapsed past a threshold** (e.g. >2k changed lines, or a minified megabyte-wide line) + "load diff" | normal |
-| **Generated / lockfile / vendored** | de-emphasized in tree | **collapsed + auto-marked-viewed** (via `.gitattributes linguist-generated` + a default glob set — lockfiles, `dist/`); reviewer can expand and un-view | auto-viewed, still counted |
-| **Mode-only / submodule** | row: mode `x→y` / submodule `sha→sha` | none | viewable |
+| Case                                | Chrome                                | Body                                                                                                                                                    | Viewed / progress            |
+| ----------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| **Binary** (non-image)              | row: change type + size delta         | none (placeholder)                                                                                                                                      | viewable at file granularity |
+| **Image**                           | change type                           | **side-by-side before/after** (both blobs via `/api/blob/:sha`)                                                                                         | viewable                     |
+| **Pure rename** (100% similarity)   | `old → new` header                    | collapsed — nothing to review                                                                                                                           | auto-viewable                |
+| **Rename + modify**                 | `old → new` header                    | normal diff                                                                                                                                             | normal                       |
+| **Very large / minified**           | normal header                         | **collapsed past a threshold** (e.g. >2k changed lines, or a minified megabyte-wide line) + "load diff"                                                 | normal                       |
+| **Generated / lockfile / vendored** | de-emphasized in tree                 | **collapsed + auto-marked-viewed** (via `.gitattributes linguist-generated` + a default glob set — lockfiles, `dist/`); reviewer can expand and un-view | auto-viewed, still counted   |
+| **Mode-only / submodule**           | row: mode `x→y` / submodule `sha→sha` | none                                                                                                                                                    | viewable                     |
 
 Onion-skin/swipe image comparison is **deferred** behind side-by-side.
 
@@ -113,7 +113,7 @@ A **read-only preview of the working tree**, letting the reviewer eyeball an `ac
 - **Not a Change**: no identity, no persistence. It is a Change-shaped view whose head side is the dirty working tree.
 - **Auto-surfaces** (with a dirty badge) when the working tree is dirty; **auto-hides** when clean.
 - **Diff-tab only** — walkthroughs are durable and immutable, untouched by live edits.
-- The binding is **definitional**: the Dossier *is* the checked-out branch ([#24](https://github.com/angusfretwell/docent/issues/24)), so the dirty working tree is by definition this Dossier's pending state.
+- The binding is **definitional**: the Dossier _is_ the checked-out branch ([#24](https://github.com/angusfretwell/docent/issues/24)), so the dirty working tree is by definition this Dossier's pending state.
 
 ### Range & rendering
 
@@ -121,7 +121,7 @@ A **read-only preview of the working tree**, letting the reviewer eyeball an `ac
   - **Incremental `git diff HEAD`** (primary) — just the pending edit, the delta since the last commit. The surgical view for verifying one `actioned` fix; empties the moment `HEAD` moves.
   - **Cumulative `base..worktree`** (toggle) — the whole current Change **plus** uncommitted edits, previewing the next Change's full diff.
 - **Staged + unstaged combined** — staging is treated as an invisible git detail (the human's commit workflow); the reviewer sees "everything since the last commit" as one delta.
-- **Untracked files included** (respecting `.gitignore`) — a newly-created, not-yet-staged file renders as a full-file add (enumerated via `git status --porcelain` / intent-to-add). `git diff HEAD` alone omits these, and agents routinely *create* files as part of a fix.
+- **Untracked files included** (respecting `.gitignore`) — a newly-created, not-yet-staged file renders as a full-file add (enumerated via `git status --porcelain` / intent-to-add). `git diff HEAD` alone omits these, and agents routinely _create_ files as part of a fix.
 
 ### Blob sourcing
 
@@ -139,12 +139,12 @@ Pending **owns no lifecycle logic**. On commit, `HEAD` moves → `git diff HEAD`
 ### Strictly verify-only
 
 - **No Finding authoring on Pending.** An anchor bound to a mutable working-tree blob would be transient and strand on commit, so all Finding anchors stay on committed Changes.
-- **Existing Findings are not rendered inline** on Pending (v1) — it is a pure code preview. Verifying an `actioned` Finding: read it in the Findings panel (or on the committed head Change), eyeball the edit on Pending, then write the resolve on the existing Finding — its born anchor untouched. *(Noted for later: because Pending's base side literally is the head Change's blobs, rendering existing Findings read-only on Pending is coherent and could be added without redrawing anything.)*
+- **Existing Findings are not rendered inline** on Pending (v1) — it is a pure code preview. Verifying an `actioned` Finding: read it in the Findings panel (or on the committed head Change), eyeball the edit on Pending, then write the resolve on the existing Finding — its born anchor untouched. _(Noted for later: because Pending's base side literally is the head Change's blobs, rendering existing Findings read-only on Pending is coherent and could be added without redrawing anything.)_
 - **Mark-as-viewed does not apply.** Viewed is keyed on immutable head-blob SHAs and tracks durable cross-Change progress; Pending's head side is mutable, un-SHA'd, and transient — nothing stable to key on. Once the edit commits into a Change, mark-as-viewed applies normally, and head-blob keying correctly shows the changed file as unviewed.
 
 ### Scope
 
-git cannot distinguish an agent's edit from a human's — the working tree is just dirty state — so Pending is a **general uncommitted-changes surface** (human edits show too; no author attribution or filtering) which the `actioned`-verify flow *leans on* rather than owns.
+git cannot distinguish an agent's edit from a human's — the working tree is just dirty state — so Pending is a **general uncommitted-changes surface** (human edits show too; no author attribution or filtering) which the `actioned`-verify flow _leans on_ rather than owns.
 
 ## 7. The Findings panel
 

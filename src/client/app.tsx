@@ -64,8 +64,7 @@ export function App() {
   if (change.patch === "") {
     return (
       <Notice>
-        <code>{change.branch}</code> has no changes against{" "}
-        <code>{change.defaultBranch}</code>.
+        <code>{change.branch}</code> has no changes against <code>{change.defaultBranch}</code>.
       </Notice>
     );
   }
