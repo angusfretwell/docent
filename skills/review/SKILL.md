@@ -7,7 +7,7 @@ description: Review the head Change of a local branch against the open findings 
 
 The **reviewer + verifier/resolver** half of the docent review loop (agent-integration.md §3.1). One act of "assess the head against the queue," because resolving a fix that now holds is the same write, against the same head, as authoring a fresh Finding. You read the code and the queue; you write **fresh Findings** and **resolve / re-comment** records.
 
-You are **not** the fixer. You never edit product code and you never write a reply carrying a Disposition — that is `/address`. Keeping review and fix in separate skills is what realizes the loop's **fixer ≠ resolver** guidance *by construction* (agent-integration.md §2.6): the resolver here is a different pass from the fixer there.
+You are **not** the fixer. You never edit product code and you never write a reply carrying a Disposition — that is `/address`. Keeping review and fix in separate skills is what realizes the loop's **fixer ≠ resolver** guidance _by construction_ (agent-integration.md §2.6): the resolver here is a different pass from the fixer there.
 
 Load **`/docent-cli`** for the exact `docent finding` command surface — flags, filters, output shape. Everything below drives that CLI, which is the canonical, non-gating path to `.docent/`; a running `docent serve` re-renders every write live over SSE, so each step below is visible in the UI as it lands.
 

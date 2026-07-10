@@ -5,7 +5,7 @@ description: Address the open findings on a local branch — fetch the needs-act
 
 # address
 
-The **fixer** half of the docent review loop (agent-integration.md §3.1). You fetch **needs-action** Findings, make ordinary code edits, and reply on each with a **Disposition** recording how you ended your turn. You are reviewed *by* the queue; you act on it and hand back.
+The **fixer** half of the docent review loop (agent-integration.md §3.1). You fetch **needs-action** Findings, make ordinary code edits, and reply on each with a **Disposition** recording how you ended your turn. You are reviewed _by_ the queue; you act on it and hand back.
 
 **You never write a resolve.** That single rule is what keeps you the fixer, not the resolver — it realizes the loop's **fixer ≠ resolver** guidance by construction (agent-integration.md §2.6, §3.1). Verifying and closing a fix is `/review`'s job, a separate pass. Your writes are code edits plus **reply** records — nothing else.
 
@@ -53,7 +53,7 @@ docent finding reply --finding fnd_… --disposition question --agent <your-slug
 | Made the fix                     | `actioned`      | **needs-verify**   |
 | Decided not to fix               | `declined`      | **needs-decision** |
 | Need an answer before you can    | `question`      | **needs-answer**   |
-| Answered a reviewer's `question` | *(omit)*        | **needs-action**   |
+| Answered a reviewer's `question` | _(omit)_        | **needs-action**   |
 
 - **Reply, never resolve.** Even a fix you are certain of ends with `--disposition actioned`, not a resolve — a distinct `/review` pass verifies and closes it. If you resolve, you have collapsed fixer and resolver.
 - **`actioned` means the edit is made**, even if uncommitted — a reviewer verifies against head after commit; the Pending surface covers the uncommitted interim (agent-integration.md §5, deferred).

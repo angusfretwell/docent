@@ -12,14 +12,14 @@ The `docent` binary has **two faces** (agent-integration.md §3.3):
 
 The finding subcommands are the CLI half of the review loop's **two I/O primitives** (agent-integration.md §2.2):
 
-| Primitive          | Subcommand                             | Does                                            |
-| ------------------ | -------------------------------------- | ----------------------------------------------- |
-| **fetch-findings** | `docent finding list --filter …`       | Read the queue (any author), filtered           |
-| **write-findings** | `docent finding add / reply / resolve` | Append a finding / a reply / a resolve record   |
+| Primitive          | Subcommand                             | Does                                          |
+| ------------------ | -------------------------------------- | --------------------------------------------- |
+| **fetch-findings** | `docent finding list --filter …`       | Read the queue (any author), filtered         |
+| **write-findings** | `docent finding add / reply / resolve` | Append a finding / a reply / a resolve record |
 
 ## Non-gating — the CLI is convenience, never a lock
 
-The files under `.docent/` stay **plain and directly writable**. The CLI is the *canonical, convenient* path — it is the single home for ULID minting, anchor construction (resolving a code arm's content-addressed `blobSha` from git), append semantics, and what's-next / Disposition derivation — but it never gates. An agent could hand-author the identical `docent/finding@3` record file, and a running `docent serve` fs-watches every write, CLI-made or direct, and re-renders over SSE (agent-integration.md §1, §3.3). Both the UI's write path and the CLI share **one** `writeFindingRecord` implementation — no divergence.
+The files under `.docent/` stay **plain and directly writable**. The CLI is the _canonical, convenient_ path — it is the single home for ULID minting, anchor construction (resolving a code arm's content-addressed `blobSha` from git), append semantics, and what's-next / Disposition derivation — but it never gates. An agent could hand-author the identical `docent/finding@3` record file, and a running `docent serve` fs-watches every write, CLI-made or direct, and re-renders over SSE (agent-integration.md §1, §3.3). Both the UI's write path and the CLI share **one** `writeFindingRecord` implementation — no divergence.
 
 Prefer the CLI: it validates the record against the same schema the server uses and resolves anchors for you. Hand-authoring is the fallback when the CLI isn't available.
 
@@ -45,13 +45,13 @@ docent finding list --author claude-code         # this author participated
 
 Filters (all optional, all AND-combined):
 
-| Flag             | Keeps                                                                              |
-| ---------------- | --------------------------------------------------------------------------------- |
-| `--open`         | Unresolved findings. `--open` and `--resolved` together (or neither) keep all.    |
-| `--resolved`     | Resolved findings.                                                                 |
-| `--whats-next`   | Only these what's-next states — any-of; repeat the flag or comma-join the values. |
-| `--anchor-file`  | Only findings whose `line`/`file` code anchor is this path.                        |
-| `--author`       | Only findings this author id participated in.                                      |
+| Flag            | Keeps                                                                             |
+| --------------- | --------------------------------------------------------------------------------- |
+| `--open`        | Unresolved findings. `--open` and `--resolved` together (or neither) keep all.    |
+| `--resolved`    | Resolved findings.                                                                |
+| `--whats-next`  | Only these what's-next states — any-of; repeat the flag or comma-join the values. |
+| `--anchor-file` | Only findings whose `line`/`file` code anchor is this path.                       |
+| `--author`      | Only findings this author id participated in.                                     |
 
 **what's-next values** — `needs-action`, `needs-verify`, `needs-answer`, `needs-decision`, `closed`. Derived actor-blind from each Finding's latest record (agent-integration.md §2.3):
 
@@ -90,12 +90,12 @@ EOF
 
 **Anchor** (exactly one required):
 
-| Form                                | Anchor                                                              |
-| ----------------------------------- | ------------------------------------------------------------------ |
-| `--change`                          | The whole Change.                                                  |
-| `--file <path>`                     | The whole file. `--side base\|head` (default `head`).             |
-| `--file <path> --line <N[:M\|-M]>`  | A line range (1-based, inclusive). `N`, `N:M`, or `N-M`. `--side`. |
-| `--anchor '<json>'`                 | Escape hatch — a raw anchor arm, validated against the schema. Use for the capture / walkthrough / text-span arms the convenience flags don't cover. |
+| Form                               | Anchor                                                                                                                                               |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--change`                         | The whole Change.                                                                                                                                    |
+| `--file <path>`                    | The whole file. `--side base\|head` (default `head`).                                                                                                |
+| `--file <path> --line <N[:M\|-M]>` | A line range (1-based, inclusive). `N`, `N:M`, or `N-M`. `--side`.                                                                                   |
+| `--anchor '<json>'`                | Escape hatch — a raw anchor arm, validated against the schema. Use for the capture / walkthrough / text-span arms the convenience flags don't cover. |
 
 The CLI resolves the code arm's content-addressed `blobSha` from git at write time, freezing the exact bytes the anchor points at.
 
@@ -112,12 +112,12 @@ docent finding reply --finding fnd_… --disposition question  --body "Do you me
 docent finding reply --finding fnd_… --body "Bumping this — still reproduces."   # no disposition → needs-action again
 ```
 
-| `--disposition` | what's-next        | Means                                        |
-| --------------- | ------------------ | -------------------------------------------- |
-| `actioned`      | **needs-verify**   | Fixed — a resolver should verify.            |
-| `declined`      | **needs-decision** | Won't fix — a human should decide.           |
-| `question`      | **needs-answer**   | Blocked on an answer.                        |
-| *(omitted)*     | **needs-action**   | Plain comment / "do it again".               |
+| `--disposition` | what's-next        | Means                              |
+| --------------- | ------------------ | ---------------------------------- |
+| `actioned`      | **needs-verify**   | Fixed — a resolver should verify.  |
+| `declined`      | **needs-decision** | Won't fix — a human should decide. |
+| `question`      | **needs-answer**   | Blocked on an answer.              |
+| _(omitted)_     | **needs-action**   | Plain comment / "do it again".     |
 
 `--finding <id>` is required (a missing or empty id is a usage error — never a stray write). Body required.
 
@@ -130,7 +130,7 @@ docent finding resolve --finding fnd_…                          # close, no re
 docent finding resolve --finding fnd_… --body "Verified against head — the guard holds."
 ```
 
-Resolution is **unconstrained**: any actor may resolve any Finding, including an agent resolving another agent's. It is safe because a resolve is an append-only, attributed, **reopenable** event — a later reply reopens the Finding (agent-integration.md §2.6). Whether a given skill *should* resolve is a role question, not a mechanism one: `/review` resolves, `/address` never does (§3.1).
+Resolution is **unconstrained**: any actor may resolve any Finding, including an agent resolving another agent's. It is safe because a resolve is an append-only, attributed, **reopenable** event — a later reply reopens the Finding (agent-integration.md §2.6). Whether a given skill _should_ resolve is a role question, not a mechanism one: `/review` resolves, `/address` never does (§3.1).
 
 ## Attribution — metadata, never permission
 
@@ -141,11 +141,11 @@ docent finding add --change --body "…" --agent claude-code --model claude-fabl
 docent finding reply --finding fnd_… --disposition actioned --body "…" --agent claude-code
 ```
 
-| Flag        | Effect                                                        |
-| ----------- | ------------------------------------------------------------ |
-| `--agent`   | Attribute to an agent with this slug (else the git human).   |
-| `--display` | Override the display name.                                    |
-| `--model`   | Optional agent model metadata.                               |
+| Flag        | Effect                                                     |
+| ----------- | ---------------------------------------------------------- |
+| `--agent`   | Attribute to an agent with this slug (else the git human). |
+| `--display` | Override the display name.                                 |
+| `--model`   | Optional agent model metadata.                             |
 
 When you run one of these subcommands **as an agent inside a skill**, pass `--agent <your-slug>` so the Finding's attribution reads true in the UI.
 
