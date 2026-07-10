@@ -32,7 +32,9 @@ const headerStyle: React.CSSProperties = {
   display: "flex",
   gap: "0.5rem",
   justifyContent: "space-between",
-  padding: "0.5rem 0.75rem",
+  // Top padding clears the fixed DossierStatus pill (top-right, over every tab),
+  // so the panel's one control is never covered by it.
+  padding: "2rem 0.75rem 0.5rem",
   position: "sticky",
   top: 0,
 };
