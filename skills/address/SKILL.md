@@ -20,7 +20,7 @@ docent finding list --whats-next needs-action        # your worklist
 docent finding list --whats-next needs-action --anchor-file src/app.ts   # scope to one file
 ```
 
-Also pick up **needs-answer** if the human asked a `question` you can now answer (you answer with a plain reply — see step 3). Leave **needs-verify** and **needs-decision** alone: verify is `/review`'s, decide is the human's.
+That is your whole inbox. **needs-action** is the only state you clear — you never pick up the others, because none is yours to clear. A `question` you raised (**needs-answer**) is answered, and a `declined` you returned (**needs-decision**) is decided, by a human or a reviewer, whose plain reply routes the Finding back to **needs-action** for you to pick up next; **needs-verify** is `/review`'s to verify and resolve. Disposition is "how a **fixer** ends its turn" (agent-integration.md §2.3), so those three states are ones you _produce_, not consume.
 
 Each folded Finding gives you its `id`, `anchor` (the file/line the concern is about), and `body` (what to fix) — enough to act without a second read.
 
@@ -48,12 +48,13 @@ docent finding reply --finding fnd_… --disposition question --agent <your-slug
   --body "Do you want the read lock or the write lock guarded? The fix differs."
 ```
 
-| You did                          | `--disposition` | Finding becomes    |
-| -------------------------------- | --------------- | ------------------ |
-| Made the fix                     | `actioned`      | **needs-verify**   |
-| Decided not to fix               | `declined`      | **needs-decision** |
-| Need an answer before you can    | `question`      | **needs-answer**   |
-| Answered a reviewer's `question` | _(omit)_        | **needs-action**   |
+| You did                       | `--disposition` | Finding becomes    |
+| ----------------------------- | --------------- | ------------------ |
+| Made the fix                  | `actioned`      | **needs-verify**   |
+| Decided not to fix            | `declined`      | **needs-decision** |
+| Need an answer before you can | `question`      | **needs-answer**   |
+
+Every reply you write carries one of these three — a fixer always ends its turn with a Disposition. A plain reply (no Disposition) is a reviewer's re-comment, not a fixer's move.
 
 - **Reply, never resolve.** Even a fix you are certain of ends with `--disposition actioned`, not a resolve — a distinct `/review` pass verifies and closes it. If you resolve, you have collapsed fixer and resolver.
 - **`actioned` means the edit is made**, even if uncommitted — a reviewer verifies against head after commit; the Pending surface covers the uncommitted interim (agent-integration.md §5, deferred).
