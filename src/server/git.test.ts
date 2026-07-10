@@ -3,7 +3,14 @@ import { mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { BunServices } from "@effect/platform-bun";
 import { ManagedRuntime } from "effect";
-import { resolveBlob, resolveChange, resolvePending, resolveWorktreeFile } from "./git.ts";
+import {
+  resolveAuthor,
+  resolveBlob,
+  resolveChange,
+  resolveChangeRefs,
+  resolvePending,
+  resolveWorktreeFile,
+} from "./git.ts";
 import { cleanupScratchDirs, git, scratchDir, scratchRepo } from "./test-fixtures.ts";
 
 const runtime = ManagedRuntime.make(BunServices.layer);
@@ -256,6 +263,50 @@ describe("resolveWorktreeFile", () => {
     symlinkSync(path.join(outside, "secret.txt"), path.join(repo, "link.txt"));
 
     await expect(worktree(repo, "link.txt")).rejects.toThrow(/path/i);
+  });
+});
+
+describe("resolveChangeRefs", () => {
+  test("resolves the (baseSha, headSha) identity without a diff", async () => {
+    const repo = repoWithOneCommit();
+    git(repo, "checkout", "-b", "feature");
+    writeFileSync(path.join(repo, "feature.txt"), "new file\n");
+    git(repo, "add", ".");
+    git(repo, "commit", "-m", "add feature file");
+
+    const refs = await runtime.runPromise(resolveChangeRefs(repo));
+
+    expect(refs.branch).toBe("feature");
+    expect(refs.defaultBranch.name).toBe("main");
+    expect(refs.headSha).toBe(git(repo, "rev-parse", "HEAD"));
+    expect(refs.baseSha).toBe(git(repo, "rev-parse", "main"));
+  });
+});
+
+describe("resolveAuthor", () => {
+  test("reads the human author from git config", async () => {
+    const repo = repoWithOneCommit();
+    git(repo, "config", "user.email", "angus@example.com");
+    git(repo, "config", "user.name", "Angus");
+
+    const author = await runtime.runPromise(resolveAuthor(repo));
+
+    expect(author).toEqual({ display: "Angus", id: "angus@example.com", kind: "human" });
+  });
+
+  test("degrades to a placeholder when git identity is unset", async () => {
+    const repo = scratchDir("docent-git-test-");
+    git(repo, "init", "-b", "main");
+    // Empty local values shadow any global config so the placeholder path runs
+    // deterministically regardless of the machine's git identity.
+    git(repo, "config", "user.email", "");
+    git(repo, "config", "user.name", "");
+
+    const author = await runtime.runPromise(resolveAuthor(repo));
+
+    expect(author.kind).toBe("human");
+    expect(author.id).toBe("unknown");
+    expect(author.display).toBe("You");
   });
 });
 

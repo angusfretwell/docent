@@ -3,12 +3,21 @@ import { useEffect, useRef, useState } from "react";
 import { Change, DiffError } from "../shared/change.ts";
 import { DossierSnapshot } from "../shared/dossier.ts";
 import type { FindingEntry, ViewedEvent } from "../shared/dossier.ts";
+import type { FindingWrite } from "../shared/finding-write.ts";
 import type { PendingRange } from "../shared/pending.ts";
 import { Pending } from "../shared/pending.ts";
 import { fetchPendingExpandedFileDiff, isPendingExpandable } from "./blobs.ts";
 import type { DiffViewHandle } from "./diff-view.tsx";
 import { DiffView } from "./diff-view.tsx";
+import { writeFinding } from "./findings-client.ts";
 import { FindingsPanel } from "./findings-panel.tsx";
+
+// Append a Finding record. The write lands a file in `.docent/`, which trips the
+// server's watch → SSE push → snapshot re-fetch, so the new record renders
+// itself; the caller just awaits the POST.
+async function handleWrite(write: FindingWrite): Promise<void> {
+  await writeFinding(write);
+}
 
 // Stable empties so the pre-snapshot render doesn't churn DiffView's effects.
 const NO_VIEWED: readonly ViewedEvent[] = [];
@@ -191,6 +200,7 @@ function ChangeBody({
   return (
     <DiffView
       findings={dossier?.findings ?? NO_FINDINGS}
+      onWrite={handleWrite}
       patch={change.patch}
       ref={diffRef}
       viewed={dossier?.viewed ?? NO_VIEWED}
@@ -326,6 +336,7 @@ export function App() {
           <FindingsPanel
             findings={dossier.findings}
             onJump={(file, line) => diffRef.current?.scrollToLine(file, line)}
+            onWrite={handleWrite}
           />
         ) : null}
       </div>

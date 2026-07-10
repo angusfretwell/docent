@@ -1,53 +1,53 @@
 import { useState } from "react";
 import type { FindingEntry } from "../shared/dossier.ts";
-import type { FoldedFinding, WhatsNext } from "../shared/finding.ts";
+import type { FindingWrite } from "../shared/finding-write.ts";
+import type { FoldedFinding } from "../shared/finding.ts";
 import {
   findingJumpTarget,
   findingLocation,
   foldFinding,
   sortFoldedFindings,
+  WHATS_NEXT_LABEL,
 } from "../shared/finding.ts";
+import { Composer } from "./composer.tsx";
+import { FindingThread } from "./finding-thread.tsx";
 
 // The Dossier-global Findings panel (diff-review.md §7): a flat list of every
-// Finding sorted by location, with a show-resolved toggle (off by default).
-// Records arrive folded on the client so the panel and future agent surfaces
-// share one derivation. v1 is deliberately minimal — one control, one row shape.
-
-const WHATS_NEXT_LABEL: Record<WhatsNext, string> = {
-  closed: "Closed",
-  "needs-action": "Needs action",
-  "needs-answer": "Needs answer",
-  "needs-decision": "Needs decision",
-  "needs-verify": "Needs verify",
-};
+// Finding sorted by location, with a show-resolved toggle (off by default) and a
+// change-level composer. It is the home for triage and for detached Findings —
+// which have no line in the diff to pin to. Rows expand to a thread in place, so
+// replies, resolves and reopens are authorable here as well as inline. Records
+// arrive folded here so the panel and future agent surfaces share one derivation.
 
 const panelStyle: React.CSSProperties = {
   borderLeft: "1px solid rgba(128,128,128,0.25)",
   display: "flex",
   flexDirection: "column",
   fontSize: "0.8rem",
-  height: "100vh",
+  height: "100%",
   overflow: "auto",
   width: "20rem",
 };
 
 const headerStyle: React.CSSProperties = {
-  alignItems: "center",
   borderBottom: "1px solid rgba(128,128,128,0.25)",
   display: "flex",
+  flexDirection: "column",
   gap: "0.5rem",
-  justifyContent: "space-between",
   // Top padding clears the fixed DossierStatus pill (top-right, over every tab),
-  // so the panel's one control is never covered by it.
+  // so the panel's controls are never covered by it.
   padding: "2rem 0.75rem 0.5rem",
   position: "sticky",
   top: 0,
 };
 
 const rowStyle: React.CSSProperties = {
+  background: "none",
   border: "none",
-  borderBottom: "1px solid rgba(128,128,128,0.15)",
+  color: "inherit",
+  cursor: "pointer",
   display: "block",
+  font: "inherit",
   padding: "0.5rem 0.75rem",
   textAlign: "left",
   width: "100%",
@@ -68,68 +68,115 @@ const metaStyle: React.CSSProperties = {
 };
 
 function FindingRow({
+  expanded,
   finding,
-  onJump,
+  onToggle,
+  onWrite,
 }: {
+  expanded: boolean;
   finding: FoldedFinding;
-  onJump: (file: string, line: number) => void;
+  onToggle: () => void;
+  onWrite: (write: FindingWrite) => Promise<void>;
 }) {
-  const target = findingJumpTarget(finding.anchor);
-
   return (
-    <button
-      disabled={target === undefined}
-      onClick={target ? () => onJump(target.file, target.line) : undefined}
-      style={{ ...rowStyle, background: "none", cursor: target ? "pointer" : "default" }}
-      type="button"
-    >
-      <div style={locationStyle}>{findingLocation(finding.anchor)}</div>
-      <div style={metaStyle}>
-        <span>{finding.resolved ? "Resolved" : "Open"}</span>
-        <span>·</span>
-        <span>{WHATS_NEXT_LABEL[finding.whatsNext]}</span>
-      </div>
-    </button>
+    <div style={{ borderBottom: "1px solid rgba(128,128,128,0.15)" }}>
+      <button onClick={onToggle} style={rowStyle} type="button">
+        <div style={locationStyle}>{findingLocation(finding.anchor)}</div>
+        <div style={metaStyle}>
+          <span>{finding.resolved ? "Resolved" : "Open"}</span>
+          <span>·</span>
+          <span>{WHATS_NEXT_LABEL[finding.whatsNext]}</span>
+        </div>
+      </button>
+      {expanded ? <FindingThread finding={finding} onWrite={onWrite} /> : null}
+    </div>
   );
 }
 
 /**
- * The Findings side panel. Folds each record directory, sorts by location, and
- * hides resolved Findings unless the toggle is on. New records dropped into
- * `findings/` reach here live: the parent re-fetches the snapshot on every SSE
- * change event, re-rendering the panel.
+ * The Findings side panel. Folds each record directory, sorts by location, hides
+ * resolved ones unless the toggle is on, and expands a row to its thread on click
+ * (also jumping to its diff anchor when it has one). New records — dropped here,
+ * inline in the diff, or by an external agent — reach the panel live: the parent
+ * re-fetches the snapshot on every SSE change event.
  */
 export function FindingsPanel({
   findings,
   onJump,
+  onWrite,
 }: {
   findings: readonly FindingEntry[];
   onJump: (file: string, line: number) => void;
+  onWrite: (write: FindingWrite) => Promise<void>;
 }) {
   const [showResolved, setShowResolved] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [changeComposerOpen, setChangeComposerOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   const folded = sortFoldedFindings(
     findings.map((finding) => foldFinding(finding.id, finding.records)),
   );
   const visible = showResolved ? folded : folded.filter((finding) => !finding.resolved);
 
+  function toggle(finding: FoldedFinding) {
+    setExpandedId((current) => (current === finding.id ? null : finding.id));
+    const target = findingJumpTarget(finding.anchor);
+    if (target !== undefined) {
+      onJump(target.file, target.line);
+    }
+  }
+
+  function submitChangeFinding(body: string) {
+    setBusy(true);
+    void onWrite({ anchor: { kind: "change" }, body, op: "open" })
+      .then(() => setChangeComposerOpen(false))
+      .finally(() => setBusy(false));
+  }
+
   return (
     <aside style={panelStyle}>
       <header style={headerStyle}>
-        <strong>Findings · {visible.length}</strong>
-        <label style={{ alignItems: "center", display: "flex", gap: "0.25rem", opacity: 0.8 }}>
-          <input
-            checked={showResolved}
-            onChange={(event) => setShowResolved(event.target.checked)}
-            type="checkbox"
+        <div style={{ alignItems: "center", display: "flex", justifyContent: "space-between" }}>
+          <strong>Findings · {visible.length}</strong>
+          <label style={{ alignItems: "center", display: "flex", gap: "0.25rem", opacity: 0.8 }}>
+            <input
+              checked={showResolved}
+              onChange={(event) => setShowResolved(event.target.checked)}
+              type="checkbox"
+            />
+            Show resolved
+          </label>
+        </div>
+        <button
+          className="expand-context"
+          onClick={() => setChangeComposerOpen((open) => !open)}
+          type="button"
+        >
+          {changeComposerOpen ? "Cancel" : "Comment on whole change"}
+        </button>
+        {changeComposerOpen ? (
+          <Composer
+            autoFocus
+            busy={busy}
+            onSubmit={submitChangeFinding}
+            placeholder="A finding about the whole change…"
+            submitLabel="Comment"
           />
-          Show resolved
-        </label>
+        ) : null}
       </header>
       {visible.length === 0 ? (
         <p style={{ opacity: 0.6, padding: "0.75rem" }}>No findings to show.</p>
       ) : (
-        visible.map((finding) => <FindingRow finding={finding} key={finding.id} onJump={onJump} />)
+        visible.map((finding) => (
+          <FindingRow
+            expanded={expandedId === finding.id}
+            finding={finding}
+            key={finding.id}
+            onToggle={() => toggle(finding)}
+            onWrite={onWrite}
+          />
+        ))
       )}
     </aside>
   );

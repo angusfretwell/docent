@@ -1,11 +1,20 @@
-import type { CodeViewDiffItem, CodeViewItem, FileDiffMetadata } from "@pierre/diffs";
+import type {
+  CodeViewDiffItem,
+  CodeViewItem,
+  CodeViewLineSelection,
+  DiffLineAnnotation,
+  FileDiffMetadata,
+  LineAnnotation,
+} from "@pierre/diffs";
 import { processPatch } from "@pierre/diffs";
 import type { CodeViewHandle } from "@pierre/diffs/react";
 import { CodeView, WorkerPoolContextProvider } from "@pierre/diffs/react";
 import { sift } from "radashi";
 import { useEffect, useImperativeHandle, useRef, useState } from "react";
 import type { FindingEntry, ViewedEvent } from "../shared/dossier.ts";
+import type { FindingWrite } from "../shared/finding-write.ts";
 import { fetchExpandedFileDiff, isExpandable } from "./blobs.ts";
+import type { Annotation } from "./diff-annotations.ts";
 import { FileTree } from "./file-tree.tsx";
 import type { RowState } from "./file-tree.tsx";
 import {
@@ -19,6 +28,7 @@ import {
   stepFile,
 } from "./nav.ts";
 import type { FileEntry, FileOrder } from "./nav.ts";
+import { useDiffFindings } from "./use-diff-findings.tsx";
 import { computeViewed, viewedStateFor } from "./viewed.ts";
 
 const themes = { dark: "github-dark", light: "github-light" } as const;
@@ -72,19 +82,26 @@ function HeaderMetadata({
   row,
   busy,
   isFileExpandable,
+  onComment,
   onToggleViewed,
   onExpandContext,
 }: {
-  item: CodeViewDiffItem;
+  item: CodeViewDiffItem<Annotation>;
   row: RowState | undefined;
   busy: boolean;
   isFileExpandable: (fileDiff: FileDiffMetadata) => boolean;
+  onComment?: (item: CodeViewDiffItem<Annotation>) => void;
   onToggleViewed: (id: string) => void;
   onExpandContext: (id: string, fileDiff: FileDiffMetadata) => void;
 }) {
   return (
     <span style={{ alignItems: "center", display: "inline-flex", gap: "0.6rem" }}>
       {row?.changed ? <span className="viewed-changed">changed since viewed</span> : null}
+      {onComment ? (
+        <button className="expand-context" onClick={() => onComment(item)} type="button">
+          Comment
+        </button>
+      ) : null}
       {isFileExpandable(item.fileDiff) ? (
         <button
           className="expand-context"
@@ -130,23 +147,33 @@ function DiffScroll({
   expanding,
   isFileExpandable,
   items,
+  onComment,
   onExpandContext,
   onScroll,
+  onSelectedLinesChange,
   onToggleViewed,
+  renderAnnotation,
   rowStates,
+  selectionEnabled,
   split,
 }: {
-  codeRef: React.RefObject<CodeViewHandle<undefined> | null>;
+  codeRef: React.RefObject<CodeViewHandle<Annotation> | null>;
   expanding: ReadonlySet<string>;
   isFileExpandable: (fileDiff: FileDiffMetadata) => boolean;
-  items: CodeViewItem[];
+  items: CodeViewItem<Annotation>[];
+  onComment?: (item: CodeViewDiffItem<Annotation>) => void;
   onExpandContext: (id: string, fileDiff: FileDiffMetadata) => void;
   onScroll: (
     scrollTop: number,
-    viewer: NonNullable<ReturnType<CodeViewHandle<undefined>["getInstance"]>>,
+    viewer: NonNullable<ReturnType<CodeViewHandle<Annotation>["getInstance"]>>,
   ) => void;
+  onSelectedLinesChange: (selection: CodeViewLineSelection | null) => void;
   onToggleViewed: (id: string) => void;
+  renderAnnotation: (
+    annotation: DiffLineAnnotation<Annotation> | LineAnnotation<Annotation>,
+  ) => React.ReactNode;
   rowStates: Map<string, { viewed: boolean; changed: boolean }>;
+  selectionEnabled: boolean;
   split: "unified" | "split";
 }) {
   return (
@@ -161,14 +188,22 @@ function DiffScroll({
         <CodeView
           items={items}
           onScroll={onScroll}
-          options={{ diffStyle: split, stickyHeaders: true, theme: themes }}
+          onSelectedLinesChange={onSelectedLinesChange}
+          options={{
+            diffStyle: split,
+            enableLineSelection: selectionEnabled,
+            stickyHeaders: true,
+            theme: themes,
+          }}
           ref={codeRef}
+          renderAnnotation={renderAnnotation}
           renderHeaderMetadata={(item) =>
             item.type === "diff" ? (
               <HeaderMetadata
                 busy={expanding.has(item.id)}
                 isFileExpandable={isFileExpandable}
                 item={item}
+                onComment={onComment}
                 onExpandContext={onExpandContext}
                 onToggleViewed={onToggleViewed}
                 row={rowStates.get(item.id)}
@@ -204,6 +239,7 @@ export function DiffView({
   patch,
   viewed,
   findings,
+  onWrite,
   ref,
   expandFile = fetchExpandedFileDiff,
   isFileExpandable = isExpandable,
@@ -211,6 +247,8 @@ export function DiffView({
   patch: string;
   viewed: readonly ViewedEvent[];
   findings: readonly FindingEntry[];
+  /** Absent on the read-only Pending preview, which disables authoring. */
+  onWrite?: (write: FindingWrite) => Promise<void>;
   ref?: React.Ref<DiffViewHandle>;
   expandFile?: (fileDiff: FileDiffMetadata) => Promise<FileDiffMetadata>;
   isFileExpandable?: (fileDiff: FileDiffMetadata) => boolean;
@@ -244,7 +282,7 @@ export function DiffView({
   const [expanded, setExpanded] = useState<ReadonlyMap<string, FileDiffMetadata>>(new Map());
   const [expanding, setExpanding] = useState<ReadonlySet<string>>(new Set());
 
-  const codeRef = useRef<CodeViewHandle<undefined>>(null);
+  const codeRef = useRef<CodeViewHandle<Annotation>>(null);
 
   // The single ordered file model both surfaces read from. `allEntries` is every
   // file in the Change (the viewed read-model and progress span all of them);
@@ -290,22 +328,18 @@ export function DiffView({
   );
   const viewedCount = allEntries.reduce((total, entry) => total + (isViewed(entry.id) ? 1 : 0), 0);
 
-  const byName = new Map(processPatch(patch).files.map((f, i) => [`${f.name}#${i}`, f]));
-  // The lazily-fetched full diff wins over the patch-only one, so an expanded
-  // file renders with context available. A viewed file collapses its body; the
-  // version encodes both axes so CodeView re-renders the item on either change.
-  const items: CodeViewItem[] = entries.flatMap((entry) => {
-    const fileDiff = expanded.get(entry.id) ?? byName.get(entry.id);
-    if (!fileDiff) {
-      return [];
-    }
-    const collapsedBody = isViewed(entry.id);
-    // CodeView only re-renders an item when its version changes, so give each
-    // (expanded, collapsed) combination a distinct version number.
-    const expandedStep = expanded.has(entry.id) ? 1 : 0;
-    const collapsedStep = collapsedBody ? 2 : 0;
-    const version = expandedStep + collapsedStep;
-    return [{ collapsed: collapsedBody, fileDiff, id: entry.id, type: "diff" as const, version }];
+  // The diff's Finding layer: the annotated item list, the inline thread/composer
+  // renderer, and the compose lifecycle. A viewed file collapses its body and an
+  // expanded file gains context; the item `version` folds those with the
+  // annotations so CodeView re-renders on any of them.
+  const { canAuthor, compose, items, renderAnnotation } = useDiffFindings({
+    codeRef,
+    entries,
+    expanded,
+    findings,
+    isViewed,
+    onWrite,
+    patch,
   });
 
   function toggleViewed(id: string) {
@@ -351,7 +385,7 @@ export function DiffView({
   // last item whose top has passed the viewport top.
   function handleScroll(
     scrollTop: number,
-    viewer: NonNullable<ReturnType<CodeViewHandle<undefined>["getInstance"]>>,
+    viewer: NonNullable<ReturnType<CodeViewHandle<Annotation>["getInstance"]>>,
   ) {
     let current: string | undefined;
     for (const item of items) {
@@ -483,10 +517,14 @@ export function DiffView({
         expanding={expanding}
         isFileExpandable={isFileExpandable}
         items={items}
+        onComment={canAuthor ? (item) => compose.commentOnFile(item.id, item.fileDiff) : undefined}
         onExpandContext={expandContext}
         onScroll={handleScroll}
+        onSelectedLinesChange={(selection) => compose.selectLines(selection)}
         onToggleViewed={toggleViewed}
+        renderAnnotation={renderAnnotation}
         rowStates={rowStates}
+        selectionEnabled={canAuthor}
         split={split}
       />
     </div>
