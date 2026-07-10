@@ -1,0 +1,75 @@
+# Architecture — app shell & delivery
+
+This document specifies docent's process model, HTTP file API, SSE live-reload bridge, frontend substrate, and packaging. Schemas and on-disk layout are owned by [data-model.md](data-model.md); diff-tab UX by [diff-review.md](diff-review.md); walkthrough UX by [walkthroughs.md](walkthroughs.md); the skills catalogue and non-serve CLI contract by [agent-integration.md](agent-integration.md). Terminology follows [CONTEXT.md](../../CONTEXT.md); superseded ticket wording (`.review/`, "review-tool", Review-the-entity, PR input) is rendered here in the consolidated vocabulary ratified by [#24](https://github.com/angusfretwell/docent/issues/24).
+
+## 1. Process model
+
+docent is a **Bun-native local server that serves a static browser UI and bridges it to the shared `.docent/` filesystem over an HTTP file API plus SSE live-reload** ([#6](https://github.com/angusfretwell/docent/issues/6)).
+
+- **Runtime & server** — Bun-native: `Bun.serve`, `Bun.Glob`, `Bun.file`, `node:fs` recursive watch. **Zero runtime dependencies** ([#6](https://github.com/angusfretwell/docent/issues/6)).
+- **Boot** — `npx docent` (equivalently `docent serve`, the default subcommand) resolves the repo root, starts `Bun.serve` on an ephemeral port, prints the URL, and opens the browser ([#6](https://github.com/angusfretwell/docent/issues/6), [#24](https://github.com/angusfretwell/docent/issues/24)). `bin.ts` is the compile entry.
+- **UI framework** — React + Vite, forced by the adopted diff renderer `@pierre/diffs` ([#4](https://github.com/angusfretwell/docent/issues/4)), built to static assets **embedded into the binary** (`import … with { type: "text" }`) ([#6](https://github.com/angusfretwell/docent/issues/6)).
+- **v1 input** — a **local git branch checked out in the repo**. There is no GitHub integration in v1: no PR input, no GitHub API reads, no token handling ([#24](https://github.com/angusfretwell/docent/issues/24)). Reviewing a PR is done manually via `gh pr checkout N`, then reviewing the local branch ([#24](https://github.com/angusfretwell/docent/issues/24)). The active Dossier *is* the checked-out branch — a definitional binding, not a lookup ([#24](https://github.com/angusfretwell/docent/issues/24)); everything the server resolves (diffs, blobs, the working tree) comes from local git alone.
+
+### docent is inert
+
+The filesystem is the interface: a review persists as plain files with a documented, self-describing schema under `.docent/`, which agents read and write directly; docent is a **renderer plus optional validating sugar over the very same files — never a gate** ([#2](https://github.com/angusfretwell/docent/issues/2)). Consequences, all ratified:
+
+- docent **never spawns, schedules, or invokes agents**. Every agent skill is a slash command the human runs in their own Claude Code session; docent can only *surface* state (e.g. walkthrough staleness), never act on it ([#21](https://github.com/angusfretwell/docent/issues/21), decision B).
+- docent **never spawns the app-under-review's dev server** — serving the app is the human's dev workflow; capture merely consumes a served app ([#21](https://github.com/angusfretwell/docent/issues/21)).
+- Commit and push stay the human's git workflow; docent neither commits nor pushes ([#23](https://github.com/angusfretwell/docent/issues/23), [#21](https://github.com/angusfretwell/docent/issues/21)).
+- The diff always renders the **live head straight from git**; a Change is minted lazily only when a durable artifact must reference the head ([#24](https://github.com/angusfretwell/docent/issues/24)). Minting is the tool's job (idempotent by `(baseSha, headSha)` identity), never a skill's ([#21](https://github.com/angusfretwell/docent/issues/21) as amended by [#24](https://github.com/angusfretwell/docent/issues/24)); record shapes are in [data-model.md](data-model.md).
+
+## 2. HTTP file API & SSE bridge
+
+The browser talks to `.docent/` and to git exclusively through this API ([#6](https://github.com/angusfretwell/docent/issues/6)). Writes are **append-only file drops** — the same record shape an agent writes directly into `.docent/`; no locks, no read-modify-write ([#2](https://github.com/angusfretwell/docent/issues/2), [#6](https://github.com/angusfretwell/docent/issues/6)).
+
+### Endpoints
+
+| Endpoint | Purpose | Backing | Caching |
+| --- | --- | --- | --- |
+| `GET /api/dossier` | JSON snapshot of the active Dossier — walks its `.docent/dossiers/<branch-slug>/` records (Changes, Findings, Walkthroughs) | `.docent/` filesystem walk | Uncached; client re-fetches on SSE |
+| `POST /api/findings` | Append-only Finding write — a new Finding, or a reply/resolve record on an existing one. Drops a record file under `findings/fnd_*/NNN-*.md`; identical to a direct agent write | Append-only file drop into `.docent/` | n/a (write) |
+| `GET /api/blob/:sha` | Raw bytes of a git blob — context expansion, image before/after, Pending base side | Pure local `git cat-file`; **no GitHub fallback** ([#9](https://github.com/angusfretwell/docent/issues/9) as amended by [#24](https://github.com/angusfretwell/docent/issues/24)) | Content-addressed → immutable → **cache forever** |
+| `GET /api/worktree?path=…` | Live working-tree file for the Pending diff's head side | Direct disk read on every request | **Explicitly uncached** — the working tree is mutable, no stable SHA to cache against ([#23](https://github.com/angusfretwell/docent/issues/23)) |
+| `GET /api/events` | SSE stream; one-way server→client change notifications | fs watches (below) | n/a (stream) |
+
+Endpoint provenance: `GET /api/dossier` supersedes [#6](https://github.com/angusfretwell/docent/issues/6)'s `GET /api/review`; the Finding POST supersedes its `POST /api/reviews/:key/comments`; both renames follow [#24](https://github.com/angusfretwell/docent/issues/24). `GET /api/blob/:sha` was pinned in [#9](https://github.com/angusfretwell/docent/issues/9); `GET /api/worktree` in [#23](https://github.com/angusfretwell/docent/issues/23). Blob fetches are **lazy** — a full file blob is fetched only when the reviewer expands context there, never eagerly for all files ([#9](https://github.com/angusfretwell/docent/issues/9)). Both diff sides (split view) go through the same blob endpoint. Record schemas behind these endpoints are owned by [data-model.md](data-model.md); the CLI subcommands that write the same records are owned by [agent-integration.md](agent-integration.md).
+
+### SSE live-reload — the watch → re-render loop
+
+SSE was chosen over WebSocket because the channel is strictly one-way ([#6](https://github.com/angusfretwell/docent/issues/6)). Two watch surfaces feed the single `GET /api/events` stream:
+
+1. **`.docent/` watch** ([#6](https://github.com/angusfretwell/docent/issues/6)) — a `node:fs` recursive watch on `.docent/`, debounced, broadcasting a coarse dossier-changed event; the client re-fetches `GET /api/dossier`. This is the agent-review loop: **an external agent writing a record file directly into `.docent/` trips the watcher → SSE push → UI refresh** — verified end-to-end in the [#6](https://github.com/angusfretwell/docent/issues/6) prototype, not just for the UI's own writes. Event granularity is coarse in v1 (finer-grained events were noted as a non-blocking follow-on in [#6](https://github.com/angusfretwell/docent/issues/6)).
+2. **Repo-rooted working-tree watch** ([#23](https://github.com/angusfretwell/docent/issues/23)) — the same watch→recompute→SSE mechanism rooted at the repo instead of `.docent/`: **gitignore-aware** (so `node_modules`/`dist` don't drown it) and **debounced** (agents write files in bursts). On a debounced change the server recomputes the Pending diff (`git diff HEAD`, plus untracked files enumerated via `git status --porcelain`, respecting `.gitignore`) and pushes the result over the same SSE channel, so the Pending view refreshes live like everything else. Pending-tab UX (selector entry, ranges, verify-only rules) is owned by [diff-review.md](diff-review.md).
+
+## 3. Validation stance
+
+docent **validates optionally and never gates writes** ([#2](https://github.com/angusfretwell/docent/issues/2)). The files under `.docent/` stay plain and directly writable by any actor; validation and atomic writes are recovered as *optional sugar* (the API and the CLI write validated records, but a hand-written or agent-written file is equally legitimate). The renderer is **best-effort**: it renders what it can parse and degrades gracefully on records it cannot, rather than refusing. Append-only granularity is what sidesteps concurrency — there is no single-writer requirement anywhere in the system ([#2](https://github.com/angusfretwell/docent/issues/2)).
+
+## 4. Frontend substrate
+
+Facts an implementer needs about the browser UI's foundations; all tab-level UX is owned by [diff-review.md](diff-review.md) and [walkthroughs.md](walkthroughs.md).
+
+- **Diff renderer: `@pierre/diffs`** (diffs.com, `@pierre/diffs@1.2.12`, Apache-2.0) — adopted after a benchmarked prototype cleared the high-performance bar: virtualization holds live DOM at ~300–550 nodes regardless of diff size, ~60 fps scroll with zero long frames at 319 files / ≈63k rows ([#4](https://github.com/angusfretwell/docent/issues/4)). One renderer across the app: the Diff tab's single virtualized scroll and the code walkthrough's per-section rendering both use `CodeView` ([#9](https://github.com/angusfretwell/docent/issues/9)).
+- **Keep the Web Worker tokenization pool on** — measured, not a hunch: with the worker off, Shiki re-highlights on the main thread and janks scroll to p95 225 ms with 15 long frames ([#4](https://github.com/angusfretwell/docent/issues/4) re-benchmark).
+- **`CodeView` must be its own scroll container** — its virtualizer reads its own element's `scrollTop` and does not walk up to a scrollable ancestor; wrapping it in an outer scrolling `<div>` breaks both scrolling and virtualization ([#4](https://github.com/angusfretwell/docent/issues/4) correction).
+- **Patch-only input is `isPartial`** — hunk/context expansion requires feeding the renderer full file blobs, which is what `GET /api/blob/:sha` exists for ([#4](https://github.com/angusfretwell/docent/issues/4), [#9](https://github.com/angusfretwell/docent/issues/9)).
+- **The annotation framework is the comment-rendering substrate** — `renderAnnotation` injects arbitrary React content anchored to `{ side, lineNumber }` in a specific file; Finding rendering builds on it ([#4](https://github.com/angusfretwell/docent/issues/4)).
+- **Nav tree: `trees.software` is the first component to reach for**; roll our own compact-folder logic if it doesn't fit. This is an implementation choice, not a spec gate ([#9](https://github.com/angusfretwell/docent/issues/9)). Tree behaviour (compact folders, sync, filters) is specified in [diff-review.md](diff-review.md).
+
+## 5. Packaging & delivery
+
+- **Standalone compiled binary** — `bun build --compile` produces a per-platform executable; the user needs **no runtime installed** (chosen over Node+npx and a Bun+npx shim) ([#6](https://github.com/angusfretwell/docent/issues/6)). The binary embeds the built client assets and serves the full API with no runtime on `PATH` — verified in the [#6](https://github.com/angusfretwell/docent/issues/6) prototype.
+- **Delivery: GitHub Releases behind a thin npm shim** — per-platform binaries are published as GitHub Release assets; `npx docent` installs a tiny (~KB) npm shim that downloads and execs the matching binary on first run. The compiled binary is ~95 MB (Bun embeds its runtime); that size is what drove the shim over shipping binaries inside the npm tarball ([#6](https://github.com/angusfretwell/docent/issues/6)).
+- **Subcommand split** — the single `docent` binary has two faces:
+  - **`docent serve`** (the default when no subcommand is given, so `npx docent` alone boots the server and opens the UI) — the app shell specified in this document.
+  - **Non-serve CLI subcommands** — `docent finding list/add/reply/resolve …`, plus `walkthrough`/`capture` writes — the canonical, non-gating write path shared by the UI and agents, so ULID/anchor/manifest/content-address minting has one implementation ([#21](https://github.com/angusfretwell/docent/issues/21)). Their full contract is owned by [agent-integration.md](agent-integration.md); this document only pins that they live in the same binary.
+
+## 6. Deferred / out of scope for v1 (architecture)
+
+- **No GitHub reads of any kind** — PR input, auth/token handling, PR→SHA resolution, PR metadata fetch, the `/api/blob` GitHub fallback, and materialize-from-PR are all deferred; PR metadata returns someday only as an additive provenance field on Change, never identity ([#24](https://github.com/angusfretwell/docent/issues/24)).
+- **No auth, no sync, no hosted backend** — local-first and solo; nothing needs a server-mediated store ([#2](https://github.com/angusfretwell/docent/issues/2), [#6](https://github.com/angusfretwell/docent/issues/6)).
+- **No CI mode** — docent is an interactive local server, not a pipeline step ([#6](https://github.com/angusfretwell/docent/issues/6)).
+- **No IDE extension** — the delivery surface is the browser UI served by the local binary ([#6](https://github.com/angusfretwell/docent/issues/6)).
+- **Fine-grained SSE events** — the live-reload event stays coarse in v1; granularity is a noted follow-on, not a ticket ([#6](https://github.com/angusfretwell/docent/issues/6)).
