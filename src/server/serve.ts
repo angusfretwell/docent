@@ -22,12 +22,16 @@ import {
 import { lookupAsset } from "../client/assets.ts";
 import type { ClientAssets } from "../client/assets.ts";
 import { ViewedRequest } from "../shared/dossier.ts";
+import { FindingWrite } from "../shared/finding-write.ts";
 import type { PendingRange } from "../shared/pending.ts";
 import { appendViewedEvent, readDossierSnapshot } from "./dossier.ts";
+import { writeFindingRecord } from "./findings-write.ts";
 import {
+  resolveAuthor,
   resolveBlob,
   resolveBlobSize,
   resolveChange,
+  resolveChangeRefs,
   resolvePending,
   resolveRepo,
   resolveWorktreeFile,
@@ -258,6 +262,47 @@ function viewedRoute(cwd: string) {
   );
 }
 
+/**
+ * `POST /api/findings` — append one Finding record (new Finding, reply, resolve,
+ * or reopen) as a file drop into `.docent/`, the identical shape an agent writes
+ * directly (architecture.md §2). Writing mints-or-reuses the live head's Change
+ * and stamps its `changeId`; attribution is the human resolved from git config.
+ * A malformed body 400s; a git/write failure 500s. The `.docent/` watch turns
+ * the drop into an SSE push, so the UI refreshes without this response.
+ */
+function findingsRoute(cwd: string) {
+  return HttpRouter.add(
+    "POST",
+    "/api/findings",
+    Effect.gen(function* postFinding() {
+      const write = yield* HttpServerRequest.schemaBodyJson(FindingWrite);
+      const refs = yield* resolveChangeRefs(cwd);
+      const author = yield* resolveAuthor(refs.root);
+      const result = yield* writeFindingRecord({
+        author,
+        base: refs.defaultBranch.name,
+        branch: refs.branch,
+        refs: {
+          baseRef: refs.defaultBranch.name,
+          baseSha: refs.baseSha,
+          headRef: refs.branch,
+          headSha: refs.headSha,
+        },
+        root: refs.root,
+        write,
+      });
+      return yield* HttpServerResponse.json(result);
+    }).pipe(
+      Effect.catchTag("SchemaError", (error) =>
+        Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 400 })),
+      ),
+      Effect.catch((error) =>
+        Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 500 })),
+      ),
+    ),
+  );
+}
+
 // SSE frames: an opening comment on connect, then a coarse change event per push.
 const encoder = new TextEncoder();
 function sseFrame(payload: string) {
@@ -304,6 +349,7 @@ export function layer(options: ServeOptions) {
     worktreeRoute(options.cwd),
     dossierRoute(options.cwd),
     viewedRoute(options.cwd),
+    findingsRoute(options.cwd),
     eventsRoute,
     assetRoute(options.assets),
   );

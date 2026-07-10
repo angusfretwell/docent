@@ -247,11 +247,25 @@ const resolveGeneratedPaths = Effect.fn("resolveGeneratedPaths")(function* resol
   return [...generated];
 });
 
-/** Resolve the checked-out branch's live Change against the default branch. */
-export const resolveChange = Effect.fn("resolveChange")(function* resolveChange(cwd: string) {
+/**
+ * Resolve the checked-out branch's Change identity — its `(baseSha, headSha)`
+ * against the default branch, plus the ref labels — without minting the
+ * (expensive) diff. This is what lazy Change minting keys on: a Finding write
+ * resolves these refs, then mints or idempotently reuses the Change for the
+ * live head (data-model.md §4).
+ */
+export const resolveChangeRefs = Effect.fn("resolveChangeRefs")(function* resolveChangeRefs(
+  cwd: string,
+) {
   const { root, branch, defaultBranch } = yield* resolveRepo(cwd);
   const headSha = yield* git(root, ["rev-parse", "HEAD"]);
   const baseSha = yield* git(root, ["merge-base", defaultBranch.ref, "HEAD"]);
+  return { baseSha, branch, defaultBranch, headSha, root };
+});
+
+/** Resolve the checked-out branch's live Change against the default branch. */
+export const resolveChange = Effect.fn("resolveChange")(function* resolveChange(cwd: string) {
+  const { root, branch, baseSha, headSha, defaultBranch } = yield* resolveChangeRefs(cwd);
   // `--full-index` emits the full blob object ids on each index line. The Diff
   // tab keys mark-as-viewed on the head-blob SHA (diff-review.md §3); an
   // abbreviated id's length grows with the repo, so a full id is what stays
@@ -275,6 +289,29 @@ export const resolveChange = Effect.fn("resolveChange")(function* resolveChange(
     patch,
     root,
   });
+});
+
+/**
+ * The human author for a UI-authored record, read from local git config. The
+ * browser UI is definitionally the human, so attribution comes from
+ * `user.email`/`user.name` — never gating anything, just recorded
+ * (data-model.md §5.4). A missing config degrades to a usable placeholder
+ * rather than failing the write.
+ */
+export const resolveAuthor = Effect.fn("resolveAuthor")(function* resolveAuthor(root: string) {
+  const email = yield* git(root, ["config", "user.email"]).pipe(
+    Effect.catchTag("GitCommandFailed", () => Effect.succeed("")),
+  );
+  const name = yield* git(root, ["config", "user.name"]).pipe(
+    Effect.catchTag("GitCommandFailed", () => Effect.succeed("")),
+  );
+  let display = "You";
+  if (name !== "") {
+    display = name;
+  } else if (email !== "") {
+    display = email;
+  }
+  return { display, id: email === "" ? "unknown" : email, kind: "human" as const };
 });
 
 /**

@@ -30,6 +30,11 @@ export function branchSlug(branch: string): string {
   return branch.replaceAll("/", "-");
 }
 
+/** The absolute directory of a branch's Dossier under `<root>/.docent/`. */
+export function dossierDirPath(root: string, branch: string): string {
+  return `${root}/${STATE_ROOT}/dossiers/${branchSlug(branch)}`;
+}
+
 const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
 /**
@@ -37,7 +42,7 @@ const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
  * random chars, Crockford base32. The time head keeps ids lexically sortable by
  * mint order — which is also the append-only `viewed/` file order.
  */
-const makeId = Effect.fn("makeId")(function* makeId(prefix: string) {
+export const makeId = Effect.fn("makeId")(function* makeId(prefix: string) {
   const now = yield* Clock.currentTimeMillis;
   let time = now;
   let head = "";
@@ -55,7 +60,7 @@ const makeId = Effect.fn("makeId")(function* makeId(prefix: string) {
 });
 
 /** Decode a JSON file against a schema; `None` on any read/parse/decode failure. */
-const readRecord = Effect.fn("readRecord")(function* readRecord<S extends Schema.Constraint>(
+export const readRecord = Effect.fn("readRecord")(function* readRecord<S extends Schema.Constraint>(
   file: string,
   schema: S,
 ) {
@@ -77,13 +82,13 @@ function somes<A>(options: readonly Option.Option<A>[]): A[] {
 }
 
 /** List a directory's entries, or `[]` when it does not exist. */
-const listDir = Effect.fn("listDir")(function* listDir(dir: string) {
+export const listDir = Effect.fn("listDir")(function* listDir(dir: string) {
   const fs = yield* FileSystem;
   return yield* fs.readDirectory(dir).pipe(Effect.orElseSucceed(() => []));
 });
 
 /** Read `dossier.json`, creating it (auto-create on first use) when absent. */
-const ensureDossier = Effect.fn("ensureDossier")(function* ensureDossier(params: {
+export const ensureDossier = Effect.fn("ensureDossier")(function* ensureDossier(params: {
   dossierDir: string;
   branch: string;
   base: string;
