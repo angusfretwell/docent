@@ -9,7 +9,7 @@ export default defineConfig({
     builtin: true,
   },
   extends: [core, react, tanstack, jsPlugins],
-  ignorePatterns: ["prototypes", ".agents", ".sandcastle"],
+  ignorePatterns: ["prototypes", ".agents"],
   plugins: [
     "eslint",
     "import",

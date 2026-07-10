@@ -11,7 +11,8 @@
     "lint": "oxlint",
     "fix": "oxlint --fix",
     "format": "oxfmt",
-    "check": "oxfmt --check"
+    "check": "oxfmt --check",
+    "prepare": "./scripts/prepare-effect.sh"
   },
   "dependencies": {
     "@effect/platform-bun": "^4.0.0-beta.97",
@@ -22,7 +23,6 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@ai-hero/sandcastle": "^0.12.0",
     "@effect/language-service": "^0.86.6",
     "@pierre/diffs": "1.2.12",
     "@rolldown/plugin-babel": "^0.2.3",
