@@ -3,7 +3,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { BunServices } from "@effect/platform-bun";
 import { ManagedRuntime } from "effect";
-import { resolveBlob, resolveChange } from "./git.ts";
+import { resolveBlob, resolveChange, resolvePending, resolveWorktreeFile } from "./git.ts";
 import { cleanupScratchDirs, git, scratchDir, scratchRepo } from "./test-fixtures.ts";
 
 const runtime = ManagedRuntime.make(BunServices.layer);
@@ -126,6 +126,125 @@ describe("resolveChange", () => {
     const dir = scratchDir("docent-git-test-");
 
     await expect(resolve(dir)).rejects.toThrow(/not a git repository/i);
+  });
+});
+
+describe("resolvePending", () => {
+  function pending(cwd: string, range: "incremental" | "cumulative" = "incremental") {
+    return runtime.runPromise(resolvePending(cwd, range));
+  }
+
+  test("is not dirty and has an empty patch on a clean working tree", async () => {
+    const repo = repoWithOneCommit();
+
+    const result = await pending(repo);
+
+    expect(result.dirty).toBe(false);
+    expect(result.patch).toBe("");
+  });
+
+  test("combines staged and unstaged edits into one delta since HEAD", async () => {
+    const repo = repoWithOneCommit();
+    // Stage one edit, then make a further unstaged edit on top.
+    writeFileSync(path.join(repo, "hello.txt"), "hello\nstaged\n");
+    git(repo, "add", "hello.txt");
+    writeFileSync(path.join(repo, "hello.txt"), "hello\nstaged\nunstaged\n");
+
+    const result = await pending(repo);
+
+    expect(result.dirty).toBe(true);
+    expect(result.patch).toContain("hello.txt");
+    expect(result.patch).toContain("+staged");
+    expect(result.patch).toContain("+unstaged");
+  });
+
+  test("includes untracked files as full-file adds, respecting .gitignore", async () => {
+    const repo = repoWithOneCommit();
+    writeFileSync(path.join(repo, ".gitignore"), "ignored.txt\n");
+    git(repo, "add", ".gitignore");
+    git(repo, "commit", "-m", "add gitignore");
+    writeFileSync(path.join(repo, "fresh.txt"), "brand\nnew\n");
+    writeFileSync(path.join(repo, "ignored.txt"), "do not show\n");
+
+    const result = await pending(repo);
+
+    expect(result.patch).toContain("fresh.txt");
+    expect(result.patch).toContain("+brand");
+    // A parseable add: /dev/null → new file.
+    expect(result.patch).toContain("new file mode");
+    expect(result.patch).not.toContain("ignored.txt");
+  });
+
+  test("incremental empties the moment HEAD moves (commit hides Pending)", async () => {
+    const repo = repoWithOneCommit();
+    writeFileSync(path.join(repo, "hello.txt"), "hello\nedit\n");
+
+    const before = await pending(repo);
+    expect(before.dirty).toBe(true);
+
+    git(repo, "add", ".");
+    git(repo, "commit", "-m", "commit the edit");
+    const after = await pending(repo);
+
+    expect(after.dirty).toBe(false);
+    expect(after.patch).toBe("");
+  });
+
+  test("cumulative previews base..worktree — committed change plus uncommitted edits", async () => {
+    const repo = repoWithOneCommit();
+    git(repo, "checkout", "-b", "feature");
+    writeFileSync(path.join(repo, "committed.txt"), "committed on feature\n");
+    git(repo, "add", ".");
+    git(repo, "commit", "-m", "committed feature work");
+    // An uncommitted edit on top of the committed feature work.
+    writeFileSync(path.join(repo, "working.txt"), "uncommitted\n");
+
+    const incremental = await pending(repo, "incremental");
+    const cumulative = await pending(repo, "cumulative");
+
+    // Incremental is only the uncommitted delta since HEAD.
+    expect(incremental.patch).toContain("working.txt");
+    expect(incremental.patch).not.toContain("committed.txt");
+    // Cumulative is the whole Change (base..HEAD) plus the uncommitted edit.
+    expect(cumulative.patch).toContain("committed.txt");
+    expect(cumulative.patch).toContain("working.txt");
+  });
+});
+
+describe("resolveWorktreeFile", () => {
+  function worktree(cwd: string, relPath: string) {
+    return runtime.runPromise(resolveWorktreeFile(cwd, relPath));
+  }
+
+  test("reads the live working-tree bytes for a path (uncommitted content)", async () => {
+    const repo = repoWithOneCommit();
+    writeFileSync(path.join(repo, "hello.txt"), "live edit not yet committed\n");
+
+    const bytes = await worktree(repo, "hello.txt");
+
+    expect(new TextDecoder().decode(bytes)).toBe("live edit not yet committed\n");
+  });
+
+  test("reads a nested path", async () => {
+    const repo = repoWithOneCommit();
+    mkdirSync(path.join(repo, "src"), { recursive: true });
+    writeFileSync(path.join(repo, "src", "app.ts"), "export const x = 1;\n");
+
+    const bytes = await worktree(repo, "src/app.ts");
+
+    expect(new TextDecoder().decode(bytes)).toBe("export const x = 1;\n");
+  });
+
+  test("rejects a path that escapes the repo root", async () => {
+    const repo = repoWithOneCommit();
+
+    await expect(worktree(repo, "../../../etc/passwd")).rejects.toThrow(/path/i);
+  });
+
+  test("rejects an absolute path", async () => {
+    const repo = repoWithOneCommit();
+
+    await expect(worktree(repo, "/etc/passwd")).rejects.toThrow(/path/i);
   });
 });
 
