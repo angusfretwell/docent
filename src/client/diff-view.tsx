@@ -14,6 +14,7 @@ import { useEffect, useImperativeHandle, useRef, useState } from "react";
 import type { FindingEntry, ViewedEvent } from "../shared/dossier.ts";
 import type { FindingWrite } from "../shared/finding-write.ts";
 import { fetchExpandedFileDiff, isExpandable } from "./blobs.ts";
+import { themes, workerFactory } from "./code-view.ts";
 import type { Annotation } from "./diff-annotations.ts";
 import type { DriftResult } from "./drift.ts";
 import { EdgeChrome } from "./edge-chrome.tsx";
@@ -35,8 +36,6 @@ import type { FileEntry, FileOrder } from "./nav.ts";
 import { useDiffFindings } from "./use-diff-findings.tsx";
 import { computeViewed, viewedStateFor } from "./viewed.ts";
 import type { ViewedModel } from "./viewed.ts";
-
-const themes = { dark: "github-dark", light: "github-light" } as const;
 
 // Keyboard jumps — [ ] step files, , . step changes.
 const KEY_ACTIONS: Record<string, ["file" | "change", 1 | -1]> = {
@@ -89,15 +88,6 @@ function useJumpKeys(jump: (kind: "file" | "change", direction: 1 | -1) => void)
     globalThis.addEventListener("keydown", onKey);
     return () => globalThis.removeEventListener("keydown", onKey);
   }, []);
-}
-
-// One Shiki-tokenizing worker per hardware thread (capped). Tokenization must
-// stay off the main thread: the #4 re-benchmark measured worker-off scroll at
-// p95 225 ms with 15 long frames vs. zero with the pool on.
-function workerFactory() {
-  return new Worker(new URL("@pierre/diffs/worker/worker.js", import.meta.url), {
-    type: "module",
-  });
 }
 
 /** A localStorage-backed preference, so layout/order survive reloads. */

@@ -6,6 +6,7 @@ import type { FindingEntry, ViewedEvent } from "../shared/dossier.ts";
 import type { FindingWrite } from "../shared/finding-write.ts";
 import type { PendingRange } from "../shared/pending.ts";
 import { Pending } from "../shared/pending.ts";
+import { latestCodeWalkthrough } from "../shared/walkthrough.ts";
 import { fetchPendingExpandedFileDiff, isPendingExpandable } from "./blobs.ts";
 import type { DriftResult } from "./drift.ts";
 import { useDrift } from "./drift.ts";
@@ -13,6 +14,7 @@ import type { DiffViewHandle } from "./diff-view.tsx";
 import { DiffView } from "./diff-view.tsx";
 import { writeFinding } from "./findings-client.ts";
 import { FindingsPanel } from "./findings-panel.tsx";
+import { WalkthroughView } from "./walkthrough-view.tsx";
 
 // Append a Finding record. The write lands a file in `.docent/`, which trips the
 // server's watch → SSE push → snapshot re-fetch, so the new record renders
@@ -34,6 +36,11 @@ const decodePending = Schema.decodeUnknownSync(Pending);
 // Which selector entry is showing: the committed Change, or the read-only
 // Pending working-tree preview.
 type Selection = "change" | "pending";
+
+// The tab / view mode (walkthroughs.md §1). The Diff tab and the Code
+// walkthrough tab are self-contained surfaces over the same Change; the Product
+// walkthrough is a separate tab (#15), not built here.
+type Tab = "diff" | "walkthrough";
 
 type LoadState =
   | { kind: "loading" }
@@ -76,6 +83,51 @@ function DossierStatus({ dossier }: { dossier: DossierSnapshot }) {
 
 function Notice({ children }: { children: React.ReactNode }) {
   return <p style={{ opacity: 0.7, padding: "1rem" }}>{children}</p>;
+}
+
+const tabBarStyle: React.CSSProperties = {
+  borderBottom: "1px solid rgba(128,128,128,0.25)",
+  display: "flex",
+  gap: "0.25rem",
+  padding: "0.3rem 0.6rem 0",
+};
+
+function tabStyle(active: boolean): React.CSSProperties {
+  return {
+    background: "transparent",
+    border: "none",
+    borderBottom: active ? "2px solid #4c8dff" : "2px solid transparent",
+    color: "inherit",
+    cursor: "pointer",
+    font: "inherit",
+    fontSize: "0.9rem",
+    opacity: active ? 1 : 0.7,
+    padding: "0.4rem 0.7rem",
+  };
+}
+
+/** The view-mode tabs (walkthroughs.md §1). Each tab is its own self-contained surface. */
+function TabBar({ tab, onTab }: { tab: Tab; onTab: (tab: Tab) => void }) {
+  return (
+    <div style={tabBarStyle}>
+      <button
+        aria-pressed={tab === "diff"}
+        onClick={() => onTab("diff")}
+        style={tabStyle(tab === "diff")}
+        type="button"
+      >
+        Diff
+      </button>
+      <button
+        aria-pressed={tab === "walkthrough"}
+        onClick={() => onTab("walkthrough")}
+        style={tabStyle(tab === "walkthrough")}
+        type="button"
+      >
+        Code walkthrough
+      </button>
+    </div>
+  );
 }
 
 const barStyle: React.CSSProperties = {
@@ -237,12 +289,102 @@ function PendingBody({
   );
 }
 
+/**
+ * The Diff tab: the Change/Pending selector over the diff surface plus the
+ * global Findings panel. Split out so `App` picks a tab without carrying the
+ * diff surface's own derivations (dirty/effective/branch).
+ */
+function DiffTab({
+  change,
+  pending,
+  dossier,
+  drift,
+  diffRef,
+  selected,
+  range,
+  onSelect,
+  onRange,
+}: {
+  change: LoadState;
+  pending: Pending | null;
+  dossier: DossierSnapshot | null;
+  drift: ReadonlyMap<string, DriftResult>;
+  diffRef: React.RefObject<DiffViewHandle | null>;
+  selected: Selection;
+  range: PendingRange;
+  onSelect: (selection: Selection) => void;
+  onRange: (range: PendingRange) => void;
+}) {
+  const dirty = pending?.dirty ?? false;
+  const effective: Selection = selected === "pending" && dirty ? "pending" : "change";
+  const branch = pending?.branch ?? (change.kind === "loaded" ? change.change.branch : "…");
+
+  return (
+    <>
+      <ChangeSelector
+        branch={branch}
+        dirty={dirty}
+        onRange={onRange}
+        onSelect={onSelect}
+        range={range}
+        selected={effective}
+      />
+      <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {effective === "pending" && pending ? (
+            <PendingBody diffRef={diffRef} pending={pending} />
+          ) : (
+            <ChangeBody diffRef={diffRef} dossier={dossier} drift={drift} state={change} />
+          )}
+        </div>
+        {dossier ? (
+          <FindingsPanel
+            drift={drift}
+            findings={dossier.findings}
+            onJump={(file, line) => diffRef.current?.scrollToLine(file, line)}
+            onWrite={handleWrite}
+          />
+        ) : null}
+      </div>
+    </>
+  );
+}
+
+/** The Code walkthrough tab, or a prompt to author one when none exists. */
+function WalkthroughTab({
+  dossier,
+  patch,
+  onOpenInDiff,
+}: {
+  dossier: DossierSnapshot | null;
+  patch: string;
+  onOpenInDiff: (file: string, line: number) => void;
+}) {
+  const walkthrough = latestCodeWalkthrough(dossier?.walkthroughs ?? []);
+  if (!(walkthrough && dossier)) {
+    return <Notice>No code walkthrough yet. Run /docent to author one.</Notice>;
+  }
+  return (
+    <WalkthroughView
+      changes={dossier.changes}
+      findings={dossier.findings}
+      onOpenInDiff={onOpenInDiff}
+      patch={patch}
+      walkthrough={walkthrough}
+    />
+  );
+}
+
 export function App() {
   const [change, setChange] = useState<LoadState>({ kind: "loading" });
   const [pending, setPending] = useState<Pending | null>(null);
   const [dossier, setDossier] = useState<DossierSnapshot | null>(null);
   const [selected, setSelected] = useState<Selection>("change");
   const [range, setRange] = useState<PendingRange>("incremental");
+  const [tab, setTab] = useState<Tab>("diff");
+  // A one-shot Diff deep-link from the walkthrough tab: switch to Diff, then
+  // scroll to the range's file/line once DiffView has mounted (walkthroughs.md §1).
+  const [pendingJump, setPendingJump] = useState<{ file: string; line: number } | null>(null);
   const diffRef = useRef<DiffViewHandle>(null);
 
   // One live loop for the whole tab: fetch the Change, the Pending preview (at
@@ -322,40 +464,46 @@ export function App() {
     patch: change.kind === "loaded" ? change.change.patch : "",
   });
 
-  // Derived, not stored: Pending shows only while dirty, so a clean tree (e.g.
-  // after commit) falls back to the committed Change with no lifecycle logic.
-  const dirty = pending?.dirty ?? false;
-  const effective: Selection = selected === "pending" && dirty ? "pending" : "change";
-  const branch = pending?.branch ?? (change.kind === "loaded" ? change.change.branch : "…");
+  // The deep-link loop: a range in the walkthrough tab opens the Diff tab at its
+  // file/line. Switching to Diff mounts DiffView; the effect then scrolls once
+  // DiffView's imperative handle is live, given a frame for the renderer to lay
+  // out, and clears the one-shot request.
+  function openInDiff(file: string, line: number) {
+    setTab("diff");
+    setPendingJump({ file, line });
+  }
+  useEffect(() => {
+    if (tab !== "diff" || pendingJump === null) {
+      return;
+    }
+    const frame = requestAnimationFrame(() => {
+      diffRef.current?.scrollToLine(pendingJump.file, pendingJump.line);
+      setPendingJump(null);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [tab, pendingJump]);
+
+  const patch = change.kind === "loaded" ? change.change.patch : "";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       {dossier ? <DossierStatus dossier={dossier} /> : null}
-      <ChangeSelector
-        branch={branch}
-        dirty={dirty}
-        onRange={setRange}
-        onSelect={setSelected}
-        range={range}
-        selected={effective}
-      />
-      <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          {effective === "pending" && pending ? (
-            <PendingBody diffRef={diffRef} pending={pending} />
-          ) : (
-            <ChangeBody diffRef={diffRef} dossier={dossier} drift={drift} state={change} />
-          )}
-        </div>
-        {dossier ? (
-          <FindingsPanel
-            drift={drift}
-            findings={dossier.findings}
-            onJump={(file, line) => diffRef.current?.scrollToLine(file, line)}
-            onWrite={handleWrite}
-          />
-        ) : null}
-      </div>
+      <TabBar onTab={setTab} tab={tab} />
+      {tab === "walkthrough" ? (
+        <WalkthroughTab dossier={dossier} onOpenInDiff={openInDiff} patch={patch} />
+      ) : (
+        <DiffTab
+          change={change}
+          diffRef={diffRef}
+          dossier={dossier}
+          drift={drift}
+          onRange={setRange}
+          onSelect={setSelected}
+          pending={pending}
+          range={range}
+          selected={selected}
+        />
+      )}
     </div>
   );
 }
