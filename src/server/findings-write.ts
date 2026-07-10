@@ -17,6 +17,7 @@ import { ChangeRecord } from "../shared/dossier.ts";
 import type { Anchor, Disposition } from "../shared/finding.ts";
 import type { FindingWrite } from "../shared/finding-write.ts";
 import { dossierDirPath, ensureDossier, listDir, makeId, readRecord } from "./dossier.ts";
+import { recordFile, serializeFrontmatter } from "./records.ts";
 
 /** The plain human/agent attribution a write stamps onto its record. */
 export interface AuthorInput {
@@ -121,17 +122,7 @@ function frontmatter(fields: {
     ["anchor", fields.anchor],
     ["disposition", fields.disposition],
   ];
-  return ordered
-    .filter(([, value]) => value !== undefined)
-    .map(([key, value]) => `${key}: ${Bun.YAML.stringify(value).trim()}`)
-    .join("\n");
-}
-
-/** Assemble a record file: frontmatter envelope over a trimmed markdown body. */
-function recordFile(meta: Parameters<typeof frontmatter>[0], body: string): string {
-  const trimmed = body.trim();
-  const bodyBlock = trimmed === "" ? "" : `\n${trimmed}\n`;
-  return `---\n${frontmatter(meta)}\n---\n${bodyBlock}`;
+  return serializeFrontmatter(ordered);
 }
 
 /**
@@ -185,7 +176,10 @@ export const writeFindingRecord = Effect.fn("writeFindingRecord")(
     const body = write.op === "reopen" ? "" : (write.body ?? "");
 
     yield* fs.makeDirectory(findingDir, { recursive: true });
-    yield* fs.writeFileString(path.join(findingDir, recordName), recordFile(meta, body));
+    yield* fs.writeFileString(
+      path.join(findingDir, recordName),
+      recordFile(frontmatter(meta), body),
+    );
 
     return { changeId: change.id, findingId, record: recordName };
   },
