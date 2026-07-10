@@ -358,7 +358,7 @@ function WalkthroughTab({
 }: {
   dossier: DossierSnapshot | null;
   patch: string;
-  onOpenInDiff: (file: string, line: number) => void;
+  onOpenInDiff: (file: string, line: number, side: "base" | "head") => void;
 }) {
   const walkthrough = latestCodeWalkthrough(dossier?.walkthroughs ?? []);
   if (!(walkthrough && dossier)) {
@@ -384,7 +384,11 @@ export function App() {
   const [tab, setTab] = useState<Tab>("diff");
   // A one-shot Diff deep-link from the walkthrough tab: switch to Diff, then
   // scroll to the range's file/line once DiffView has mounted (walkthroughs.md §1).
-  const [pendingJump, setPendingJump] = useState<{ file: string; line: number } | null>(null);
+  const [pendingJump, setPendingJump] = useState<{
+    file: string;
+    line: number;
+    side: "base" | "head";
+  } | null>(null);
   const diffRef = useRef<DiffViewHandle>(null);
 
   // One live loop for the whole tab: fetch the Change, the Pending preview (at
@@ -468,16 +472,16 @@ export function App() {
   // file/line. Switching to Diff mounts DiffView; the effect then scrolls once
   // DiffView's imperative handle is live, given a frame for the renderer to lay
   // out, and clears the one-shot request.
-  function openInDiff(file: string, line: number) {
+  function openInDiff(file: string, line: number, side: "base" | "head") {
     setTab("diff");
-    setPendingJump({ file, line });
+    setPendingJump({ file, line, side });
   }
   useEffect(() => {
     if (tab !== "diff" || pendingJump === null) {
       return;
     }
     const frame = requestAnimationFrame(() => {
-      diffRef.current?.scrollToLine(pendingJump.file, pendingJump.line);
+      diffRef.current?.scrollToLine(pendingJump.file, pendingJump.line, pendingJump.side);
       setPendingJump(null);
     });
     return () => cancelAnimationFrame(frame);

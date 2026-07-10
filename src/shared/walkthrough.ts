@@ -195,12 +195,3 @@ export function latestCodeWalkthrough<T extends { id: string; kind: "code" | "pr
   }
   return latest;
 }
-
-/**
- * Identity drift for a `walkthrough-section` Finding (walkthroughs.md §8): live
- * while the section still exists in its (immutable) walkthrough, outdated once
- * gone — no `shifted`, since a whole section has no line-number movement.
- */
-export function sectionPresent(sectionId: string, sections: readonly { id: string }[]): boolean {
-  return sections.some((section) => section.id === sectionId);
-}

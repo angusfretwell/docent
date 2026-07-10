@@ -8,13 +8,12 @@
  * re-anchors lazily and folds them in as they land.
  */
 
-import { useEffect, useState } from "react";
-import { excerptLines, planDrift, reanchorRange, splitLines } from "../shared/drift.ts";
+import { planDrift } from "../shared/drift.ts";
 import { rangeAnchor } from "../shared/walkthrough.ts";
 import type { WalkthroughRange } from "../shared/walkthrough.ts";
-import { fetchBlobText, isRealObjectId } from "./blobs.ts";
-import { anchorContext, indexDiffFiles } from "./drift.ts";
-import type { DiffFile, DriftResult } from "./drift.ts";
+import { isRealObjectId } from "./blobs.ts";
+import { anchorContext, indexDiffFiles, useReanchor } from "./drift.ts";
+import type { DiffFile, DriftResult, ExcerptJob, ReanchorJob } from "./drift.ts";
 
 /** A range plus the stable key its drift is published under. */
 export interface KeyedRange {
@@ -64,10 +63,10 @@ export function planRange(keyed: KeyedRange, files: ReadonlyMap<string, DiffFile
 
 /**
  * The per-range drift map, keyed by each range's stable key. Fast-path results
- * are ready synchronously; a re-anchor is fetched lazily and folded in as it
- * resolves, so the map only grows more precise — a range whose re-anchor is
- * still in flight simply reads live at its born lines until the fetch lands,
- * never mis-pinned. Blobs are content-addressed, so fetches cache forever.
+ * are ready synchronously; a re-anchor is fetched lazily by the shared
+ * `useReanchor` engine and folded in as it resolves, so the map only grows more
+ * precise — a range whose re-anchor is still in flight simply reads live at its
+ * born lines until the fetch lands, never mis-pinned.
  */
 export function useRangeDrift(
   ranges: readonly KeyedRange[],
@@ -77,72 +76,25 @@ export function useRangeDrift(
   const plans = ranges.map((keyed) => planRange(keyed, files));
 
   const base = new Map<string, DriftResult>();
+  const jobs: ReanchorJob[] = [];
+  const excerpts: ExcerptJob[] = [];
   for (const plan of plans) {
     if (plan.kind === "resolved") {
       base.set(plan.key, plan.result);
-    } else if (plan.kind === "excerpt") {
+    } else if (plan.kind === "reanchor") {
+      jobs.push({
+        bornSha: plan.bornSha,
+        currentSha: plan.currentSha,
+        id: plan.key,
+        range: plan.range,
+      });
+    } else {
       base.set(plan.key, { lines: plan.range, state: "outdated" });
+      excerpts.push({ bornSha: plan.bornSha, id: plan.key, range: plan.range });
     }
   }
 
-  const [resolved, setResolved] = useState<ReadonlyMap<string, DriftResult>>(new Map());
-
-  // A stable key so the fetch effect only re-runs when the set of fetch jobs
-  // actually changes, not on every render.
-  const jobTokens: string[] = [];
-  for (const plan of plans) {
-    if (plan.kind === "reanchor") {
-      jobTokens.push(`r:${plan.key}:${plan.bornSha}:${plan.currentSha}`);
-    } else if (plan.kind === "excerpt") {
-      jobTokens.push(`e:${plan.key}:${plan.bornSha}`);
-    }
-  }
-  const jobsKey = jobTokens.join("|");
-
-  useEffect(() => {
-    let cancelled = false;
-    function publish(key: string, result: DriftResult) {
-      if (!cancelled) {
-        setResolved((prev) => new Map(prev).set(key, result));
-      }
-    }
-    async function run(plan: RangePlan) {
-      if (plan.kind === "reanchor") {
-        try {
-          const [bornText, currentText] = await Promise.all([
-            fetchBlobText(plan.bornSha),
-            fetchBlobText(plan.currentSha),
-          ]);
-          const result = reanchorRange(splitLines(bornText), splitLines(currentText), plan.range);
-          publish(plan.key, {
-            lines: result.lines,
-            state: result.state,
-            ...(result.state === "outdated"
-              ? { bornText: excerptLines(bornText, plan.range) }
-              : {}),
-          });
-        } catch {
-          // Leave the range at its born lines until a later render re-anchors it.
-        }
-      } else if (plan.kind === "excerpt") {
-        try {
-          const bornText = await fetchBlobText(plan.bornSha);
-          publish(plan.key, {
-            bornText: excerptLines(bornText, plan.range),
-            lines: plan.range,
-            state: "outdated",
-          });
-        } catch {
-          // The born blob is unreachable; the range still reads outdated via base.
-        }
-      }
-    }
-    void Promise.all(plans.map(run));
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- jobsKey encodes the fetch jobs
-  }, [jobsKey]);
+  const resolved = useReanchor(jobs, excerpts);
 
   const merged = new Map(base);
   for (const [key, result] of resolved) {

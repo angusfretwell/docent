@@ -18,12 +18,7 @@ import { splitLines } from "../shared/drift.ts";
 import type { DriftState } from "../shared/drift.ts";
 import { foldFinding } from "../shared/finding.ts";
 import type { Anchor, FoldedFinding } from "../shared/finding.ts";
-import {
-  interleaveSegments,
-  rollupDrift,
-  sectionPresent,
-  walkthroughStaleness,
-} from "../shared/walkthrough.ts";
+import { interleaveSegments, rollupDrift, walkthroughStaleness } from "../shared/walkthrough.ts";
 import type { WalkthroughRange, WalkthroughSection } from "../shared/walkthrough.ts";
 import { fetchBlobText } from "./blobs.ts";
 import { themes, workerFactory } from "./code-view.ts";
@@ -34,6 +29,11 @@ import type { KeyedRange } from "./walkthrough-drift.ts";
 /** A stable key for a section's range, so drift and rendering agree. */
 function rangeKey(sectionId: string, index: number): string {
   return `${sectionId}#${index}`;
+}
+
+/** The `CodeView` item id for a range — its content coordinate, not a drift key. */
+function rangeItemId(range: WalkthroughRange): string {
+  return `${range.file}:${range.blobSha}:${range.lines[0]}-${range.lines[1]}`;
 }
 
 /** Whether two 1-based inclusive line ranges overlap. */
@@ -175,7 +175,7 @@ function RangeBody({
       <RangeCodeView
         cacheKey={`${range.blobSha}:${range.lines[0]}-${range.lines[1]}`}
         contents={text}
-        id={rangeKey(range.file, range.lines[0])}
+        id={rangeItemId(range)}
         name={range.file}
       />
     </div>
@@ -200,7 +200,7 @@ function RangeCode({
   range: WalkthroughRange;
   drift: DriftResult | undefined;
   findings: readonly FoldedFinding[];
-  onOpenInDiff: (file: string, line: number) => void;
+  onOpenInDiff: (file: string, line: number, side: "base" | "head") => void;
 }) {
   const [text, setText] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
@@ -244,7 +244,7 @@ function RangeCode({
         <span style={{ opacity: 0.6 }}>({range.side})</span>
         <DriftTag state={state} />
         <button
-          onClick={() => onOpenInDiff(range.file, targetLine)}
+          onClick={() => onOpenInDiff(range.file, targetLine, range.side)}
           style={buttonStyle}
           type="button"
         >
@@ -261,21 +261,26 @@ function RangeCode({
   );
 }
 
-/** One section: its title, drift rollup, narrative Findings, and interleaved body. */
+/**
+ * One section: its title, drift rollup, narrative Findings, and interleaved body.
+ * A section rendered here belongs to the shown (immutable) walkthrough, so its
+ * `walkthrough-section` Findings are identity-live by construction — the
+ * outdated arm (§8) arises only for a superseded walkthrough, which v1 does not
+ * show (one walkthrough per pillar), so those Findings are filtered out upstream
+ * rather than surfaced detached here.
+ */
 function Section({
   section,
   drift,
   narrative,
   code,
-  present,
   onOpenInDiff,
 }: {
   section: WalkthroughSection;
   drift: ReadonlyMap<string, DriftResult>;
   narrative: readonly FoldedFinding[];
   code: readonly FoldedFinding[];
-  present: boolean;
-  onOpenInDiff: (file: string, line: number) => void;
+  onOpenInDiff: (file: string, line: number, side: "base" | "head") => void;
 }) {
   const ranges = section.ranges ?? [];
   const rollup = rollupDrift(
@@ -291,7 +296,7 @@ function Section({
       </div>
       {narrative.map((finding) => (
         <div key={finding.id} style={findingStyle}>
-          <span style={{ opacity: 0.6 }}>{present ? "note" : "note (detached)"}: </span>
+          <span style={{ opacity: 0.6 }}>note: </span>
           {finding.body}
         </div>
       ))}
@@ -353,7 +358,7 @@ export function WalkthroughView({
   changes: readonly ChangeRecord[];
   findings: readonly FindingEntry[];
   patch: string;
-  onOpenInDiff: (file: string, line: number) => void;
+  onOpenInDiff: (file: string, line: number, side: "base" | "head") => void;
 }) {
   const { sections } = walkthrough;
 
@@ -389,7 +394,7 @@ export function WalkthroughView({
             ) : null}
             {firstRange ? (
               <button
-                onClick={() => onOpenInDiff(firstRange.file, firstRange.lines[0])}
+                onClick={() => onOpenInDiff(firstRange.file, firstRange.lines[0], firstRange.side)}
                 style={{ ...buttonStyle, marginLeft: "auto" }}
                 type="button"
               >
@@ -408,7 +413,6 @@ export function WalkthroughView({
               key={section.id}
               narrative={narrative.get(section.id) ?? []}
               onOpenInDiff={onOpenInDiff}
-              present={sectionPresent(section.id, sections)}
               section={section}
             />
           ))

@@ -137,6 +137,20 @@ const RECORD_NAME = new RegExp(`^\\d+-(?<type>${RECORD_TYPES.join("|")})\\.md$`)
 // is skipped — the best-effort walk (architecture.md §3).
 const FRONTMATTER = /^---\r?\n(?<frontmatter>[\s\S]*?)\r?\n?---\r?\n?(?<body>[\s\S]*)$/;
 
+/**
+ * Split a frontmatter-over-markdown file into its parsed YAML `meta` and trimmed
+ * `body` — the shared envelope of Finding records and walkthrough sections
+ * (data-model.md §5.1). A file without `---` fences yields empty `meta`, so the
+ * caller's decode fails and the record is skipped (the best-effort walk).
+ */
+const parseEnvelope = Effect.fn("parseEnvelope")(function* parseEnvelope(text: string) {
+  const match = FRONTMATTER.exec(text);
+  const frontmatter = match?.groups?.frontmatter ?? "";
+  const body = (match?.groups?.body ?? "").trim();
+  const meta = yield* Effect.try(() => Bun.YAML.parse(frontmatter) ?? {});
+  return { body, meta: meta as object };
+});
+
 /** Parse one `NNN-<type>.md` record; `None` on any read/parse/decode failure. */
 const readFindingRecord = Effect.fn("readFindingRecord")(function* readFindingRecord(
   file: string,
@@ -144,17 +158,9 @@ const readFindingRecord = Effect.fn("readFindingRecord")(function* readFindingRe
 ) {
   const fs = yield* FileSystem;
   const text = yield* fs.readFileString(file);
-  const match = FRONTMATTER.exec(text);
-  const frontmatter = match?.groups?.frontmatter ?? "";
-  const body = (match?.groups?.body ?? "").trim();
-  const meta = yield* Effect.try(() => Bun.YAML.parse(frontmatter) ?? {});
+  const { body, meta } = yield* parseEnvelope(text);
   const type = RECORD_NAME.exec(name)?.groups?.type;
-  return yield* Schema.decodeUnknownEffect(FindingRecord)({
-    ...(meta as object),
-    body,
-    name,
-    type,
-  });
+  return yield* Schema.decodeUnknownEffect(FindingRecord)({ ...meta, body, name, type });
 }, Effect.option);
 
 const ANCHOR_FILE = /\bfile:\s*(?<file>[^,}\n]+)/;
@@ -230,11 +236,8 @@ const readWalkthroughSection = Effect.fn("readWalkthroughSection")(function* rea
 ) {
   const fs = yield* FileSystem;
   const text = yield* fs.readFileString(file);
-  const match = FRONTMATTER.exec(text);
-  const frontmatter = match?.groups?.frontmatter ?? "";
-  const body = (match?.groups?.body ?? "").trim();
-  const meta = yield* Effect.try(() => Bun.YAML.parse(frontmatter) ?? {});
-  return yield* Schema.decodeUnknownEffect(WalkthroughSection)({ ...(meta as object), body });
+  const { body, meta } = yield* parseEnvelope(text);
+  return yield* Schema.decodeUnknownEffect(WalkthroughSection)({ ...meta, body });
 }, Effect.option);
 
 /**

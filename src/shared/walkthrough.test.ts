@@ -5,7 +5,6 @@ import {
   latestCodeWalkthrough,
   rangeAnchor,
   rollupDrift,
-  sectionPresent,
   walkthroughStaleness,
 } from "./walkthrough.ts";
 import type { WalkthroughRange } from "./walkthrough.ts";
@@ -131,12 +130,5 @@ describe("latestCodeWalkthrough", () => {
 
   test("no code walkthrough yields undefined", () => {
     expect(latestCodeWalkthrough([{ id: "wlk_01C", kind: "product" as const }])).toBeUndefined();
-  });
-});
-
-describe("sectionPresent", () => {
-  test("live while the section id exists in the walkthrough", () => {
-    expect(sectionPresent("sec_a", [{ id: "sec_a" }, { id: "sec_b" }])).toBe(true);
-    expect(sectionPresent("sec_z", [{ id: "sec_a" }])).toBe(false);
   });
 });

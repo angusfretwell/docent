@@ -107,9 +107,10 @@ function usePersisted<T extends string>(
   return [value, set];
 }
 
-/** The imperative surface the Findings panel drives to jump into the diff. */
+/** The imperative surface the Findings panel and the walkthrough tab drive to jump into the diff. */
 export interface DiffViewHandle {
-  scrollToLine: (file: string, line: number) => void;
+  /** Scroll to a file's line on the given side (default head/additions). */
+  scrollToLine: (file: string, line: number, side?: "base" | "head") => void;
 }
 
 // A stable empty generated list, so the pre-snapshot render doesn't churn the
@@ -502,13 +503,20 @@ export function DiffView({
   // file's index in the patch (`name#index`), so a Finding anchor — which knows
   // only the path — is resolved against the parsed patch here, where that index
   // lives. A file the diff no longer contains (an outdated Finding) is a no-op.
-  function scrollToLine(file: string, line: number) {
+  function scrollToLine(file: string, line: number, side: "base" | "head" = "head") {
     const index = processPatch(patch).files.findIndex((fileDiff) => fileDiff.name === file);
     if (index === -1) {
       return;
     }
     const id = `${file}#${index}`;
-    codeRef.current?.scrollTo({ behavior: "smooth", id, lineNumber: line, type: "line" });
+    // git side → renderer column: base ⇒ deletions, head ⇒ additions.
+    codeRef.current?.scrollTo({
+      behavior: "smooth",
+      id,
+      lineNumber: line,
+      side: side === "base" ? "deletions" : "additions",
+      type: "line",
+    });
     setActiveId(id);
   }
   useImperativeHandle(ref, () => ({ scrollToLine }));
