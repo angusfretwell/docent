@@ -6,6 +6,8 @@ import { assetsFromManifest } from "../client/assets.ts";
 import type { ClientAssets } from "../client/assets.ts";
 import { Change, DiffError } from "../shared/change.ts";
 import { DossierSnapshot } from "../shared/dossier.ts";
+import { FindingWriteResult } from "../shared/finding-write.ts";
+import { foldFinding } from "../shared/finding.ts";
 import { Pending } from "../shared/pending.ts";
 import { layer, serverUrl } from "./serve.ts";
 import { cleanupScratchDirs, git, scratchDir, scratchRepo } from "./test-fixtures.ts";
@@ -17,6 +19,7 @@ const decodeChange = Schema.decodeUnknownSync(Change);
 const decodeDiffError = Schema.decodeUnknownSync(DiffError);
 const decodeSnapshot = Schema.decodeUnknownSync(DossierSnapshot);
 const decodePending = Schema.decodeUnknownSync(Pending);
+const decodeWriteResult = Schema.decodeUnknownSync(FindingWriteResult);
 
 afterAll(async () => {
   await Promise.all(disposers.map((dispose) => dispose()));
@@ -91,6 +94,28 @@ async function serve(repo: string): Promise<{ url: string }> {
   const url = await runtime.runPromise(serverUrl);
   return { url: await reachableBase(url) };
 }
+
+function postFinding(url: string, body: unknown): Promise<Response> {
+  return fetch(new URL("/api/findings", url), {
+    body: JSON.stringify(body),
+    headers: { "content-type": "application/json" },
+    method: "POST",
+  });
+}
+
+/** Fetch and decode the live Dossier snapshot. */
+async function fetchDossier(url: string) {
+  const res = await fetch(new URL("/api/dossier", url));
+  return decodeSnapshot(await res.json());
+}
+
+const lineAnchor = {
+  blobSha: "9c2a1f0",
+  file: "feature.txt",
+  kind: "line",
+  lines: [1, 1],
+  side: "head",
+};
 
 describe("server layer", () => {
   test("GET /api/diff returns the live branch diff as JSON", async () => {
@@ -303,6 +328,61 @@ describe("server layer", () => {
       headers: { "content-type": "application/json" },
       method: "POST",
     });
+
+    expect(res.status).toBe(400);
+  });
+
+  test("POST /api/findings opens a Finding, minting the head's Change", async () => {
+    const repo = featureRepo();
+    const { url } = await serve(repo);
+
+    const res = await postFinding(url, {
+      anchor: lineAnchor,
+      body: "the flush races the mark",
+      op: "open",
+    });
+
+    expect(res.status).toBe(200);
+    const result = decodeWriteResult(await res.json());
+    expect(result.findingId).toMatch(/^fnd_/);
+    expect(result.record).toBe("001-open.md");
+    expect(result.changeId).toBe("chg_001");
+
+    // The record and its minted Change are both visible in the live snapshot.
+    const snap = await fetchDossier(url);
+    expect(snap.changes.map((change) => change.id)).toEqual(["chg_001"]);
+    const finding = snap.findings.find((entry) => entry.id === result.findingId);
+    const folded = foldFinding(result.findingId, finding?.records ?? []);
+    expect(folded.body).toBe("the flush races the mark");
+    expect(folded.anchor).toMatchObject({ file: "feature.txt", kind: "line" });
+    // Attribution is the human resolved from git config, never gating.
+    expect(finding?.records.at(0)?.author).toMatchObject({ kind: "human" });
+  });
+
+  test("POST /api/findings appends a reply to an existing Finding", async () => {
+    const repo = featureRepo();
+    const { url } = await serve(repo);
+    const openRes = await postFinding(url, { anchor: lineAnchor, body: "flagged", op: "open" });
+    const opened = decodeWriteResult(await openRes.json());
+
+    const res = await postFinding(url, {
+      body: "fixed",
+      disposition: "actioned",
+      findingId: opened.findingId,
+      op: "reply",
+    });
+
+    expect(res.status).toBe(200);
+    expect(decodeWriteResult(await res.json()).record).toBe("002-reply.md");
+    const snap = await fetchDossier(url);
+    const finding = snap.findings.find((entry) => entry.id === opened.findingId);
+    expect(foldFinding(opened.findingId, finding?.records ?? []).whatsNext).toBe("needs-verify");
+  });
+
+  test("POST /api/findings 400s a malformed body", async () => {
+    const { url } = await serve(featureRepo());
+
+    const res = await postFinding(url, { op: "nonsense" });
 
     expect(res.status).toBe(400);
   });
