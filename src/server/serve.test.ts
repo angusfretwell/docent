@@ -6,6 +6,7 @@ import { assetsFromManifest } from "../client/assets.ts";
 import type { ClientAssets } from "../client/assets.ts";
 import { Change, DiffError } from "../shared/change.ts";
 import { DossierSnapshot } from "../shared/dossier.ts";
+import { Pending } from "../shared/pending.ts";
 import { layer, serverUrl } from "./serve.ts";
 import { cleanupScratchDirs, git, scratchDir, scratchRepo } from "./test-fixtures.ts";
 
@@ -15,6 +16,7 @@ const disposers: (() => Promise<void>)[] = [];
 const decodeChange = Schema.decodeUnknownSync(Change);
 const decodeDiffError = Schema.decodeUnknownSync(DiffError);
 const decodeSnapshot = Schema.decodeUnknownSync(DossierSnapshot);
+const decodePending = Schema.decodeUnknownSync(Pending);
 
 afterAll(async () => {
   await Promise.all(disposers.map((dispose) => dispose()));
@@ -178,6 +180,82 @@ describe("server layer", () => {
     const res = await fetch(new URL("/api/blob/not-a-sha", url));
 
     expect(res.status).toBe(400);
+  });
+
+  test("GET /api/pending returns the dirty working-tree preview as JSON", async () => {
+    const repo = featureRepo();
+    const { url } = await serve(repo);
+    writeFileSync(path.join(repo, "feature.txt"), "new file\nplus an edit\n");
+    writeFileSync(path.join(repo, "fresh.txt"), "untracked\n");
+
+    const res = await fetch(new URL("/api/pending", url));
+
+    expect(res.status).toBe(200);
+    const body = decodePending(await res.json());
+    expect(body.dirty).toBe(true);
+    expect(body.range).toBe("incremental");
+    expect(body.patch).toContain("+plus an edit");
+    expect(body.patch).toContain("fresh.txt");
+  });
+
+  test("GET /api/pending is not dirty on a clean tree", async () => {
+    const repo = featureRepo();
+    // docent's boot writes `.docent/` and its `.gitignore` entry; committing a
+    // `.gitignore` that already ignores `.docent/` keeps the boot a no-op so the
+    // tree stays genuinely clean.
+    writeFileSync(path.join(repo, ".gitignore"), ".docent/\n");
+    git(repo, "add", ".gitignore");
+    git(repo, "commit", "-m", "ignore .docent");
+    const { url } = await serve(repo);
+
+    const res = await fetch(new URL("/api/pending", url));
+
+    const body = decodePending(await res.json());
+    expect(body.dirty).toBe(false);
+    expect(body.patch).toBe("");
+  });
+
+  test("GET /api/pending?range=cumulative previews base..worktree", async () => {
+    const repo = featureRepo();
+    const { url } = await serve(repo);
+    writeFileSync(path.join(repo, "working.txt"), "uncommitted\n");
+
+    const res = await fetch(new URL("/api/pending?range=cumulative", url));
+
+    const body = decodePending(await res.json());
+    expect(body.range).toBe("cumulative");
+    // The committed feature file plus the uncommitted working file.
+    expect(body.patch).toContain("feature.txt");
+    expect(body.patch).toContain("working.txt");
+  });
+
+  test("GET /api/worktree reads live working-tree bytes, explicitly uncached", async () => {
+    const repo = featureRepo();
+    const { url } = await serve(repo);
+    writeFileSync(path.join(repo, "feature.txt"), "edited live on disk\n");
+
+    const res = await fetch(new URL("/api/worktree?path=feature.txt", url));
+
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("edited live on disk\n");
+    // The working tree is mutable — never cache it.
+    expect(res.headers.get("cache-control")).toMatch(/no-store/);
+  });
+
+  test("GET /api/worktree 400s a path that escapes the repo root", async () => {
+    const { url } = await serve(featureRepo());
+
+    const res = await fetch(new URL("/api/worktree?path=../../../etc/passwd", url));
+
+    expect(res.status).toBe(400);
+  });
+
+  test("GET /api/worktree 404s a path that does not exist", async () => {
+    const { url } = await serve(featureRepo());
+
+    const res = await fetch(new URL("/api/worktree?path=nope.txt", url));
+
+    expect(res.status).toBe(404);
   });
 
   test("GET /api/dossier auto-creates and returns the branch's snapshot", async () => {
