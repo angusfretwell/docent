@@ -28,8 +28,11 @@ async function readSse(
   reader: ReadableStreamDefaultReader<Uint8Array>,
   decoder: TextDecoder,
 ): Promise<string> {
+  // Generous: under full-suite load every server runs recursive fs watches, and
+  // macOS FSEvents can delay a frame well past a second. This only guards
+  // against a truly hung stream, so a high ceiling costs nothing when frames flow.
   const timeout = new Promise<never>((_resolve, reject) => {
-    setTimeout(() => reject(new Error("timed out waiting for an SSE frame")), 3000);
+    setTimeout(() => reject(new Error("timed out waiting for an SSE frame")), 10000);
   });
   const { value, done } = await Promise.race([reader.read(), timeout]);
   return done || value === undefined ? "" : decoder.decode(value);
@@ -297,6 +300,30 @@ describe("server layer", () => {
       expect(await readSse(reader, decoder)).toContain("dossier-changed");
     } finally {
       // Close the socket so the server's graceful shutdown doesn't wait on it.
+      controller.abort();
+    }
+  });
+
+  test("GET /api/events pushes a change when a working-tree file is edited", async () => {
+    const repo = featureRepo();
+    const { url } = await serve(repo);
+    const controller = new AbortController();
+    const res = await fetch(new URL("/api/events", url), { signal: controller.signal });
+    const { body } = res;
+    if (!body) {
+      throw new Error("SSE response had no body");
+    }
+    const reader = body.getReader();
+    const decoder = new TextDecoder();
+
+    try {
+      expect(await readSse(reader, decoder)).toContain("connected");
+      // An agent editing a tracked file in the working tree — the Pending diff's
+      // live-refresh trigger, rooted at the repo, not `.docent/`.
+      writeFileSync(path.join(repo, "feature.txt"), "edited by an agent\n");
+
+      expect(await readSse(reader, decoder)).toContain("dossier-changed");
+    } finally {
       controller.abort();
     }
   });

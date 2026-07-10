@@ -188,6 +188,15 @@ export const resolveRepo = Effect.fn("resolveRepo")(function* resolveRepo(cwd: s
   return { branch, defaultBranch, root };
 });
 
+/**
+ * The repo's absolute git directory — `<root>/.git` for a normal checkout, or
+ * the linked path under `.git/worktrees/<name>` for a git worktree. The watch
+ * (watch.ts) watches this for HEAD/index moves so Pending hides live on commit.
+ */
+export const resolveGitDir = Effect.fn("resolveGitDir")(function* resolveGitDir(cwd: string) {
+  return yield* git(cwd, ["rev-parse", "--absolute-git-dir"]);
+});
+
 /** Resolve the checked-out branch's live Change against the default branch. */
 export const resolveChange = Effect.fn("resolveChange")(function* resolveChange(cwd: string) {
   const { root, branch, defaultBranch } = yield* resolveRepo(cwd);
