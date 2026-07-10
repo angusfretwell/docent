@@ -18,7 +18,7 @@ const ALWAYS_IGNORED = ".git";
 
 export interface IgnoreMatcher {
   /** Whether `relPath` (repo-relative, any OS separator) is ignored. */
-  ignores(relPath: string): boolean;
+  readonly ignores: (relPath: string) => boolean;
 }
 
 /** Parse gitignore text into the supported pattern lines (see module note). */
@@ -31,7 +31,7 @@ export function parseGitignore(text: string): string[] {
 
 /** Escape a literal for use inside a RegExp, leaving glob handling to the caller. */
 function escapeLiteral(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return text.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 /** Convert one path segment's glob to a regex source: `*`→`[^/]*`, `?`→`[^/]`. */

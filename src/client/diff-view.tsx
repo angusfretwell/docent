@@ -57,8 +57,20 @@ function usePersisted<T extends string>(
  * The Diff tab: the compact-folder navigation tree beside the whole branch
  * diff rendered as one continuous virtualized cross-file scroll. The tree and
  * the scroll share a single ordered file model, so position stays in sync.
+ *
+ * Context expansion is pluggable so the same surface renders both a committed
+ * Change (both sides from `/api/blob/:sha`) and the Pending working-tree preview
+ * (head side from `/api/worktree`). Defaults are the committed-Change fetchers.
  */
-export function DiffView({ patch }: { patch: string }) {
+export function DiffView({
+  patch,
+  expandFile = fetchExpandedFileDiff,
+  isFileExpandable = isExpandable,
+}: {
+  patch: string;
+  expandFile?: (fileDiff: FileDiffMetadata) => Promise<FileDiffMetadata>;
+  isFileExpandable?: (fileDiff: FileDiffMetadata) => boolean;
+}) {
   const [filter, setFilter] = useState("");
   const [order, setOrder] = usePersisted<FileOrder>("docent:fileOrder", "path", (raw) =>
     raw === "size" || raw === "path" ? raw : undefined,
@@ -158,7 +170,7 @@ export function DiffView({ patch }: { patch: string }) {
   // hunk/whole-file expansion. Fetching is per-file and on demand, never eager.
   function expandContext(id: string, fileDiff: FileDiffMetadata) {
     setExpanding((prev) => new Set(prev).add(id));
-    void fetchExpandedFileDiff(fileDiff)
+    void expandFile(fileDiff)
       .then((full) => {
         setExpanded((prev) => new Map(prev).set(id, full));
       })
@@ -175,7 +187,7 @@ export function DiffView({ patch }: { patch: string }) {
   }
 
   function renderExpandContext(item: CodeViewItem) {
-    if (item.type !== "diff" || !isExpandable(item.fileDiff)) {
+    if (item.type !== "diff" || !isFileExpandable(item.fileDiff)) {
       return null;
     }
     const busy = expanding.has(item.id);
@@ -227,7 +239,7 @@ export function DiffView({ patch }: { patch: string }) {
   }, []);
 
   return (
-    <div style={{ display: "flex", height: "100vh" }}>
+    <div style={{ display: "flex", height: "100%" }}>
       <FileTree
         activeId={activeId}
         collapsed={collapsed}
@@ -259,7 +271,7 @@ export function DiffView({ patch }: { patch: string }) {
             // CodeView must be its own scroll container: its virtualizer reads
             // this element's scrollTop, not an ancestor's. An outer scrolling
             // wrapper breaks both scrolling and virtualization.
-            style={{ height: "100vh", overflow: "auto" }}
+            style={{ height: "100%", overflow: "auto" }}
           />
         </WorkerPoolContextProvider>
       </div>

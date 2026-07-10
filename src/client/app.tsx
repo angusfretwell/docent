@@ -2,50 +2,32 @@ import { Schema } from "effect";
 import { useEffect, useState } from "react";
 import { Change, DiffError } from "../shared/change.ts";
 import { DossierSnapshot } from "../shared/dossier.ts";
+import type { PendingRange } from "../shared/pending.ts";
+import { Pending } from "../shared/pending.ts";
+import { fetchPendingExpandedFileDiff, isPendingExpandable } from "./blobs.ts";
 import { DiffView } from "./diff-view.tsx";
 
-// Sync decode boundary: the fetch handler below owns the try/catch.
+// Sync decode boundary: the fetch handlers below own the try/catch.
 const decodeChange = Schema.decodeUnknownSync(Change);
 const decodeDiffError = Schema.decodeUnknownSync(DiffError);
 const decodeSnapshot = Schema.decodeUnknownSync(DossierSnapshot);
+const decodePending = Schema.decodeUnknownSync(Pending);
 
-/**
- * The live Dossier: fetched once, then re-fetched every time the server's SSE
- * stream reports a `.docent/` change. This is the agent-review loop's client
- * half — an external agent dropping a record file trips the watch, the server
- * pushes an event, and this hook re-reads the snapshot (architecture.md §2).
- *
- * The re-fetch lives directly in the effect (no data library): the linter's
- * React Query / React Compiler assumptions below don't apply to this app.
- */
-function useLiveDossier(): DossierSnapshot | null {
-  const [snapshot, setSnapshot] = useState<DossierSnapshot | null>(null);
+// Which selector entry is showing: the committed Change, or the read-only
+// Pending working-tree preview.
+type Selection = "change" | "pending";
 
-  useEffect(() => {
-    let cancelled = false;
-    async function refetch() {
-      try {
-        const res = await fetch("/api/dossier");
-        if (res.ok && !cancelled) {
-          // oxlint-disable-next-line react-compiler
-          setSnapshot(decodeSnapshot(await res.json()));
-        }
-      } catch {
-        // Best-effort: keep the last good snapshot until the next event.
-      }
-    }
-    // oxlint-disable-next-line react-doctor/query-no-query-in-effect
-    void refetch();
-    const events = new EventSource("/api/events");
-    // Coarse in v1: any change re-reads the whole snapshot.
-    events.addEventListener("dossier-changed", () => void refetch());
-    return () => {
-      cancelled = true;
-      events.close();
-    };
-  }, []);
+type LoadState =
+  | { kind: "loading" }
+  | { kind: "error"; message: string }
+  | { kind: "loaded"; change: Change };
 
-  return snapshot;
+function failureMessage(body: unknown, status: number): string {
+  try {
+    return decodeDiffError(body).error;
+  } catch {
+    return `HTTP ${status}`;
+  }
 }
 
 // Fixed pill over the diff; hoisted so it isn't rebuilt on every render.
@@ -74,87 +56,233 @@ function DossierStatus({ dossier }: { dossier: DossierSnapshot }) {
   );
 }
 
-function failureMessage(body: unknown, status: number): string {
-  try {
-    return decodeDiffError(body).error;
-  } catch {
-    return `HTTP ${status}`;
-  }
-}
-
-type LoadState =
-  | { kind: "loading" }
-  | { kind: "error"; message: string }
-  | { kind: "loaded"; change: Change };
-
 function Notice({ children }: { children: React.ReactNode }) {
   return <p style={{ opacity: 0.7, padding: "1rem" }}>{children}</p>;
 }
 
-export function App() {
-  const [state, setState] = useState<LoadState>({ kind: "loading" });
-  const dossier = useLiveDossier();
+const barStyle: React.CSSProperties = {
+  alignItems: "center",
+  borderBottom: "1px solid rgba(128,128,128,0.25)",
+  display: "flex",
+  flexWrap: "wrap",
+  fontSize: "0.85rem",
+  gap: "0.5rem",
+  padding: "0.4rem 0.6rem",
+};
 
+function entryStyle(active: boolean): React.CSSProperties {
+  return {
+    background: active ? "rgba(56,139,253,0.18)" : "transparent",
+    border: "1px solid rgba(128,128,128,0.35)",
+    borderRadius: "0.25rem",
+    color: "inherit",
+    cursor: "pointer",
+    font: "inherit",
+    padding: "0.2rem 0.6rem",
+  };
+}
+
+/**
+ * The Change selector. In this slice it carries the committed Change plus — when
+ * the working tree is dirty — the read-only **Pending** entry at the top, with a
+ * dirty badge (diff-review.md §6). Pending auto-surfaces here when dirty and
+ * auto-hides when clean; selecting it exposes the incremental/cumulative range
+ * toggle. It is strictly a preview: no Finding authoring, no mark-as-viewed.
+ */
+function ChangeSelector({
+  branch,
+  dirty,
+  selected,
+  range,
+  onSelect,
+  onRange,
+}: {
+  branch: string;
+  dirty: boolean;
+  selected: Selection;
+  range: PendingRange;
+  onSelect: (selection: Selection) => void;
+  onRange: (range: PendingRange) => void;
+}) {
+  return (
+    <div style={barStyle}>
+      {dirty && (
+        <button
+          aria-pressed={selected === "pending"}
+          onClick={() => onSelect("pending")}
+          style={entryStyle(selected === "pending")}
+          type="button"
+        >
+          Pending
+          <span aria-hidden="true" style={{ color: "#d29922", marginLeft: "0.4rem" }}>
+            ●
+          </span>
+        </button>
+      )}
+      <button
+        aria-pressed={selected === "change"}
+        onClick={() => onSelect("change")}
+        style={entryStyle(selected === "change")}
+        type="button"
+      >
+        <code>{branch}</code>
+      </button>
+      {selected === "pending" && (
+        <>
+          <span style={{ marginLeft: "0.4rem", opacity: 0.6 }}>Range:</span>
+          <button
+            aria-pressed={range === "incremental"}
+            onClick={() => onRange("incremental")}
+            style={entryStyle(range === "incremental")}
+            type="button"
+          >
+            Incremental
+          </button>
+          <button
+            aria-pressed={range === "cumulative"}
+            onClick={() => onRange("cumulative")}
+            style={entryStyle(range === "cumulative")}
+            type="button"
+          >
+            Cumulative
+          </button>
+          <span style={{ marginLeft: "0.4rem", opacity: 0.6 }}>Read-only preview</span>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** The committed-Change body: loading / error / empty / the rendered diff. */
+function ChangeBody({ state }: { state: LoadState }) {
+  if (state.kind === "loading") {
+    return <Notice>Loading diff…</Notice>;
+  }
+  if (state.kind === "error") {
+    return <Notice>Could not load the diff: {state.message}</Notice>;
+  }
+  const { change } = state;
+  if (change.patch === "") {
+    return (
+      <Notice>
+        <code>{change.branch}</code> has no changes against <code>{change.defaultBranch}</code>.
+      </Notice>
+    );
+  }
+  return <DiffView patch={change.patch} />;
+}
+
+/** The Pending body: the working-tree preview, with worktree-sourced expansion. */
+function PendingBody({ pending }: { pending: Pending }) {
+  if (pending.patch === "") {
+    return <Notice>The working tree is clean — nothing pending.</Notice>;
+  }
+  return (
+    <DiffView
+      expandFile={fetchPendingExpandedFileDiff}
+      isFileExpandable={isPendingExpandable}
+      patch={pending.patch}
+    />
+  );
+}
+
+export function App() {
+  const [change, setChange] = useState<LoadState>({ kind: "loading" });
+  const [pending, setPending] = useState<Pending | null>(null);
+  const [dossier, setDossier] = useState<DossierSnapshot | null>(null);
+  const [selected, setSelected] = useState<Selection>("change");
+  const [range, setRange] = useState<PendingRange>("incremental");
+
+  // One live loop for the whole tab: fetch the Change, the Pending preview (at
+  // the current range), and the dossier once, then re-fetch all three on every
+  // SSE change event — an agent editing the working tree pushes a coarse event
+  // and Pending refreshes live (architecture.md §2). Re-runs when the range
+  // toggles, which reloads Pending for the new range.
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    async function loadChange() {
       try {
         const res = await fetch("/api/diff");
         const body: unknown = await res.json();
+        if (cancelled) {
+          return;
+        }
         if (!res.ok) {
           throw new Error(failureMessage(body, res.status));
         }
-        const change = decodeChange(body);
-        if (!cancelled) {
-          setState({ change, kind: "loaded" });
-        }
+        // oxlint-disable-next-line react-compiler
+        setChange({ change: decodeChange(body), kind: "loaded" });
       } catch (error) {
         if (!cancelled) {
-          setState({
+          // oxlint-disable-next-line react-compiler
+          setChange({
             kind: "error",
             message: error instanceof Error ? error.message : String(error),
           });
         }
       }
-    })();
+    }
+    async function loadPending() {
+      try {
+        const res = await fetch(`/api/pending?range=${range}`);
+        if (res.ok && !cancelled) {
+          // oxlint-disable-next-line react-compiler
+          setPending(decodePending(await res.json()));
+        }
+      } catch {
+        // Best-effort: keep the last good preview until the next event.
+      }
+    }
+    async function loadDossier() {
+      try {
+        const res = await fetch("/api/dossier");
+        if (res.ok && !cancelled) {
+          // oxlint-disable-next-line react-compiler
+          setDossier(decodeSnapshot(await res.json()));
+        }
+      } catch {
+        // Best-effort: keep the last good snapshot until the next event.
+      }
+    }
+    function refetchAll() {
+      void loadChange();
+      void loadPending();
+      void loadDossier();
+    }
+    // oxlint-disable-next-line react-doctor/query-no-query-in-effect
+    refetchAll();
+    const events = new EventSource("/api/events");
+    events.addEventListener("dossier-changed", refetchAll);
     return () => {
       cancelled = true;
+      events.close();
     };
-  }, []);
+  }, [range]);
 
-  const live = dossier ? <DossierStatus dossier={dossier} /> : null;
+  // Derived, not stored: Pending shows only while dirty, so a clean tree (e.g.
+  // after commit) falls back to the committed Change with no lifecycle logic.
+  const dirty = pending?.dirty ?? false;
+  const effective: Selection = selected === "pending" && dirty ? "pending" : "change";
+  const branch = pending?.branch ?? (change.kind === "loaded" ? change.change.branch : "…");
 
-  if (state.kind === "loading") {
-    return (
-      <>
-        {live}
-        <Notice>Loading diff…</Notice>
-      </>
-    );
-  }
-  if (state.kind === "error") {
-    return (
-      <>
-        {live}
-        <Notice>Could not load the diff: {state.message}</Notice>
-      </>
-    );
-  }
-  const { change } = state;
-  if (change.patch === "") {
-    return (
-      <>
-        {live}
-        <Notice>
-          <code>{change.branch}</code> has no changes against <code>{change.defaultBranch}</code>.
-        </Notice>
-      </>
-    );
-  }
   return (
-    <>
-      {live}
-      <DiffView patch={change.patch} />
-    </>
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+      {dossier ? <DossierStatus dossier={dossier} /> : null}
+      <ChangeSelector
+        branch={branch}
+        dirty={dirty}
+        onRange={setRange}
+        onSelect={setSelected}
+        range={range}
+        selected={effective}
+      />
+      <div style={{ flex: 1, minHeight: 0 }}>
+        {effective === "pending" && pending ? (
+          <PendingBody pending={pending} />
+        ) : (
+          <ChangeBody state={change} />
+        )}
+      </div>
+    </div>
   );
 }

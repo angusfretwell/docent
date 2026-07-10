@@ -19,7 +19,7 @@
  */
 
 import { watch } from "node:fs";
-import { Context, Effect, Layer, PubSub } from "effect";
+import { Context, Effect, Layer, Option, PubSub } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 import { ensureGitignore } from "./dossier.ts";
@@ -43,7 +43,10 @@ const readIgnoreText = Effect.fn("readIgnoreText")(function* readIgnoreText(file
 });
 
 /** Build the ignore matcher from the repo's `.gitignore` and `.git/info/exclude`. */
-const buildMatcher = Effect.fn("buildMatcher")(function* buildMatcher(root: string, gitDir?: string) {
+const buildMatcher = Effect.fn("buildMatcher")(function* buildMatcher(
+  root: string,
+  gitDir?: string,
+) {
   const path = yield* Path;
   const rootIgnore = yield* readIgnoreText(path.join(root, ".gitignore"));
   const exclude =
@@ -91,7 +94,7 @@ const makeWatch = Effect.fn("makeWatch")(function* makeWatch(cwd: string) {
     Effect.map((repo) => repo.root),
     Effect.orElseSucceed(() => cwd),
   );
-  const gitDir = yield* resolveGitDir(cwd).pipe(Effect.orElseSucceed(() => undefined));
+  const gitDir = Option.getOrUndefined(yield* resolveGitDir(cwd).pipe(Effect.option));
   const stateRoot = path.join(root, ".docent");
 
   // The watch target must exist, and `.docent/` must stay out of git history.
@@ -111,7 +114,7 @@ const makeWatch = Effect.fn("makeWatch")(function* makeWatch(cwd: string) {
   // One shared debounce across all three surfaces: any burst coalesces into a
   // single coarse push.
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const schedule = () => {
+  function schedule() {
     clearTimeout(timer);
     timer = setTimeout(() => {
       // The `undefined` value is required: it selects `publishUnsafe`'s
@@ -119,7 +122,7 @@ const makeWatch = Effect.fn("makeWatch")(function* makeWatch(cwd: string) {
       // oxlint-disable-next-line no-useless-undefined
       PubSub.publishUnsafe(events, undefined);
     }, DEBOUNCE_MS);
-  };
+  }
   yield* Effect.addFinalizer(() => Effect.sync(() => clearTimeout(timer)));
 
   // Surface 1: `.docent/` — dossier writes (external agents and the UI alike).

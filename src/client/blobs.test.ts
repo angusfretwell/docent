@@ -1,6 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { processPatch } from "@pierre/diffs";
-import { blobUrl, expandedFileDiff, isExpandable } from "./blobs.ts";
+import {
+  blobUrl,
+  expandedFileDiff,
+  isExpandable,
+  isPendingExpandable,
+  worktreeUrl,
+} from "./blobs.ts";
 
 // A git diff of a file with only its first line changed. The unchanged context
 // lines 2–5 are trimmed by git's default 3-line context on such a small file,
@@ -44,6 +50,28 @@ describe("isExpandable", () => {
     const withoutBase = { ...firstFile() };
     delete withoutBase.prevObjectId;
     expect(isExpandable(withoutBase)).toBe(false);
+  });
+});
+
+describe("worktreeUrl", () => {
+  test("addresses the uncached working-tree endpoint by path, encoded", () => {
+    expect(worktreeUrl("src/app.ts")).toBe("/api/worktree?path=src%2Fapp.ts");
+  });
+});
+
+describe("isPendingExpandable", () => {
+  test("a patch-only modified file with real base and head ids is expandable", () => {
+    expect(isPendingExpandable(firstFile())).toBe(true);
+  });
+
+  test("an untracked add (all-zero base id) is not expandable — no base to expand around", () => {
+    const add = { ...firstFile(), prevObjectId: "0000000" };
+    expect(isPendingExpandable(add)).toBe(false);
+  });
+
+  test("a deletion (all-zero head id) is not expandable — no working-tree file", () => {
+    const del = { ...firstFile(), newObjectId: "0000000" };
+    expect(isPendingExpandable(del)).toBe(false);
   });
 });
 

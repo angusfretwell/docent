@@ -53,6 +53,9 @@ function diffRoute(cwd: string) {
   );
 }
 
+// Base for parsing a request's relative URL; only the path/query is read from it.
+const REQUEST_URL_BASE = "http://localhost";
+
 // A git object id is immutable, so its bytes never change: cache for a year and
 // mark immutable so the browser never revalidates a blob it already has.
 const BLOB_CACHE_CONTROL = "public, max-age=31536000, immutable";
@@ -101,7 +104,7 @@ const WORKTREE_CACHE_CONTROL = "no-store";
 function pendingRoute(cwd: string) {
   return HttpRouter.add("GET", "/api/pending", (request) =>
     Effect.gen(function* servePending() {
-      const { searchParams } = new URL(request.url, "http://localhost");
+      const { searchParams } = new URL(request.url, REQUEST_URL_BASE);
       const range: PendingRange =
         searchParams.get("range") === "cumulative" ? "cumulative" : "incremental";
       const pending = yield* resolvePending(cwd, range);
@@ -123,7 +126,7 @@ function pendingRoute(cwd: string) {
 function worktreeRoute(cwd: string) {
   return HttpRouter.add("GET", "/api/worktree", (request) =>
     Effect.gen(function* serveWorktree() {
-      const { searchParams } = new URL(request.url, "http://localhost");
+      const { searchParams } = new URL(request.url, REQUEST_URL_BASE);
       const bytes = yield* resolveWorktreeFile(cwd, searchParams.get("path") ?? "");
       return HttpServerResponse.uint8Array(bytes, {
         contentType: "application/octet-stream",
@@ -149,7 +152,7 @@ function worktreeRoute(cwd: string) {
 function assetRoute(assets: ClientAssets) {
   return HttpRouter.add("GET", "*", (request) =>
     Effect.gen(function* serveAsset() {
-      const { pathname } = new URL(request.url, "http://localhost");
+      const { pathname } = new URL(request.url, REQUEST_URL_BASE);
       const asset = lookupAsset(assets, pathname);
       if (asset === undefined) {
         return HttpServerResponse.empty({ status: 404 });

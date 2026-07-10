@@ -32,7 +32,7 @@ async function readSse(
   // macOS FSEvents can delay a frame well past a second. This only guards
   // against a truly hung stream, so a high ceiling costs nothing when frames flow.
   const timeout = new Promise<never>((_resolve, reject) => {
-    setTimeout(() => reject(new Error("timed out waiting for an SSE frame")), 10000);
+    setTimeout(() => reject(new Error("timed out waiting for an SSE frame")), 10_000);
   });
   const { value, done } = await Promise.race([reader.read(), timeout]);
   return done || value === undefined ? "" : decoder.decode(value);

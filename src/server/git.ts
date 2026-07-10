@@ -19,6 +19,12 @@ const TRAILING_NEWLINE = /\n$/;
 const NUL = "\0";
 const UNTRACKED = "?? ";
 
+// Shared `git diff` argv fragments, extracted so the three diff call sites agree
+// (and don't trip the no-duplicate-string lint).
+const DIFF = "diff";
+const NO_COLOR = "--no-color";
+const FIND_RENAMES = "--find-renames";
+
 // Keep every git read inert: `GIT_OPTIONAL_LOCKS=0` stops git from taking the
 // index lock to refresh cached stat info, so a `git status`/`git diff` never
 // writes `.git/index`. The repo-rooted watch (watch.ts) would otherwise see its
@@ -203,9 +209,7 @@ export const resolveChange = Effect.fn("resolveChange")(function* resolveChange(
   const headSha = yield* git(root, ["rev-parse", "HEAD"]);
   const baseSha = yield* git(root, ["merge-base", defaultBranch.ref, "HEAD"]);
   const patch =
-    baseSha === headSha
-      ? ""
-      : yield* git(root, ["diff", "--no-color", "--find-renames", baseSha, headSha]);
+    baseSha === headSha ? "" : yield* git(root, [DIFF, NO_COLOR, FIND_RENAMES, baseSha, headSha]);
   return Change.make({
     baseSha,
     branch,
@@ -284,12 +288,11 @@ export const resolvePending = Effect.fn("resolvePending")(function* resolvePendi
   const patch = dirty
     ? yield* Effect.gen(function* buildPatch() {
         const diffBase = range === "incremental" ? "HEAD" : baseSha;
-        const tracked = yield* git(root, ["diff", "--no-color", "--find-renames", diffBase]);
+        const tracked = yield* git(root, [DIFF, NO_COLOR, FIND_RENAMES, diffBase]);
         // Render each untracked file as an add: /dev/null → the working file.
         const adds = yield* Effect.forEach(
           untrackedPaths(status),
-          (file) =>
-            gitDiffNoIndex(root, ["diff", "--no-color", "--no-index", "--", "/dev/null", file]),
+          (file) => gitDiffNoIndex(root, [DIFF, NO_COLOR, "--no-index", "--", "/dev/null", file]),
           { concurrency: "unbounded" },
         );
         return joinPatches([tracked, ...adds]);
