@@ -1,9 +1,11 @@
 import { Schema } from "effect";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Change, DiffError } from "../shared/change.ts";
 import { DossierSnapshot } from "../shared/dossier.ts";
 import type { FindingEntry, ViewedEvent } from "../shared/dossier.ts";
+import type { DiffViewHandle } from "./diff-view.tsx";
 import { DiffView } from "./diff-view.tsx";
+import { FindingsPanel } from "./findings-panel.tsx";
 
 // Stable empties so the pre-snapshot render doesn't churn DiffView's effects.
 const NO_VIEWED: readonly ViewedEvent[] = [];
@@ -99,6 +101,7 @@ function Notice({ children }: { children: React.ReactNode }) {
 export function App() {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const dossier = useLiveDossier();
+  const diffRef = useRef<DiffViewHandle>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -159,11 +162,22 @@ export function App() {
   return (
     <>
       {live}
-      <DiffView
-        findings={dossier?.findings ?? NO_FINDINGS}
-        patch={change.patch}
-        viewed={dossier?.viewed ?? NO_VIEWED}
-      />
+      <div style={{ display: "flex", height: "100vh" }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <DiffView
+            findings={dossier?.findings ?? NO_FINDINGS}
+            patch={change.patch}
+            ref={diffRef}
+            viewed={dossier?.viewed ?? NO_VIEWED}
+          />
+        </div>
+        {dossier ? (
+          <FindingsPanel
+            findings={dossier.findings}
+            onJump={(file, line) => diffRef.current?.scrollToLine(file, line)}
+          />
+        ) : null}
+      </div>
     </>
   );
 }

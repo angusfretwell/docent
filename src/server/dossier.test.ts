@@ -115,18 +115,57 @@ describe("readDossierSnapshot", () => {
     expect(snap.changes.map((c) => c.id)).toEqual(["chg_002"]);
   });
 
-  test("walks findings record directories", async () => {
+  test("parses findings records: envelope, anchor, body, and type", async () => {
     const root = scratchDir("docent-dossier-");
     await snapshot(root, "feature");
     const fndDir = path.join(root, ".docent", "dossiers", "feature", "findings", "fnd_01J9GQ4W7X");
     mkdirSync(fndDir, { recursive: true });
-    writeFileSync(path.join(fndDir, "001-open.md"), "---\n---\nbody\n");
-    writeFileSync(path.join(fndDir, "002-reply.md"), "---\n---\nreply\n");
+    writeFileSync(
+      path.join(fndDir, "001-open.md"),
+      [
+        "---",
+        "schema: docent/finding@3",
+        'author: { kind: agent, id: claude-code, display: "Claude Code" }',
+        "changeId: chg_001",
+        "createdAt: 2026-07-10T02:14:00Z",
+        "anchor: { kind: line, file: src/x.ts, side: head, blobSha: 9c2a, lines: [42, 47] }",
+        "---",
+        "",
+        "the flush races the mark",
+        "",
+      ].join("\n"),
+    );
+    writeFileSync(
+      path.join(fndDir, "002-reply.md"),
+      [
+        "---",
+        "schema: docent/finding@3",
+        'author: { kind: human, id: angusfretwell@me.com, display: "Angus" }',
+        "changeId: chg_002",
+        "createdAt: 2026-07-10T03:02:11Z",
+        "disposition: actioned",
+        "---",
+        "",
+        "fixed",
+        "",
+      ].join("\n"),
+    );
 
     const snap = await snapshot(root, "feature");
 
-    expect(snap.findings).toEqual([
-      { id: "fnd_01J9GQ4W7X", records: ["001-open.md", "002-reply.md"] },
+    const finding = snap.findings.at(0);
+    if (finding === undefined) {
+      throw new Error("expected a finding");
+    }
+    expect(finding.id).toBe("fnd_01J9GQ4W7X");
+    expect(finding.records).toMatchObject([
+      {
+        anchor: { file: "src/x.ts", kind: "line", lines: [42, 47] },
+        author: { id: "claude-code", kind: "agent" },
+        body: "the flush races the mark",
+        type: "open",
+      },
+      { body: "fixed", disposition: "actioned", type: "reply" },
     ]);
   });
 
@@ -152,6 +191,80 @@ body
       anchorFile: "src/parser/stream.ts",
       id: "fnd_ANCHORED",
     });
+  });
+
+  test("degrades gracefully: a malformed record is skipped, its finding survives", async () => {
+    const root = scratchDir("docent-dossier-");
+    await snapshot(root, "feature");
+    const fndDir = path.join(root, ".docent", "dossiers", "feature", "findings", "fnd_02");
+    mkdirSync(fndDir, { recursive: true });
+    writeFileSync(path.join(fndDir, "001-open.md"), "no frontmatter here\n");
+    writeFileSync(
+      path.join(fndDir, "002-reply.md"),
+      [
+        "---",
+        "schema: docent/finding@3",
+        'author: { kind: human, id: angusfretwell@me.com, display: "Angus" }',
+        "changeId: chg_001",
+        "createdAt: 2026-07-10T03:02:11Z",
+        "---",
+        "",
+        "still here",
+        "",
+      ].join("\n"),
+    );
+
+    const snap = await snapshot(root, "feature");
+
+    const finding = snap.findings.at(0);
+    if (finding === undefined) {
+      throw new Error("expected a finding");
+    }
+    expect(finding.records.map((record) => record.type)).toEqual(["reply"]);
+  });
+
+  test("degrades gracefully: a record with the wrong schema is skipped", async () => {
+    const root = scratchDir("docent-dossier-");
+    await snapshot(root, "feature");
+    const fndDir = path.join(root, ".docent", "dossiers", "feature", "findings", "fnd_03");
+    mkdirSync(fndDir, { recursive: true });
+    writeFileSync(
+      path.join(fndDir, "001-open.md"),
+      [
+        "---",
+        "schema: docent/finding@2",
+        'author: { kind: human, id: angusfretwell@me.com, display: "Angus" }',
+        "changeId: chg_001",
+        "createdAt: 2026-07-10T02:14:00Z",
+        "anchor: { kind: change }",
+        "---",
+        "",
+        "wrong envelope version",
+        "",
+      ].join("\n"),
+    );
+    writeFileSync(
+      path.join(fndDir, "002-reply.md"),
+      [
+        "---",
+        "schema: docent/finding@3",
+        'author: { kind: human, id: angusfretwell@me.com, display: "Angus" }',
+        "changeId: chg_001",
+        "createdAt: 2026-07-10T03:02:11Z",
+        "---",
+        "",
+        "still here",
+        "",
+      ].join("\n"),
+    );
+
+    const snap = await snapshot(root, "feature");
+
+    const finding = snap.findings.at(0);
+    if (finding === undefined) {
+      throw new Error("expected a finding");
+    }
+    expect(finding.records.map((record) => record.type)).toEqual(["reply"]);
   });
 });
 

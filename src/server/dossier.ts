@@ -20,6 +20,7 @@ import {
   WalkthroughEntry,
 } from "../shared/dossier.ts";
 import type { ViewedRequest } from "../shared/dossier.ts";
+import { FindingRecord, RECORD_TYPES } from "../shared/finding.ts";
 
 const STATE_ROOT = ".docent";
 const GITIGNORE_ENTRY = `${STATE_ROOT}/`;
@@ -121,7 +122,35 @@ const readJsonRecords = Effect.fn("readJsonRecords")(function* readJsonRecords<
   return somes(records);
 });
 
-const FRONTMATTER = /^---\n(?<body>[\s\S]*?)\n---/;
+// A record filename is `NNN-<type>.md`; the suffix is the record type (the
+// frontmatter carries no type field — data-model.md §5.1). The type vocabulary
+// is owned by the schema, so the pattern is derived from it, never re-spelled.
+const RECORD_NAME = new RegExp(`^\\d+-(?<type>${RECORD_TYPES.join("|")})\\.md$`);
+// Split a record into its YAML frontmatter envelope and markdown body. A file
+// without the `---` fences yields empty frontmatter, so it fails to decode and
+// is skipped — the best-effort walk (architecture.md §3).
+const FRONTMATTER = /^---\r?\n(?<frontmatter>[\s\S]*?)\r?\n?---\r?\n?(?<body>[\s\S]*)$/;
+
+/** Parse one `NNN-<type>.md` record; `None` on any read/parse/decode failure. */
+const readFindingRecord = Effect.fn("readFindingRecord")(function* readFindingRecord(
+  file: string,
+  name: string,
+) {
+  const fs = yield* FileSystem;
+  const text = yield* fs.readFileString(file);
+  const match = FRONTMATTER.exec(text);
+  const frontmatter = match?.groups?.frontmatter ?? "";
+  const body = (match?.groups?.body ?? "").trim();
+  const meta = yield* Effect.try(() => Bun.YAML.parse(frontmatter) ?? {});
+  const type = RECORD_NAME.exec(name)?.groups?.type;
+  return yield* Schema.decodeUnknownEffect(FindingRecord)({
+    ...(meta as object),
+    body,
+    name,
+    type,
+  });
+}, Effect.option);
+
 const ANCHOR_FILE = /\bfile:\s*(?<file>[^,}\n]+)/;
 const SURROUNDING_QUOTES = /^["']|["']$/g;
 
@@ -134,16 +163,16 @@ const SURROUNDING_QUOTES = /^["']|["']$/g;
  * YAML parse — the full record fold belongs to the Findings panel.
  */
 export function parseAnchor(markdown: string): { anchorFile?: string } {
-  const body = FRONTMATTER.exec(markdown)?.groups?.body;
-  if (body === undefined) {
+  const frontmatter = FRONTMATTER.exec(markdown)?.groups?.frontmatter;
+  if (frontmatter === undefined) {
     return {};
   }
-  const start = body.indexOf("anchor:");
+  const start = frontmatter.indexOf("anchor:");
   if (start === -1) {
     return {};
   }
   // Bound the scan to the anchor's own flow map so a later key can't leak in.
-  const rest = body.slice(start);
+  const rest = frontmatter.slice(start);
   const close = rest.indexOf("}");
   const scope = close === -1 ? (rest.split("\n")[0] ?? rest) : rest.slice(0, close + 1);
 
@@ -159,16 +188,21 @@ const readAnchor = Effect.fn("readAnchor")(function* readAnchor(file: string) {
   return parseAnchor(text);
 });
 
-/** Walk one finding's directory into its record listing plus its anchor fold. */
+/** Walk one finding's directory, parsing each record and folding its anchor. */
 const readFinding = Effect.fn("readFinding")(function* readFinding(dir: string, id: string) {
   const path = yield* Path;
-  const records = (yield* listDir(path.join(dir, id)))
+  const names = (yield* listDir(path.join(dir, id)))
     .filter((name) => name.endsWith(".md"))
     .toSorted();
+  const parsed = yield* Effect.forEach(
+    names,
+    (name) => readFindingRecord(path.join(dir, id, name), name),
+    { concurrency: "unbounded" },
+  );
   // The root record carries the anchor: the `*-open.md`, else the first record.
-  const root = records.find((name) => name.endsWith("-open.md")) ?? records[0];
+  const root = names.find((name) => name.endsWith("-open.md")) ?? names[0];
   const anchor = root === undefined ? {} : yield* readAnchor(path.join(dir, id, root));
-  return FindingEntry.make({ id, records, ...anchor });
+  return FindingEntry.make({ id, records: somes(parsed), ...anchor });
 });
 
 const readFindings = Effect.fn("readFindings")(function* readFindings(dossierDir: string) {

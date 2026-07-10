@@ -11,6 +11,7 @@
  */
 
 import { Schema } from "effect";
+import { FindingRecord } from "./finding.ts";
 
 /** `docent/dossier@3` — the `dossier.json` identity record (data-model.md §3). */
 export class Dossier extends Schema.Class<Dossier>("Dossier")({
@@ -53,18 +54,21 @@ export class ViewedRequest extends Schema.Class<ViewedRequest>("ViewedRequest")(
 }) {}
 
 /**
- * A Finding as walked in this slice: its record-dir id, the sorted names of its
- * append-only record files, and a light fold of the root record's anchored file.
- * Folding the full records into what's-next / drift is owned by the Findings
- * panel (a later slice); here we lift only the anchored file of the `line`/
- * `file` code arms so the Diff tab's has-findings tree filter can key on it
- * (diff-review.md §2). Best-effort: an unparseable anchor just omits the field.
+ * A Finding as walked in this slice: its record-dir id, its append-only records
+ * (each parsed from a `NNN-<type>.md` file — a frontmatter envelope over a
+ * markdown body), and a light fold of the root record's anchored file. Records
+ * are carried whole — folding them into anchor/what's-next/participants is a
+ * pure client-side read (see `foldFinding`), so the panel and future agent
+ * surfaces share one derivation. On top of that, we lift the anchored file of
+ * the `line`/`file` code arms so the Diff tab's has-findings tree filter can key
+ * on it (diff-review.md §2). Best-effort: an unparseable anchor just omits the
+ * field.
  */
 export class FindingEntry extends Schema.Class<FindingEntry>("FindingEntry")({
   /** The root anchor's file path — present only for `line`/`file` code arms. */
   anchorFile: Schema.optional(Schema.String),
   id: Schema.String,
-  records: Schema.Array(Schema.String),
+  records: Schema.Array(FindingRecord),
 }) {}
 
 /** A Walkthrough as walked in this slice: pillar, id, and its file names. */

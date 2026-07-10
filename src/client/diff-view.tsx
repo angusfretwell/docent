@@ -3,7 +3,7 @@ import { processPatch } from "@pierre/diffs";
 import type { CodeViewHandle } from "@pierre/diffs/react";
 import { CodeView, WorkerPoolContextProvider } from "@pierre/diffs/react";
 import { sift } from "radashi";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useImperativeHandle, useRef, useState } from "react";
 import type { FindingEntry, ViewedEvent } from "../shared/dossier.ts";
 import { fetchExpandedFileDiff, isExpandable } from "./blobs.ts";
 import { FileTree } from "./file-tree.tsx";
@@ -55,6 +55,11 @@ function usePersisted<T extends string>(
     globalThis.localStorage?.setItem(key, next);
   }
   return [value, set];
+}
+
+/** The imperative surface the Findings panel drives to jump into the diff. */
+export interface DiffViewHandle {
+  scrollToLine: (file: string, line: number) => void;
 }
 
 /**
@@ -113,6 +118,69 @@ async function postViewed(entry: FileEntry): Promise<void> {
 }
 
 /**
+ * The right-hand diff pane: the whole-branch diff rendered as one continuous
+ * virtualized cross-file scroll. Split out of DiffView so the tab's model/nav
+ * logic and the renderer plumbing stay separately legible; all state still lives
+ * in DiffView and reaches here as props.
+ */
+function DiffScroll({
+  codeRef,
+  expanding,
+  items,
+  onExpandContext,
+  onScroll,
+  onToggleViewed,
+  rowStates,
+  split,
+}: {
+  codeRef: React.RefObject<CodeViewHandle<undefined> | null>;
+  expanding: ReadonlySet<string>;
+  items: CodeViewItem[];
+  onExpandContext: (id: string, fileDiff: FileDiffMetadata) => void;
+  onScroll: (
+    scrollTop: number,
+    viewer: NonNullable<ReturnType<CodeViewHandle<undefined>["getInstance"]>>,
+  ) => void;
+  onToggleViewed: (id: string) => void;
+  rowStates: Map<string, { viewed: boolean; changed: boolean }>;
+  split: "unified" | "split";
+}) {
+  return (
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <WorkerPoolContextProvider
+        highlighterOptions={{ theme: themes, useTokenTransformer: true }}
+        poolOptions={{
+          poolSize: Math.min(8, navigator.hardwareConcurrency || 4),
+          workerFactory,
+        }}
+      >
+        <CodeView
+          items={items}
+          onScroll={onScroll}
+          options={{ diffStyle: split, stickyHeaders: true, theme: themes }}
+          ref={codeRef}
+          renderHeaderMetadata={(item) =>
+            item.type === "diff" ? (
+              <HeaderMetadata
+                busy={expanding.has(item.id)}
+                item={item}
+                onExpandContext={onExpandContext}
+                onToggleViewed={onToggleViewed}
+                row={rowStates.get(item.id)}
+              />
+            ) : null
+          }
+          // CodeView must be its own scroll container: its virtualizer reads
+          // this element's scrollTop, not an ancestor's. An outer scrolling
+          // wrapper breaks both scrolling and virtualization.
+          style={{ height: "100vh", overflow: "auto" }}
+        />
+      </WorkerPoolContextProvider>
+    </div>
+  );
+}
+
+/**
  * The Diff tab: the compact-folder navigation tree beside the whole branch
  * diff rendered as one continuous virtualized cross-file scroll. The tree and
  * the scroll share a single ordered file model, so position stays in sync.
@@ -127,10 +195,12 @@ export function DiffView({
   patch,
   viewed,
   findings,
+  ref,
 }: {
   patch: string;
   viewed: readonly ViewedEvent[];
   findings: readonly FindingEntry[];
+  ref?: React.Ref<DiffViewHandle>;
 }) {
   const [filter, setFilter] = useState("");
   const [unviewedOnly, setUnviewedOnly] = useState(false);
@@ -248,6 +318,21 @@ export function DiffView({
     codeRef.current?.scrollTo({ behavior: "smooth", id, type: "item" });
     setActiveId(id);
   }
+
+  // Jump the scroll to a Finding's anchored file/line. The item id encodes the
+  // file's index in the patch (`name#index`), so a Finding anchor — which knows
+  // only the path — is resolved against the parsed patch here, where that index
+  // lives. A file the diff no longer contains (an outdated Finding) is a no-op.
+  function scrollToLine(file: string, line: number) {
+    const index = processPatch(patch).files.findIndex((fileDiff) => fileDiff.name === file);
+    if (index === -1) {
+      return;
+    }
+    const id = `${file}#${index}`;
+    codeRef.current?.scrollTo({ behavior: "smooth", id, lineNumber: line, type: "line" });
+    setActiveId(id);
+  }
+  useImperativeHandle(ref, () => ({ scrollToLine }));
 
   // Two-way sync: the scroll drives the active file. The active file is the
   // last item whose top has passed the viewport top.
@@ -380,37 +465,16 @@ export function DiffView({
         split={split === "split"}
         unviewedOnly={unviewedOnly}
       />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <WorkerPoolContextProvider
-          highlighterOptions={{ theme: themes, useTokenTransformer: true }}
-          poolOptions={{
-            poolSize: Math.min(8, navigator.hardwareConcurrency || 4),
-            workerFactory,
-          }}
-        >
-          <CodeView
-            items={items}
-            onScroll={handleScroll}
-            options={{ diffStyle: split, stickyHeaders: true, theme: themes }}
-            ref={codeRef}
-            renderHeaderMetadata={(item) =>
-              item.type === "diff" ? (
-                <HeaderMetadata
-                  busy={expanding.has(item.id)}
-                  item={item}
-                  onExpandContext={expandContext}
-                  onToggleViewed={toggleViewed}
-                  row={rowStates.get(item.id)}
-                />
-              ) : null
-            }
-            // CodeView must be its own scroll container: its virtualizer reads
-            // this element's scrollTop, not an ancestor's. An outer scrolling
-            // wrapper breaks both scrolling and virtualization.
-            style={{ height: "100vh", overflow: "auto" }}
-          />
-        </WorkerPoolContextProvider>
-      </div>
+      <DiffScroll
+        codeRef={codeRef}
+        expanding={expanding}
+        items={items}
+        onExpandContext={expandContext}
+        onScroll={handleScroll}
+        onToggleViewed={toggleViewed}
+        rowStates={rowStates}
+        split={split}
+      />
     </div>
   );
 }
