@@ -9,7 +9,7 @@
 import { join } from "node:path";
 import { BunRuntime } from "@effect/platform-bun";
 import { Console, Effect, FileSystem } from "effect";
-import { ChildProcess } from "effect/unstable/process";
+import open from "open";
 import { resolveRepoDiff } from "./src/server/git.ts";
 import { layer as serveLayer, serverUrl } from "./src/server/serve.ts";
 
@@ -26,16 +26,7 @@ const clientDir = join(import.meta.dir, "dist", "client");
 // Best-effort browser open, only for interactive runs — piped/headless
 // callers get just the printed URL.
 const openBrowser = Effect.fn("openBrowser")(
-  function* (url: string) {
-    const openers: Partial<Record<NodeJS.Platform, string>> = {
-      darwin: "open",
-      win32: "start",
-    };
-    const opener = openers[process.platform] ?? "xdg-open";
-    const handle = yield* ChildProcess.make(opener, [url]);
-    yield* handle.exitCode;
-  },
-  Effect.scoped,
+  (url: string) => Effect.tryPromise(() => open(url)),
   // No opener available — the URL is printed above.
   (effect) => Effect.ignore(effect)
 );
