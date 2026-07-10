@@ -7,8 +7,6 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-export const NOT_A_GIT_REPO = /not a git repository/i;
-
 const scratchDirs: string[] = [];
 
 /** A fresh temp dir, removed by `cleanupScratchDirs`. */

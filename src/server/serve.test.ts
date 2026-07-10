@@ -6,13 +6,7 @@ import { assetsFromManifest } from "../client/assets.ts";
 import type { ClientAssets } from "../client/assets.ts";
 import { Change, DiffError } from "../shared/change.ts";
 import { layer, serverUrl } from "./serve.ts";
-import {
-  cleanupScratchDirs,
-  git,
-  NOT_A_GIT_REPO,
-  scratchDir,
-  scratchRepo,
-} from "./test-fixtures.ts";
+import { cleanupScratchDirs, git, scratchDir, scratchRepo } from "./test-fixtures.ts";
 
 const disposers: (() => Promise<void>)[] = [];
 
@@ -115,6 +109,6 @@ describe("server layer", () => {
 
     expect(res.status).toBe(500);
     const body = decodeDiffError(await res.json());
-    expect(body.error).toMatch(NOT_A_GIT_REPO);
+    expect(body.error).toMatch(/not a git repository/i);
   });
 });

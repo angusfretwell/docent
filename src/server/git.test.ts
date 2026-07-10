@@ -4,13 +4,7 @@ import path from "node:path";
 import { BunServices } from "@effect/platform-bun";
 import { ManagedRuntime } from "effect";
 import { resolveChange } from "./git.ts";
-import {
-  cleanupScratchDirs,
-  git,
-  NOT_A_GIT_REPO,
-  scratchDir,
-  scratchRepo,
-} from "./test-fixtures.ts";
+import { cleanupScratchDirs, git, scratchDir, scratchRepo } from "./test-fixtures.ts";
 
 const runtime = ManagedRuntime.make(BunServices.layer);
 
@@ -131,6 +125,6 @@ describe("resolveChange", () => {
   test("rejects a directory that is not a git repo", async () => {
     const dir = scratchDir("docent-git-test-");
 
-    await expect(resolve(dir)).rejects.toThrow(NOT_A_GIT_REPO);
+    await expect(resolve(dir)).rejects.toThrow(/not a git repository/i);
   });
 });
