@@ -15,7 +15,7 @@
  */
 
 import { Schema } from "effect";
-import type { Anchor } from "./finding.ts";
+import { Anchor } from "./finding.ts";
 import type { DriftState } from "./drift.ts";
 
 /** A code range: the same coordinate as the `line` anchor arm (walkthroughs.md §5). */
@@ -28,13 +28,31 @@ export class WalkthroughRange extends Schema.Class<WalkthroughRange>("Walkthroug
 }) {}
 
 /**
+ * One authored callout on a product section (walkthroughs.md §7): a body pinned
+ * to a capture-region / recording-timestamp / text-span anchor (the same anchor
+ * vocabulary Findings use, reused here). Durable, not a thread, not resolvable —
+ * the annotation lives in the section, distinct from a Finding.
+ */
+export class WalkthroughAnnotation extends Schema.Class<WalkthroughAnnotation>(
+  "WalkthroughAnnotation",
+)({
+  anchor: Anchor,
+  body: Schema.String,
+}) {}
+
+/**
  * `docent/walkthrough-section@2` — one step of the tour: a titled unit of prose
  * interleaved with its targets (walkthroughs.md §5). `body` is lifted from the
  * markdown after the frontmatter at parse time (the same envelope split as a
- * Finding record). `ranges` is the code arm; a product section carries none.
+ * Finding record). `ranges` is the code arm; `captures`/`annotations` are the
+ * product arm — a section carries the arm for its walkthrough's `kind`.
  */
 export class WalkthroughSection extends Schema.Class<WalkthroughSection>("WalkthroughSection")({
+  /** Product arm: authored callouts pinned to captures/recordings/prose (§7). */
+  annotations: Schema.optional(Schema.Array(WalkthroughAnnotation)),
   body: Schema.String,
+  /** Product arm: the `cap_*` ids this section embeds, in `{{capture:i}}` order. */
+  captures: Schema.optional(Schema.Array(Schema.String)),
   id: Schema.String,
   ranges: Schema.optional(Schema.Array(WalkthroughRange)),
   schema: Schema.Literal("docent/walkthrough-section@2"),
@@ -42,14 +60,32 @@ export class WalkthroughSection extends Schema.Class<WalkthroughSection>("Walkth
 }) {}
 
 /**
+ * `docent/walkthrough@2`'s product-only `captures[]` registry entry
+ * (walkthroughs.md §6): one atomic media artifact — a screenshot or a
+ * recording. `media` is a content sha addressing the blob at
+ * `captures/<sha>.png` / `captures/<sha>.rrweb.json`; `dims` rides screenshots
+ * (full-page pixels) and `durationMs` rides recordings. Born against the
+ * walkthrough's `bornChangeId`, so no per-capture ref.
+ */
+export class Capture extends Schema.Class<Capture>("Capture")({
+  dims: Schema.optional(Schema.Tuple([Schema.Number, Schema.Number])),
+  durationMs: Schema.optional(Schema.Number),
+  id: Schema.String,
+  kind: Schema.Literals(["screenshot", "recording"]),
+  media: Schema.String,
+  route: Schema.String,
+  viewport: Schema.Tuple([Schema.Number, Schema.Number]),
+}) {}
+
+/**
  * `docent/walkthrough@2` — the manifest. `sections` is the ordered list of
  * section filenames; **array position IS the order** (walkthroughs.md §4). The
- * product-only `captures` registry is carried opaquely so a product manifest
- * still decodes; the code tab never reads it.
+ * product-only `captures` registry is validated (walkthroughs.md §6); code
+ * manifests omit it and the code tab never reads it.
  */
 export class Walkthrough extends Schema.Class<Walkthrough>("Walkthrough")({
   bornChangeId: Schema.String,
-  captures: Schema.optional(Schema.Array(Schema.Unknown)),
+  captures: Schema.optional(Schema.Array(Capture)),
   id: Schema.String,
   kind: Schema.Literals(["code", "product"]),
   schema: Schema.Literal("docent/walkthrough@2"),
