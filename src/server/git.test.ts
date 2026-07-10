@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import path from "node:path";
 import { BunServices } from "@effect/platform-bun";
 import { ManagedRuntime } from "effect";
 import { resolveChange } from "./git.ts";
@@ -19,15 +19,19 @@ afterAll(async () => {
   cleanupScratchDirs();
 });
 
-const resolve = (cwd: string) => runtime.runPromise(resolveChange(cwd));
+function resolve(cwd: string) {
+  return runtime.runPromise(resolveChange(cwd));
+}
 
-const repoWithOneCommit = () => scratchRepo("docent-git-test-");
+function repoWithOneCommit() {
+  return scratchRepo("docent-git-test-");
+}
 
 describe("resolveChange", () => {
   test("renders the merge-base..head diff of a feature branch", async () => {
     const repo = repoWithOneCommit();
     git(repo, "checkout", "-b", "feature");
-    writeFileSync(join(repo, "feature.txt"), "new file\n");
+    writeFileSync(path.join(repo, "feature.txt"), "new file\n");
     git(repo, "add", ".");
     git(repo, "commit", "-m", "add feature file");
 
@@ -45,12 +49,12 @@ describe("resolveChange", () => {
     const repo = repoWithOneCommit();
     const branchPoint = git(repo, "rev-parse", "HEAD");
     git(repo, "checkout", "-b", "feature");
-    writeFileSync(join(repo, "feature.txt"), "on feature\n");
+    writeFileSync(path.join(repo, "feature.txt"), "on feature\n");
     git(repo, "add", ".");
     git(repo, "commit", "-m", "feature work");
     // main moves on after the branch point — its changes must NOT show up.
     git(repo, "checkout", "main");
-    writeFileSync(join(repo, "main-only.txt"), "on main\n");
+    writeFileSync(path.join(repo, "main-only.txt"), "on main\n");
     git(repo, "add", ".");
     git(repo, "commit", "-m", "main work");
     git(repo, "checkout", "feature");
@@ -65,10 +69,10 @@ describe("resolveChange", () => {
   test("resolves the repo root from a subdirectory", async () => {
     const repo = repoWithOneCommit();
     git(repo, "checkout", "-b", "feature");
-    writeFileSync(join(repo, "change.txt"), "x\n");
+    writeFileSync(path.join(repo, "change.txt"), "x\n");
     git(repo, "add", ".");
     git(repo, "commit", "-m", "change");
-    const sub = join(repo, "nested", "deep");
+    const sub = path.join(repo, "nested", "deep");
     mkdirSync(sub, { recursive: true });
 
     const change = await resolve(sub);
@@ -85,11 +89,11 @@ describe("resolveChange", () => {
     git(upstream, "branch", "-m", "main", "trunk");
     const dir = scratchDir("docent-git-test-");
     git(dir, "clone", upstream, "clone");
-    const repo = join(dir, "clone");
+    const repo = path.join(dir, "clone");
     git(repo, "config", "user.email", "test@example.com");
     git(repo, "config", "user.name", "Test");
     git(repo, "checkout", "-b", "feature");
-    writeFileSync(join(repo, "feature.txt"), "x\n");
+    writeFileSync(path.join(repo, "feature.txt"), "x\n");
     git(repo, "add", ".");
     git(repo, "commit", "-m", "feature work");
 
@@ -104,7 +108,7 @@ describe("resolveChange", () => {
     git(repo, "init", "-b", "master");
     git(repo, "config", "user.email", "test@example.com");
     git(repo, "config", "user.name", "Test");
-    writeFileSync(join(repo, "hello.txt"), "hello\n");
+    writeFileSync(path.join(repo, "hello.txt"), "hello\n");
     git(repo, "add", ".");
     git(repo, "commit", "-m", "initial");
     git(repo, "checkout", "-b", "feature");

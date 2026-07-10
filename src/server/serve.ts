@@ -7,12 +7,7 @@
 
 import { BunHttpServer } from "@effect/platform-bun";
 import { Effect, Layer } from "effect";
-import {
-  HttpRouter,
-  HttpServer,
-  HttpServerResponse,
-  HttpStaticServer,
-} from "effect/unstable/http";
+import { HttpRouter, HttpServer, HttpServerResponse, HttpStaticServer } from "effect/unstable/http";
 import { resolveChange } from "./git.ts";
 
 export interface ServeOptions {
@@ -23,34 +18,29 @@ export interface ServeOptions {
 }
 
 /** The running server's base URL (with trailing slash), e.g. for printing. */
-export const serverUrl: Effect.Effect<string, never, HttpServer.HttpServer> =
-  Effect.map(
-    Effect.service(HttpServer.HttpServer),
-    (server) => new URL(HttpServer.formatAddress(server.address)).href,
-  );
+export const serverUrl: Effect.Effect<string, never, HttpServer.HttpServer> = Effect.map(
+  Effect.service(HttpServer.HttpServer),
+  (server) => new URL(HttpServer.formatAddress(server.address)).href,
+);
 
-const diffRoute = (cwd: string) =>
-  HttpRouter.add(
+function diffRoute(cwd: string) {
+  return HttpRouter.add(
     "GET",
     "/api/diff",
     resolveChange(cwd).pipe(
       Effect.flatMap((change) => HttpServerResponse.json(change)),
       Effect.catch((error) =>
-        Effect.succeed(
-          HttpServerResponse.jsonUnsafe(
-            { error: error.message },
-            { status: 500 },
-          ),
-        ),
+        Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 500 })),
       ),
     ),
   );
+}
 
 /**
  * The full server as a layer: building it binds the port and serves until the
  * layer's scope closes. Exposes `HttpServer` so callers can read `serverUrl`.
  */
-export const layer = (options: ServeOptions) => {
+export function layer(options: ServeOptions) {
   const routes = Layer.mergeAll(
     diffRoute(options.cwd),
     HttpStaticServer.layer({ root: options.clientDir }),
@@ -64,4 +54,4 @@ export const layer = (options: ServeOptions) => {
       BunHttpServer.layer({ hostname: "localhost", port: 0 }),
     ),
   );
-};
+}

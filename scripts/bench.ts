@@ -10,21 +10,18 @@
  *   bun run build && bun scripts/bench.ts [path/to/fixture.diff]
  */
 
-import { join } from "node:path";
+import path from "node:path";
 import { chromium } from "playwright";
 import { Change } from "../src/shared/change.ts";
 
-const repoRoot = join(import.meta.dir, "..");
+const repoRoot = path.join(import.meta.dir, "..");
 const fixturePath =
   process.argv[2] ??
-  join(
-    repoRoot,
-    "prototypes/0004-diff-rendering/public/fixtures/three-xl.diff",
-  );
-const clientDir = join(repoRoot, "dist", "client");
+  path.join(repoRoot, "prototypes/0004-diff-rendering/public/fixtures/three-xl.diff");
+const clientDir = path.join(repoRoot, "dist", "client");
 
 const patch = await Bun.file(fixturePath).text();
-if (!(await Bun.file(join(clientDir, "index.html")).exists())) {
+if (!(await Bun.file(path.join(clientDir, "index.html")).exists())) {
   console.error("client assets not built — run `bun run build` first");
   process.exit(1);
 }
@@ -46,11 +43,9 @@ const server = Bun.serve({
       );
     }
     const file = Bun.file(
-      join(clientDir, pathname === "/" ? "index.html" : pathname.slice(1)),
+      path.join(clientDir, pathname === "/" ? "index.html" : pathname.slice(1)),
     );
-    return (await file.exists())
-      ? new Response(file)
-      : new Response("not found", { status: 404 });
+    return (await file.exists()) ? new Response(file) : new Response("not found", { status: 404 });
   },
   port: 0,
 });
@@ -58,6 +53,8 @@ const server = Bun.serve({
 // Browser-side helpers (from the #4 harness): pierce the diffs-container
 // shadow root, find the real scroll container, read the materialized window.
 const HELPERS = `
+  window.__nextFrame = () => new Promise((resolve) => { requestAnimationFrame(() => resolve(null)); });
+  window.__sleep = (ms) => new Promise((resolve) => { setTimeout(() => resolve(null), ms); });
   window.__host = () => document.querySelector('diffs-container');
   window.__sr = () => window.__host()?.shadowRoot ?? null;
   window.__rows = () => window.__sr()?.querySelectorAll('[data-line]').length ?? 0;
@@ -118,34 +115,27 @@ const measured = await page.evaluate(async () => {
     if (window.__rows() > 0) {
       firstRowsMs = performance.now() - t0;
     }
-    await new Promise((r) => requestAnimationFrame(() => r(null)));
+    await window.__nextFrame();
     if (performance.now() - t0 > 30_000) {
       break;
     }
   }
   // Settle: no shadow-DOM mutations for 600 ms — structure and async worker
-  // highlighting done.
-  await new Promise((resolve) => {
-    const sr = window.__sr();
-    if (!sr) {
-      resolve(null);
-      return;
-    }
-    let timer = setTimeout(done, 600);
+  // highlighting done. Capped at 30 s.
+  const sr = window.__sr();
+  if (sr) {
+    const settleStart = performance.now();
+    let lastMutation = performance.now();
     const obs = new MutationObserver(() => {
-      clearTimeout(timer);
-      timer = setTimeout(done, 600);
+      lastMutation = performance.now();
     });
     obs.observe(sr, { characterData: true, childList: true, subtree: true });
-    function done() {
-      obs.disconnect();
-      resolve(null);
+    while (performance.now() - lastMutation < 600 && performance.now() - settleStart < 30_000) {
+      await window.__sleep(50);
     }
-    setTimeout(done, 30_000);
-  });
-  const mem = performance.memory
-    ? Math.round(performance.memory.usedJSHeapSize / 1_048_576)
-    : null;
+    obs.disconnect();
+  }
+  const mem = performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1_048_576) : null;
   return {
     deepNodesAtRest: window.__deepCount(),
     firstRowsMs: Math.round(firstRowsMs ?? -1),
@@ -161,7 +151,7 @@ const scroll = await page.evaluate(async () => {
     return null;
   }
   el.scrollTop = 0;
-  await new Promise((r) => requestAnimationFrame(() => r(null)));
+  await window.__nextFrame();
   const rangeTop = window.__lineRange();
   const max = el.scrollHeight - el.clientHeight;
   const steps = 40;
@@ -170,7 +160,7 @@ const scroll = await page.evaluate(async () => {
   let last = performance.now();
   for (let i = 1; i <= steps; i += 1) {
     el.scrollTop = (max * i) / steps;
-    await new Promise((r) => requestAnimationFrame(() => r(null)));
+    await window.__nextFrame();
     const now = performance.now();
     frames.push(now - last);
     last = now;
@@ -178,10 +168,12 @@ const scroll = await page.evaluate(async () => {
       nodeSamples.push(window.__deepCount());
     }
   }
-  await new Promise((r) => setTimeout(r, 150));
+  await window.__sleep(150);
   const rangeBottom = window.__lineRange();
-  const sorted = [...frames].sort((a, b) => a - b);
-  const pct = (p: number) => sorted[Math.floor((sorted.length - 1) * p)] ?? 0;
+  const sorted = [...frames].toSorted((a, b) => a - b);
+  function pct(p: number) {
+    return sorted[Math.floor((sorted.length - 1) * p)] ?? 0;
+  }
   return {
     longFrames: frames.filter((f) => f > 50).length,
     maxFrameMs: Math.round(Math.max(...frames) * 10) / 10,
@@ -192,9 +184,7 @@ const scroll = await page.evaluate(async () => {
     rangeTop,
     scrolledPx: Math.round(el.scrollTop),
     virtualizationFollows:
-      !!rangeTop &&
-      !!rangeBottom &&
-      JSON.stringify(rangeTop) !== JSON.stringify(rangeBottom),
+      !!rangeTop && !!rangeBottom && JSON.stringify(rangeTop) !== JSON.stringify(rangeBottom),
   };
 });
 
@@ -223,9 +213,7 @@ if (measured.firstRowsMs < 0 || measured.firstRowsMs > 2000) {
   failures.push(`first rows ${measured.firstRowsMs}ms (bar: <2000ms)`);
 }
 if (measured.deepNodesAtRest > 1500) {
-  failures.push(
-    `live DOM at rest ${measured.deepNodesAtRest} nodes (bar: ≤1500)`,
-  );
+  failures.push(`live DOM at rest ${measured.deepNodesAtRest} nodes (bar: ≤1500)`);
 }
 if (scroll) {
   if (!scroll.virtualizationFollows) {
@@ -264,8 +252,10 @@ declare global {
   interface Window {
     __deepCount: () => number;
     __lineRange: () => [number, number] | null;
+    __nextFrame: () => Promise<null>;
     __rows: () => number;
     __scroller: () => HTMLElement | null;
+    __sleep: (ms: number) => Promise<null>;
     __sr: () => ShadowRoot | null;
   }
   interface Performance {

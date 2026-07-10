@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import path from "node:path";
 import { ManagedRuntime, Schema } from "effect";
 import { Change, DiffError } from "../shared/change.ts";
 import { layer, serverUrl } from "./serve.ts";
@@ -27,7 +27,7 @@ afterAll(async () => {
 function featureRepo(): string {
   const dir = scratchRepo("docent-serve-test-");
   git(dir, "checkout", "-b", "feature");
-  writeFileSync(join(dir, "feature.txt"), "new file\n");
+  writeFileSync(path.join(dir, "feature.txt"), "new file\n");
   git(dir, "add", ".");
   git(dir, "commit", "-m", "add feature file");
   return dir;
@@ -36,21 +36,16 @@ function featureRepo(): string {
 /** A stub built-client directory. */
 function scratchClientDir(): string {
   const dir = scratchDir("docent-client-test-");
-  writeFileSync(
-    join(dir, "index.html"),
-    "<!doctype html><title>docent</title>",
-  );
-  mkdirSync(join(dir, "assets"));
-  writeFileSync(join(dir, "assets", "app.js"), "console.log('app');\n");
-  writeFileSync(join(dir, "..", "secret.txt"), "top secret\n");
+  writeFileSync(path.join(dir, "index.html"), "<!doctype html><title>docent</title>");
+  mkdirSync(path.join(dir, "assets"));
+  writeFileSync(path.join(dir, "assets", "app.js"), "console.log('app');\n");
+  writeFileSync(path.join(dir, "..", "secret.txt"), "top secret\n");
   return dir;
 }
 
 /** Boot the server layer and return its base URL; torn down in afterAll. */
 async function serve(repo: string): Promise<{ url: string }> {
-  const runtime = ManagedRuntime.make(
-    layer({ clientDir: scratchClientDir(), cwd: repo }),
-  );
+  const runtime = ManagedRuntime.make(layer({ clientDir: scratchClientDir(), cwd: repo }));
   disposers.push(() => runtime.dispose());
   const url = await runtime.runPromise(serverUrl);
   return { url };
@@ -74,13 +69,12 @@ describe("server layer", () => {
     const repo = featureRepo();
     const { url } = await serve(repo);
     await fetch(new URL("/api/diff", url));
-    writeFileSync(join(repo, "second.txt"), "second\n");
+    writeFileSync(path.join(repo, "second.txt"), "second\n");
     git(repo, "add", ".");
     git(repo, "commit", "-m", "second commit");
 
-    const body = decodeChange(
-      await (await fetch(new URL("/api/diff", url))).json(),
-    );
+    const res = await fetch(new URL("/api/diff", url));
+    const body = decodeChange(await res.json());
 
     expect(body.patch).toContain("second.txt");
   });
