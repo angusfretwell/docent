@@ -13,7 +13,7 @@ steps:
     plugins: *plugins
 
   - label: ":oxc: lint"
-    key: check
+    key: lint
     command: mise ci && mise lint
     plugins: *plugins
 

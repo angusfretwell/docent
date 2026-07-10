@@ -26,6 +26,9 @@ export default defineConfig({
   rules: {
     "class-methods-use-this": "off",
     "func-style": ["error", "declaration"],
+    // `Effect.forEach` is Effect's structured iteration, not `Array.prototype.forEach`;
+    // this rule misfires on it across the Effect-heavy server code.
+    "github/array-foreach": "off",
     "github/no-then": "off",
     "max-classes-per-file": "off",
     "no-await-in-loop": "off",

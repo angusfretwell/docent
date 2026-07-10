@@ -1,10 +1,11 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { writeFileSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { ManagedRuntime, Schema } from "effect";
 import { assetsFromManifest } from "../client/assets.ts";
 import type { ClientAssets } from "../client/assets.ts";
 import { Change, DiffError } from "../shared/change.ts";
+import { DossierSnapshot } from "../shared/dossier.ts";
 import { layer, serverUrl } from "./serve.ts";
 import { cleanupScratchDirs, git, scratchDir, scratchRepo } from "./test-fixtures.ts";
 
@@ -13,11 +14,24 @@ const disposers: (() => Promise<void>)[] = [];
 // Sync decode boundary: bun:test assertions are synchronous by design.
 const decodeChange = Schema.decodeUnknownSync(Change);
 const decodeDiffError = Schema.decodeUnknownSync(DiffError);
+const decodeSnapshot = Schema.decodeUnknownSync(DossierSnapshot);
 
 afterAll(async () => {
   await Promise.all(disposers.map((dispose) => dispose()));
   cleanupScratchDirs();
 });
+
+/** Read the next SSE chunk as text, failing loudly rather than hanging forever. */
+async function readSse(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  decoder: TextDecoder,
+): Promise<string> {
+  const timeout = new Promise<never>((_resolve, reject) => {
+    setTimeout(() => reject(new Error("timed out waiting for an SSE frame")), 3000);
+  });
+  const { value, done } = await Promise.race([reader.read(), timeout]);
+  return done || value === undefined ? "" : decoder.decode(value);
+}
 
 /** A scratch repo on branch `feature` with one committed change off `main`. */
 function featureRepo(): string {
@@ -43,12 +57,34 @@ function scratchClientAssets(): ClientAssets {
   ]);
 }
 
+/**
+ * The reachable form of the server's base URL. Bun reports `localhost`, but some
+ * sandboxes only route one loopback family — probe `/` and fall back to the
+ * IPv6/IPv4 literal so the suite runs regardless of how loopback resolves.
+ */
+async function reachableBase(url: string): Promise<string> {
+  const candidates = [
+    url,
+    url.replace("localhost", "[::1]"),
+    url.replace("localhost", "127.0.0.1"),
+  ];
+  for (const candidate of candidates) {
+    try {
+      await fetch(new URL("/", candidate));
+      return candidate;
+    } catch {
+      // Try the next loopback form.
+    }
+  }
+  return url;
+}
+
 /** Boot the server layer and return its base URL; torn down in afterAll. */
 async function serve(repo: string): Promise<{ url: string }> {
   const runtime = ManagedRuntime.make(layer({ assets: scratchClientAssets(), cwd: repo }));
   disposers.push(() => runtime.dispose());
   const url = await runtime.runPromise(serverUrl);
-  return { url };
+  return { url: await reachableBase(url) };
 }
 
 describe("server layer", () => {
@@ -110,5 +146,48 @@ describe("server layer", () => {
     expect(res.status).toBe(500);
     const body = decodeDiffError(await res.json());
     expect(body.error).toMatch(/not a git repository/i);
+  });
+
+  test("GET /api/dossier auto-creates and returns the branch's snapshot", async () => {
+    const repo = featureRepo();
+    const { url } = await serve(repo);
+
+    const res = await fetch(new URL("/api/dossier", url));
+
+    expect(res.status).toBe(200);
+    const snap = decodeSnapshot(await res.json());
+    expect(snap.dossier.schema).toBe("docent/dossier@3");
+    expect(snap.dossier.branch).toBe("feature");
+    expect(snap.dossier.base).toBe("main");
+    expect(existsSync(path.join(repo, ".docent", "dossiers", "feature", "dossier.json"))).toBe(
+      true,
+    );
+  });
+
+  test("GET /api/events pushes a change when .docent/ is written externally", async () => {
+    const repo = featureRepo();
+    const { url } = await serve(repo);
+    const controller = new AbortController();
+    const res = await fetch(new URL("/api/events", url), {
+      signal: controller.signal,
+    });
+    const { body } = res;
+    if (!body) {
+      throw new Error("SSE response had no body");
+    }
+    const reader = body.getReader();
+    const decoder = new TextDecoder();
+
+    try {
+      // The opening comment confirms the stream is live before we write.
+      expect(await readSse(reader, decoder)).toContain("connected");
+      // An external agent dropping a record file into `.docent/`, not a UI write.
+      writeFileSync(path.join(repo, ".docent", "external.txt"), "hi\n");
+
+      expect(await readSse(reader, decoder)).toContain("dossier-changed");
+    } finally {
+      // Close the socket so the server's graceful shutdown doesn't wait on it.
+      controller.abort();
+    }
   });
 });
