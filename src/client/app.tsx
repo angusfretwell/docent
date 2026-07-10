@@ -6,7 +6,7 @@ import type { FindingEntry, ViewedEvent } from "../shared/dossier.ts";
 import type { FindingWrite } from "../shared/finding-write.ts";
 import type { PendingRange } from "../shared/pending.ts";
 import { Pending } from "../shared/pending.ts";
-import { latestCodeWalkthrough } from "../shared/walkthrough.ts";
+import { latestCodeWalkthrough, latestProductWalkthrough } from "../shared/walkthrough.ts";
 import { fetchPendingExpandedFileDiff, isPendingExpandable } from "./blobs.ts";
 import type { DriftResult } from "./drift.ts";
 import { useDrift } from "./drift.ts";
@@ -14,6 +14,7 @@ import type { DiffViewHandle } from "./diff-view.tsx";
 import { DiffView } from "./diff-view.tsx";
 import { writeFinding } from "./findings-client.ts";
 import { FindingsPanel } from "./findings-panel.tsx";
+import { ProductWalkthroughView } from "./product-walkthrough-view.tsx";
 import { WalkthroughView } from "./walkthrough-view.tsx";
 
 // Append a Finding record. The write lands a file in `.docent/`, which trips the
@@ -37,10 +38,10 @@ const decodePending = Schema.decodeUnknownSync(Pending);
 // Pending working-tree preview.
 type Selection = "change" | "pending";
 
-// The tab / view mode (walkthroughs.md §1). The Diff tab and the Code
-// walkthrough tab are self-contained surfaces over the same Change; the Product
-// walkthrough is a separate tab (#15), not built here.
-type Tab = "diff" | "walkthrough";
+// The tab / view mode (walkthroughs.md §1). Each is its own self-contained
+// surface over the same Change: the Diff tab, the Code walkthrough tab, and the
+// Product walkthrough tab (#15).
+type Tab = "diff" | "walkthrough" | "product";
 
 type LoadState =
   | { kind: "loading" }
@@ -125,6 +126,14 @@ function TabBar({ tab, onTab }: { tab: Tab; onTab: (tab: Tab) => void }) {
         type="button"
       >
         Code walkthrough
+      </button>
+      <button
+        aria-pressed={tab === "product"}
+        onClick={() => onTab("product")}
+        style={tabStyle(tab === "product")}
+        type="button"
+      >
+        Product walkthrough
       </button>
     </div>
   );
@@ -375,6 +384,22 @@ function WalkthroughTab({
   );
 }
 
+/** The Product walkthrough tab, or a prompt to author one when none exists. */
+function ProductWalkthroughTab({ dossier }: { dossier: DossierSnapshot | null }) {
+  const walkthrough = latestProductWalkthrough(dossier?.walkthroughs ?? []);
+  if (!(walkthrough && dossier)) {
+    return <Notice>No product walkthrough yet. Run /docent to author one.</Notice>;
+  }
+  return (
+    <ProductWalkthroughView
+      changes={dossier.changes}
+      findings={dossier.findings}
+      walkthrough={walkthrough}
+      walkthroughs={dossier.walkthroughs}
+    />
+  );
+}
+
 export function App() {
   const [change, setChange] = useState<LoadState>({ kind: "loading" });
   const [pending, setPending] = useState<Pending | null>(null);
@@ -489,25 +514,32 @@ export function App() {
 
   const patch = change.kind === "loaded" ? change.change.patch : "";
 
+  let body: React.ReactNode;
+  if (tab === "walkthrough") {
+    body = <WalkthroughTab dossier={dossier} onOpenInDiff={openInDiff} patch={patch} />;
+  } else if (tab === "product") {
+    body = <ProductWalkthroughTab dossier={dossier} />;
+  } else {
+    body = (
+      <DiffTab
+        change={change}
+        diffRef={diffRef}
+        dossier={dossier}
+        drift={drift}
+        onRange={setRange}
+        onSelect={setSelected}
+        pending={pending}
+        range={range}
+        selected={selected}
+      />
+    );
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       {dossier ? <DossierStatus dossier={dossier} /> : null}
       <TabBar onTab={setTab} tab={tab} />
-      {tab === "walkthrough" ? (
-        <WalkthroughTab dossier={dossier} onOpenInDiff={openInDiff} patch={patch} />
-      ) : (
-        <DiffTab
-          change={change}
-          diffRef={diffRef}
-          dossier={dossier}
-          drift={drift}
-          onRange={setRange}
-          onSelect={setSelected}
-          pending={pending}
-          range={range}
-          selected={selected}
-        />
-      )}
+      {body}
     </div>
   );
 }
