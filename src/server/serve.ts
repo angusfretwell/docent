@@ -13,6 +13,8 @@
 
 import { BunHttpServer } from "@effect/platform-bun";
 import { Effect, Layer, Stream } from "effect";
+import { FileSystem } from "effect/FileSystem";
+import { Path } from "effect/Path";
 import {
   HttpRouter,
   HttpServer,
@@ -24,7 +26,7 @@ import type { ClientAssets } from "../client/assets.ts";
 import { ViewedRequest } from "../shared/dossier.ts";
 import { FindingWrite } from "../shared/finding-write.ts";
 import type { PendingRange } from "../shared/pending.ts";
-import { appendViewedEvent, readDossierSnapshot } from "./dossier.ts";
+import { appendViewedEvent, dossierDirPath, readDossierSnapshot } from "./dossier.ts";
 import { writeFindingRecord } from "./findings-write.ts";
 import {
   resolveAuthor,
@@ -71,6 +73,9 @@ const REQUEST_URL_BASE = "http://localhost";
 // mark immutable so the browser never revalidates a blob it already has.
 const BLOB_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
+// The opaque byte-stream content-type for raw blobs and worktree files.
+const OCTET_STREAM = "application/octet-stream";
+
 /**
  * `GET /api/blob/:sha` — the raw bytes of a git blob, resolved via pure local
  * `git cat-file` (no network). Content-addressed, so responses cache forever.
@@ -87,7 +92,7 @@ function blobRoute(cwd: string) {
       const params = yield* HttpRouter.params;
       const bytes = yield* resolveBlob(cwd, params.sha ?? "");
       return HttpServerResponse.uint8Array(bytes, {
-        contentType: "application/octet-stream",
+        contentType: OCTET_STREAM,
         headers: { "cache-control": BLOB_CACHE_CONTROL },
       });
     }).pipe(
@@ -123,6 +128,68 @@ function blobSizeRoute(cwd: string) {
       Effect.catchTag("InvalidObjectId", (error) =>
         Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 400 })),
       ),
+      Effect.catch((error) =>
+        Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 404 })),
+      ),
+    ),
+  );
+}
+
+// A walkthrough id and a capture filename must be plain, single-segment names —
+// no slashes, no `..` — so the join below can never escape the captures dir.
+const WALKTHROUGH_ID = /^wlk_[A-Za-z0-9]+$/;
+const CAPTURE_FILE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+
+/** The content-type for a capture media file, keyed off its extension. */
+function captureContentType(file: string): string {
+  if (file.endsWith(".png")) {
+    return "image/png";
+  }
+  if (file.endsWith(".json")) {
+    return "application/json";
+  }
+  return OCTET_STREAM;
+}
+
+/**
+ * `GET /api/capture/:walkthrough/:file` — the raw bytes of a product-walkthrough
+ * capture blob, read off `.docent/dossiers/<slug>/walkthroughs/product/<wlk>/
+ * captures/<file>` (walkthroughs.md §3, §6). Unlike code ranges, capture media
+ * is **not a git blob** — it lives in the gitignored Dossier, born with its
+ * immutable walkthrough — so `git cat-file` (`/api/blob/:sha`) cannot serve it.
+ * The `<file>` is `<media-sha>.png` (screenshots, served `image/png` for a bare
+ * `<img src>`) or `<media-sha>.rrweb.json` (recordings, served `application/json`
+ * for the rrweb replayer). Content-addressed, so responses cache forever. A
+ * malformed id/filename 400s; an absent file 404s.
+ */
+function captureRoute(cwd: string) {
+  return HttpRouter.add(
+    "GET",
+    "/api/capture/:walkthrough/:file",
+    Effect.gen(function* serveCapture() {
+      const params = yield* HttpRouter.params;
+      const walkthrough = params.walkthrough ?? "";
+      const file = params.file ?? "";
+      if (!(WALKTHROUGH_ID.test(walkthrough) && CAPTURE_FILE.test(file)) || file.includes("..")) {
+        return HttpServerResponse.jsonUnsafe({ error: "invalid capture path" }, { status: 400 });
+      }
+      const repo = yield* resolveRepo(cwd);
+      const fs = yield* FileSystem;
+      const path = yield* Path;
+      const filePath = path.join(
+        dossierDirPath(repo.root, repo.branch),
+        "walkthroughs",
+        "product",
+        walkthrough,
+        "captures",
+        file,
+      );
+      const bytes = yield* fs.readFile(filePath);
+      return HttpServerResponse.uint8Array(bytes, {
+        contentType: captureContentType(file),
+        headers: { "cache-control": BLOB_CACHE_CONTROL },
+      });
+    }).pipe(
       Effect.catch((error) =>
         Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 404 })),
       ),
@@ -169,7 +236,7 @@ function worktreeRoute(cwd: string) {
       const { searchParams } = new URL(request.url, REQUEST_URL_BASE);
       const bytes = yield* resolveWorktreeFile(cwd, searchParams.get("path") ?? "");
       return HttpServerResponse.uint8Array(bytes, {
-        contentType: "application/octet-stream",
+        contentType: OCTET_STREAM,
         headers: { "cache-control": WORKTREE_CACHE_CONTROL },
       });
     }).pipe(
@@ -345,6 +412,7 @@ export function layer(options: ServeOptions) {
     diffRoute(options.cwd),
     blobSizeRoute(options.cwd),
     blobRoute(options.cwd),
+    captureRoute(options.cwd),
     pendingRoute(options.cwd),
     worktreeRoute(options.cwd),
     dossierRoute(options.cwd),
