@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import path from "node:path";
 import { BunServices } from "@effect/platform-bun";
 import { ManagedRuntime } from "effect";
 import { branchSlug, ensureGitignore, readDossierSnapshot } from "./dossier.ts";
@@ -13,8 +13,9 @@ afterAll(async () => {
   cleanupScratchDirs();
 });
 
-const snapshot = (root: string, branch: string, base = "main") =>
-  runtime.runPromise(readDossierSnapshot({ base, branch, root }));
+function snapshot(root: string, branch: string, base = "main") {
+  return runtime.runPromise(readDossierSnapshot({ base, branch, root }));
+}
 
 describe("branchSlug", () => {
   test("maps slashes to dashes", () => {
@@ -34,9 +35,9 @@ describe("readDossierSnapshot", () => {
     expect(snap.dossier.branch).toBe("feature");
     expect(snap.dossier.base).toBe("trunk");
     expect(snap.dossier.id).not.toBe("");
-    const file = join(root, ".docent", "dossiers", "feature", "dossier.json");
+    const file = path.join(root, ".docent", "dossiers", "feature", "dossier.json");
     expect(existsSync(file)).toBe(true);
-    const onDisk = JSON.parse(readFileSync(file, "utf8"));
+    const onDisk = JSON.parse(readFileSync(file, "utf-8"));
     expect(onDisk.branch).toBe("feature");
   });
 
@@ -46,11 +47,9 @@ describe("readDossierSnapshot", () => {
     const snap = await snapshot(root, "feat/stream");
 
     expect(snap.dossier.branch).toBe("feat/stream");
-    expect(
-      existsSync(
-        join(root, ".docent", "dossiers", "feat-stream", "dossier.json"),
-      ),
-    ).toBe(true);
+    expect(existsSync(path.join(root, ".docent", "dossiers", "feat-stream", "dossier.json"))).toBe(
+      true,
+    );
   });
 
   test("keeps the id stable across reads (no regenerate)", async () => {
@@ -65,18 +64,18 @@ describe("readDossierSnapshot", () => {
   test("walks the changes/ log", async () => {
     const root = scratchDir("docent-dossier-");
     await snapshot(root, "feature");
-    const changesDir = join(root, ".docent", "dossiers", "feature", "changes");
+    const changesDir = path.join(root, ".docent", "dossiers", "feature", "changes");
     mkdirSync(changesDir, { recursive: true });
     writeFileSync(
-      join(changesDir, "chg_001.json"),
+      path.join(changesDir, "chg_001.json"),
       JSON.stringify({
-        schema: "docent/change@3",
-        id: "chg_001",
-        baseSha: "aaa",
-        headSha: "bbb",
         baseRef: "main",
-        headRef: "feature",
+        baseSha: "aaa",
         capturedAt: "2026-07-10T02:14:00Z",
+        headRef: "feature",
+        headSha: "bbb",
+        id: "chg_001",
+        schema: "docent/change@3",
       }),
     );
 
@@ -88,19 +87,19 @@ describe("readDossierSnapshot", () => {
   test("degrades gracefully: a malformed record never breaks the snapshot", async () => {
     const root = scratchDir("docent-dossier-");
     await snapshot(root, "feature");
-    const changesDir = join(root, ".docent", "dossiers", "feature", "changes");
+    const changesDir = path.join(root, ".docent", "dossiers", "feature", "changes");
     mkdirSync(changesDir, { recursive: true });
-    writeFileSync(join(changesDir, "chg_001.json"), "{ not valid json");
+    writeFileSync(path.join(changesDir, "chg_001.json"), "{ not valid json");
     writeFileSync(
-      join(changesDir, "chg_002.json"),
+      path.join(changesDir, "chg_002.json"),
       JSON.stringify({
-        schema: "docent/change@3",
-        id: "chg_002",
-        baseSha: "aaa",
-        headSha: "bbb",
         baseRef: "main",
-        headRef: "feature",
+        baseSha: "aaa",
         capturedAt: "2026-07-10T02:14:00Z",
+        headRef: "feature",
+        headSha: "bbb",
+        id: "chg_002",
+        schema: "docent/change@3",
       }),
     );
 
@@ -112,17 +111,10 @@ describe("readDossierSnapshot", () => {
   test("walks findings record directories", async () => {
     const root = scratchDir("docent-dossier-");
     await snapshot(root, "feature");
-    const fndDir = join(
-      root,
-      ".docent",
-      "dossiers",
-      "feature",
-      "findings",
-      "fnd_01J9GQ4W7X",
-    );
+    const fndDir = path.join(root, ".docent", "dossiers", "feature", "findings", "fnd_01J9GQ4W7X");
     mkdirSync(fndDir, { recursive: true });
-    writeFileSync(join(fndDir, "001-open.md"), "---\n---\nbody\n");
-    writeFileSync(join(fndDir, "002-reply.md"), "---\n---\nreply\n");
+    writeFileSync(path.join(fndDir, "001-open.md"), "---\n---\nbody\n");
+    writeFileSync(path.join(fndDir, "002-reply.md"), "---\n---\nreply\n");
 
     const snap = await snapshot(root, "feature");
 
@@ -138,18 +130,16 @@ describe("ensureGitignore", () => {
 
     await runtime.runPromise(ensureGitignore(root));
 
-    expect(readFileSync(join(root, ".gitignore"), "utf8")).toContain(
-      ".docent/",
-    );
+    expect(readFileSync(path.join(root, ".gitignore"), "utf-8")).toContain(".docent/");
   });
 
   test("is idempotent when .docent/ is already ignored", async () => {
     const root = scratchDir("docent-dossier-");
-    writeFileSync(join(root, ".gitignore"), "node_modules\n.docent/\n");
+    writeFileSync(path.join(root, ".gitignore"), "node_modules\n.docent/\n");
 
     await runtime.runPromise(ensureGitignore(root));
 
-    const body = readFileSync(join(root, ".gitignore"), "utf8");
+    const body = readFileSync(path.join(root, ".gitignore"), "utf-8");
     expect(body.match(/\.docent\//g)?.length).toBe(1);
   });
 });

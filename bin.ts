@@ -6,7 +6,7 @@
  * opens the browser.
  */
 
-import { join } from "node:path";
+import path from "node:path";
 import { BunRuntime } from "@effect/platform-bun";
 import { Console, Effect, FileSystem, Schema } from "effect";
 import open from "open";
@@ -30,7 +30,7 @@ if (subcommand !== "serve") {
 
 // Dev serving path: built client assets on disk. Packaging embeds these into
 // the compiled binary later (docs/spec/architecture.md §5).
-const clientDir = join(import.meta.dir, "dist", "client");
+const clientDir = path.join(import.meta.dir, "dist", "client");
 
 // Best-effort browser open, only for interactive runs — piped/headless
 // callers get just the printed URL.
@@ -40,9 +40,9 @@ const openBrowser = Effect.fn("openBrowser")(
   (effect) => Effect.ignore(effect),
 );
 
-const main = Effect.gen(function* () {
+const main = Effect.gen(function* main() {
   const fs = yield* FileSystem.FileSystem;
-  if (!(yield* fs.exists(join(clientDir, "index.html")))) {
+  if (!(yield* fs.exists(path.join(clientDir, "index.html")))) {
     return yield* Effect.fail(ClientAssetsMissing.make({ clientDir }));
   }
 
@@ -51,9 +51,7 @@ const main = Effect.gen(function* () {
   const change = yield* resolveChange(process.cwd());
   const url = yield* serverUrl;
 
-  yield* Console.log(
-    `docent  ·  ${change.branch} → ${change.defaultBranch} @ ${change.root}`,
-  );
+  yield* Console.log(`docent  ·  ${change.branch} → ${change.defaultBranch} @ ${change.root}`);
   yield* Console.log(`        ·  ${url}`);
 
   if (process.stdout.isTTY) {

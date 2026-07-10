@@ -26,7 +26,7 @@ export class DocentWatch extends Context.Service<
   { readonly events: PubSub.PubSub<void> }
 >()("docent/DocentWatch") {}
 
-const makeWatch = Effect.fn("makeWatch")(function* (cwd: string) {
+const makeWatch = Effect.fn("makeWatch")(function* makeWatch(cwd: string) {
   const fs = yield* FileSystem;
   const path = yield* Path;
 
@@ -43,10 +43,11 @@ const makeWatch = Effect.fn("makeWatch")(function* (cwd: string) {
   yield* fs.makeDirectory(stateRoot, { recursive: true }).pipe(Effect.ignore);
   yield* ensureGitignore(root).pipe(Effect.ignore);
 
+  // The channel carries `void` by design (see the module comment); `void` here
+  // is a generic type argument, which this rule flags despite being valid.
+  // oxlint-disable-next-line no-invalid-void-type
   const events = yield* PubSub.unbounded<void>();
-  const exists = yield* fs
-    .exists(stateRoot)
-    .pipe(Effect.orElseSucceed(() => false));
+  const exists = yield* fs.exists(stateRoot).pipe(Effect.orElseSucceed(() => false));
   if (exists) {
     yield* Effect.acquireRelease(
       Effect.sync(() => {
@@ -54,10 +55,13 @@ const makeWatch = Effect.fn("makeWatch")(function* (cwd: string) {
         const watcher = watch(stateRoot, { recursive: true }, () => {
           clearTimeout(timer);
           timer = setTimeout(() => {
+            // The `undefined` value is required: it selects `publishUnsafe`'s
+            // data-first overload, so the void message actually publishes.
+            // oxlint-disable-next-line no-useless-undefined
             PubSub.publishUnsafe(events, undefined);
           }, DEBOUNCE_MS);
         });
-        return { watcher, cancel: () => clearTimeout(timer) };
+        return { cancel: () => clearTimeout(timer), watcher };
       }),
       ({ watcher, cancel }) =>
         Effect.sync(() => {
@@ -71,4 +75,6 @@ const makeWatch = Effect.fn("makeWatch")(function* (cwd: string) {
 });
 
 /** Scoped layer: starts the watch on build, closes it when the scope ends. */
-export const layer = (cwd: string) => Layer.effect(DocentWatch, makeWatch(cwd));
+export function layer(cwd: string) {
+  return Layer.effect(DocentWatch, makeWatch(cwd));
+}

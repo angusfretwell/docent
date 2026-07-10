@@ -1,7 +1,6 @@
 import type { CodeViewItem } from "@pierre/diffs";
 import { processPatch } from "@pierre/diffs";
 import { CodeView, WorkerPoolContextProvider } from "@pierre/diffs/react";
-import { useMemo } from "react";
 
 const themes = { dark: "github-dark", light: "github-light" } as const;
 
@@ -9,12 +8,9 @@ const themes = { dark: "github-dark", light: "github-light" } as const;
 // stay off the main thread: the #4 re-benchmark measured worker-off scroll at
 // p95 225 ms with 15 long frames vs. zero with the pool on.
 function workerFactory() {
-  return new Worker(
-    new URL("@pierre/diffs/worker/worker.js", import.meta.url),
-    {
-      type: "module",
-    },
-  );
+  return new Worker(new URL("@pierre/diffs/worker/worker.js", import.meta.url), {
+    type: "module",
+  });
 }
 
 /**
@@ -22,14 +18,12 @@ function workerFactory() {
  * `CodeView`'s virtualizer is where the renderer's performance lives.
  */
 export function DiffView({ patch }: { patch: string }) {
-  const items = useMemo<CodeViewItem[]>(() => {
-    const { files } = processPatch(patch);
-    return files.map((fileDiff, i) => ({
-      fileDiff,
-      id: `${fileDiff.name}#${i}`,
-      type: "diff" as const,
-    }));
-  }, [patch]);
+  const { files } = processPatch(patch);
+  const items: CodeViewItem[] = files.map((fileDiff, i) => ({
+    fileDiff,
+    id: `${fileDiff.name}#${i}`,
+    type: "diff" as const,
+  }));
 
   return (
     <WorkerPoolContextProvider

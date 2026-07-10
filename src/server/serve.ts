@@ -9,12 +9,7 @@
 
 import { BunHttpServer } from "@effect/platform-bun";
 import { Effect, Layer, Stream } from "effect";
-import {
-  HttpRouter,
-  HttpServer,
-  HttpServerResponse,
-  HttpStaticServer,
-} from "effect/unstable/http";
+import { HttpRouter, HttpServer, HttpServerResponse, HttpStaticServer } from "effect/unstable/http";
 import { readDossierSnapshot } from "./dossier.ts";
 import { resolveChange, resolveRepo } from "./git.ts";
 import { DocentWatch, layer as watchLayer } from "./watch.ts";
@@ -27,61 +22,54 @@ export interface ServeOptions {
 }
 
 /** The running server's base URL (with trailing slash), e.g. for printing. */
-export const serverUrl: Effect.Effect<string, never, HttpServer.HttpServer> =
-  Effect.map(
-    Effect.service(HttpServer.HttpServer),
-    (server) => new URL(HttpServer.formatAddress(server.address)).href,
-  );
+export const serverUrl: Effect.Effect<string, never, HttpServer.HttpServer> = Effect.map(
+  Effect.service(HttpServer.HttpServer),
+  (server) => new URL(HttpServer.formatAddress(server.address)).href,
+);
 
-const diffRoute = (cwd: string) =>
-  HttpRouter.add(
+function diffRoute(cwd: string) {
+  return HttpRouter.add(
     "GET",
     "/api/diff",
     resolveChange(cwd).pipe(
       Effect.flatMap((change) => HttpServerResponse.json(change)),
       Effect.catch((error) =>
-        Effect.succeed(
-          HttpServerResponse.jsonUnsafe(
-            { error: error.message },
-            { status: 500 },
-          ),
-        ),
+        Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 500 })),
       ),
     ),
   );
+}
 
 /**
  * `GET /api/dossier` — the JSON snapshot of the active Dossier (the one for the
  * checked-out branch), walked live off `.docent/` on every request (uncached).
  * The Dossier auto-creates on first use; the branch/base come from git.
  */
-const dossierRoute = (cwd: string) =>
-  HttpRouter.add(
+function dossierRoute(cwd: string) {
+  return HttpRouter.add(
     "GET",
     "/api/dossier",
     resolveRepo(cwd).pipe(
       Effect.flatMap((repo) =>
         readDossierSnapshot({
-          root: repo.root,
-          branch: repo.branch,
           base: repo.defaultBranch.name,
+          branch: repo.branch,
+          root: repo.root,
         }),
       ),
       Effect.flatMap((snapshot) => HttpServerResponse.json(snapshot)),
       Effect.catch((error) =>
-        Effect.succeed(
-          HttpServerResponse.jsonUnsafe(
-            { error: error.message },
-            { status: 500 },
-          ),
-        ),
+        Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 500 })),
       ),
     ),
   );
+}
 
 // SSE frames: an opening comment on connect, then a coarse change event per push.
 const encoder = new TextEncoder();
-const sseFrame = (payload: string) => encoder.encode(payload);
+function sseFrame(payload: string) {
+  return encoder.encode(payload);
+}
 const SSE_OPEN = sseFrame(": connected\n\n");
 const SSE_CHANGED = sseFrame("event: dossier-changed\ndata: {}\n\n");
 
@@ -114,7 +102,7 @@ const eventsRoute = HttpRouter.add(
  * The full server as a layer: building it binds the port and serves until the
  * layer's scope closes. Exposes `HttpServer` so callers can read `serverUrl`.
  */
-export const layer = (options: ServeOptions) => {
+export function layer(options: ServeOptions) {
   const routes = Layer.mergeAll(
     diffRoute(options.cwd),
     dossierRoute(options.cwd),
@@ -134,4 +122,4 @@ export const layer = (options: ServeOptions) => {
       BunHttpServer.layer({ hostname: "localhost", idleTimeout: 0, port: 0 }),
     ),
   );
-};
+}

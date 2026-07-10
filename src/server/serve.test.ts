@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import path from "node:path";
 import { ManagedRuntime, Schema } from "effect";
 import { Change, DiffError } from "../shared/change.ts";
 import { DossierSnapshot } from "../shared/dossier.ts";
@@ -30,11 +30,8 @@ async function readSse(
   reader: ReadableStreamDefaultReader<Uint8Array>,
   decoder: TextDecoder,
 ): Promise<string> {
-  const timeout = new Promise<never>((_, reject) => {
-    setTimeout(
-      () => reject(new Error("timed out waiting for an SSE frame")),
-      3000,
-    );
+  const timeout = new Promise<never>((_resolve, reject) => {
+    setTimeout(() => reject(new Error("timed out waiting for an SSE frame")), 3000);
   });
   const { value, done } = await Promise.race([reader.read(), timeout]);
   return done || value === undefined ? "" : decoder.decode(value);
@@ -44,7 +41,7 @@ async function readSse(
 function featureRepo(): string {
   const dir = scratchRepo("docent-serve-test-");
   git(dir, "checkout", "-b", "feature");
-  writeFileSync(join(dir, "feature.txt"), "new file\n");
+  writeFileSync(path.join(dir, "feature.txt"), "new file\n");
   git(dir, "add", ".");
   git(dir, "commit", "-m", "add feature file");
   return dir;
@@ -53,13 +50,10 @@ function featureRepo(): string {
 /** A stub built-client directory. */
 function scratchClientDir(): string {
   const dir = scratchDir("docent-client-test-");
-  writeFileSync(
-    join(dir, "index.html"),
-    "<!doctype html><title>docent</title>",
-  );
-  mkdirSync(join(dir, "assets"));
-  writeFileSync(join(dir, "assets", "app.js"), "console.log('app');\n");
-  writeFileSync(join(dir, "..", "secret.txt"), "top secret\n");
+  writeFileSync(path.join(dir, "index.html"), "<!doctype html><title>docent</title>");
+  mkdirSync(path.join(dir, "assets"));
+  writeFileSync(path.join(dir, "assets", "app.js"), "console.log('app');\n");
+  writeFileSync(path.join(dir, "..", "secret.txt"), "top secret\n");
   return dir;
 }
 
@@ -87,9 +81,7 @@ async function reachableBase(url: string): Promise<string> {
 
 /** Boot the server layer and return its base URL; torn down in afterAll. */
 async function serve(repo: string): Promise<{ url: string }> {
-  const runtime = ManagedRuntime.make(
-    layer({ clientDir: scratchClientDir(), cwd: repo }),
-  );
+  const runtime = ManagedRuntime.make(layer({ clientDir: scratchClientDir(), cwd: repo }));
   disposers.push(() => runtime.dispose());
   const url = await runtime.runPromise(serverUrl);
   return { url: await reachableBase(url) };
@@ -113,13 +105,12 @@ describe("server layer", () => {
     const repo = featureRepo();
     const { url } = await serve(repo);
     await fetch(new URL("/api/diff", url));
-    writeFileSync(join(repo, "second.txt"), "second\n");
+    writeFileSync(path.join(repo, "second.txt"), "second\n");
     git(repo, "add", ".");
     git(repo, "commit", "-m", "second commit");
 
-    const body = decodeChange(
-      await (await fetch(new URL("/api/diff", url))).json(),
-    );
+    const res = await fetch(new URL("/api/diff", url));
+    const body = decodeChange(await res.json());
 
     expect(body.patch).toContain("second.txt");
   });
@@ -168,9 +159,9 @@ describe("server layer", () => {
     expect(snap.dossier.schema).toBe("docent/dossier@3");
     expect(snap.dossier.branch).toBe("feature");
     expect(snap.dossier.base).toBe("main");
-    expect(
-      existsSync(join(repo, ".docent", "dossiers", "feature", "dossier.json")),
-    ).toBe(true);
+    expect(existsSync(path.join(repo, ".docent", "dossiers", "feature", "dossier.json"))).toBe(
+      true,
+    );
   });
 
   test("GET /api/events pushes a change when .docent/ is written externally", async () => {
@@ -180,7 +171,7 @@ describe("server layer", () => {
     const res = await fetch(new URL("/api/events", url), {
       signal: controller.signal,
     });
-    const body = res.body;
+    const { body } = res;
     if (!body) {
       throw new Error("SSE response had no body");
     }
@@ -191,7 +182,7 @@ describe("server layer", () => {
       // The opening comment confirms the stream is live before we write.
       expect(await readSse(reader, decoder)).toContain("connected");
       // An external agent dropping a record file into `.docent/`, not a UI write.
-      writeFileSync(join(repo, ".docent", "external.txt"), "hi\n");
+      writeFileSync(path.join(repo, ".docent", "external.txt"), "hi\n");
 
       expect(await readSse(reader, decoder)).toContain("dossier-changed");
     } finally {

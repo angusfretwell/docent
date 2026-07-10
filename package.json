@@ -6,32 +6,37 @@
     "build": "vite build",
     "serve": "bun run build && bun bin.ts",
     "typecheck": "tsc --noEmit",
-    "check": "biome check",
-    "fix": "biome check --write",
-    "prepare": "husky"
-  },
-  "devDependencies": {
-    "@ai-hero/sandcastle": "^0.12.0",
-    "@biomejs/biome": "2.5.2",
-    "@effect/language-service": "^0.86.6",
-    "@pierre/diffs": "1.2.12",
-    "@types/bun": "latest",
-    "@types/react": "^19.2.17",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.3",
-    "husky": "^9.1.7",
-    "playwright": "^1.61.1",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7",
-    "vite": "^8.1.4"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
+    "lint": "oxlint",
+    "fix": "oxlint --fix",
+    "format": "oxfmt",
+    "check": "oxfmt --check"
   },
   "dependencies": {
     "@effect/platform-bun": "^4.0.0-beta.97",
     "effect": "^4.0.0-beta.97",
     "open": "^11.0.0",
     "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@ai-hero/sandcastle": "^0.12.0",
+    "@effect/language-service": "^0.86.6",
+    "@pierre/diffs": "1.2.12",
+    "@types/bun": "latest",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "eslint-plugin-github": "^6.1.1",
+    "eslint-plugin-sonarjs": "^4.1.0",
+    "oxfmt": "^0.58.0",
+    "oxlint": "^1.73.0",
+    "oxlint-plugin-react-doctor": "^0.7.4",
+    "playwright": "^1.61.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "ultracite": "^7.9.3",
+    "vite": "^8.1.4"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
   }
 }

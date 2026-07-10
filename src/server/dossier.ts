@@ -31,45 +31,53 @@ export function branchSlug(branch: string): string {
 const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
 /** A ULID-shaped opaque id: 10 time chars + 16 random chars, Crockford base32. */
-const makeDossierId = Effect.fn("makeDossierId")(function* () {
+const makeDossierId = Effect.fn("makeDossierId")(function* makeDossierId() {
   const now = yield* Clock.currentTimeMillis;
   let time = now;
   let head = "";
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 10; i += 1) {
     head = CROCKFORD.charAt(time % 32) + head;
     time = Math.floor(time / 32);
   }
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
   let tail = "";
-  for (let i = 0; i < bytes.length; i++) {
-    tail += CROCKFORD.charAt((bytes[i] ?? 0) % 32);
+  for (const byte of bytes) {
+    tail += CROCKFORD.charAt(byte % 32);
   }
   return `dsr_${head}${tail}`;
 });
 
 /** Decode a JSON file against a schema; `None` on any read/parse/decode failure. */
-const readRecord = <S extends Schema.Constraint>(file: string, schema: S) =>
-  Effect.gen(function* () {
-    const fs = yield* FileSystem;
-    const text = yield* fs.readFileString(file);
-    const json = yield* Effect.try(() => JSON.parse(text));
-    return yield* Schema.decodeUnknownEffect(schema)(json);
-  }).pipe(Effect.option);
+const readRecord = Effect.fn("readRecord")(function* readRecord<S extends Schema.Constraint>(
+  file: string,
+  schema: S,
+) {
+  const fs = yield* FileSystem;
+  const text = yield* fs.readFileString(file);
+  const json = yield* Effect.try(() => JSON.parse(text));
+  return yield* Schema.decodeUnknownEffect(schema)(json);
+}, Effect.option);
 
 /** Unwrap the `Some` values of an Options array (best-effort walk survivors). */
-const somes = <A>(options: ReadonlyArray<Option.Option<A>>): A[] =>
-  options.filter(Option.isSome).map((option) => option.value);
+function somes<A>(options: readonly Option.Option<A>[]): A[] {
+  const values: A[] = [];
+  for (const option of options) {
+    if (Option.isSome(option)) {
+      values.push(option.value);
+    }
+  }
+  return values;
+}
 
 /** List a directory's entries, or `[]` when it does not exist. */
-const listDir = (dir: string) =>
-  Effect.gen(function* () {
-    const fs = yield* FileSystem;
-    return yield* fs.readDirectory(dir).pipe(Effect.orElseSucceed(() => []));
-  });
+const listDir = Effect.fn("listDir")(function* listDir(dir: string) {
+  const fs = yield* FileSystem;
+  return yield* fs.readDirectory(dir).pipe(Effect.orElseSucceed(() => []));
+});
 
 /** Read `dossier.json`, creating it (auto-create on first use) when absent. */
-const ensureDossier = Effect.fn("ensureDossier")(function* (params: {
+const ensureDossier = Effect.fn("ensureDossier")(function* ensureDossier(params: {
   dossierDir: string;
   branch: string;
   base: string;
@@ -85,10 +93,10 @@ const ensureDossier = Effect.fn("ensureDossier")(function* (params: {
 
   const id = yield* makeDossierId();
   const dossier = Dossier.make({
-    schema: "docent/dossier@3",
-    id,
-    branch: params.branch,
     base: params.base,
+    branch: params.branch,
+    id,
+    schema: "docent/dossier@3",
   });
   yield* fs.makeDirectory(params.dossierDir, { recursive: true });
   yield* fs.writeFileString(file, `${JSON.stringify(dossier, null, 2)}\n`);
@@ -96,71 +104,70 @@ const ensureDossier = Effect.fn("ensureDossier")(function* (params: {
 });
 
 /** Decode every `*.json` in `<dossierDir>/<sub>`, skipping records that fail. */
-const readJsonRecords = <S extends Schema.Constraint>(
+const readJsonRecords = Effect.fn("readJsonRecords")(function* readJsonRecords<
+  S extends Schema.Constraint,
+>(dossierDir: string, sub: string, schema: S) {
+  const path = yield* Path;
+  const dir = path.join(dossierDir, sub);
+  const names = (yield* listDir(dir)).filter((name) => name.endsWith(".json")).toSorted();
+  const records = yield* Effect.forEach(names, (name) => readRecord(path.join(dir, name), schema), {
+    concurrency: "unbounded",
+  });
+  return somes(records);
+});
+
+/** Walk one finding's directory into its record listing. */
+const readFinding = Effect.fn("readFinding")(function* readFinding(dir: string, id: string) {
+  const path = yield* Path;
+  const records = (yield* listDir(path.join(dir, id)))
+    .filter((name) => name.endsWith(".md"))
+    .toSorted();
+  return FindingEntry.make({ id, records });
+});
+
+const readFindings = Effect.fn("readFindings")(function* readFindings(dossierDir: string) {
+  const path = yield* Path;
+  const dir = path.join(dossierDir, "findings");
+  const ids = (yield* listDir(dir)).filter((name) => name.startsWith("fnd_")).toSorted();
+  return yield* Effect.forEach(ids, (id) => readFinding(dir, id), { concurrency: "unbounded" });
+});
+
+/** Walk one walkthrough's directory into its file listing. */
+const readWalkthrough = Effect.fn("readWalkthrough")(function* readWalkthrough(
+  dir: string,
+  kind: "code" | "product",
+  id: string,
+) {
+  const path = yield* Path;
+  const files = (yield* listDir(path.join(dir, id))).toSorted();
+  return WalkthroughEntry.make({ files, id, kind });
+});
+
+/** Walk one walkthrough kind (`code`/`product`) into its entries. */
+const readWalkthroughKind = Effect.fn("readWalkthroughKind")(function* readWalkthroughKind(
+  root: string,
+  kind: "code" | "product",
+) {
+  const path = yield* Path;
+  const dir = path.join(root, kind);
+  const ids = (yield* listDir(dir)).filter((name) => name.startsWith("wlk_")).toSorted();
+  return yield* Effect.forEach(ids, (id) => readWalkthrough(dir, kind, id), {
+    concurrency: "unbounded",
+  });
+});
+
+const readWalkthroughs = Effect.fn("readWalkthroughs")(function* readWalkthroughs(
   dossierDir: string,
-  sub: string,
-  schema: S,
-) =>
-  Effect.gen(function* () {
-    const path = yield* Path;
-    const dir = path.join(dossierDir, sub);
-    const names = (yield* listDir(dir))
-      .filter((name) => name.endsWith(".json"))
-      .sort();
-    const records = yield* Effect.forEach(
-      names,
-      (name) => readRecord(path.join(dir, name), schema),
-      { concurrency: "unbounded" },
-    );
-    return somes(records);
-  });
-
-const readFindings = (dossierDir: string) =>
-  Effect.gen(function* () {
-    const path = yield* Path;
-    const dir = path.join(dossierDir, "findings");
-    const ids = (yield* listDir(dir))
-      .filter((name) => name.startsWith("fnd_"))
-      .sort();
-    return yield* Effect.forEach(
-      ids,
-      (id) =>
-        Effect.gen(function* () {
-          const records = (yield* listDir(path.join(dir, id)))
-            .filter((name) => name.endsWith(".md"))
-            .sort();
-          return FindingEntry.make({ id, records });
-        }),
-      { concurrency: "unbounded" },
-    );
-  });
-
-const readWalkthroughs = (dossierDir: string) =>
-  Effect.gen(function* () {
-    const path = yield* Path;
-    const root = path.join(dossierDir, "walkthroughs");
-    const entries = yield* Effect.forEach(
-      ["code", "product"] as const,
-      (kind) =>
-        Effect.gen(function* () {
-          const dir = path.join(root, kind);
-          const ids = (yield* listDir(dir))
-            .filter((name) => name.startsWith("wlk_"))
-            .sort();
-          return yield* Effect.forEach(
-            ids,
-            (id) =>
-              Effect.gen(function* () {
-                const files = (yield* listDir(path.join(dir, id))).sort();
-                return WalkthroughEntry.make({ kind, id, files });
-              }),
-            { concurrency: "unbounded" },
-          );
-        }),
-      { concurrency: "unbounded" },
-    );
-    return entries.flat();
-  });
+) {
+  const path = yield* Path;
+  const root = path.join(dossierDir, "walkthroughs");
+  const entries = yield* Effect.forEach(
+    ["code", "product"] as const,
+    (kind) => readWalkthroughKind(root, kind),
+    { concurrency: "unbounded" },
+  );
+  return entries.flat();
+});
 
 /**
  * Resolve the Dossier for `branch` under `root` (auto-creating it on first use)
@@ -168,19 +175,14 @@ const readWalkthroughs = (dossierDir: string) =>
  * request, and the client re-fetches on every SSE change event.
  */
 export const readDossierSnapshot = Effect.fn("readDossierSnapshot")(
-  function* (params: { root: string; branch: string; base: string }) {
+  function* readDossierSnapshot(params: { root: string; branch: string; base: string }) {
     const path = yield* Path;
-    const dossierDir = path.join(
-      params.root,
-      STATE_ROOT,
-      "dossiers",
-      branchSlug(params.branch),
-    );
+    const dossierDir = path.join(params.root, STATE_ROOT, "dossiers", branchSlug(params.branch));
 
     const dossier = yield* ensureDossier({
-      dossierDir,
-      branch: params.branch,
       base: params.base,
+      branch: params.branch,
+      dossierDir,
     });
     const [changes, findings, walkthroughs, viewed] = yield* Effect.all(
       [
@@ -193,11 +195,11 @@ export const readDossierSnapshot = Effect.fn("readDossierSnapshot")(
     );
 
     return DossierSnapshot.make({
-      dossier,
       changes,
+      dossier,
       findings,
-      walkthroughs,
       viewed,
+      walkthroughs,
     });
   },
 );
@@ -207,24 +209,19 @@ export const readDossierSnapshot = Effect.fn("readDossierSnapshot")(
  * `.gitignore` (data-model.md §1: in-repo but gitignored). Idempotent and
  * best-effort — a missing or unwritable `.gitignore` is not fatal.
  */
-export const ensureGitignore = Effect.fn("ensureGitignore")(function* (
+export const ensureGitignore = Effect.fn("ensureGitignore")(function* ensureGitignore(
   root: string,
 ) {
   const fs = yield* FileSystem;
   const path = yield* Path;
   const file = path.join(root, ".gitignore");
 
-  const current = yield* fs
-    .readFileString(file)
-    .pipe(Effect.orElseSucceed(() => ""));
-  const ignored = current
-    .split("\n")
-    .some((line) => line.trim().replace(/\/$/, "") === STATE_ROOT);
+  const current = yield* fs.readFileString(file).pipe(Effect.orElseSucceed(() => ""));
+  const ignored = current.split("\n").some((line) => line.trim().replace(/\/$/, "") === STATE_ROOT);
   if (ignored) {
     return;
   }
 
-  const prefix =
-    current === "" || current.endsWith("\n") ? current : `${current}\n`;
+  const prefix = current === "" || current.endsWith("\n") ? current : `${current}\n`;
   yield* fs.writeFileString(file, `${prefix}${GITIGNORE_ENTRY}\n`);
 });
