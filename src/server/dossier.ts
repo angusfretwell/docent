@@ -19,6 +19,7 @@ import {
   ViewedEvent,
   WalkthroughEntry,
 } from "../shared/dossier.ts";
+import { FindingRecord } from "../shared/finding.ts";
 
 const STATE_ROOT = ".docent";
 const GITIGNORE_ENTRY = `${STATE_ROOT}/`;
@@ -116,13 +117,46 @@ const readJsonRecords = Effect.fn("readJsonRecords")(function* readJsonRecords<
   return somes(records);
 });
 
-/** Walk one finding's directory into its record listing. */
+// A record filename is `NNN-<type>.md`; the suffix is the record type (the
+// frontmatter carries no type field — data-model.md §5.1).
+const RECORD_NAME = /^\d+-(?<type>open|reply|resolve|reopen|edit)\.md$/;
+// Split a record into its YAML frontmatter envelope and markdown body. A file
+// without the `---` fences yields empty frontmatter, so it fails to decode and
+// is skipped — the best-effort walk (architecture.md §3).
+const FRONTMATTER = /^---\r?\n(?<frontmatter>[\s\S]*?)\r?\n?---\r?\n?(?<body>[\s\S]*)$/;
+
+/** Parse one `NNN-<type>.md` record; `None` on any read/parse/decode failure. */
+const readFindingRecord = Effect.fn("readFindingRecord")(function* readFindingRecord(
+  file: string,
+  name: string,
+) {
+  const fs = yield* FileSystem;
+  const text = yield* fs.readFileString(file);
+  const match = FRONTMATTER.exec(text);
+  const frontmatter = match?.groups?.frontmatter ?? "";
+  const body = (match?.groups?.body ?? "").trim();
+  const meta = yield* Effect.try(() => Bun.YAML.parse(frontmatter) ?? {});
+  const type = RECORD_NAME.exec(name)?.groups?.type;
+  return yield* Schema.decodeUnknownEffect(FindingRecord)({
+    ...(meta as object),
+    body,
+    name,
+    type,
+  });
+}, Effect.option);
+
+/** Walk one finding's directory, parsing each record and skipping malformed ones. */
 const readFinding = Effect.fn("readFinding")(function* readFinding(dir: string, id: string) {
   const path = yield* Path;
-  const records = (yield* listDir(path.join(dir, id)))
+  const names = (yield* listDir(path.join(dir, id)))
     .filter((name) => name.endsWith(".md"))
     .toSorted();
-  return FindingEntry.make({ id, records });
+  const parsed = yield* Effect.forEach(
+    names,
+    (name) => readFindingRecord(path.join(dir, id, name), name),
+    { concurrency: "unbounded" },
+  );
+  return FindingEntry.make({ id, records: somes(parsed) });
 });
 
 const readFindings = Effect.fn("readFindings")(function* readFindings(dossierDir: string) {
