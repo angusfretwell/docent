@@ -350,6 +350,22 @@ export const resolveBlobSize = Effect.fn("resolveBlobSize")(function* resolveBlo
   return Math.trunc(Number(size));
 });
 
+/**
+ * The blob object id of a file at a committed ref — `git rev-parse <ref>:<path>`.
+ * This is the content-addressed `blobSha` a Finding's code anchor freezes at
+ * birth (data-model.md §5.3): the exact file bytes on the anchored side, which
+ * `line`/`file` arms index into and drift is later computed against. The CLI's
+ * `finding add` resolves it so anchor construction has one home, matching the
+ * UI's write path. A path absent at that ref fails.
+ */
+export const resolveBlobShaAt = Effect.fn("resolveBlobShaAt")(function* resolveBlobShaAt(
+  root: string,
+  ref: string,
+  file: string,
+) {
+  return yield* git(root, ["rev-parse", `${ref}:${file}`]);
+});
+
 /** The untracked (`??`) paths of a `git status --porcelain -z -uall` dump. */
 function untrackedPaths(status: string): string[] {
   return status

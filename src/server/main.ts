@@ -9,10 +9,11 @@
  * opens the browser. Non-serve subcommands route through this same binary.
  */
 
-import { BunRuntime } from "@effect/platform-bun";
+import { BunRuntime, BunServices } from "@effect/platform-bun";
 import { Console, Effect, Schema } from "effect";
 import open from "open";
 import type { ClientAssets } from "../client/assets.ts";
+import { runFinding } from "./cli.ts";
 import { resolveChange } from "./git.ts";
 import { layer as serveLayer, serverUrl } from "./serve.ts";
 
@@ -56,25 +57,38 @@ function serve(assets: ClientAssets) {
   }).pipe(Effect.provide(serveLayer({ assets, cwd: process.cwd() })));
 }
 
+// Print the error message and exit non-zero — the shared failure tail for every
+// subcommand. All the binary's errors carry a human `.message`.
+function crash(error: unknown) {
+  return Effect.andThen(
+    Console.error(error instanceof Error ? error.message : String(error)),
+    Effect.sync(() => process.exit(1)),
+  );
+}
+
 /**
- * The process entry: dispatch the subcommand and run it. `serve` is the
- * default; every subcommand is served by this one binary.
+ * The process entry: dispatch the subcommand and run it. `serve` — the default
+ * when no subcommand is given — boots the server; `finding` is the non-serve
+ * CLI (list / add / reply / resolve). Every subcommand is served by this one
+ * binary (architecture.md §5).
  */
 export function runMain(assets: ClientAssets): void {
   const subcommand = process.argv[2] ?? "serve";
+
+  if (subcommand === "finding") {
+    BunRuntime.runMain(
+      runFinding(process.cwd(), process.argv.slice(3)).pipe(
+        Effect.provide(BunServices.layer),
+        Effect.catch(crash),
+      ),
+    );
+    return;
+  }
+
   if (subcommand !== "serve") {
-    console.error(`unknown subcommand: ${subcommand} (expected "serve")`);
+    console.error(`unknown subcommand: ${subcommand} (expected "serve" or "finding")`);
     process.exit(1);
   }
 
-  BunRuntime.runMain(
-    serve(assets).pipe(
-      Effect.catch((error) =>
-        Effect.andThen(
-          Console.error(error instanceof Error ? error.message : String(error)),
-          Effect.sync(() => process.exit(1)),
-        ),
-      ),
-    ),
-  );
+  BunRuntime.runMain(serve(assets).pipe(Effect.catch(crash)));
 }
