@@ -207,6 +207,46 @@ export const resolveGitDir = Effect.fn("resolveGitDir")(function* resolveGitDir(
   return yield* git(cwd, ["rev-parse", "--absolute-git-dir"]);
 });
 
+// A `.gitattributes` value counts a path as generated when the attribute is set
+// (bare `linguist-generated`) or explicitly true (`=true`) — not "unspecified",
+// "unset", or "false".
+function isGeneratedValue(value: string): boolean {
+  return value === "set" || value === "true";
+}
+
+/**
+ * The changed paths that `.gitattributes` marks `linguist-generated` or
+ * `linguist-vendored` (diff-review.md §5). `git check-attr` reads the same
+ * attribute stack Linguist does; the client folds these into its default glob
+ * set. Best-effort: any failure (or no changed paths) yields none, so a repo
+ * without attributes still renders.
+ */
+const resolveGeneratedPaths = Effect.fn("resolveGeneratedPaths")(function* resolveGeneratedPaths(
+  root: string,
+  baseSha: string,
+  headSha: string,
+) {
+  const names = yield* git(root, [DIFF, NO_COLOR, "--name-only", FIND_RENAMES, baseSha, headSha]);
+  const paths = names.split("\n").filter((line) => line !== "");
+  if (paths.length === 0) {
+    return [];
+  }
+  const attrs = ["linguist-generated", "linguist-vendored"];
+  const output = yield* git(root, ["check-attr", "-z", ...attrs, "--", ...paths]).pipe(
+    Effect.catchTag("GitCommandFailed", () => Effect.succeed("")),
+  );
+  // `check-attr -z` emits NUL-separated (path, attr, value) triples. Collect any
+  // path whose generated/vendored value is set — de-duplicated across attrs.
+  const records = output.split(NUL);
+  const generated = new Set<string>();
+  for (let i = 0; i + 2 < records.length; i += 3) {
+    if (isGeneratedValue(records[i + 2] ?? "")) {
+      generated.add(records[i] ?? "");
+    }
+  }
+  return [...generated];
+});
+
 /**
  * Resolve the checked-out branch's Change identity — its `(baseSha, headSha)`
  * against the default branch, plus the ref labels — without minting the
@@ -230,14 +270,21 @@ export const resolveChange = Effect.fn("resolveChange")(function* resolveChange(
   // tab keys mark-as-viewed on the head-blob SHA (diff-review.md §3); an
   // abbreviated id's length grows with the repo, so a full id is what stays
   // byte-comparable across Changes.
-  const patch =
+  const [patch, generated] =
     baseSha === headSha
-      ? ""
-      : yield* git(root, [DIFF, NO_COLOR, FULL_INDEX, FIND_RENAMES, baseSha, headSha]);
+      ? ["", []]
+      : yield* Effect.all(
+          [
+            git(root, [DIFF, NO_COLOR, FULL_INDEX, FIND_RENAMES, baseSha, headSha]),
+            resolveGeneratedPaths(root, baseSha, headSha),
+          ],
+          { concurrency: "unbounded" },
+        );
   return Change.make({
     baseSha,
     branch,
     defaultBranch: defaultBranch.name,
+    generated,
     headSha,
     patch,
     root,
@@ -283,6 +330,24 @@ export const resolveBlob = Effect.fn("resolveBlob")(function* resolveBlob(
   }
   const { root } = yield* resolveRepo(cwd);
   return yield* gitBytes(root, ["cat-file", "blob", sha]);
+});
+
+/**
+ * The byte size of a git blob by its object id — `git cat-file -s`, which reads
+ * only the object header, so it never streams a large binary. The Diff tab shows
+ * this as the size-delta row on binary files (diff-review.md §5) without
+ * fetching the blob. A malformed id short-circuits; an absent id fails.
+ */
+export const resolveBlobSize = Effect.fn("resolveBlobSize")(function* resolveBlobSize(
+  cwd: string,
+  sha: string,
+) {
+  if (!OBJECT_ID.test(sha)) {
+    return yield* Effect.fail(InvalidObjectId.make({ sha }));
+  }
+  const { root } = yield* resolveRepo(cwd);
+  const size = yield* git(root, ["cat-file", "-s", sha]);
+  return Math.trunc(Number(size));
 });
 
 /** The untracked (`??`) paths of a `git status --porcelain -z -uall` dump. */

@@ -134,13 +134,15 @@ export function buildDiffItems(params: {
   fileDiffFor: (id: string) => FileDiffMetadata | undefined;
   isExpanded: (id: string) => boolean;
   isViewed: (id: string) => boolean;
+  /** Collapse an edge-case body (binary/image/mode/submodule, unloaded large). */
+  isEdgeCollapsed: (id: string) => boolean;
 }): CodeViewItem<Annotation>[] {
   return params.entries.flatMap((entry) => {
     const fileDiff = params.fileDiffFor(entry.id);
     if (fileDiff === undefined) {
       return [];
     }
-    const collapsed = params.isViewed(entry.id);
+    const collapsed = params.isViewed(entry.id) || params.isEdgeCollapsed(entry.id);
     const annotations = itemAnnotations(params.findings, entry, fileDiff, params.composing);
     const version = hashString(itemKey(annotations, params.isExpanded(entry.id), collapsed));
     return [{ annotations, collapsed, fileDiff, id: entry.id, type: "diff" as const, version }];

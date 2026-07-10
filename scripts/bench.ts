@@ -36,6 +36,7 @@ const server = Bun.serve({
           baseSha: "0".repeat(40),
           branch: "bench-fixture",
           defaultBranch: "main",
+          generated: [],
           headSha: "1".repeat(40),
           patch,
           root: repoRoot,

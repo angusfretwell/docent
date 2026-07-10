@@ -44,6 +44,7 @@ function itemsFor(findings: readonly FoldedFinding[], entries = [entry()]) {
     entries,
     fileDiffFor,
     findings,
+    isEdgeCollapsed: () => false,
     isExpanded: () => false,
     isViewed: () => false,
   });

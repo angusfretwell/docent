@@ -115,3 +115,49 @@ describe("computeViewed", () => {
     expect(model.total).toBe(3);
   });
 });
+
+function isAuto(e: FileEntry): boolean {
+  return e.path.startsWith("gen/");
+}
+
+describe("computeViewed — auto-viewed files (generated, pure renames)", () => {
+  test("an auto-viewed file with no events defaults to viewed and counts", () => {
+    const model = computeViewed([], [entry("gen/lock", "aaa"), entry("src/a", "bbb")], isAuto);
+
+    expect(viewedStateFor(model, "gen/lock#0")).toEqual({
+      changedSinceViewed: false,
+      viewed: true,
+    });
+    expect(viewedStateFor(model, "src/a#0").viewed).toBe(false);
+    expect(model.viewed).toBe(1);
+  });
+
+  test("one event un-views an auto-viewed file (parity baseline flipped)", () => {
+    // The reviewer un-checked the auto-viewed file; a single appended event
+    // persists the un-view instead of re-asserting viewed.
+    const model = computeViewed([event("gen/lock", "aaa")], [entry("gen/lock", "aaa")], isAuto);
+
+    expect(viewedStateFor(model, "gen/lock#0").viewed).toBe(false);
+    expect(model.viewed).toBe(0);
+  });
+
+  test("two events on an auto-viewed file return it to viewed", () => {
+    const model = computeViewed(
+      [event("gen/lock", "aaa"), event("gen/lock", "aaa", "2026-07-10T01:00:00Z")],
+      [entry("gen/lock", "aaa")],
+      isAuto,
+    );
+
+    expect(viewedStateFor(model, "gen/lock#0").viewed).toBe(true);
+  });
+
+  test("an auto-viewed file whose head blob changed re-applies the default", () => {
+    // Auto-view re-applies at the new blob, so no changed-since-viewed flag.
+    const model = computeViewed([event("gen/lock", "aaa")], [entry("gen/lock", "ccc")], isAuto);
+
+    expect(viewedStateFor(model, "gen/lock#0")).toEqual({
+      changedSinceViewed: false,
+      viewed: true,
+    });
+  });
+});

@@ -30,6 +30,8 @@ export function useDiffFindings(params: {
   findings: readonly FindingEntry[];
   expanded: ReadonlyMap<string, FileDiffMetadata>;
   isViewed: (id: string) => boolean;
+  /** Collapse an edge-case body (binary/image/mode/submodule, unloaded large). */
+  isEdgeCollapsed: (id: string) => boolean;
   codeRef: React.RefObject<CodeViewHandle<Annotation> | null>;
   onWrite?: (write: FindingWrite) => Promise<void>;
 }) {
@@ -49,6 +51,7 @@ export function useDiffFindings(params: {
     entries: params.entries,
     fileDiffFor,
     findings: folded,
+    isEdgeCollapsed: params.isEdgeCollapsed,
     isExpanded: (id) => params.expanded.has(id),
     isViewed: params.isViewed,
   });

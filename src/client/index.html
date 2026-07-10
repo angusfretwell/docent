@@ -115,6 +115,56 @@
         cursor: default;
         opacity: 0.5;
       }
+      .edge-row {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.75rem;
+        opacity: 0.85;
+        white-space: nowrap;
+      }
+      .edge-chip {
+        border: 1px solid rgba(128, 128, 128, 0.4);
+        border-radius: 0.35rem;
+        padding: 0 0.35rem;
+        font-size: 0.68rem;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        opacity: 0.9;
+      }
+      .edge-mono {
+        font-family: ui-monospace, monospace;
+        font-size: 0.72rem;
+      }
+      .edge-image-compare {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        padding: 0.5rem 0;
+      }
+      .edge-image-cell {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        font-size: 0.7rem;
+        opacity: 0.85;
+      }
+      .edge-image {
+        max-width: 240px;
+        max-height: 200px;
+        border: 1px solid rgba(128, 128, 128, 0.35);
+        border-radius: 0.25rem;
+        background: repeating-conic-gradient(rgba(128, 128, 128, 0.15) 0% 25%, transparent 0% 50%)
+          50% / 16px 16px;
+        object-fit: contain;
+      }
+      .tree-generated {
+        color: rgba(128, 128, 128, 0.9);
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        margin-left: 0.3rem;
+      }
       .finding-annotation {
         border: 1px solid rgba(128, 128, 128, 0.3);
         border-radius: 0.4rem;

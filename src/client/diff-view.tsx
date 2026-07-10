@@ -15,6 +15,9 @@ import type { FindingEntry, ViewedEvent } from "../shared/dossier.ts";
 import type { FindingWrite } from "../shared/finding-write.ts";
 import { fetchExpandedFileDiff, isExpandable } from "./blobs.ts";
 import type { Annotation } from "./diff-annotations.ts";
+import { EdgeChrome } from "./edge-chrome.tsx";
+import { autoViewed, bodyReplaced, classifyFiles } from "./edge-cases.ts";
+import type { FileClass } from "./edge-cases.ts";
 import { FileTree } from "./file-tree.tsx";
 import type { RowState } from "./file-tree.tsx";
 import {
@@ -30,6 +33,7 @@ import {
 import type { FileEntry, FileOrder } from "./nav.ts";
 import { useDiffFindings } from "./use-diff-findings.tsx";
 import { computeViewed, viewedStateFor } from "./viewed.ts";
+import type { ViewedModel } from "./viewed.ts";
 
 const themes = { dark: "github-dark", light: "github-light" } as const;
 
@@ -40,6 +44,51 @@ const KEY_ACTIONS: Record<string, ["file" | "change", 1 | -1]> = {
   "[": ["file", -1],
   "]": ["file", 1],
 };
+
+/**
+ * Bind the `[ ] , .` file/change jump keys to the latest `jump`. The listener
+ * subscribes once; a ref keeps it pointed at the current closure so React
+ * Compiler's per-render identity doesn't churn the effect (and re-add the
+ * listener) every render. Typing in an input/textarea is left alone.
+ */
+/** Flip an id's membership in a `Set` state — the add/remove toggle both the
+ * directory-collapse and the large-file "Load diff" state share. */
+function toggleInSet(
+  setState: React.Dispatch<React.SetStateAction<ReadonlySet<string>>>,
+  id: string,
+) {
+  setState((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    return next;
+  });
+}
+
+function useJumpKeys(jump: (kind: "file" | "change", direction: 1 | -1) => void) {
+  const jumpRef = useRef(jump);
+  useEffect(() => {
+    jumpRef.current = jump;
+  });
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      const { target } = event;
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+        return;
+      }
+      const action = KEY_ACTIONS[event.key];
+      if (action) {
+        event.preventDefault();
+        jumpRef.current(action[0], action[1]);
+      }
+    }
+    globalThis.addEventListener("keydown", onKey);
+    return () => globalThis.removeEventListener("keydown", onKey);
+  }, []);
+}
 
 // One Shiki-tokenizing worker per hardware thread (capped). Tokenization must
 // stay off the main thread: the #4 re-benchmark measured worker-off scroll at
@@ -72,6 +121,23 @@ export interface DiffViewHandle {
   scrollToLine: (file: string, line: number) => void;
 }
 
+// A stable empty generated list, so the pre-snapshot render doesn't churn the
+// classification derivation.
+const NO_GENERATED: readonly string[] = [];
+
+// The no-edge-case default, so a file absent from the classification map (or a
+// lookup miss) reads as an ordinary diff.
+const NORMAL_CLASS: FileClass = {
+  binary: false,
+  generated: false,
+  image: false,
+  large: false,
+  modeOnly: false,
+  renameModify: false,
+  renamePure: false,
+  submodule: false,
+};
+
 /**
  * The sticky file-header metadata (diff-review.md §3): the "changed since
  * viewed" flag, the context-expansion affordance for a both-sided partial file,
@@ -80,29 +146,44 @@ export interface DiffViewHandle {
 function HeaderMetadata({
   item,
   row,
+  file,
   busy,
+  largeLoaded,
   isFileExpandable,
   onComment,
   onToggleViewed,
+  onToggleLarge,
   onExpandContext,
 }: {
   item: CodeViewDiffItem<Annotation>;
   row: RowState | undefined;
+  file: FileClass;
   busy: boolean;
+  largeLoaded: boolean;
   isFileExpandable: (fileDiff: FileDiffMetadata) => boolean;
   onComment?: (item: CodeViewDiffItem<Annotation>) => void;
   onToggleViewed: (id: string) => void;
+  onToggleLarge: (id: string) => void;
   onExpandContext: (id: string, fileDiff: FileDiffMetadata) => void;
 }) {
+  // Binary/image/mode/submodule bodies are replaced by the edge chrome, so
+  // their patch-only "context" is meaningless — never offer to expand it.
+  const canExpand = !bodyReplaced(file) && isFileExpandable(item.fileDiff);
   return (
     <span style={{ alignItems: "center", display: "inline-flex", gap: "0.6rem" }}>
+      <EdgeChrome
+        file={file}
+        item={item.fileDiff}
+        largeLoaded={largeLoaded}
+        onToggleLarge={() => onToggleLarge(item.id)}
+      />
       {row?.changed ? <span className="viewed-changed">changed since viewed</span> : null}
       {onComment ? (
         <button className="expand-context" onClick={() => onComment(item)} type="button">
           Comment
         </button>
       ) : null}
-      {isFileExpandable(item.fileDiff) ? (
+      {canExpand ? (
         <button
           className="expand-context"
           disabled={busy}
@@ -144,13 +225,16 @@ async function postViewed(entry: FileEntry): Promise<void> {
  */
 function DiffScroll({
   codeRef,
+  classFor,
   expanding,
   isFileExpandable,
   items,
+  largeLoaded,
   onComment,
   onExpandContext,
   onScroll,
   onSelectedLinesChange,
+  onToggleLarge,
   onToggleViewed,
   renderAnnotation,
   rowStates,
@@ -158,9 +242,11 @@ function DiffScroll({
   split,
 }: {
   codeRef: React.RefObject<CodeViewHandle<Annotation> | null>;
+  classFor: (id: string) => FileClass;
   expanding: ReadonlySet<string>;
   isFileExpandable: (fileDiff: FileDiffMetadata) => boolean;
   items: CodeViewItem<Annotation>[];
+  largeLoaded: ReadonlySet<string>;
   onComment?: (item: CodeViewDiffItem<Annotation>) => void;
   onExpandContext: (id: string, fileDiff: FileDiffMetadata) => void;
   onScroll: (
@@ -168,11 +254,12 @@ function DiffScroll({
     viewer: NonNullable<ReturnType<CodeViewHandle<Annotation>["getInstance"]>>,
   ) => void;
   onSelectedLinesChange: (selection: CodeViewLineSelection | null) => void;
+  onToggleLarge: (id: string) => void;
   onToggleViewed: (id: string) => void;
   renderAnnotation: (
     annotation: DiffLineAnnotation<Annotation> | LineAnnotation<Annotation>,
   ) => React.ReactNode;
-  rowStates: Map<string, { viewed: boolean; changed: boolean }>;
+  rowStates: Map<string, RowState>;
   selectionEnabled: boolean;
   split: "unified" | "split";
 }) {
@@ -201,10 +288,13 @@ function DiffScroll({
             item.type === "diff" ? (
               <HeaderMetadata
                 busy={expanding.has(item.id)}
+                file={classFor(item.id)}
                 isFileExpandable={isFileExpandable}
                 item={item}
+                largeLoaded={largeLoaded.has(item.id)}
                 onComment={onComment}
                 onExpandContext={onExpandContext}
+                onToggleLarge={onToggleLarge}
                 onToggleViewed={onToggleViewed}
                 row={rowStates.get(item.id)}
               />
@@ -217,6 +307,33 @@ function DiffScroll({
         />
       </WorkerPoolContextProvider>
     </div>
+  );
+}
+
+/**
+ * Per-row viewed read-out for the tree, spanning every file (rows for hidden
+ * files are simply never rendered). `changed` shows only while unviewed;
+ * `generated` de-emphasizes the row (diff-review.md §5).
+ */
+function buildRowStates(
+  entries: readonly FileEntry[],
+  model: ViewedModel,
+  isViewed: (id: string) => boolean,
+  classFor: (id: string) => FileClass,
+): Map<string, RowState> {
+  return new Map(
+    entries.map((entry) => {
+      const state = viewedStateFor(model, entry.id);
+      const viewedNow = isViewed(entry.id);
+      return [
+        entry.id,
+        {
+          changed: state.changedSinceViewed && !viewedNow,
+          generated: classFor(entry.id).generated,
+          viewed: viewedNow,
+        },
+      ];
+    }),
   );
 }
 
@@ -239,6 +356,7 @@ export function DiffView({
   patch,
   viewed,
   findings,
+  generated = NO_GENERATED,
   onWrite,
   ref,
   expandFile = fetchExpandedFileDiff,
@@ -247,6 +365,8 @@ export function DiffView({
   patch: string;
   viewed: readonly ViewedEvent[];
   findings: readonly FindingEntry[];
+  /** Server-side `.gitattributes` generated paths, unioned with the glob set. */
+  generated?: readonly string[];
   /** Absent on the read-only Pending preview, which disables authoring. */
   onWrite?: (write: FindingWrite) => Promise<void>;
   ref?: React.Ref<DiffViewHandle>;
@@ -254,6 +374,9 @@ export function DiffView({
   isFileExpandable?: (fileDiff: FileDiffMetadata) => boolean;
 }) {
   const [filter, setFilter] = useState("");
+  // Ids of oversized/minified files the reviewer clicked "Load diff" on, so the
+  // collapsed body reveals — local, transient state (no persistence needed).
+  const [largeLoaded, setLargeLoaded] = useState<ReadonlySet<string>>(new Set());
   const [unviewedOnly, setUnviewedOnly] = useState(false);
   const [findingsOnly, setFindingsOnly] = useState(false);
   const [order, setOrder] = usePersisted<FileOrder>("docent:fileOrder", "path", (raw) =>
@@ -290,7 +413,14 @@ export function DiffView({
   // these derivations, so no manual useMemo is needed.
   const allEntries = sortEntries(parseFiles(patch), order);
   const entryById = new Map(allEntries.map((entry) => [entry.id, entry]));
-  const model = computeViewed(viewed, allEntries);
+  // Per-file edge-case classification (diff-review.md §5), keyed by item id.
+  const classes = classifyFiles(patch, generated);
+  function classFor(id: string): FileClass {
+    return classes.get(id) ?? NORMAL_CLASS;
+  }
+  // Generated and pure-rename files auto-mark-viewed: the fold starts them from
+  // a viewed baseline, still counted in progress but un-viewable.
+  const model = computeViewed(viewed, allEntries, (entry) => autoViewed(classFor(entry.id)));
   // Anchored files, from the finding fold — the has-findings quick filter.
   const findingPaths = new Set(sift(findings.map((finding) => finding.anchorFile)));
 
@@ -317,30 +447,37 @@ export function DiffView({
   const entries = flattenFiles(tree);
   const anchors = changeAnchors(entries);
 
-  // Per-row viewed state for the tree, spanning every file (rows for hidden
-  // files are simply never rendered). `changed` shows only while unviewed.
-  const rowStates = new Map<string, { viewed: boolean; changed: boolean }>(
-    allEntries.map((entry) => {
-      const state = viewedStateFor(model, entry.id);
-      const viewedNow = isViewed(entry.id);
-      return [entry.id, { changed: state.changedSinceViewed && !viewedNow, viewed: viewedNow }];
-    }),
-  );
+  const rowStates = buildRowStates(allEntries, model, isViewed, classFor);
   const viewedCount = allEntries.reduce((total, entry) => total + (isViewed(entry.id) ? 1 : 0), 0);
 
+  // A file's body collapses when it is an edge case whose body is replaced by
+  // header chrome (binary/image/mode/submodule) or an oversized/minified file
+  // not yet loaded via "Load diff" (diff-review.md §5). Folded into the item's
+  // collapse alongside viewed state below.
+  function isEdgeCollapsed(id: string): boolean {
+    const cls = classFor(id);
+    return bodyReplaced(cls) || (cls.large && !largeLoaded.has(id));
+  }
+
   // The diff's Finding layer: the annotated item list, the inline thread/composer
-  // renderer, and the compose lifecycle. A viewed file collapses its body and an
-  // expanded file gains context; the item `version` folds those with the
-  // annotations so CodeView re-renders on any of them.
+  // renderer, and the compose lifecycle. A viewed or edge-collapsed file collapses
+  // its body and an expanded file gains context; the item `version` folds those
+  // with the annotations so CodeView re-renders on any of them.
   const { canAuthor, compose, items, renderAnnotation } = useDiffFindings({
     codeRef,
     entries,
     expanded,
     findings,
+    isEdgeCollapsed,
     isViewed,
     onWrite,
     patch,
   });
+
+  // Reveal or re-collapse an oversized/minified file's body (diff-review.md §5).
+  function toggleLarge(id: string) {
+    toggleInSet(setLargeLoaded, id);
+  }
 
   function toggleViewed(id: string) {
     const entry = entryById.get(id);
@@ -455,39 +592,10 @@ export function DiffView({
   }
 
   function toggleDir(path: string) {
-    setCollapsed((prev) => {
-      const next = new Set(prev);
-      if (next.has(path)) {
-        next.delete(path);
-      } else {
-        next.add(path);
-      }
-      return next;
-    });
+    toggleInSet(setCollapsed, path);
   }
 
-  // The keydown listener subscribes once; a ref keeps it pointed at the latest
-  // jump so it sees current state without React Compiler's per-render identity
-  // churning the effect (and re-adding the listener) every render.
-  const jumpRef = useRef(jump);
-  useEffect(() => {
-    jumpRef.current = jump;
-  });
-  useEffect(() => {
-    function onKey(event: KeyboardEvent) {
-      const { target } = event;
-      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
-        return;
-      }
-      const action = KEY_ACTIONS[event.key];
-      if (action) {
-        event.preventDefault();
-        jumpRef.current(action[0], action[1]);
-      }
-    }
-    globalThis.addEventListener("keydown", onKey);
-    return () => globalThis.removeEventListener("keydown", onKey);
-  }, []);
+  useJumpKeys(jump);
 
   return (
     <div style={{ display: "flex", height: "100%" }}>
@@ -513,14 +621,17 @@ export function DiffView({
         unviewedOnly={unviewedOnly}
       />
       <DiffScroll
+        classFor={classFor}
         codeRef={codeRef}
         expanding={expanding}
         isFileExpandable={isFileExpandable}
         items={items}
+        largeLoaded={largeLoaded}
         onComment={canAuthor ? (item) => compose.commentOnFile(item.id, item.fileDiff) : undefined}
         onExpandContext={expandContext}
         onScroll={handleScroll}
         onSelectedLinesChange={(selection) => compose.selectLines(selection)}
+        onToggleLarge={toggleLarge}
         onToggleViewed={toggleViewed}
         renderAnnotation={renderAnnotation}
         rowStates={rowStates}

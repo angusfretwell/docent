@@ -20,9 +20,34 @@ export function worktreeUrl(path: string): string {
   return `/api/worktree?path=${encodeURIComponent(path)}`;
 }
 
+/** The content-addressed byte-size endpoint for a git blob (binary size deltas). */
+export function blobSizeUrl(sha: string): string {
+  return `/api/blob/${sha}/size`;
+}
+
 /** Whether an object id names real content — a null id (all zeros) has no blob. */
-function isRealObjectId(id: string | undefined): id is string {
+export function isRealObjectId(id: string | undefined): id is string {
   return id !== undefined && !/^0+$/.test(id);
+}
+
+/**
+ * Fetch a git blob's byte size from `/api/blob/:sha/size`, which reads only the
+ * object header (never the bytes). Used by the binary size-delta chrome
+ * (diff-review.md §5). A null/absent id resolves to 0 — a missing side of an
+ * add/delete contributes nothing to the delta.
+ */
+export async function fetchBlobSize(sha: string | undefined): Promise<number> {
+  if (!isRealObjectId(sha)) {
+    return 0;
+  }
+  const url = blobSizeUrl(sha);
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`GET ${url} failed: HTTP ${res.status}`);
+  }
+  const body = (await res.json()) as { size?: unknown };
+  const { size } = body;
+  return typeof size === "number" ? size : 0;
 }
 
 /**
