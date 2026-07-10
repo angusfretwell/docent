@@ -71,19 +71,21 @@ function HeaderMetadata({
   item,
   row,
   busy,
+  isFileExpandable,
   onToggleViewed,
   onExpandContext,
 }: {
   item: CodeViewDiffItem;
   row: RowState | undefined;
   busy: boolean;
+  isFileExpandable: (fileDiff: FileDiffMetadata) => boolean;
   onToggleViewed: (id: string) => void;
   onExpandContext: (id: string, fileDiff: FileDiffMetadata) => void;
 }) {
   return (
     <span style={{ alignItems: "center", display: "inline-flex", gap: "0.6rem" }}>
       {row?.changed ? <span className="viewed-changed">changed since viewed</span> : null}
-      {isExpandable(item.fileDiff) ? (
+      {isFileExpandable(item.fileDiff) ? (
         <button
           className="expand-context"
           disabled={busy}
@@ -126,6 +128,7 @@ async function postViewed(entry: FileEntry): Promise<void> {
 function DiffScroll({
   codeRef,
   expanding,
+  isFileExpandable,
   items,
   onExpandContext,
   onScroll,
@@ -135,6 +138,7 @@ function DiffScroll({
 }: {
   codeRef: React.RefObject<CodeViewHandle<undefined> | null>;
   expanding: ReadonlySet<string>;
+  isFileExpandable: (fileDiff: FileDiffMetadata) => boolean;
   items: CodeViewItem[];
   onExpandContext: (id: string, fileDiff: FileDiffMetadata) => void;
   onScroll: (
@@ -163,6 +167,7 @@ function DiffScroll({
             item.type === "diff" ? (
               <HeaderMetadata
                 busy={expanding.has(item.id)}
+                isFileExpandable={isFileExpandable}
                 item={item}
                 onExpandContext={onExpandContext}
                 onToggleViewed={onToggleViewed}
@@ -173,7 +178,7 @@ function DiffScroll({
           // CodeView must be its own scroll container: its virtualizer reads
           // this element's scrollTop, not an ancestor's. An outer scrolling
           // wrapper breaks both scrolling and virtualization.
-          style={{ height: "100vh", overflow: "auto" }}
+          style={{ height: "100%", overflow: "auto" }}
         />
       </WorkerPoolContextProvider>
     </div>
@@ -190,17 +195,25 @@ function DiffScroll({
  * viewed state, which collapses the file body, checks the tree row, and drives
  * the progress read-model. Toggling posts an event and optimistically overlays
  * the fold until the SSE snapshot catches up.
+ *
+ * Context expansion is pluggable so the same surface renders both a committed
+ * Change (both sides from `/api/blob/:sha`) and the Pending working-tree preview
+ * (head side from `/api/worktree`). Defaults are the committed-Change fetchers.
  */
 export function DiffView({
   patch,
   viewed,
   findings,
   ref,
+  expandFile = fetchExpandedFileDiff,
+  isFileExpandable = isExpandable,
 }: {
   patch: string;
   viewed: readonly ViewedEvent[];
   findings: readonly FindingEntry[];
   ref?: React.Ref<DiffViewHandle>;
+  expandFile?: (fileDiff: FileDiffMetadata) => Promise<FileDiffMetadata>;
+  isFileExpandable?: (fileDiff: FileDiffMetadata) => boolean;
 }) {
   const [filter, setFilter] = useState("");
   const [unviewedOnly, setUnviewedOnly] = useState(false);
@@ -391,7 +404,7 @@ export function DiffView({
   // hunk/whole-file expansion. Fetching is per-file and on demand, never eager.
   function expandContext(id: string, fileDiff: FileDiffMetadata) {
     setExpanding((prev) => new Set(prev).add(id));
-    void fetchExpandedFileDiff(fileDiff)
+    void expandFile(fileDiff)
       .then((full) => {
         setExpanded((prev) => new Map(prev).set(id, full));
       })
@@ -443,7 +456,7 @@ export function DiffView({
   }, []);
 
   return (
-    <div style={{ display: "flex", height: "100vh" }}>
+    <div style={{ display: "flex", height: "100%" }}>
       <FileTree
         activeId={activeId}
         collapsed={collapsed}
@@ -468,6 +481,7 @@ export function DiffView({
       <DiffScroll
         codeRef={codeRef}
         expanding={expanding}
+        isFileExpandable={isFileExpandable}
         items={items}
         onExpandContext={expandContext}
         onScroll={handleScroll}

@@ -266,7 +266,7 @@ export function FileTree({
         display: "flex",
         flexDirection: "column",
         fontSize: "0.85rem",
-        height: "100vh",
+        height: "100%",
         width: "22rem",
       }}
     >

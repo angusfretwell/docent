@@ -22,8 +22,15 @@ import {
 import { lookupAsset } from "../client/assets.ts";
 import type { ClientAssets } from "../client/assets.ts";
 import { ViewedRequest } from "../shared/dossier.ts";
+import type { PendingRange } from "../shared/pending.ts";
 import { appendViewedEvent, readDossierSnapshot } from "./dossier.ts";
-import { resolveBlob, resolveChange, resolveRepo } from "./git.ts";
+import {
+  resolveBlob,
+  resolveChange,
+  resolvePending,
+  resolveRepo,
+  resolveWorktreeFile,
+} from "./git.ts";
 import { DocentWatch, layer as watchLayer } from "./watch.ts";
 
 export interface ServeOptions {
@@ -51,6 +58,9 @@ function diffRoute(cwd: string) {
     ),
   );
 }
+
+// Base for parsing a request's relative URL; only the path/query is read from it.
+const REQUEST_URL_BASE = "http://localhost";
 
 // A git object id is immutable, so its bytes never change: cache for a year and
 // mark immutable so the browser never revalidates a blob it already has.
@@ -86,6 +96,59 @@ function blobRoute(cwd: string) {
   );
 }
 
+// The working tree is mutable with no stable SHA to cache against, so its live
+// bytes must never be cached (diff-review.md §6, architecture.md §2).
+const WORKTREE_CACHE_CONTROL = "no-store";
+
+/**
+ * `GET /api/pending?range=incremental|cumulative` — the read-only preview of
+ * the dirty working tree that backs the Diff tab's Pending entry
+ * (diff-review.md §6). Resolved live from git per request (uncached; the client
+ * re-fetches on every SSE change). An unknown/absent `range` defaults to the
+ * primary `incremental` view. A git failure 500s with the message.
+ */
+function pendingRoute(cwd: string) {
+  return HttpRouter.add("GET", "/api/pending", (request) =>
+    Effect.gen(function* servePending() {
+      const { searchParams } = new URL(request.url, REQUEST_URL_BASE);
+      const range: PendingRange =
+        searchParams.get("range") === "cumulative" ? "cumulative" : "incremental";
+      const pending = yield* resolvePending(cwd, range);
+      return yield* HttpServerResponse.json(pending);
+    }).pipe(
+      Effect.catch((error) =>
+        Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 500 })),
+      ),
+    ),
+  );
+}
+
+/**
+ * `GET /api/worktree?path=…` — the live bytes of a working-tree file, read off
+ * disk on every request and explicitly uncached. This is the Pending diff's
+ * head side, which has no committed SHA to address (diff-review.md §6). A path
+ * that escapes the repo root 400s; a path that does not exist 404s.
+ */
+function worktreeRoute(cwd: string) {
+  return HttpRouter.add("GET", "/api/worktree", (request) =>
+    Effect.gen(function* serveWorktree() {
+      const { searchParams } = new URL(request.url, REQUEST_URL_BASE);
+      const bytes = yield* resolveWorktreeFile(cwd, searchParams.get("path") ?? "");
+      return HttpServerResponse.uint8Array(bytes, {
+        contentType: "application/octet-stream",
+        headers: { "cache-control": WORKTREE_CACHE_CONTROL },
+      });
+    }).pipe(
+      Effect.catchTag("InvalidWorktreePath", (error) =>
+        Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 400 })),
+      ),
+      Effect.catch((error) =>
+        Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 404 })),
+      ),
+    ),
+  );
+}
+
 /**
  * Serve the built UI from the in-memory asset map. A `*` wildcard falls in
  * behind the explicit `/api/*` routes, so it only sees UI requests. Unmapped
@@ -95,7 +158,7 @@ function blobRoute(cwd: string) {
 function assetRoute(assets: ClientAssets) {
   return HttpRouter.add("GET", "*", (request) =>
     Effect.gen(function* serveAsset() {
-      const { pathname } = new URL(request.url, "http://localhost");
+      const { pathname } = new URL(request.url, REQUEST_URL_BASE);
       const asset = lookupAsset(assets, pathname);
       if (asset === undefined) {
         return HttpServerResponse.empty({ status: 404 });
@@ -206,6 +269,8 @@ export function layer(options: ServeOptions) {
   const routes = Layer.mergeAll(
     diffRoute(options.cwd),
     blobRoute(options.cwd),
+    pendingRoute(options.cwd),
+    worktreeRoute(options.cwd),
     dossierRoute(options.cwd),
     viewedRoute(options.cwd),
     eventsRoute,
