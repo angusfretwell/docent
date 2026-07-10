@@ -3,7 +3,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { BunServices } from "@effect/platform-bun";
 import { ManagedRuntime } from "effect";
-import { branchSlug, ensureGitignore, readDossierSnapshot } from "./dossier.ts";
+import { ViewedRequest } from "../shared/dossier.ts";
+import { appendViewedEvent, branchSlug, ensureGitignore, readDossierSnapshot } from "./dossier.ts";
 import { cleanupScratchDirs, scratchDir } from "./test-fixtures.ts";
 
 const runtime = ManagedRuntime.make(BunServices.layer);
@@ -121,6 +122,50 @@ describe("readDossierSnapshot", () => {
     expect(snap.findings).toEqual([
       { id: "fnd_01J9GQ4W7X", records: ["001-open.md", "002-reply.md"] },
     ]);
+  });
+});
+
+describe("appendViewedEvent", () => {
+  function mark(root: string, branch: string, filePath: string, blobSha: string) {
+    return runtime.runPromise(
+      appendViewedEvent({
+        base: "main",
+        branch,
+        request: ViewedRequest.make({ blobSha, path: filePath }),
+        root,
+      }),
+    );
+  }
+
+  test("writes a {path, blobSha, ts} event that the snapshot reads back", async () => {
+    const root = scratchDir("docent-dossier-");
+
+    const event = await mark(root, "feature", "src/app.ts", "9c2a1f0");
+
+    expect(event.path).toBe("src/app.ts");
+    expect(event.blobSha).toBe("9c2a1f0");
+    expect(event.ts).not.toBe("");
+    const snap = await snapshot(root, "feature");
+    expect(snap.viewed).toEqual([{ blobSha: "9c2a1f0", path: "src/app.ts", ts: event.ts }]);
+  });
+
+  test("is append-only: a re-mark adds a second event (parity toggle)", async () => {
+    const root = scratchDir("docent-dossier-");
+
+    await mark(root, "feature", "src/app.ts", "9c2a1f0");
+    await mark(root, "feature", "src/app.ts", "9c2a1f0");
+
+    const snap = await snapshot(root, "feature");
+    const forFile = snap.viewed.filter((v) => v.path === "src/app.ts");
+    expect(forFile).toHaveLength(2);
+  });
+
+  test("auto-creates the Dossier so the first mark has a home", async () => {
+    const root = scratchDir("docent-dossier-");
+
+    await mark(root, "fresh", "a.ts", "aaa");
+
+    expect(existsSync(path.join(root, ".docent", "dossiers", "fresh", "dossier.json"))).toBe(true);
   });
 });
 

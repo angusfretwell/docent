@@ -19,6 +19,7 @@ import {
   ViewedEvent,
   WalkthroughEntry,
 } from "../shared/dossier.ts";
+import type { ViewedRequest } from "../shared/dossier.ts";
 
 const STATE_ROOT = ".docent";
 const GITIGNORE_ENTRY = `${STATE_ROOT}/`;
@@ -30,8 +31,12 @@ export function branchSlug(branch: string): string {
 
 const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
-/** A ULID-shaped opaque id: 10 time chars + 16 random chars, Crockford base32. */
-const makeDossierId = Effect.fn("makeDossierId")(function* makeDossierId() {
+/**
+ * A ULID-shaped opaque id under `prefix`: `<prefix>_` + 10 time chars + 16
+ * random chars, Crockford base32. The time head keeps ids lexically sortable by
+ * mint order — which is also the append-only `viewed/` file order.
+ */
+const makeId = Effect.fn("makeId")(function* makeId(prefix: string) {
   const now = yield* Clock.currentTimeMillis;
   let time = now;
   let head = "";
@@ -45,7 +50,7 @@ const makeDossierId = Effect.fn("makeDossierId")(function* makeDossierId() {
   for (const byte of bytes) {
     tail += CROCKFORD.charAt(byte % 32);
   }
-  return `dsr_${head}${tail}`;
+  return `${prefix}_${head}${tail}`;
 });
 
 /** Decode a JSON file against a schema; `None` on any read/parse/decode failure. */
@@ -91,7 +96,7 @@ const ensureDossier = Effect.fn("ensureDossier")(function* ensureDossier(params:
     return existing.value;
   }
 
-  const id = yield* makeDossierId();
+  const id = yield* makeId("dsr");
   const dossier = Dossier.make({
     base: params.base,
     branch: params.branch,
@@ -201,6 +206,44 @@ export const readDossierSnapshot = Effect.fn("readDossierSnapshot")(
       viewed,
       walkthroughs,
     });
+  },
+);
+
+/**
+ * Append one mark-as-viewed event to the Dossier's `viewed/` directory
+ * (data-model.md §8). Directory-of-files, append-only: every toggle is a new
+ * `vew_*.json`, never a rewrite — so there is no lock and no read-modify-write.
+ * The server stamps `ts`; the Dossier auto-creates on first use so the very
+ * first mark has a home. The write trips the `.docent/` watch, which re-pushes
+ * the snapshot over SSE — the client's viewed state and progress refresh live.
+ */
+export const appendViewedEvent = Effect.fn("appendViewedEvent")(
+  function* appendViewedEvent(params: {
+    root: string;
+    branch: string;
+    base: string;
+    request: ViewedRequest;
+  }) {
+    const fs = yield* FileSystem;
+    const path = yield* Path;
+    const dossierDir = path.join(params.root, STATE_ROOT, "dossiers", branchSlug(params.branch));
+    yield* ensureDossier({ base: params.base, branch: params.branch, dossierDir });
+
+    const viewedDir = path.join(dossierDir, "viewed");
+    yield* fs.makeDirectory(viewedDir, { recursive: true });
+
+    const now = yield* Clock.currentTimeMillis;
+    const event = ViewedEvent.make({
+      blobSha: params.request.blobSha,
+      path: params.request.path,
+      ts: new Date(now).toISOString(),
+    });
+    const id = yield* makeId("vew");
+    yield* fs.writeFileString(
+      path.join(viewedDir, `${id}.json`),
+      `${JSON.stringify(event, null, 2)}\n`,
+    );
+    return event;
   },
 );
 

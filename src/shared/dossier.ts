@@ -43,6 +43,16 @@ export class ViewedEvent extends Schema.Class<ViewedEvent>("ViewedEvent")({
 }) {}
 
 /**
+ * The `POST /api/viewed` request body: the file the reviewer toggled and its
+ * head-blob SHA. The server stamps `ts` and appends the `{path, blobSha, ts}`
+ * event — the client never authors the timestamp.
+ */
+export class ViewedRequest extends Schema.Class<ViewedRequest>("ViewedRequest")({
+  blobSha: Schema.String,
+  path: Schema.String,
+}) {}
+
+/**
  * A Finding as walked in this slice: its record-dir id plus the sorted names of
  * its append-only record files. Folding the records into anchor/what's-next/
  * drift is owned by the Findings panel (a later slice); the snapshot only needs
