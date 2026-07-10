@@ -185,6 +185,27 @@ describe("server layer", () => {
     expect(res.status).toBe(400);
   });
 
+  test("GET /api/blob/:sha/size returns the blob byte size as JSON, cached forever", async () => {
+    const repo = featureRepo();
+    const { url } = await serve(repo);
+    const sha = git(repo, "rev-parse", "HEAD:feature.txt");
+
+    const res = await fetch(new URL(`/api/blob/${sha}/size`, url));
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ size: "new file\n".length });
+    expect(res.headers.get("cache-control")).toMatch(/immutable/);
+  });
+
+  test("GET /api/blob/:sha/size 400s a malformed object id", async () => {
+    const repo = featureRepo();
+    const { url } = await serve(repo);
+
+    const res = await fetch(new URL("/api/blob/not-a-sha/size", url));
+
+    expect(res.status).toBe(400);
+  });
+
   test("GET /api/pending returns the dirty working-tree preview as JSON", async () => {
     const repo = featureRepo();
     const { url } = await serve(repo);

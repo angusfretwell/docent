@@ -16,6 +16,13 @@ export class Change extends Schema.Class<Change>("Change")({
   branch: Schema.String,
   /** Name of the repo's default branch (e.g. "main"). */
   defaultBranch: Schema.String,
+  /**
+   * Changed paths that `.gitattributes` marks `linguist-generated` or
+   * `linguist-vendored` — the server half of generated-file detection
+   * (diff-review.md §5). The client unions this with its default glob set to
+   * de-emphasize and auto-mark-viewed generated files.
+   */
+  generated: Schema.Array(Schema.String),
   headSha: Schema.String,
   /** `git diff baseSha..headSha`; empty when head is the default branch. */
   patch: Schema.String,

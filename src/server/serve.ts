@@ -26,6 +26,7 @@ import type { PendingRange } from "../shared/pending.ts";
 import { appendViewedEvent, readDossierSnapshot } from "./dossier.ts";
 import {
   resolveBlob,
+  resolveBlobSize,
   resolveChange,
   resolvePending,
   resolveRepo,
@@ -85,6 +86,35 @@ function blobRoute(cwd: string) {
         contentType: "application/octet-stream",
         headers: { "cache-control": BLOB_CACHE_CONTROL },
       });
+    }).pipe(
+      Effect.catchTag("InvalidObjectId", (error) =>
+        Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 400 })),
+      ),
+      Effect.catch((error) =>
+        Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 404 })),
+      ),
+    ),
+  );
+}
+
+/**
+ * `GET /api/blob/:sha/size` — the byte size of a git blob, read from its object
+ * header via `git cat-file -s` (never streaming the bytes). The Diff tab shows
+ * this as the size-delta row on binary files (diff-review.md §5). Content-
+ * addressed, so cached forever like the blob itself. A malformed id 400s; an
+ * absent id 404s.
+ */
+function blobSizeRoute(cwd: string) {
+  return HttpRouter.add(
+    "GET",
+    "/api/blob/:sha/size",
+    Effect.gen(function* serveBlobSize() {
+      const params = yield* HttpRouter.params;
+      const size = yield* resolveBlobSize(cwd, params.sha ?? "");
+      return yield* HttpServerResponse.json(
+        { size },
+        { headers: { "cache-control": BLOB_CACHE_CONTROL } },
+      );
     }).pipe(
       Effect.catchTag("InvalidObjectId", (error) =>
         Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 400 })),
@@ -268,6 +298,7 @@ const eventsRoute = HttpRouter.add(
 export function layer(options: ServeOptions) {
   const routes = Layer.mergeAll(
     diffRoute(options.cwd),
+    blobSizeRoute(options.cwd),
     blobRoute(options.cwd),
     pendingRoute(options.cwd),
     worktreeRoute(options.cwd),

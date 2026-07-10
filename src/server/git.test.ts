@@ -3,7 +3,13 @@ import { mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { BunServices } from "@effect/platform-bun";
 import { ManagedRuntime } from "effect";
-import { resolveBlob, resolveChange, resolvePending, resolveWorktreeFile } from "./git.ts";
+import {
+  resolveBlob,
+  resolveBlobSize,
+  resolveChange,
+  resolvePending,
+  resolveWorktreeFile,
+} from "./git.ts";
 import { cleanupScratchDirs, git, scratchDir, scratchRepo } from "./test-fixtures.ts";
 
 const runtime = ManagedRuntime.make(BunServices.layer);
@@ -126,6 +132,39 @@ describe("resolveChange", () => {
     const dir = scratchDir("docent-git-test-");
 
     await expect(resolve(dir)).rejects.toThrow(/not a git repository/i);
+  });
+
+  test("reports .gitattributes linguist-generated / -vendored changed paths as generated", async () => {
+    const repo = repoWithOneCommit();
+    writeFileSync(
+      path.join(repo, ".gitattributes"),
+      "api.gen.ts linguist-generated=true\nvendor/** linguist-vendored\n",
+    );
+    git(repo, "add", ".");
+    git(repo, "commit", "-m", "attributes");
+    git(repo, "checkout", "-b", "feature");
+    writeFileSync(path.join(repo, "api.gen.ts"), "export const x = 1;\n");
+    mkdirSync(path.join(repo, "vendor"), { recursive: true });
+    writeFileSync(path.join(repo, "vendor", "lib.js"), "module.exports = {};\n");
+    writeFileSync(path.join(repo, "src.ts"), "export const y = 2;\n");
+    git(repo, "add", ".");
+    git(repo, "commit", "-m", "generated + real work");
+
+    const change = await resolve(repo);
+
+    expect([...change.generated].toSorted()).toEqual(["api.gen.ts", "vendor/lib.js"]);
+  });
+
+  test("generated is empty when the working tree has no attributes", async () => {
+    const repo = repoWithOneCommit();
+    git(repo, "checkout", "-b", "feature");
+    writeFileSync(path.join(repo, "plain.ts"), "x\n");
+    git(repo, "add", ".");
+    git(repo, "commit", "-m", "plain");
+
+    const change = await resolve(repo);
+
+    expect(change.generated).toEqual([]);
   });
 });
 
@@ -305,5 +344,28 @@ describe("resolveBlob", () => {
     const repo = repoWithOneCommit();
 
     await expect(blob(repo, "../../etc/passwd")).rejects.toThrow(/object id/i);
+  });
+});
+
+describe("resolveBlobSize", () => {
+  function size(cwd: string, sha: string) {
+    return runtime.runPromise(resolveBlobSize(cwd, sha));
+  }
+
+  test("returns the byte size of a blob without streaming its content", async () => {
+    const repo = repoWithOneCommit();
+    const raw = new Uint8Array([0x00, 0xff, 0x0a, 0x42, 0x0a, 0x01]);
+    writeFileSync(path.join(repo, "blob.bin"), raw);
+    git(repo, "add", ".");
+    git(repo, "commit", "-m", "add binary");
+    const sha = git(repo, "rev-parse", "HEAD:blob.bin");
+
+    expect(await size(repo, sha)).toBe(raw.length);
+  });
+
+  test("rejects a malformed object id before running git", async () => {
+    const repo = repoWithOneCommit();
+
+    await expect(size(repo, "../../etc/passwd")).rejects.toThrow(/object id/i);
   });
 });
