@@ -454,8 +454,8 @@ export const resolveFinding = Effect.fn("resolveFinding")(function* resolveFindi
 // ── argv dispatch ────────────────────────────────────────────────────────────
 
 function requireFinding(args: ParsedArgs): string {
-  const findingId = one(args, "finding");
-  if (findingId === undefined) {
+  const findingId = one(args, "finding")?.trim();
+  if (findingId === undefined || findingId === "") {
     throw new CliUsageError({ reason: "--finding <id> is required" });
   }
   return findingId;

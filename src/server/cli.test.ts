@@ -16,6 +16,7 @@ import {
   parseListArgs,
   replyFinding,
   resolveFinding,
+  runFinding,
 } from "./cli.ts";
 import { cleanupScratchDirs, git, scratchRepo } from "./test-fixtures.ts";
 
@@ -295,5 +296,17 @@ describe("write + fetch round-trip (shared write path)", () => {
     );
 
     expect(opts).toEqual({ agent: "a", display: "Agent A", model: "m" });
+  });
+
+  test("reply with a missing or empty --finding is a usage error (never a stray write)", async () => {
+    const repo = featureRepo();
+
+    const missing = await runtime.runPromiseExit(runFinding(repo, ["reply", "--body", "x"]));
+    const empty = await runtime.runPromiseExit(
+      runFinding(repo, ["reply", "--finding", "", "--body", "x"]),
+    );
+
+    expect(missing._tag).toBe("Failure");
+    expect(empty._tag).toBe("Failure");
   });
 });
