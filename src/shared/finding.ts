@@ -11,6 +11,7 @@
  */
 
 import { Schema } from "effect";
+import { unique } from "radashi";
 
 /** Attribution carried by every record (data-model.md §5.4). */
 export class Author extends Schema.Class<Author>("Author")({
@@ -90,8 +91,9 @@ export type Anchor = typeof Anchor.Type;
 export const Disposition = Schema.Literals(["actioned", "declined", "question"]);
 export type Disposition = typeof Disposition.Type;
 
-/** Record type, derived from the `NNN-<type>.md` filename (data-model.md §5.1). */
-export const RecordType = Schema.Literals(["open", "reply", "resolve", "reopen", "edit"]);
+/** The record types, derived from the `NNN-<type>.md` filename (data-model.md §5.1). */
+export const RECORD_TYPES = ["open", "reply", "resolve", "reopen", "edit"] as const;
+export const RecordType = Schema.Literals(RECORD_TYPES);
 export type RecordType = typeof RecordType.Type;
 
 /**
@@ -110,6 +112,8 @@ export class FindingRecord extends Schema.Class<FindingRecord>("FindingRecord")(
   edits: Schema.optional(Schema.String),
   /** The record's filename, e.g. `002-reply.md` — orders the log and is the edit target. */
   name: Schema.String,
+  /** The envelope discriminant; a record without it fails to decode and is skipped. */
+  schema: Schema.Literal("docent/finding@3"),
   type: RecordType,
 }) {}
 
@@ -190,21 +194,21 @@ export function foldFinding(id: string, records: readonly FindingRecord[]): Fold
     }
   }
 
+  // Open/resolved folds from resolve/reopen — and re-commenting reopens: a reply
+  // appended after a resolve returns the Finding to open (data-model.md §7).
   let resolved = false;
   for (const record of ordered) {
     if (record.type === "resolve") {
       resolved = true;
-    } else if (record.type === "reopen") {
+    } else if (record.type === "reopen" || record.type === "reply") {
       resolved = false;
     }
   }
 
-  const participants: Author[] = [];
-  for (const record of ordered) {
-    if (!participants.some((participant) => participant.id === record.author.id)) {
-      participants.push(record.author);
-    }
-  }
+  const participants = unique(
+    ordered.map((record) => record.author),
+    (author) => author.id,
+  );
 
   const latest = ordered.findLast((record) => record.type !== "edit");
   let whatsNext: WhatsNext = "needs-action";

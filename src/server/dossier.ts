@@ -19,7 +19,7 @@ import {
   ViewedEvent,
   WalkthroughEntry,
 } from "../shared/dossier.ts";
-import { FindingRecord } from "../shared/finding.ts";
+import { FindingRecord, RECORD_TYPES } from "../shared/finding.ts";
 
 const STATE_ROOT = ".docent";
 const GITIGNORE_ENTRY = `${STATE_ROOT}/`;
@@ -118,8 +118,9 @@ const readJsonRecords = Effect.fn("readJsonRecords")(function* readJsonRecords<
 });
 
 // A record filename is `NNN-<type>.md`; the suffix is the record type (the
-// frontmatter carries no type field — data-model.md §5.1).
-const RECORD_NAME = /^\d+-(?<type>open|reply|resolve|reopen|edit)\.md$/;
+// frontmatter carries no type field — data-model.md §5.1). The type vocabulary
+// is owned by the schema, so the pattern is derived from it, never re-spelled.
+const RECORD_NAME = new RegExp(`^\\d+-(?<type>${RECORD_TYPES.join("|")})\\.md$`);
 // Split a record into its YAML frontmatter envelope and markdown body. A file
 // without the `---` fences yields empty frontmatter, so it fails to decode and
 // is skipped — the best-effort walk (architecture.md §3).

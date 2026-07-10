@@ -11,6 +11,7 @@ function record(fields: Partial<FindingRecord> & { name: string; type: FindingRe
     body: "",
     changeId: "chg_001",
     createdAt: "2026-07-10T02:14:00Z",
+    schema: "docent/finding@3",
     ...fields,
   } as FindingRecord;
 }
@@ -67,30 +68,29 @@ describe("foldFinding", () => {
     ]);
   });
 
-  test("a reply's disposition drives what's-next", () => {
-    const base = [record({ anchor: lineAnchor, name: "001-open.md", type: "open" })];
+  test.each([
+    ["actioned", "needs-verify"],
+    ["question", "needs-answer"],
+    ["declined", "needs-decision"],
+    [undefined, "needs-action"],
+  ] as const)("a reply with disposition %s folds to what's-next %s", (disposition, expected) => {
+    const folded = foldFinding("fnd_1", [
+      record({ anchor: lineAnchor, name: "001-open.md", type: "open" }),
+      record({ disposition, name: "002-reply.md", type: "reply" }),
+    ]);
 
-    expect(
-      foldFinding("f", [
-        ...base,
-        record({ disposition: "actioned", name: "002-reply.md", type: "reply" }),
-      ]).whatsNext,
-    ).toBe("needs-verify");
-    expect(
-      foldFinding("f", [
-        ...base,
-        record({ disposition: "question", name: "002-reply.md", type: "reply" }),
-      ]).whatsNext,
-    ).toBe("needs-answer");
-    expect(
-      foldFinding("f", [
-        ...base,
-        record({ disposition: "declined", name: "002-reply.md", type: "reply" }),
-      ]).whatsNext,
-    ).toBe("needs-decision");
-    expect(
-      foldFinding("f", [...base, record({ name: "002-reply.md", type: "reply" })]).whatsNext,
-    ).toBe("needs-action");
+    expect(folded.whatsNext).toBe(expected);
+  });
+
+  test("re-commenting after a resolve reopens the finding at needs-action", () => {
+    const folded = foldFinding("fnd_1", [
+      record({ anchor: lineAnchor, name: "001-open.md", type: "open" }),
+      record({ body: "done", name: "002-resolve.md", type: "resolve" }),
+      record({ body: "actually, one more thing", name: "003-reply.md", type: "reply" }),
+    ]);
+
+    expect(folded.resolved).toBe(false);
+    expect(folded.whatsNext).toBe("needs-action");
   });
 
   test("a resolve record closes the finding", () => {
