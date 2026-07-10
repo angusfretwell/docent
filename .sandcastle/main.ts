@@ -30,9 +30,7 @@ import { z } from "zod";
 // Schema validator works just as well — Valibot, ArkType, etc. See
 // https://standardschema.dev.
 const planSchema = z.object({
-  issues: z.array(
-    z.object({ branch: z.string(), id: z.string(), title: z.string() }),
-  ),
+  issues: z.array(z.object({ branch: z.string(), id: z.string(), title: z.string() })),
 });
 
 // ---------------------------------------------------------------------------
@@ -52,7 +50,7 @@ const hooks = {
 // Copy node_modules from the host into the worktree before each sandbox
 // starts. Avoids a full npm install from scratch; the hook above handles
 // platform-specific binaries and any packages added since the last copy.
-const copyToWorktree = ["node_modules"];
+const copyToWorktree = ["node_modules", ".repos"];
 
 // ---------------------------------------------------------------------------
 // Main loop
@@ -94,9 +92,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration += 1) {
     break;
   }
 
-  console.log(
-    `Planning complete. ${issues.length} issue(s) to work in parallel:`,
-  );
+  console.log(`Planning complete. ${issues.length} issue(s) to work in parallel:`);
   for (const issue of issues) {
     console.log(`  ${issue.id}: ${issue.title} → ${issue.branch}`);
   }
@@ -164,9 +160,7 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration += 1) {
   // Log any agents that threw (network error, sandbox crash, etc.).
   for (const [i, outcome] of settled.entries()) {
     if (outcome.status === "rejected") {
-      console.error(
-        `  ✗ ${issues[i].id} (${issues[i].branch}) failed: ${outcome.reason}`,
-      );
+      console.error(`  ✗ ${issues[i].id} (${issues[i].branch}) failed: ${outcome.reason}`);
     }
   }
 
@@ -175,17 +169,13 @@ for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration += 1) {
   const completedIssues = settled
     .map((outcome, i) => ({ issue: issues[i], outcome }))
     .filter(
-      (entry) =>
-        entry.outcome.status === "fulfilled" &&
-        entry.outcome.value.commits.length > 0,
+      (entry) => entry.outcome.status === "fulfilled" && entry.outcome.value.commits.length > 0,
     )
     .map((entry) => entry.issue);
 
   const completedBranches = completedIssues.map((i) => i.branch);
 
-  console.log(
-    `\nExecution complete. ${completedBranches.length} branch(es) with commits:`,
-  );
+  console.log(`\nExecution complete. ${completedBranches.length} branch(es) with commits:`);
   for (const branch of completedBranches) {
     console.log(`  ${branch}`);
   }

@@ -5,7 +5,7 @@ set -eu
 repo_dir=".repos/effect"
 repo_url="https://github.com/Effect-TS/effect-smol"
 
-if [ -d "$repo_dir/.git" ]; then
+if [ -d "$repo_dir" ]; then
   exit 0
 fi
 
