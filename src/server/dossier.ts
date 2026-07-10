@@ -122,19 +122,18 @@ const readJsonRecords = Effect.fn("readJsonRecords")(function* readJsonRecords<
 });
 
 const FRONTMATTER = /^---\n(?<body>[\s\S]*?)\n---/;
-const ANCHOR_KIND = /\bkind:\s*(?<kind>[\w-]+)/;
 const ANCHOR_FILE = /\bfile:\s*(?<file>[^,}\n]+)/;
 const SURROUNDING_QUOTES = /^["']|["']$/g;
 
 /**
- * Lift the `file` and `kind` of a Finding root record's anchor, best-effort.
- * The anchor is an inline flow map in the frontmatter (data-model.md §5.3), e.g.
+ * Lift the anchored `file` of a Finding root record, best-effort. The anchor is
+ * an inline flow map in the frontmatter (data-model.md §5.3), e.g.
  * `anchor: { kind: line, file: src/app.ts, side: head, ... }`. Only the `line`/
  * `file` code arms carry a `file`; every other arm (or an unparseable record)
  * yields no `anchorFile`. This is deliberately a lightweight extractor, not a
  * YAML parse — the full record fold belongs to the Findings panel.
  */
-export function parseAnchor(markdown: string): { anchorKind?: string; anchorFile?: string } {
+export function parseAnchor(markdown: string): { anchorFile?: string } {
   const body = FRONTMATTER.exec(markdown)?.groups?.body;
   if (body === undefined) {
     return {};
@@ -148,13 +147,9 @@ export function parseAnchor(markdown: string): { anchorKind?: string; anchorFile
   const close = rest.indexOf("}");
   const scope = close === -1 ? (rest.split("\n")[0] ?? rest) : rest.slice(0, close + 1);
 
-  const kind = ANCHOR_KIND.exec(scope)?.groups?.kind;
   const rawFile = ANCHOR_FILE.exec(scope)?.groups?.file?.trim();
   const file = rawFile?.replaceAll(SURROUNDING_QUOTES, "");
-  return {
-    ...(file ? { anchorFile: file } : {}),
-    ...(kind ? { anchorKind: kind } : {}),
-  };
+  return file ? { anchorFile: file } : {};
 }
 
 /** Read and parse a finding root record's anchor; empty on any read failure. */

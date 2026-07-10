@@ -172,6 +172,28 @@ function Row({
   );
 }
 
+/** A toggle button for one tree quick filter (unviewed-only, has-findings). */
+function QuickFilter({
+  label,
+  active,
+  onToggle,
+}: {
+  label: string;
+  active: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      aria-pressed={active}
+      className={active ? "quick-filter is-active" : "quick-filter"}
+      onClick={onToggle}
+      type="button"
+    >
+      {label}
+    </button>
+  );
+}
+
 /** The review-progress read-out: viewed / total files plus a thin bar. */
 function Progress({ viewed, total }: { viewed: number; total: number }) {
   const pct = total === 0 ? 0 : Math.round((viewed / total) * 100);
@@ -273,22 +295,16 @@ export function FileTree({
           value={filter}
         />
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem" }}>
-          <button
-            aria-pressed={unviewedOnly}
-            className={unviewedOnly ? "quick-filter is-active" : "quick-filter"}
-            onClick={() => onUnviewedOnlyChange(!unviewedOnly)}
-            type="button"
-          >
-            Unviewed
-          </button>
-          <button
-            aria-pressed={findingsOnly}
-            className={findingsOnly ? "quick-filter is-active" : "quick-filter"}
-            onClick={() => onFindingsOnlyChange(!findingsOnly)}
-            type="button"
-          >
-            Has findings
-          </button>
+          <QuickFilter
+            active={unviewedOnly}
+            label="Unviewed"
+            onToggle={() => onUnviewedOnlyChange(!unviewedOnly)}
+          />
+          <QuickFilter
+            active={findingsOnly}
+            label="Has findings"
+            onToggle={() => onFindingsOnlyChange(!findingsOnly)}
+          />
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem" }}>
           <button onClick={() => onOrderChange(order === "size" ? "path" : "size")} type="button">

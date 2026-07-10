@@ -150,21 +150,20 @@ body
 
     expect(snap.findings[0]).toMatchObject({
       anchorFile: "src/parser/stream.ts",
-      anchorKind: "line",
       id: "fnd_ANCHORED",
     });
   });
 });
 
 describe("parseAnchor", () => {
-  test("lifts file and kind from a line-arm anchor", () => {
+  test("lifts the file from a line-arm anchor", () => {
     const md = "---\nanchor: { kind: line, file: src/app.ts, side: head, lines: [1, 2] }\n---\n";
 
-    expect(parseAnchor(md)).toEqual({ anchorFile: "src/app.ts", anchorKind: "line" });
+    expect(parseAnchor(md)).toEqual({ anchorFile: "src/app.ts" });
   });
 
   test("a change-arm anchor has no file", () => {
-    expect(parseAnchor("---\nanchor: { kind: change }\n---\n")).toEqual({ anchorKind: "change" });
+    expect(parseAnchor("---\nanchor: { kind: change }\n---\n")).toEqual({});
   });
 
   test("no frontmatter or no anchor yields empty", () => {
@@ -175,7 +174,7 @@ describe("parseAnchor", () => {
   test("does not leak a file key from beyond the anchor object", () => {
     const md = "---\nanchor: { kind: change }\nother: { file: nope.ts }\n---\n";
 
-    expect(parseAnchor(md)).toEqual({ anchorKind: "change" });
+    expect(parseAnchor(md)).toEqual({});
   });
 });
 
@@ -210,7 +209,7 @@ describe("appendViewedEvent", () => {
     await mark(root, "feature", "src/app.ts", "9c2a1f0");
 
     const snap = await snapshot(root, "feature");
-    const forFile = snap.viewed.filter((v) => v.path === "src/app.ts");
+    const forFile = snap.viewed.filter((event) => event.path === "src/app.ts");
     expect(forFile).toHaveLength(2);
   });
 

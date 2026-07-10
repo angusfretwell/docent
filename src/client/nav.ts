@@ -21,8 +21,9 @@ export interface FileEntry {
   prevPath?: string;
   /**
    * Head-blob object id — the key mark-as-viewed asserts against ("I've seen
-   * this file's resulting content", diff-review.md §3). Empty for a deletion,
-   * which has no head blob; the file's own path still scopes its viewed state.
+   * this file's resulting content", diff-review.md §3). A deletion carries the
+   * null-SHA head id; a rare content-less change (mode-only) falls back to the
+   * base id, then to empty. The file's path scopes its viewed state either way.
    */
   blobSha: string;
   changeType: ChangeType;
@@ -82,7 +83,7 @@ function toEntry(file: FileDiffMetadata, index: number): FileEntry {
   }
   return {
     additions,
-    blobSha: file.newObjectId ?? "",
+    blobSha: file.newObjectId ?? file.prevObjectId ?? "",
     changeType: CHANGE_TYPE[file.type],
     deletions,
     hunkStarts,

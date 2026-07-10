@@ -79,11 +79,20 @@ describe("computeViewed", () => {
     expect(viewedStateFor(model, "a.ts#0").viewed).toBe(true);
   });
 
-  test("empty blob (deletion) is never counted viewed", () => {
-    const model = computeViewed([event("gone.ts", "")], [entry("gone.ts", "")]);
+  test("a deletion (null-SHA head) is viewable like any other file", () => {
+    const nullSha = "0000000000000000000000000000000000000000";
+    const model = computeViewed([event("gone.ts", nullSha)], [entry("gone.ts", nullSha)]);
 
-    expect(viewedStateFor(model, "gone.ts#0").viewed).toBe(false);
-    expect(model.viewed).toBe(0);
+    expect(viewedStateFor(model, "gone.ts#0").viewed).toBe(true);
+    expect(model.viewed).toBe(1);
+  });
+
+  test("a content-less file (empty key) is still toggleable, so progress can reach 100%", () => {
+    // A mode-only change carries no blob id; it must still count toward progress.
+    const model = computeViewed([event("mode.ts", "")], [entry("mode.ts", "")]);
+
+    expect(viewedStateFor(model, "mode.ts#0").viewed).toBe(true);
+    expect(model.viewed).toBe(1);
   });
 
   test("events for other files do not leak across paths", () => {

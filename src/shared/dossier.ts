@@ -54,17 +54,15 @@ export class ViewedRequest extends Schema.Class<ViewedRequest>("ViewedRequest")(
 
 /**
  * A Finding as walked in this slice: its record-dir id, the sorted names of its
- * append-only record files, and a light fold of the root record's anchor.
+ * append-only record files, and a light fold of the root record's anchored file.
  * Folding the full records into what's-next / drift is owned by the Findings
  * panel (a later slice); here we lift only the anchored file of the `line`/
  * `file` code arms so the Diff tab's has-findings tree filter can key on it
- * (diff-review.md §2). Best-effort: an unparseable anchor just omits the fields.
+ * (diff-review.md §2). Best-effort: an unparseable anchor just omits the field.
  */
 export class FindingEntry extends Schema.Class<FindingEntry>("FindingEntry")({
   /** The root anchor's file path — present only for `line`/`file` code arms. */
   anchorFile: Schema.optional(Schema.String),
-  /** The root anchor's `kind` (e.g. `line`, `file`, `change`), when parseable. */
-  anchorKind: Schema.optional(Schema.String),
   id: Schema.String,
   records: Schema.Array(Schema.String),
 }) {}

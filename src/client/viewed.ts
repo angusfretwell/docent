@@ -67,7 +67,7 @@ function isOdd(count: number | undefined): boolean {
 
 /** Fold one file's viewed state from its per-blob event counts. */
 function foldFile(counts: Map<string, number> | undefined, blobSha: string): ViewedState {
-  const viewed = blobSha !== "" && isOdd(counts?.get(blobSha));
+  const viewed = isOdd(counts?.get(blobSha));
   if (viewed || counts === undefined) {
     return { changedSinceViewed: false, viewed };
   }
