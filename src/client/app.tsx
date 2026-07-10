@@ -1,8 +1,10 @@
 import { Schema } from "effect";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Change, DiffError } from "../shared/change.ts";
 import { DossierSnapshot } from "../shared/dossier.ts";
+import type { DiffViewHandle } from "./diff-view.tsx";
 import { DiffView } from "./diff-view.tsx";
+import { FindingsPanel } from "./findings-panel.tsx";
 
 // Sync decode boundary: the fetch handler below owns the try/catch.
 const decodeChange = Schema.decodeUnknownSync(Change);
@@ -94,6 +96,7 @@ function Notice({ children }: { children: React.ReactNode }) {
 export function App() {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const dossier = useLiveDossier();
+  const diffRef = useRef<DiffViewHandle>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -154,7 +157,17 @@ export function App() {
   return (
     <>
       {live}
-      <DiffView patch={change.patch} />
+      <div style={{ display: "flex", height: "100vh" }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <DiffView patch={change.patch} ref={diffRef} />
+        </div>
+        {dossier ? (
+          <FindingsPanel
+            findings={dossier.findings}
+            onJump={(file, line) => diffRef.current?.scrollToLine(file, line)}
+          />
+        ) : null}
+      </div>
     </>
   );
 }

@@ -2,7 +2,7 @@ import type { CodeViewItem, FileDiffMetadata } from "@pierre/diffs";
 import { processPatch } from "@pierre/diffs";
 import type { CodeViewHandle } from "@pierre/diffs/react";
 import { CodeView, WorkerPoolContextProvider } from "@pierre/diffs/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useImperativeHandle, useRef, useState } from "react";
 import { fetchExpandedFileDiff, isExpandable } from "./blobs.ts";
 import { FileTree } from "./file-tree.tsx";
 import {
@@ -53,12 +53,17 @@ function usePersisted<T extends string>(
   return [value, set];
 }
 
+/** The imperative surface the Findings panel drives to jump into the diff. */
+export interface DiffViewHandle {
+  scrollToLine: (file: string, line: number) => void;
+}
+
 /**
  * The Diff tab: the compact-folder navigation tree beside the whole branch
  * diff rendered as one continuous virtualized cross-file scroll. The tree and
  * the scroll share a single ordered file model, so position stays in sync.
  */
-export function DiffView({ patch }: { patch: string }) {
+export function DiffView({ patch, ref }: { patch: string; ref?: React.Ref<DiffViewHandle> }) {
   const [filter, setFilter] = useState("");
   const [order, setOrder] = usePersisted<FileOrder>("docent:fileOrder", "path", (raw) =>
     raw === "size" || raw === "path" ? raw : undefined,
@@ -100,6 +105,21 @@ export function DiffView({ patch }: { patch: string }) {
     codeRef.current?.scrollTo({ behavior: "smooth", id, type: "item" });
     setActiveId(id);
   }
+
+  // Jump the scroll to a Finding's anchored file/line. The item id encodes the
+  // file's index in the patch (`name#index`), so a Finding anchor — which knows
+  // only the path — is resolved against the parsed patch here, where that index
+  // lives. A file the diff no longer contains (an outdated Finding) is a no-op.
+  function scrollToLine(file: string, line: number) {
+    const index = processPatch(patch).files.findIndex((fileDiff) => fileDiff.name === file);
+    if (index === -1) {
+      return;
+    }
+    const id = `${file}#${index}`;
+    codeRef.current?.scrollTo({ behavior: "smooth", id, lineNumber: line, type: "line" });
+    setActiveId(id);
+  }
+  useImperativeHandle(ref, () => ({ scrollToLine }));
 
   // Two-way sync: the scroll drives the active file. The active file is the
   // last item whose top has passed the viewport top.

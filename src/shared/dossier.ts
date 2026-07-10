@@ -11,6 +11,7 @@
  */
 
 import { Schema } from "effect";
+import { FindingRecord } from "./finding.ts";
 
 /** `docent/dossier@3` — the `dossier.json` identity record (data-model.md §3). */
 export class Dossier extends Schema.Class<Dossier>("Dossier")({
@@ -43,14 +44,15 @@ export class ViewedEvent extends Schema.Class<ViewedEvent>("ViewedEvent")({
 }) {}
 
 /**
- * A Finding as walked in this slice: its record-dir id plus the sorted names of
- * its append-only record files. Folding the records into anchor/what's-next/
- * drift is owned by the Findings panel (a later slice); the snapshot only needs
- * to reflect that the directory exists and changed.
+ * A Finding as walked in this slice: its record-dir id plus its append-only
+ * records, each parsed from a `NNN-<type>.md` file (frontmatter envelope over a
+ * markdown body). Records are carried whole — folding them into
+ * anchor/what's-next/participants is a pure client-side read (see
+ * `foldFinding`), so the panel and future agent surfaces share one derivation.
  */
 export class FindingEntry extends Schema.Class<FindingEntry>("FindingEntry")({
   id: Schema.String,
-  records: Schema.Array(Schema.String),
+  records: Schema.Array(FindingRecord),
 }) {}
 
 /** A Walkthrough as walked in this slice: pillar, id, and its file names. */
