@@ -17,6 +17,7 @@
     "@effect/platform-bun": "^4.0.0-beta.97",
     "effect": "^4.0.0-beta.97",
     "open": "^11.0.0",
+    "radashi": "^12.9.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {
