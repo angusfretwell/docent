@@ -3,7 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vite build",
+    "build:client": "vite build",
+    "build": "bun run build:client && bun scripts/embed-assets.ts",
+    "compile": "bun run build && bun build --compile --outfile dist/docent bin.ts",
     "serve": "bun run build && bun bin.ts",
     "typecheck": "tsc --noEmit",
     "check": "biome check",

@@ -1,7 +1,8 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ManagedRuntime, Schema } from "effect";
+import { assetsFromManifest, type ClientAssets } from "../client/assets.ts";
 import { Change, DiffError } from "../shared/change.ts";
 import { layer, serverUrl } from "./serve.ts";
 import {
@@ -33,23 +34,24 @@ function featureRepo(): string {
   return dir;
 }
 
-/** A stub built-client directory. */
-function scratchClientDir(): string {
+/** A stub built-client asset map backed by real files (what `Bun.file` reads). */
+function scratchClientAssets(): ClientAssets {
   const dir = scratchDir("docent-client-test-");
-  writeFileSync(
-    join(dir, "index.html"),
-    "<!doctype html><title>docent</title>",
-  );
-  mkdirSync(join(dir, "assets"));
-  writeFileSync(join(dir, "assets", "app.js"), "console.log('app');\n");
-  writeFileSync(join(dir, "..", "secret.txt"), "top secret\n");
-  return dir;
+  const indexPath = join(dir, "index.html");
+  const appPath = join(dir, "app.js");
+  writeFileSync(indexPath, "<!doctype html><title>docent</title>");
+  writeFileSync(appPath, "console.log('app');\n");
+  writeFileSync(join(dir, "secret.txt"), "top secret\n");
+  return assetsFromManifest([
+    { file: indexPath, path: "/index.html" },
+    { file: appPath, path: "/assets/app.js" },
+  ]);
 }
 
 /** Boot the server layer and return its base URL; torn down in afterAll. */
 async function serve(repo: string): Promise<{ url: string }> {
   const runtime = ManagedRuntime.make(
-    layer({ clientDir: scratchClientDir(), cwd: repo }),
+    layer({ assets: scratchClientAssets(), cwd: repo }),
   );
   disposers.push(() => runtime.dispose());
   const url = await runtime.runPromise(serverUrl);

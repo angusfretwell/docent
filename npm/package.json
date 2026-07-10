@@ -1,0 +1,22 @@
+{
+  "name": "docent",
+  "version": "0.0.0",
+  "description": "Local code-review app shell — downloads and runs the docent binary.",
+  "type": "module",
+  "bin": {
+    "docent": "shim.mjs"
+  },
+  "files": [
+    "shim.mjs",
+    "lib.mjs"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/angusfretwell/docent.git",
+    "directory": "npm"
+  },
+  "license": "MIT"
+}
