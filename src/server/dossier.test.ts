@@ -4,7 +4,13 @@ import path from "node:path";
 import { BunServices } from "@effect/platform-bun";
 import { ManagedRuntime } from "effect";
 import { ViewedRequest } from "../shared/dossier.ts";
-import { appendViewedEvent, branchSlug, ensureGitignore, readDossierSnapshot } from "./dossier.ts";
+import {
+  appendViewedEvent,
+  branchSlug,
+  ensureGitignore,
+  parseAnchor,
+  readDossierSnapshot,
+} from "./dossier.ts";
 import { cleanupScratchDirs, scratchDir } from "./test-fixtures.ts";
 
 const runtime = ManagedRuntime.make(BunServices.layer);
@@ -122,6 +128,54 @@ describe("readDossierSnapshot", () => {
     expect(snap.findings).toEqual([
       { id: "fnd_01J9GQ4W7X", records: ["001-open.md", "002-reply.md"] },
     ]);
+  });
+
+  test("folds the root record's anchored file for the has-findings filter", async () => {
+    const root = scratchDir("docent-dossier-");
+    await snapshot(root, "feature");
+    const fndDir = path.join(root, ".docent", "dossiers", "feature", "findings", "fnd_ANCHORED");
+    mkdirSync(fndDir, { recursive: true });
+    writeFileSync(
+      path.join(fndDir, "001-open.md"),
+      `---
+schema: docent/finding@3
+anchor: { kind: line, file: src/parser/stream.ts, side: head, blobSha: 9c2a1f0, lines: [42, 47] }
+---
+
+body
+`,
+    );
+
+    const snap = await snapshot(root, "feature");
+
+    expect(snap.findings[0]).toMatchObject({
+      anchorFile: "src/parser/stream.ts",
+      anchorKind: "line",
+      id: "fnd_ANCHORED",
+    });
+  });
+});
+
+describe("parseAnchor", () => {
+  test("lifts file and kind from a line-arm anchor", () => {
+    const md = "---\nanchor: { kind: line, file: src/app.ts, side: head, lines: [1, 2] }\n---\n";
+
+    expect(parseAnchor(md)).toEqual({ anchorFile: "src/app.ts", anchorKind: "line" });
+  });
+
+  test("a change-arm anchor has no file", () => {
+    expect(parseAnchor("---\nanchor: { kind: change }\n---\n")).toEqual({ anchorKind: "change" });
+  });
+
+  test("no frontmatter or no anchor yields empty", () => {
+    expect(parseAnchor("just a body")).toEqual({});
+    expect(parseAnchor("---\nschema: docent/finding@3\n---\nbody")).toEqual({});
+  });
+
+  test("does not leak a file key from beyond the anchor object", () => {
+    const md = "---\nanchor: { kind: change }\nother: { file: nope.ts }\n---\n";
+
+    expect(parseAnchor(md)).toEqual({ anchorKind: "change" });
   });
 });
 

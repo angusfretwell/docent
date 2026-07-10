@@ -121,13 +121,59 @@ const readJsonRecords = Effect.fn("readJsonRecords")(function* readJsonRecords<
   return somes(records);
 });
 
-/** Walk one finding's directory into its record listing. */
+const FRONTMATTER = /^---\n(?<body>[\s\S]*?)\n---/;
+const ANCHOR_KIND = /\bkind:\s*(?<kind>[\w-]+)/;
+const ANCHOR_FILE = /\bfile:\s*(?<file>[^,}\n]+)/;
+const SURROUNDING_QUOTES = /^["']|["']$/g;
+
+/**
+ * Lift the `file` and `kind` of a Finding root record's anchor, best-effort.
+ * The anchor is an inline flow map in the frontmatter (data-model.md §5.3), e.g.
+ * `anchor: { kind: line, file: src/app.ts, side: head, ... }`. Only the `line`/
+ * `file` code arms carry a `file`; every other arm (or an unparseable record)
+ * yields no `anchorFile`. This is deliberately a lightweight extractor, not a
+ * YAML parse — the full record fold belongs to the Findings panel.
+ */
+export function parseAnchor(markdown: string): { anchorKind?: string; anchorFile?: string } {
+  const body = FRONTMATTER.exec(markdown)?.groups?.body;
+  if (body === undefined) {
+    return {};
+  }
+  const start = body.indexOf("anchor:");
+  if (start === -1) {
+    return {};
+  }
+  // Bound the scan to the anchor's own flow map so a later key can't leak in.
+  const rest = body.slice(start);
+  const close = rest.indexOf("}");
+  const scope = close === -1 ? (rest.split("\n")[0] ?? rest) : rest.slice(0, close + 1);
+
+  const kind = ANCHOR_KIND.exec(scope)?.groups?.kind;
+  const rawFile = ANCHOR_FILE.exec(scope)?.groups?.file?.trim();
+  const file = rawFile?.replaceAll(SURROUNDING_QUOTES, "");
+  return {
+    ...(file ? { anchorFile: file } : {}),
+    ...(kind ? { anchorKind: kind } : {}),
+  };
+}
+
+/** Read and parse a finding root record's anchor; empty on any read failure. */
+const readAnchor = Effect.fn("readAnchor")(function* readAnchor(file: string) {
+  const fs = yield* FileSystem;
+  const text = yield* fs.readFileString(file).pipe(Effect.orElseSucceed(() => ""));
+  return parseAnchor(text);
+});
+
+/** Walk one finding's directory into its record listing plus its anchor fold. */
 const readFinding = Effect.fn("readFinding")(function* readFinding(dir: string, id: string) {
   const path = yield* Path;
   const records = (yield* listDir(path.join(dir, id)))
     .filter((name) => name.endsWith(".md"))
     .toSorted();
-  return FindingEntry.make({ id, records });
+  // The root record carries the anchor: the `*-open.md`, else the first record.
+  const root = records.find((name) => name.endsWith("-open.md")) ?? records[0];
+  const anchor = root === undefined ? {} : yield* readAnchor(path.join(dir, id, root));
+  return FindingEntry.make({ id, records, ...anchor });
 });
 
 const readFindings = Effect.fn("readFindings")(function* readFindings(dossierDir: string) {
