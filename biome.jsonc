@@ -3,5 +3,8 @@
   "extends": ["ultracite/biome/core", "ultracite/biome/vitest"],
   "files": {
     "includes": ["!prototypes", "!.sandcastle"]
+  },
+  "javascript": {
+    "globals": ["Bun"]
   }
 }

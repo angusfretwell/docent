@@ -1,13 +1,13 @@
 {
   "compilerOptions": {
     // Environment setup & latest features
-    "lib": ["ESNext"],
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "target": "ESNext",
     "module": "Preserve",
     "moduleDetection": "force",
     "jsx": "react-jsx",
     "allowJs": true,
-    "types": ["bun"],
+    "types": ["bun", "vite/client"],
 
     // Bundler mode
     "moduleResolution": "bundler",
@@ -25,10 +25,13 @@
     // Some stricter flags (disabled by default)
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noPropertyAccessFromIndexSignature": false
+    "noPropertyAccessFromIndexSignature": false,
+
+    "plugins": [{ "name": "@effect/language-service" }]
   },
 
   // Prototypes are throwaway code (see .agents/skills/prototype/SKILL.md) and
-  // are excluded from the repo typecheck.
+  // are excluded from the repo typecheck. The browser client typechecks under
+  // its own config (src/client/tsconfig.json) with DOM libs.
   "exclude": ["prototypes"]
 }

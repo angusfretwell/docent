@@ -3,6 +3,8 @@ bun = "1.3.14"
 
 [tasks]
 ci = "bun ci"
+serve = "bun serve"
+build = "bun build"
 test = "bun test"
 typecheck = "bun typecheck"
 check = "bun check"
