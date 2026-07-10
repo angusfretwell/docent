@@ -1,8 +1,9 @@
-import type { CodeViewItem } from "@pierre/diffs";
+import type { CodeViewItem, FileDiffMetadata } from "@pierre/diffs";
 import { processPatch } from "@pierre/diffs";
 import type { CodeViewHandle } from "@pierre/diffs/react";
 import { CodeView, WorkerPoolContextProvider } from "@pierre/diffs/react";
 import { useEffect, useRef, useState } from "react";
+import { fetchExpandedFileDiff, isExpandable } from "./blobs.ts";
 import { FileTree } from "./file-tree.tsx";
 import {
   buildTree,
@@ -69,6 +70,12 @@ export function DiffView({ patch }: { patch: string }) {
   );
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [activeId, setActiveId] = useState<string | undefined>();
+  // Files whose full base/head blobs have been lazily fetched, keyed by item
+  // id. A present entry is a non-partial diff that the renderer can expand;
+  // `expanding` holds ids with a fetch in flight so the affordance can't
+  // double-fire.
+  const [expanded, setExpanded] = useState<ReadonlyMap<string, FileDiffMetadata>>(new Map());
+  const [expanding, setExpanding] = useState<ReadonlySet<string>>(new Set());
 
   const codeRef = useRef<CodeViewHandle<undefined>>(null);
 
@@ -82,8 +89,10 @@ export function DiffView({ patch }: { patch: string }) {
   const anchors = changeAnchors(entries);
 
   const byName = new Map(processPatch(patch).files.map((f, i) => [`${f.name}#${i}`, f]));
+  // The lazily-fetched full diff wins over the patch-only one, so an expanded
+  // file renders with context available.
   const items: CodeViewItem[] = entries.flatMap((entry) => {
-    const fileDiff = byName.get(entry.id);
+    const fileDiff = expanded.get(entry.id) ?? byName.get(entry.id);
     return fileDiff ? [{ fileDiff, id: entry.id, type: "diff" as const }] : [];
   });
 
@@ -140,6 +149,46 @@ export function DiffView({ patch }: { patch: string }) {
       type: "line",
     });
     setActiveId(anchor.fileId);
+  }
+
+  // Lazy context expansion: a patch-only file is `isPartial`, so the renderer
+  // hides its own hunk-expansion controls. The reviewer clicks "Expand
+  // context", we fetch that file's full base/head blobs from `/api/blob/:sha`,
+  // and swap in the non-partial diff — only then does the renderer expose
+  // hunk/whole-file expansion. Fetching is per-file and on demand, never eager.
+  function expandContext(id: string, fileDiff: FileDiffMetadata) {
+    setExpanding((prev) => new Set(prev).add(id));
+    void fetchExpandedFileDiff(fileDiff)
+      .then((full) => {
+        setExpanded((prev) => new Map(prev).set(id, full));
+      })
+      .catch(() => {
+        // Best-effort: leave the file partial on a failed blob fetch.
+      })
+      .finally(() => {
+        setExpanding((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      });
+  }
+
+  function renderExpandContext(item: CodeViewItem) {
+    if (item.type !== "diff" || !isExpandable(item.fileDiff)) {
+      return null;
+    }
+    const busy = expanding.has(item.id);
+    return (
+      <button
+        className="expand-context"
+        disabled={busy}
+        onClick={() => expandContext(item.id, item.fileDiff)}
+        type="button"
+      >
+        {busy ? "Expanding…" : "Expand context"}
+      </button>
+    );
   }
 
   function toggleDir(path: string) {
@@ -206,6 +255,7 @@ export function DiffView({ patch }: { patch: string }) {
             onScroll={handleScroll}
             options={{ diffStyle: split, stickyHeaders: true, theme: themes }}
             ref={codeRef}
+            renderHeaderMetadata={renderExpandContext}
             // CodeView must be its own scroll container: its virtualizer reads
             // this element's scrollTop, not an ancestor's. An outer scrolling
             // wrapper breaks both scrolling and virtualization.

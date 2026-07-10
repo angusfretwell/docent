@@ -10,6 +10,10 @@ import { Change } from "../shared/change.ts";
 
 const TRAILING_NEWLINE = /\n$/;
 
+// A git object id: 4–64 lowercase/uppercase hex chars (abbreviated through full
+// SHA-1 or SHA-256). Anything else can't name a blob, so it never reaches git.
+const OBJECT_ID = /^[0-9a-f]{4,64}$/i;
+
 export class GitCommandFailed extends Schema.TaggedErrorClass<GitCommandFailed>()(
   "GitCommandFailed",
   {
@@ -41,8 +45,30 @@ export class DefaultBranchNotFound extends Schema.TaggedErrorClass<DefaultBranch
   }
 }
 
+export class InvalidObjectId extends Schema.TaggedErrorClass<InvalidObjectId>()("InvalidObjectId", {
+  sha: Schema.String,
+}) {
+  override get message(): string {
+    return `not a valid git object id: ${this.sha}`;
+  }
+}
+
 function streamText<E, R>(stream: Stream.Stream<Uint8Array, E, R>) {
   return Stream.mkString(Stream.decodeText(stream));
+}
+
+/** Concatenate the stream's byte chunks into a single `Uint8Array`. */
+function streamBytes<E, R>(stream: Stream.Stream<Uint8Array, E, R>) {
+  return Effect.map(Stream.runCollect(stream), (parts) => {
+    const total = parts.reduce((sum, part) => sum + part.length, 0);
+    const bytes = new Uint8Array(total);
+    let offset = 0;
+    for (const part of parts) {
+      bytes.set(part, offset);
+      offset += part.length;
+    }
+    return bytes;
+  });
 }
 
 /** Run a git command, succeeding with its trimmed stdout. */
@@ -58,6 +84,23 @@ const git = Effect.fn("git")(function* git(cwd: string, args: readonly string[])
     return yield* Effect.fail(GitCommandFailed.make({ args, exitCode, stderr }));
   }
   return stdout.replace(TRAILING_NEWLINE, "");
+}, Effect.scoped);
+
+/**
+ * Run a git command, succeeding with its raw stdout bytes — verbatim, with no
+ * text decode and no newline trim, so binary blobs survive intact. stderr is
+ * still decoded for the error message.
+ */
+const gitBytes = Effect.fn("gitBytes")(function* gitBytes(cwd: string, args: readonly string[]) {
+  const handle = yield* ChildProcess.make("git", args, { cwd });
+  const [stdout, stderr, exitCode] = yield* Effect.all(
+    [streamBytes(handle.stdout), streamText(handle.stderr), handle.exitCode],
+    { concurrency: "unbounded" },
+  );
+  if (exitCode !== 0) {
+    return yield* Effect.fail(GitCommandFailed.make({ args, exitCode, stderr }));
+  }
+  return stdout;
 }, Effect.scoped);
 
 /**
@@ -117,4 +160,22 @@ export const resolveChange = Effect.fn("resolveChange")(function* resolveChange(
     patch,
     root,
   });
+});
+
+/**
+ * Raw bytes of a git blob addressed by its object id — pure local `git
+ * cat-file`, offline, no network. The id is content-addressed and immutable, so
+ * the byte stream never changes; `cat-file blob` resolves any abbreviated id
+ * while still failing on a non-blob object (a commit/tree id 404s, not
+ * misreads). A malformed id short-circuits before git ever runs.
+ */
+export const resolveBlob = Effect.fn("resolveBlob")(function* resolveBlob(
+  cwd: string,
+  sha: string,
+) {
+  if (!OBJECT_ID.test(sha)) {
+    return yield* Effect.fail(InvalidObjectId.make({ sha }));
+  }
+  const { root } = yield* resolveRepo(cwd);
+  return yield* gitBytes(root, ["cat-file", "blob", sha]);
 });

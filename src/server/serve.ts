@@ -1,10 +1,10 @@
 /**
  * The `docent serve` app shell: a Bun-native local server that serves the built
- * browser UI, the live branch diff (`GET /api/diff`), the active Dossier
- * snapshot (`GET /api/dossier`), and the SSE live-reload stream
- * (`GET /api/events`) fed by a `.docent/` watch. Exposed as an Effect `Layer`;
- * runtime boundaries (bin.ts, tests) build it and keep it alive for the
- * server's lifetime.
+ * browser UI, the live branch diff (`GET /api/diff`), raw git blobs for context
+ * expansion (`GET /api/blob/:sha`), the active Dossier snapshot
+ * (`GET /api/dossier`), and the SSE live-reload stream (`GET /api/events`) fed
+ * by a `.docent/` watch. Exposed as an Effect `Layer`; runtime boundaries
+ * (bin.ts, tests) build it and keep it alive for the server's lifetime.
  *
  * The UI is served from an in-memory `ClientAssets` map, not an on-disk root,
  * so the identical code path serves the `dist/client/` build in dev and the
@@ -17,7 +17,7 @@ import { HttpRouter, HttpServer, HttpServerResponse } from "effect/unstable/http
 import { lookupAsset } from "../client/assets.ts";
 import type { ClientAssets } from "../client/assets.ts";
 import { readDossierSnapshot } from "./dossier.ts";
-import { resolveChange, resolveRepo } from "./git.ts";
+import { resolveBlob, resolveChange, resolveRepo } from "./git.ts";
 import { DocentWatch, layer as watchLayer } from "./watch.ts";
 
 export interface ServeOptions {
@@ -41,6 +41,40 @@ function diffRoute(cwd: string) {
       Effect.flatMap((change) => HttpServerResponse.json(change)),
       Effect.catch((error) =>
         Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 500 })),
+      ),
+    ),
+  );
+}
+
+// A git object id is immutable, so its bytes never change: cache for a year and
+// mark immutable so the browser never revalidates a blob it already has.
+const BLOB_CACHE_CONTROL = "public, max-age=31536000, immutable";
+
+/**
+ * `GET /api/blob/:sha` — the raw bytes of a git blob, resolved via pure local
+ * `git cat-file` (no network). Content-addressed, so responses cache forever.
+ * The Diff tab fetches these lazily to feed the renderer full file blobs for
+ * context expansion — both the base and head sides go through here
+ * (diff-review.md §4, architecture.md §2). A malformed id 400s; an id absent
+ * from the repo 404s.
+ */
+function blobRoute(cwd: string) {
+  return HttpRouter.add(
+    "GET",
+    "/api/blob/:sha",
+    Effect.gen(function* serveBlob() {
+      const params = yield* HttpRouter.params;
+      const bytes = yield* resolveBlob(cwd, params.sha ?? "");
+      return HttpServerResponse.uint8Array(bytes, {
+        contentType: "application/octet-stream",
+        headers: { "cache-control": BLOB_CACHE_CONTROL },
+      });
+    }).pipe(
+      Effect.catchTag("InvalidObjectId", (error) =>
+        Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 400 })),
+      ),
+      Effect.catch((error) =>
+        Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 404 })),
       ),
     ),
   );
@@ -133,6 +167,7 @@ const eventsRoute = HttpRouter.add(
 export function layer(options: ServeOptions) {
   const routes = Layer.mergeAll(
     diffRoute(options.cwd),
+    blobRoute(options.cwd),
     dossierRoute(options.cwd),
     eventsRoute,
     assetRoute(options.assets),

@@ -3,7 +3,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { BunServices } from "@effect/platform-bun";
 import { ManagedRuntime } from "effect";
-import { resolveChange } from "./git.ts";
+import { resolveBlob, resolveChange } from "./git.ts";
 import { cleanupScratchDirs, git, scratchDir, scratchRepo } from "./test-fixtures.ts";
 
 const runtime = ManagedRuntime.make(BunServices.layer);
@@ -126,5 +126,54 @@ describe("resolveChange", () => {
     const dir = scratchDir("docent-git-test-");
 
     await expect(resolve(dir)).rejects.toThrow(/not a git repository/i);
+  });
+});
+
+describe("resolveBlob", () => {
+  function blob(cwd: string, sha: string) {
+    return runtime.runPromise(resolveBlob(cwd, sha));
+  }
+
+  test("returns the raw bytes of a blob addressed by its object id", async () => {
+    const repo = repoWithOneCommit();
+    const sha = git(repo, "rev-parse", "HEAD:hello.txt");
+
+    const bytes = await blob(repo, sha);
+
+    expect(new TextDecoder().decode(bytes)).toBe("hello\n");
+  });
+
+  test("resolves an abbreviated object id", async () => {
+    const repo = repoWithOneCommit();
+    const sha = git(repo, "rev-parse", "HEAD:hello.txt").slice(0, 8);
+
+    const bytes = await blob(repo, sha);
+
+    expect(new TextDecoder().decode(bytes)).toBe("hello\n");
+  });
+
+  test("preserves binary bytes verbatim (no text decode, no newline trim)", async () => {
+    const repo = repoWithOneCommit();
+    const raw = new Uint8Array([0x00, 0xff, 0x0a, 0x42, 0x0a]);
+    writeFileSync(path.join(repo, "blob.bin"), raw);
+    git(repo, "add", ".");
+    git(repo, "commit", "-m", "add binary");
+    const sha = git(repo, "rev-parse", "HEAD:blob.bin");
+
+    const bytes = await blob(repo, sha);
+
+    expect([...bytes]).toEqual([...raw]);
+  });
+
+  test("rejects a sha that is not a valid git object", async () => {
+    const repo = repoWithOneCommit();
+
+    await expect(blob(repo, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef")).rejects.toThrow();
+  });
+
+  test("rejects a malformed (non-hex) object id", async () => {
+    const repo = repoWithOneCommit();
+
+    await expect(blob(repo, "../../etc/passwd")).rejects.toThrow(/object id/i);
   });
 });

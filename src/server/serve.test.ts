@@ -148,6 +148,38 @@ describe("server layer", () => {
     expect(body.error).toMatch(/not a git repository/i);
   });
 
+  test("GET /api/blob/:sha returns the raw blob bytes with cache-forever headers", async () => {
+    const repo = featureRepo();
+    const { url } = await serve(repo);
+    const sha = git(repo, "rev-parse", "HEAD:feature.txt");
+
+    const res = await fetch(new URL(`/api/blob/${sha}`, url));
+
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("new file\n");
+    // Content-addressed → immutable → cache forever.
+    expect(res.headers.get("cache-control")).toMatch(/immutable/);
+    expect(res.headers.get("cache-control")).toMatch(/max-age=31536000/);
+  });
+
+  test("GET /api/blob/:sha 404s an object id that is not in the repo", async () => {
+    const repo = featureRepo();
+    const { url } = await serve(repo);
+
+    const res = await fetch(new URL("/api/blob/deadbeefdeadbeefdeadbeefdeadbeefdeadbeef", url));
+
+    expect(res.status).toBe(404);
+  });
+
+  test("GET /api/blob/:sha 400s a malformed object id", async () => {
+    const repo = featureRepo();
+    const { url } = await serve(repo);
+
+    const res = await fetch(new URL("/api/blob/not-a-sha", url));
+
+    expect(res.status).toBe(400);
+  });
+
   test("GET /api/dossier auto-creates and returns the branch's snapshot", async () => {
     const repo = featureRepo();
     const { url } = await serve(repo);
