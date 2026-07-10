@@ -15,6 +15,7 @@ import type { FindingEntry, ViewedEvent } from "../shared/dossier.ts";
 import type { FindingWrite } from "../shared/finding-write.ts";
 import { fetchExpandedFileDiff, isExpandable } from "./blobs.ts";
 import type { Annotation } from "./diff-annotations.ts";
+import type { DriftResult } from "./drift.ts";
 import { EdgeChrome } from "./edge-chrome.tsx";
 import { autoViewed, bodyReplaced, classifyFiles } from "./edge-cases.ts";
 import type { FileClass } from "./edge-cases.ts";
@@ -359,6 +360,7 @@ export function DiffView({
   generated = NO_GENERATED,
   onWrite,
   ref,
+  drift,
   expandFile = fetchExpandedFileDiff,
   isFileExpandable = isExpandable,
 }: {
@@ -370,6 +372,8 @@ export function DiffView({
   /** Absent on the read-only Pending preview, which disables authoring. */
   onWrite?: (write: FindingWrite) => Promise<void>;
   ref?: React.Ref<DiffViewHandle>;
+  /** Per-Finding drift; absent on Pending, where the sync fast path stands in. */
+  drift?: ReadonlyMap<string, DriftResult>;
   expandFile?: (fileDiff: FileDiffMetadata) => Promise<FileDiffMetadata>;
   isFileExpandable?: (fileDiff: FileDiffMetadata) => boolean;
 }) {
@@ -465,6 +469,7 @@ export function DiffView({
   // with the annotations so CodeView re-renders on any of them.
   const { canAuthor, compose, items, renderAnnotation } = useDiffFindings({
     codeRef,
+    drift,
     entries,
     expanded,
     findings,

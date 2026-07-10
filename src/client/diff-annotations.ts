@@ -11,13 +11,19 @@ import type {
   DiffLineAnnotation,
   FileDiffMetadata,
 } from "@pierre/diffs";
+import type { DriftState } from "../shared/drift.ts";
 import type { Anchor, FoldedFinding } from "../shared/finding.ts";
+import type { DriftResult } from "./drift.ts";
 import type { FileEntry } from "./nav.ts";
 
 // A diff line-annotation carries either an existing Finding to render as a
 // thread, or the marker for the in-progress composer authoring a new one. Both
-// surface through `renderAnnotation`, anchored at `{ side, lineNumber }`.
-export type Annotation = { kind: "finding"; finding: FoldedFinding } | { kind: "composer" };
+// surface through `renderAnnotation`, anchored at `{ side, lineNumber }`. A
+// finding annotation carries its drift so the inline thread can badge a shifted
+// re-anchor (data-model.md §6.1).
+export type Annotation =
+  | { drift?: DriftState; finding: FoldedFinding; kind: "finding" }
+  | { kind: "composer" };
 
 // An in-progress authored Finding: the fully-formed anchor it will carry, plus
 // where its composer renders inline (which item, which side, which line).
@@ -45,22 +51,47 @@ function hashString(input: string): number {
   return hash;
 }
 
-// Existing Findings anchored into a file, as diff-line annotations. Line anchors
-// pin to their born line; file anchors render at line 0 (above the first line).
-// Change- and non-code anchors show only in the panel, so they are skipped.
+// The inline line an anchor renders at, or `undefined` to drop it to the panel.
+// With a drift read (§6.1): a **live** line anchor pins to its born line, a
+// **shifted** one re-anchors to its moved line, an **outdated** one detaches
+// (panel only), and a still-computing re-anchor is held back rather than
+// mis-pinned; a file anchor stays inline (line 0) unless outdated.
 //
-// Only a *live* line anchor renders inline: one whose born `blobSha` still
-// equals the diff's blob on the anchor's own side (head → `newObjectId`, base →
-// `prevObjectId`) is byte-identical, so its line numbers are trustworthy — the
-// data-model.md §6.1 live fast path. Once that blob changes the anchor has
-// drifted; rather than pin to possibly-wrong code (§6 "never pins to wrong
-// code") it drops to the panel until re-anchoring (deferred) lands. File anchors
-// carry no line numbers and §6.1 has them "drift only on delete/rename", so a
-// present file's file-level Finding stays inline regardless of content edits.
+// Without a drift read (Pending, tests), it falls back to the sync fast path:
+// a line anchor renders only while its born `blobSha` still equals the diff's
+// blob on its own side (head → `newObjectId`, base → `prevObjectId`), and drops
+// otherwise — never pinning to possibly-wrong code (§6).
+function inlineLine(
+  anchor: Extract<Anchor, { kind: "file" | "line" }>,
+  fileDiff: FileDiffMetadata,
+  drift: DriftResult | undefined,
+  hasDrift: boolean,
+): { drift?: DriftState; lineNumber: number } | undefined {
+  if (hasDrift) {
+    if (drift === undefined || drift.state === "outdated") {
+      return undefined;
+    }
+    const lineNumber = anchor.kind === "line" ? (drift.lines?.[0] ?? anchor.lines[0]) : 0;
+    return { drift: drift.state, lineNumber };
+  }
+  if (anchor.kind === "line") {
+    const sideBlob = anchor.side === "head" ? fileDiff.newObjectId : fileDiff.prevObjectId;
+    if (anchor.blobSha !== sideBlob) {
+      return undefined;
+    }
+    return { lineNumber: anchor.lines[0] };
+  }
+  return { lineNumber: 0 };
+}
+
+// Existing Findings anchored into a file, as diff-line annotations. Change- and
+// non-code anchors show only in the panel, so they are skipped; the rest defer
+// their inline placement (and whether they appear at all) to `inlineLine`.
 function findingAnnotations(
   findings: readonly FoldedFinding[],
   entry: FileEntry,
   fileDiff: FileDiffMetadata,
+  driftFor: ((id: string) => DriftResult | undefined) | undefined,
 ): DiffLineAnnotation<Annotation>[] {
   return findings.flatMap((finding): DiffLineAnnotation<Annotation>[] => {
     const { anchor } = finding;
@@ -70,16 +101,14 @@ function findingAnnotations(
     if (anchor.file !== entry.path && anchor.file !== entry.prevPath) {
       return [];
     }
-    if (anchor.kind === "line") {
-      const sideBlob = anchor.side === "head" ? fileDiff.newObjectId : fileDiff.prevObjectId;
-      if (anchor.blobSha !== sideBlob) {
-        return [];
-      }
+    const placement = inlineLine(anchor, fileDiff, driftFor?.(finding.id), driftFor !== undefined);
+    if (placement === undefined) {
+      return [];
     }
     return [
       {
-        lineNumber: anchor.kind === "line" ? anchor.lines[0] : 0,
-        metadata: { finding, kind: "finding" },
+        lineNumber: placement.lineNumber,
+        metadata: { drift: placement.drift, finding, kind: "finding" },
         side: annotationSide(anchor.side),
       },
     ];
@@ -93,8 +122,9 @@ function itemAnnotations(
   entry: FileEntry,
   fileDiff: FileDiffMetadata,
   composing: Composing | null,
+  driftFor: ((id: string) => DriftResult | undefined) | undefined,
 ): DiffLineAnnotation<Annotation>[] {
-  const annotations = findingAnnotations(findings, entry, fileDiff);
+  const annotations = findingAnnotations(findings, entry, fileDiff, driftFor);
   if (composing !== null && composing.itemId === entry.id) {
     annotations.push({
       lineNumber: composing.lineNumber,
@@ -115,7 +145,7 @@ function itemKey(
   const annotationsKey = annotations
     .map((annotation) =>
       annotation.metadata.kind === "finding"
-        ? `${annotation.side}:${annotation.lineNumber}:${annotation.metadata.finding.id}:${annotation.metadata.finding.resolved}:${annotation.metadata.finding.replies.length}:${annotation.metadata.finding.whatsNext}`
+        ? `${annotation.side}:${annotation.lineNumber}:${annotation.metadata.finding.id}:${annotation.metadata.finding.resolved}:${annotation.metadata.finding.replies.length}:${annotation.metadata.finding.whatsNext}:${annotation.metadata.drift ?? ""}`
         : `composer:${annotation.side}:${annotation.lineNumber}`,
     )
     .join("|");
@@ -136,6 +166,8 @@ export function buildDiffItems(params: {
   isViewed: (id: string) => boolean;
   /** Collapse an edge-case body (binary/image/mode/submodule, unloaded large). */
   isEdgeCollapsed: (id: string) => boolean;
+  /** Per-Finding drift; absent ⇒ the sync fast-path fallback (Pending, tests). */
+  driftFor?: (id: string) => DriftResult | undefined;
 }): CodeViewItem<Annotation>[] {
   return params.entries.flatMap((entry) => {
     const fileDiff = params.fileDiffFor(entry.id);
@@ -143,7 +175,13 @@ export function buildDiffItems(params: {
       return [];
     }
     const collapsed = params.isViewed(entry.id) || params.isEdgeCollapsed(entry.id);
-    const annotations = itemAnnotations(params.findings, entry, fileDiff, params.composing);
+    const annotations = itemAnnotations(
+      params.findings,
+      entry,
+      fileDiff,
+      params.composing,
+      params.driftFor,
+    );
     const version = hashString(itemKey(annotations, params.isExpanded(entry.id), collapsed));
     return [{ annotations, collapsed, fileDiff, id: entry.id, type: "diff" as const, version }];
   });

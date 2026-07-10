@@ -7,6 +7,7 @@ import type { FindingWrite } from "../shared/finding-write.ts";
 import type { PendingRange } from "../shared/pending.ts";
 import { Pending } from "../shared/pending.ts";
 import { fetchPendingExpandedFileDiff, isPendingExpandable } from "./blobs.ts";
+import type { DriftResult } from "./drift.ts";
 import { useDrift } from "./drift.ts";
 import type { DiffViewHandle } from "./diff-view.tsx";
 import { DiffView } from "./diff-view.tsx";
@@ -179,10 +180,12 @@ function ChangeBody({
   state,
   dossier,
   diffRef,
+  drift,
 }: {
   state: LoadState;
   dossier: DossierSnapshot | null;
   diffRef: React.Ref<DiffViewHandle>;
+  drift: ReadonlyMap<string, DriftResult>;
 }) {
   if (state.kind === "loading") {
     return <Notice>Loading diff…</Notice>;
@@ -200,6 +203,7 @@ function ChangeBody({
   }
   return (
     <DiffView
+      drift={drift}
       findings={dossier?.findings ?? NO_FINDINGS}
       generated={change.generated}
       onWrite={handleWrite}
@@ -340,7 +344,7 @@ export function App() {
           {effective === "pending" && pending ? (
             <PendingBody diffRef={diffRef} pending={pending} />
           ) : (
-            <ChangeBody diffRef={diffRef} dossier={dossier} state={change} />
+            <ChangeBody diffRef={diffRef} dossier={dossier} drift={drift} state={change} />
           )}
         </div>
         {dossier ? (

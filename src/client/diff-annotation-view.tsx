@@ -22,7 +22,11 @@ export function DiffAnnotationView({
   if (annotation.metadata.kind === "finding") {
     return (
       <div className="finding-annotation">
-        <FindingThread finding={annotation.metadata.finding} onWrite={onWrite} />
+        <FindingThread
+          drift={annotation.metadata.drift}
+          finding={annotation.metadata.finding}
+          onWrite={onWrite}
+        />
       </div>
     );
   }
