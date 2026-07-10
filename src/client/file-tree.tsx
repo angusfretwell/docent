@@ -15,31 +15,23 @@ const BADGE_COLOR: Record<FileEntry["changeType"], string> = {
   R: "#a371f7",
 };
 
+function basename(path: string): string {
+  const slash = path.lastIndexOf("/");
+  return slash === -1 ? path : path.slice(slash + 1);
+}
+
 function Badge({ type }: { type: FileEntry["changeType"] }) {
   return (
-    <span
-      style={{
-        color: BADGE_COLOR[type],
-        fontWeight: 600,
-        marginLeft: "0.5rem",
-      }}
-      title={type}
-    >
-      {type}
-    </span>
+    <span style={{ color: BADGE_COLOR[type], fontWeight: 600, marginLeft: "0.5rem" }}>{type}</span>
   );
 }
 
 function Counts({ entry }: { entry: FileEntry }) {
   return (
     <span style={{ fontVariantNumeric: "tabular-nums", marginLeft: "0.5rem" }}>
-      {entry.additions > 0 && (
-        <span style={{ color: BADGE_COLOR.A }}>+{entry.additions}</span>
-      )}
+      {entry.additions > 0 && <span style={{ color: BADGE_COLOR.A }}>+{entry.additions}</span>}
       {entry.deletions > 0 && (
-        <span style={{ color: BADGE_COLOR.D, marginLeft: "0.25rem" }}>
-          −{entry.deletions}
-        </span>
+        <span style={{ color: BADGE_COLOR.D, marginLeft: "0.25rem" }}>−{entry.deletions}</span>
       )}
     </span>
   );
@@ -66,20 +58,12 @@ function FileRow({
   }, [active]);
   return (
     <button
+      className="tree-file-row"
       onClick={() => onSelect(entry.id)}
       ref={ref}
       style={{
-        alignItems: "center",
         background: active ? "rgba(56,139,253,0.15)" : "transparent",
-        border: "none",
-        color: "inherit",
-        cursor: "pointer",
-        display: "flex",
-        font: "inherit",
-        padding: "0.15rem 0.5rem",
         paddingLeft: `${0.5 + depth * 0.85}rem`,
-        textAlign: "left",
-        width: "100%",
       }}
       type="button"
     >
@@ -96,64 +80,6 @@ function FileRow({
       <span style={{ flex: 1 }} />
       <Counts entry={entry} />
     </button>
-  );
-}
-
-function basename(path: string): string {
-  const slash = path.lastIndexOf("/");
-  return slash === -1 ? path : path.slice(slash + 1);
-}
-
-function DirRow({
-  node,
-  depth,
-  collapsed,
-  activeId,
-  onToggle,
-  onSelect,
-}: {
-  node: Extract<TreeNode, { kind: "dir" }>;
-  depth: number;
-  collapsed: ReadonlySet<string>;
-  activeId: string | undefined;
-  onToggle: (path: string) => void;
-  onSelect: (id: string) => void;
-}) {
-  const isCollapsed = collapsed.has(node.path);
-  return (
-    <>
-      <button
-        onClick={() => onToggle(node.path)}
-        style={{
-          background: "transparent",
-          border: "none",
-          color: "inherit",
-          cursor: "pointer",
-          display: "block",
-          font: "inherit",
-          opacity: 0.75,
-          padding: "0.15rem 0.5rem",
-          paddingLeft: `${0.5 + depth * 0.85}rem`,
-          textAlign: "left",
-          width: "100%",
-        }}
-        type="button"
-      >
-        {isCollapsed ? "▸" : "▾"} {node.name}
-      </button>
-      {!isCollapsed &&
-        node.children.map((child) => (
-          <Row
-            activeId={activeId}
-            collapsed={collapsed}
-            depth={depth + 1}
-            key={child.kind === "dir" ? child.path : child.entry.id}
-            node={child}
-            onSelect={onSelect}
-            onToggle={onToggle}
-          />
-        ))}
-    </>
   );
 }
 
@@ -182,15 +108,30 @@ function Row({
       />
     );
   }
+  const isCollapsed = collapsed.has(node.path);
   return (
-    <DirRow
-      activeId={activeId}
-      collapsed={collapsed}
-      depth={depth}
-      node={node}
-      onSelect={onSelect}
-      onToggle={onToggle}
-    />
+    <>
+      <button
+        className="tree-dir-row"
+        onClick={() => onToggle(node.path)}
+        style={{ paddingLeft: `${0.5 + depth * 0.85}rem` }}
+        type="button"
+      >
+        {isCollapsed ? "▸" : "▾"} {node.name}
+      </button>
+      {!isCollapsed &&
+        node.children.map((child) => (
+          <Row
+            activeId={activeId}
+            collapsed={collapsed}
+            depth={depth + 1}
+            key={child.kind === "dir" ? child.path : child.entry.id}
+            node={child}
+            onSelect={onSelect}
+            onToggle={onToggle}
+          />
+        ))}
+    </>
   );
 }
 
@@ -256,42 +197,23 @@ export function FileTree({
           value={filter}
         />
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem" }}>
-          <button
-            onClick={() => onOrderChange(order === "size" ? "path" : "size")}
-            type="button"
-          >
+          <button onClick={() => onOrderChange(order === "size" ? "path" : "size")} type="button">
             {order === "size" ? "Sort: size" : "Sort: path"}
           </button>
           <button onClick={() => onSplitChange(!split)} type="button">
             {split ? "Split" : "Unified"}
           </button>
           <span style={{ flex: 1 }} />
-          <button
-            onClick={() => onJump("file", -1)}
-            title="Previous file"
-            type="button"
-          >
+          <button aria-label="Previous file" onClick={() => onJump("file", -1)} type="button">
             ↑file
           </button>
-          <button
-            onClick={() => onJump("file", 1)}
-            title="Next file"
-            type="button"
-          >
+          <button aria-label="Next file" onClick={() => onJump("file", 1)} type="button">
             ↓file
           </button>
-          <button
-            onClick={() => onJump("change", -1)}
-            title="Previous change"
-            type="button"
-          >
+          <button aria-label="Previous change" onClick={() => onJump("change", -1)} type="button">
             ↑hunk
           </button>
-          <button
-            onClick={() => onJump("change", 1)}
-            title="Next change"
-            type="button"
-          >
+          <button aria-label="Next change" onClick={() => onJump("change", 1)} type="button">
             ↓hunk
           </button>
         </div>

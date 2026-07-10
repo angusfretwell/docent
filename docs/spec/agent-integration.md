@@ -23,14 +23,14 @@ The round-trip collapses to a **single actor-agnostic findings queue** over `.do
 
 - The Dossier holds a queue of **Findings**; the Finding is the unit — an anchored, append-only review conversation ([#18](https://github.com/angusfretwell/docent/issues/18), [#24](https://github.com/angusfretwell/docent/issues/24); records at `findings/fnd_*/NNN-*.md`, schema `docent/finding@3`, owned by [data-model.md](data-model.md)).
 - **Review, fix, and resolve are roles, not actors.** A human (via the docent UI) or an agent (via a skill) can occupy any role. An agent may resolve another agent's Finding ([#18](https://github.com/angusfretwell/docent/issues/18)).
-- **Attribution is metadata only** — it records *who did it*, never gates *who may* ([#18](https://github.com/angusfretwell/docent/issues/18)).
+- **Attribution is metadata only** — it records _who did it_, never gates _who may_ ([#18](https://github.com/angusfretwell/docent/issues/18)).
 
 ### 2.2 Two interface primitives
 
-| Primitive | Does | UI equivalent | CLI surface (§3.3) |
-| --- | --- | --- | --- |
-| **write-findings** | Append findings / replies / resolves | The UI performs this when you write a comment | `docent finding add / reply / resolve` |
-| **fetch-findings** | Read findings (any author), filtered on open/resolved + what's-next (+ anchor / author scope) | The UI performs this when it renders | `docent finding list --filter …` |
+| Primitive          | Does                                                                                          | UI equivalent                                 | CLI surface (§3.3)                     |
+| ------------------ | --------------------------------------------------------------------------------------------- | --------------------------------------------- | -------------------------------------- |
+| **write-findings** | Append findings / replies / resolves                                                          | The UI performs this when you write a comment | `docent finding add / reply / resolve` |
+| **fetch-findings** | Read findings (any author), filtered on open/resolved + what's-next (+ anchor / author scope) | The UI performs this when it renders          | `docent finding list --filter …`       |
 
 Chosen over manual copy-paste or a UI "copy as prompt" button: it keeps `.docent/` authoritative, preserves anchors, and scales to a whole review pass ([#18](https://github.com/angusfretwell/docent/issues/18)). Every finding-touching skill conforms to these two primitives ([#18](https://github.com/angusfretwell/docent/issues/18)).
 
@@ -41,13 +41,13 @@ Two axes, folded from a Finding's records ([#18](https://github.com/angusfretwel
 - **Axis 1 — open / resolved**, with reopen available.
 - **Axis 2 — what's-next** (for open Findings), derived from the **latest record**, **actor-blind**:
 
-| Latest record | What's-next |
-| --- | --- |
-| fresh Finding · plain comment · "do it again" | **needs action** |
-| reply with Disposition `actioned` | **needs verify** |
-| reply with Disposition `question` | **needs answer** |
-| reply with Disposition `declined` | **needs decision** |
-| resolve | **closed** |
+| Latest record                                 | What's-next        |
+| --------------------------------------------- | ------------------ |
+| fresh Finding · plain comment · "do it again" | **needs action**   |
+| reply with Disposition `actioned`             | **needs verify**   |
+| reply with Disposition `question`             | **needs answer**   |
+| reply with Disposition `declined`             | **needs decision** |
+| resolve                                       | **closed**         |
 
 Author-kind is **not** a routing signal — a first-pass rule that routed by human-vs-agent authorship was replaced by the disposition-driven, actor-agnostic model ([#18](https://github.com/angusfretwell/docent/issues/18)). A reply may carry a **Disposition** ∈ {`actioned`, `declined`, `question`} — MECE for how a fixer ends its turn; fresh Findings and plain comments carry none (they simply need action). Disposition is the only schema addition the loop required — an optional field on the reply record ([#18](https://github.com/angusfretwell/docent/issues/18)).
 
@@ -78,27 +78,27 @@ docent ships **7 skills**, pinned by [#21](https://github.com/angusfretwell/doce
 - **Invokable** — the blessed entry points a human types.
 - **Reference** — building blocks the invokable skills load; still directly runnable by a power user, but not the headline surface.
 
-| Skill | Kind | Role | Reads | Writes |
-| --- | --- | --- | --- | --- |
-| `/review` | Invokable | Reviewer + verifier/resolver | Head Change (plain `git`), optional focus, open findings queue | Fresh Findings; resolve / re-comment records on needs-verify Findings |
-| `/address` | Invokable | Fixer | Needs-action Findings, the code | Code edits; reply records carrying a Disposition. **Never a resolve** |
-| `/docent` | Invokable | Walkthrough reconciler | Head Change; each pillar's latest walkthrough's `bornChangeId` | Fresh immutable `wlk_*` for stale/missing pillars only |
-| `/docent-cli` | Reference | CLI usage guide | — | — (describes the `docent` binary's non-`serve` subcommands) |
-| `/author-code-walkthrough` | Reference | Code-walkthrough author | A Change (via `git`), optional focus | `walkthroughs/code/wlk_*/` — manifest + ordered sections, `bornChangeId`-bound, immutable |
-| `/author-product-walkthrough` | Reference | Product-walkthrough author (editorial half) | A Change, already-produced captures, optional focus | `walkthroughs/product/wlk_*/` — manifest + sections with `{{capture:i}}` interleave + annotations. **No browser** |
-| `/capture-product-walkthrough` | Reference | Capture recorder | A served, reachable app; the dev-server contract (URL + route + viewport); a capture target | Content-addressed capture blobs (`captures/<sha>.{png,rrweb.json}`) + `captures[]` registry entries; the `.docent/capture.md` runbook |
+| Skill                          | Kind      | Role                                        | Reads                                                                                       | Writes                                                                                                                                |
+| ------------------------------ | --------- | ------------------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `/review`                      | Invokable | Reviewer + verifier/resolver                | Head Change (plain `git`), optional focus, open findings queue                              | Fresh Findings; resolve / re-comment records on needs-verify Findings                                                                 |
+| `/address`                     | Invokable | Fixer                                       | Needs-action Findings, the code                                                             | Code edits; reply records carrying a Disposition. **Never a resolve**                                                                 |
+| `/docent`                      | Invokable | Walkthrough reconciler                      | Head Change; each pillar's latest walkthrough's `bornChangeId`                              | Fresh immutable `wlk_*` for stale/missing pillars only                                                                                |
+| `/docent-cli`                  | Reference | CLI usage guide                             | —                                                                                           | — (describes the `docent` binary's non-`serve` subcommands)                                                                           |
+| `/author-code-walkthrough`     | Reference | Code-walkthrough author                     | A Change (via `git`), optional focus                                                        | `walkthroughs/code/wlk_*/` — manifest + ordered sections, `bornChangeId`-bound, immutable                                             |
+| `/author-product-walkthrough`  | Reference | Product-walkthrough author (editorial half) | A Change, already-produced captures, optional focus                                         | `walkthroughs/product/wlk_*/` — manifest + sections with `{{capture:i}}` interleave + annotations. **No browser**                     |
+| `/capture-product-walkthrough` | Reference | Capture recorder                            | A served, reachable app; the dev-server contract (URL + route + viewport); a capture target | Content-addressed capture blobs (`captures/<sha>.{png,rrweb.json}`) + `captures[]` registry entries; the `.docent/capture.md` runbook |
 
 Artifact schemas the walkthrough skills produce are owned by [walkthroughs.md](walkthroughs.md); Finding record schemas by [data-model.md](data-model.md).
 
 ### 3.1 Invokable skills
 
-**`/review` — review + verify.** Reads the head Change (plain `git` in the agent's own session) plus an optional focus, and the open findings queue. Writes **fresh Findings** (born needs-action) **and** resolve / re-comment records on open **needs-verify** Findings. It is reviewer and verifier/resolver in one skill — one act of "assess the head against the queue," since resolving a fix that now holds is the same write, against the same head, as authoring a fresh Finding. Because it is **not** the fixer, the loop's *fixer ≠ resolver* guidance holds by construction ([#21](https://github.com/angusfretwell/docent/issues/21)).
+**`/review` — review + verify.** Reads the head Change (plain `git` in the agent's own session) plus an optional focus, and the open findings queue. Writes **fresh Findings** (born needs-action) **and** resolve / re-comment records on open **needs-verify** Findings. It is reviewer and verifier/resolver in one skill — one act of "assess the head against the queue," since resolving a fix that now holds is the same write, against the same head, as authoring a fresh Finding. Because it is **not** the fixer, the loop's _fixer ≠ resolver_ guidance holds by construction ([#21](https://github.com/angusfretwell/docent/issues/21)).
 
 **`/address` — fix.** Reads **needs-action** Findings plus the code; writes code edits (ordinary file edits) plus reply records carrying a **Disposition** (`actioned` / `declined` / `question`). **It never writes a resolve** — that is what keeps it the fixer, not the resolver ([#21](https://github.com/angusfretwell/docent/issues/21)).
 
 **`/docent` — the walkthrough reconciler** (a docent gives the guided tour). Per pillar, it reads the head Change and the `bornChangeId` of the pillar's latest walkthrough, and decides what to do from **existence + drift**: it regenerates only the pillar(s) the diff actually affects (**selective on pillars**), minting a fresh immutable `wlk_*` — never editing in place. For a stale product walkthrough it re-drives capture **wholesale**; content-addressing dedups byte-identical screens ([#21](https://github.com/angusfretwell/docent/issues/21)). It composes the three reference walkthrough skills below.
 
-**`/docent` is the answer to "how and when is a walkthrough regenerated"**: the human runs it; the tool can only *surface* staleness (the `bornChangeId`-vs-head badge, [#15](https://github.com/angusfretwell/docent/issues/15)), never auto-regenerate — decision B ([#21](https://github.com/angusfretwell/docent/issues/21)). This closes the regen-trigger question [#14](https://github.com/angusfretwell/docent/issues/14) and [#15](https://github.com/angusfretwell/docent/issues/15) deferred.
+**`/docent` is the answer to "how and when is a walkthrough regenerated"**: the human runs it; the tool can only _surface_ staleness (the `bornChangeId`-vs-head badge, [#15](https://github.com/angusfretwell/docent/issues/15)), never auto-regenerate — decision B ([#21](https://github.com/angusfretwell/docent/issues/21)). This closes the regen-trigger question [#14](https://github.com/angusfretwell/docent/issues/14) and [#15](https://github.com/angusfretwell/docent/issues/15) deferred.
 
 ### 3.2 Reference skills
 
@@ -117,7 +117,7 @@ The `docent` binary has two faces ([#21](https://github.com/angusfretwell/docent
 - **`docent serve`** — the server + UI ([architecture.md](architecture.md)): watches `.docent/`, renders, streams updates over SSE.
 - **Non-`serve` subcommands** — `docent finding list / add / reply / resolve`, plus `walkthrough` and `capture` write subcommands: the single home for ULID minting, anchor construction, append semantics, content-addressing, and what's-next / Disposition derivation. Both the UI's write path and agents use it; neither is required to (non-gating).
 
-### 3.4 Deliberately *not* skills
+### 3.4 Deliberately _not_ skills
 
 Tool / UI / human concerns, kept out of the catalogue so the invocation model stays crisp ([#21](https://github.com/angusfretwell/docent/issues/21), as amended by [#24](https://github.com/angusfretwell/docent/issues/24)):
 
@@ -141,20 +141,20 @@ The human invoking the capture skill owns serving: either the dev server is alre
 2. The optional **`.docent/capture.md` runbook**.
 3. **Ask the human.**
 
-The runbook is **markdown, not a config schema** — a fallback brief the agent both *reads and authors*, carrying prose setup instructions: how to log in, how to seed data, which port the dev server uses. It is not the source of truth; it is consulted only when the knowledge isn't discoverable elsewhere. **First-run generation:** when nothing is discoverable, the skill generates the runbook from what it learned (asked the human / inferred) so later captures don't re-ask ([#19](https://github.com/angusfretwell/docent/issues/19)).
+The runbook is **markdown, not a config schema** — a fallback brief the agent both _reads and authors_, carrying prose setup instructions: how to log in, how to seed data, which port the dev server uses. It is not the source of truth; it is consulted only when the knowledge isn't discoverable elsewhere. **First-run generation:** when nothing is discoverable, the skill generates the runbook from what it learned (asked the human / inferred) so later captures don't re-ask ([#19](https://github.com/angusfretwell/docent/issues/19)).
 
 ### 4.3 Viewport and starting route
 
 - **Viewport** — a default declared in the runbook (a stable property of the app), **overridable per-capture**.
 - **Starting route** — a **per-capture concern, not a runbook one**: user-specified if given; else the agent **infers it from the Change under review** (the changed files/routes point at what to walk); `/` (app entry) only as a last-resort fallback.
-- Both are **recorded on each capture entity** (`route` / `viewport`, [walkthroughs.md](walkthroughs.md)); the runbook or instruction is only their *source* ([#19](https://github.com/angusfretwell/docent/issues/19)).
+- Both are **recorded on each capture entity** (`route` / `viewport`, [walkthroughs.md](walkthroughs.md)); the runbook or instruction is only their _source_ ([#19](https://github.com/angusfretwell/docent/issues/19)).
 
 ### 4.4 Readiness
 
 No health endpoint is imposed on the app under review ([#19](https://github.com/angusfretwell/docent/issues/19), honoring [#5](https://github.com/angusfretwell/docent/issues/5)'s zero-app-changes):
 
 - **Already-running server** → navigate agent-browser to the starting route and **verify the page actually rendered** (a snapshot shows real DOM, not a connection-refused or error page).
-- **Agent-launched server** → **poll the base URL until it responds** (TCP connect / any HTTP status) with a timeout, *then* navigate and verify as above.
+- **Agent-launched server** → **poll the base URL until it responds** (TCP connect / any HTTP status) with a timeout, _then_ navigate and verify as above.
 - **On failure** → **hard stop with a clear, actionable message** ("app not reachable at `<url>` — is your dev server up?"). Never emit a broken capture silently.
 
 ### 4.5 Teardown

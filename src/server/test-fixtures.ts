@@ -5,7 +5,7 @@
 
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import path from "node:path";
 
 export const NOT_A_GIT_REPO = /not a git repository/i;
 
@@ -13,7 +13,7 @@ const scratchDirs: string[] = [];
 
 /** A fresh temp dir, removed by `cleanupScratchDirs`. */
 export function scratchDir(prefix: string): string {
-  const dir = mkdtempSync(join(tmpdir(), prefix));
+  const dir = mkdtempSync(path.join(tmpdir(), prefix));
   scratchDirs.push(dir);
   return dir;
 }
@@ -41,7 +41,7 @@ export function scratchRepo(prefix: string): string {
   git(dir, "init", "-b", "main");
   git(dir, "config", "user.email", "test@example.com");
   git(dir, "config", "user.name", "Test");
-  writeFileSync(join(dir, "hello.txt"), "hello\n");
+  writeFileSync(path.join(dir, "hello.txt"), "hello\n");
   git(dir, "add", ".");
   git(dir, "commit", "-m", "initial");
   return dir;

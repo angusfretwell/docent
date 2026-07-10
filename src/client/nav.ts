@@ -58,11 +58,11 @@ export interface ChangeAnchor {
 }
 
 const CHANGE_TYPE: Record<ChangeTypes, ChangeType> = {
-  new: "A",
-  deleted: "D",
   change: "M",
-  "rename-pure": "R",
+  deleted: "D",
+  new: "A",
   "rename-changed": "R",
+  "rename-pure": "R",
 };
 
 function toEntry(file: FileDiffMetadata, index: number): FileEntry {
@@ -95,18 +95,21 @@ function changedLines(entry: FileEntry): number {
   return entry.additions + entry.deletions;
 }
 
+/** Lexicographic path comparator: -1, 0, or 1. */
+function comparePath(a: string, b: string): number {
+  if (a < b) {
+    return -1;
+  }
+  return a > b ? 1 : 0;
+}
+
 /** Sort a copy of the entries by full path, or by changed-line size. */
-export function sortEntries(
-  entries: FileEntry[],
-  order: FileOrder,
-): FileEntry[] {
-  const sorted = entries.slice();
+export function sortEntries(entries: FileEntry[], order: FileOrder): FileEntry[] {
+  const sorted = [...entries];
   if (order === "size") {
-    sorted.sort(
-      (a, b) => changedLines(b) - changedLines(a) || (a.path < b.path ? -1 : 1),
-    );
+    sorted.sort((a, b) => changedLines(b) - changedLines(a) || (a.path < b.path ? -1 : 1));
   } else {
-    sorted.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+    sorted.sort((a, b) => comparePath(a.path, b.path));
   }
   return sorted;
 }
@@ -119,7 +122,7 @@ function compact(nodes: TreeNode[]): TreeNode[] {
     }
     let dir = node;
     while (dir.children.length === 1 && dir.children[0]?.kind === "dir") {
-      const child = dir.children[0];
+      const [child] = dir.children;
       dir = {
         children: child.children,
         kind: "dir",
@@ -145,11 +148,12 @@ export function buildTree(entries: FileEntry[]): TreeNode[] {
     let prefix = "";
     for (const part of parts) {
       prefix = prefix ? `${prefix}/${part}` : part;
+      const dirPath = prefix;
       let dir = cursor.find(
-        (node): node is DirNode => node.kind === "dir" && node.path === prefix,
+        (node): node is DirNode => node.kind === "dir" && node.path === dirPath,
       );
       if (dir === undefined) {
-        dir = { children: [], kind: "dir", name: part, path: prefix };
+        dir = { children: [], kind: "dir", name: part, path: dirPath };
         cursor.push(dir);
       }
       cursor = dir.children;
@@ -173,10 +177,7 @@ export function flattenFiles(nodes: TreeNode[]): FileEntry[] {
 }
 
 /** Keep entries whose path contains `query` (case-insensitive substring). */
-export function filterEntries(
-  entries: FileEntry[],
-  query: string,
-): FileEntry[] {
+export function filterEntries(entries: FileEntry[], query: string): FileEntry[] {
   const needle = query.trim().toLowerCase();
   if (needle === "") {
     return entries;
@@ -190,7 +191,7 @@ export function changeAnchors(entries: FileEntry[]): ChangeAnchor[] {
   for (const entry of entries) {
     // Adds/deletes still expose one anchor so an empty-hunk file is reachable.
     const count = Math.max(entry.hunks, 1);
-    for (let hunkIndex = 0; hunkIndex < count; hunkIndex++) {
+    for (let hunkIndex = 0; hunkIndex < count; hunkIndex += 1) {
       anchors.push({
         fileId: entry.id,
         hunkIndex,
@@ -213,11 +214,10 @@ export function stepFile(
 }
 
 /** Next/prev change index, clamped to the anchor list (crosses files). */
-export function stepChange(
-  count: number,
-  currentIndex: number,
-  direction: 1 | -1,
-): number {
+export function stepChange(count: number, currentIndex: number, direction: 1 | -1): number {
   const next = currentIndex + direction;
-  return next < 0 ? 0 : next >= count ? count - 1 : next;
+  if (next < 0) {
+    return 0;
+  }
+  return next >= count ? count - 1 : next;
 }

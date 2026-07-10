@@ -11,11 +11,7 @@ import {
 } from "./nav.ts";
 
 /** A patch touching one file, with the given hunk of +adds/-dels. */
-function filePatch(
-  header: string,
-  body: string,
-  index = "index 0000000..1111111 100644",
-): string {
+function filePatch(header: string, body: string, index = "index 0000000..1111111 100644"): string {
   return `diff --git ${header}\n${index}\n${body}`;
 }
 
@@ -68,17 +64,17 @@ describe("parseFiles", () => {
     const [ren] = parseFiles(RENAME);
 
     expect(add).toMatchObject({
-      path: "src/new.ts",
-      changeType: "A",
       additions: 2,
+      changeType: "A",
       deletions: 0,
+      path: "src/new.ts",
     });
-    expect(mod).toMatchObject({ changeType: "M", additions: 1, deletions: 0 });
-    expect(del).toMatchObject({ changeType: "D", additions: 0, deletions: 2 });
+    expect(mod).toMatchObject({ additions: 1, changeType: "M", deletions: 0 });
+    expect(del).toMatchObject({ additions: 0, changeType: "D", deletions: 2 });
     expect(ren).toMatchObject({
+      changeType: "R",
       path: "src/b.ts",
       prevPath: "src/a.ts",
-      changeType: "R",
     });
   });
 
@@ -113,7 +109,7 @@ describe("buildTree", () => {
   test("nests files under directory nodes", () => {
     const tree = buildTree(sortEntries(parseFiles(MODIFY + ADD), "path"));
     expect(tree).toHaveLength(1);
-    const root = tree[0];
+    const [root] = tree;
     expect(root).toMatchObject({ kind: "dir", name: "src", path: "src" });
   });
 
@@ -145,9 +141,7 @@ describe("filterEntries", () => {
   const entries = parseFiles(MODIFY + ADD + DELETE);
 
   test("keeps entries whose path contains the substring, case-insensitively", () => {
-    expect(filterEntries(entries, "APP").map((f) => f.path)).toEqual([
-      "src/app.ts",
-    ]);
+    expect(filterEntries(entries, "APP").map((f) => f.path)).toEqual(["src/app.ts"]);
   });
 
   test("an empty query keeps everything", () => {
