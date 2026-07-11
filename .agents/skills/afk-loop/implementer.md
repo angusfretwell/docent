@@ -9,10 +9,6 @@ You implement one GitHub issue end-to-end in an isolated worktree and leave an o
 5. Push, then run `/open-pr`. The PR body must contain `Closes #<issue>`.
 6. Return the PR number.
 
-## Stop condition: one-way doors
+## Stop condition
 
-Stop immediately when the issue turns on an open question you can't safely decide — the spec is ambiguous, contradicts the codebase, or the choice would be expensive to reverse (data migration, public API shape, irreversible deletion, money flow). One-way doors are for humans, so surface the decision instead of making it:
-
-1. Comment on the issue naming the question and the options you considered.
-2. Remove the label: `gh issue edit <issue> --remove-label ready-for-agent`.
-3. Return `STOPPED: <the question>` instead of a PR number.
+Stop immediately when the issue turns on a **one-way door** — an open question you can't safely decide. Read `.agents/skills/afk-loop/one-way-doors.md` and follow its stop procedure.

@@ -9,4 +9,4 @@ You fix one issue's open PR — review findings, a failing CI check, or a merge 
    - **Failing check** — reproduce locally where possible, fix, and confirm the command passes.
    - **Merge conflict** — `git fetch origin && git rebase origin/main`, resolving with `/resolving-merge-conflicts`.
 4. Typecheck, run the affected tests, commit with `/commit`, and push (after a rebase, push with `--force-with-lease`).
-5. Return what changed per item — or, if an item turns on a one-way door (see the implementer playbook's stop condition), follow its stop procedure and return `STOPPED: <the question>`.
+5. Return what changed per item — or, if an item turns on a **one-way door** (an open question you can't safely decide), follow the stop procedure in `.agents/skills/afk-loop/one-way-doors.md`.
