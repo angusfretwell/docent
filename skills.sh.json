@@ -1,0 +1,21 @@
+{
+  "$schema": "https://skills.sh/schemas/skills.sh.schema.json",
+  "notGrouped": "bottom",
+  "groupings": [
+    {
+      "title": "Review loop",
+      "description": "The skills you invoke in your own agent session to review, fix, and reconcile a branch under review.",
+      "skills": ["docent", "to-docent", "address"]
+    },
+    {
+      "title": "Walkthrough authoring",
+      "description": "Reference skills the review loop composes to author and capture code and product walkthroughs, plus the guide to the docent CLI.",
+      "skills": [
+        "author-code-walkthrough",
+        "author-product-walkthrough",
+        "capture-product-walkthrough",
+        "docent-cli"
+      ]
+    }
+  ]
+}

@@ -10,7 +10,7 @@ import { cleanupScratchDirs, scratchDir } from "../lib/test-fixtures";
 import {
   appendViewedEvent,
   branchSlug,
-  ensureGitignore,
+  ensureStateRootGitignore,
   parseAnchor,
   readReviewSnapshot,
 } from "./review";
@@ -632,24 +632,28 @@ describe("appendViewedEvent", () => {
   });
 });
 
-describe("ensureGitignore", () => {
-  test("adds .docent/ to a fresh .gitignore", async () => {
+describe("ensureStateRootGitignore", () => {
+  test("seeds .docent/.gitignore with the commit policy", async () => {
     const root = scratchDir("docent-review-");
 
-    await runtime.runPromise(ensureGitignore(root));
+    await runtime.runPromise(ensureStateRootGitignore(root));
 
-    expect(readFileSync(path.join(root, ".gitignore"), "utf-8")).toContain(
-      ".docent/"
+    const body = readFileSync(
+      path.join(root, ".docent", ".gitignore"),
+      "utf-8"
     );
+    expect(body).toBe("*\n!capture.md\n!.gitignore\n");
   });
 
-  test("is idempotent when .docent/ is already ignored", async () => {
+  test("leaves an existing .docent/.gitignore untouched", async () => {
     const root = scratchDir("docent-review-");
-    writeFileSync(path.join(root, ".gitignore"), "node_modules\n.docent/\n");
+    mkdirSync(path.join(root, ".docent"), { recursive: true });
+    writeFileSync(path.join(root, ".docent", ".gitignore"), "custom\n");
 
-    await runtime.runPromise(ensureGitignore(root));
+    await runtime.runPromise(ensureStateRootGitignore(root));
 
-    const body = readFileSync(path.join(root, ".gitignore"), "utf-8");
-    expect(body.match(/\.docent\//g)?.length).toBe(1);
+    expect(
+      readFileSync(path.join(root, ".docent", ".gitignore"), "utf-8")
+    ).toBe("custom\n");
   });
 });

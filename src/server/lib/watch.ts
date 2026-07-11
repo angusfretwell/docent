@@ -25,7 +25,7 @@ import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 
 import { resolveGitDir, resolveRepo } from "../services/git";
-import { ensureGitignore } from "../services/review";
+import { ensureStateRootGitignore } from "../services/review";
 import { makeMatcher, parseGitignore } from "./gitignore";
 import type { IgnoreMatcher } from "./gitignore";
 
@@ -109,13 +109,15 @@ const makeWatch = Effect.fn("makeWatch")(function* makeWatch(cwd: string) {
   );
   const stateRoot = path.join(root, ".docent");
 
-  // The watch target must exist, and `.docent/` must stay out of git history.
-  // Both are best-effort — a failure here must not stop the server from booting.
+  // The watch target must exist, and `.docent/` must carry its commit policy
+  // (data-model.md §1). Both are best-effort — a failure here must not stop the
+  // server from booting.
   yield* fs.makeDirectory(stateRoot, { recursive: true }).pipe(Effect.ignore);
-  yield* ensureGitignore(root).pipe(Effect.ignore);
+  yield* ensureStateRootGitignore(root).pipe(Effect.ignore);
 
-  // Built after ensureGitignore so `.docent/` is in `.gitignore` and the repo
-  // watch treats it as ignored (the dedicated `.docent/` watch handles it).
+  // The matcher keeps `node_modules`/`dist` churn off the repo-root watch; it
+  // always excludes `.docent/` too (the dedicated `.docent/` watch owns it),
+  // independent of the repo's `.gitignore`.
   const matcher: IgnoreMatcher = yield* buildMatcher(root, gitDir);
 
   // The channel carries `void` by design (see the module comment); `void` here

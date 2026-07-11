@@ -11,10 +11,12 @@
  * directory), `*.ext` suffix globs, trailing-slash directory patterns,
  * leading-slash / embedded-slash anchored patterns, and `*`/`?` wildcards
  * within a path segment. Not supported (fall through to git's authority):
- * `!` negations and `**` cross-segment globs. `.git/` is always ignored.
+ * `!` negations and `**` cross-segment globs. `.git/` and the `.docent/` state
+ * root are always ignored — `.docent/` no longer lives in `.gitignore`
+ * (data-model.md §1), and its own recursive watch owns it.
  */
 
-const ALWAYS_IGNORED = ".git";
+const ALWAYS_IGNORED = new Set([".git", ".docent"]);
 
 export interface IgnoreMatcher {
   /** Whether `relPath` (repo-relative, any OS separator) is ignored. */
@@ -82,7 +84,7 @@ export function makeMatcher(patterns: readonly string[]): IgnoreMatcher {
       const segments = normalized
         .split("/")
         .filter((segment) => segment !== "");
-      if (segments.includes(ALWAYS_IGNORED)) {
+      if (segments.some((segment) => ALWAYS_IGNORED.has(segment))) {
         return true;
       }
       return rules.some((rule) => rule(normalized, segments));

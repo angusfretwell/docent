@@ -168,6 +168,7 @@ export const writeFindingRecord = Effect.fn("writeFindingRecord")(
       base: params.base,
       branch: params.branch,
       reviewDir,
+      root: params.root,
     });
     const change = yield* mintChange({ refs: params.refs, reviewDir });
     const createdAt = yield* now;

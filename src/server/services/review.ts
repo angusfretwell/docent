@@ -26,7 +26,15 @@ import { Path } from "effect/Path";
 import { FRONTMATTER, recordType, splitEnvelope } from "../lib/records";
 
 const STATE_ROOT = ".docent";
-const GITIGNORE_ENTRY = `${STATE_ROOT}/`;
+
+/**
+ * The `.docent/.gitignore` commit policy (data-model.md §1): everything under
+ * `.docent/` is machine-local working state, so only the capture runbook —
+ * earned setup knowledge — and this policy file itself travel with the repo.
+ * The `!.gitignore` line is what lets the policy be committed rather than
+ * ignoring itself.
+ */
+const STATE_ROOT_GITIGNORE = "*\n!capture.md\n!.gitignore\n";
 
 /** Directory name for a branch's Review: the branch name, slashes → dashes. */
 export function branchSlug(branch: string): string {
@@ -37,6 +45,31 @@ export function branchSlug(branch: string): string {
 export function reviewDirPath(root: string, branch: string): string {
   return `${root}/${STATE_ROOT}/reviews/${branchSlug(branch)}`;
 }
+
+/**
+ * Seed `<root>/.docent/.gitignore` with the commit policy when it is absent —
+ * the single home for the policy, run by every path that lazily creates
+ * `.docent` (data-model.md §1). Idempotent: an existing file is left untouched,
+ * so a re-run never duplicates a line. Best-effort at every call site.
+ */
+export const ensureStateRootGitignore = Effect.fn("ensureStateRootGitignore")(
+  function* ensureStateRootGitignore(root: string) {
+    const fs = yield* FileSystem;
+    const path = yield* Path;
+    const dir = path.join(root, STATE_ROOT);
+    const file = path.join(dir, ".gitignore");
+
+    const present = yield* fs
+      .exists(file)
+      .pipe(Effect.orElseSucceed(() => false));
+    if (present) {
+      return;
+    }
+
+    yield* fs.makeDirectory(dir, { recursive: true });
+    yield* fs.writeFileString(file, STATE_ROOT_GITIGNORE);
+  }
+);
 
 const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
@@ -92,6 +125,7 @@ export const listDir = Effect.fn("listDir")(function* listDir(dir: string) {
 /** Read `review.json`, creating it (auto-create on first use) when absent. */
 export const ensureReview = Effect.fn("ensureReview")(
   function* ensureReview(params: {
+    root: string;
     reviewDir: string;
     branch: string;
     base: string;
@@ -99,6 +133,10 @@ export const ensureReview = Effect.fn("ensureReview")(
     const fs = yield* FileSystem;
     const path = yield* Path;
     const file = path.join(params.reviewDir, "review.json");
+
+    // Seed the commit policy the moment `.docent` first materializes, so the
+    // machine-local records this write is about to create never leak into git.
+    yield* ensureStateRootGitignore(params.root);
 
     const existing = yield* readRecord(file, Review);
     if (Option.isSome(existing)) {
@@ -330,6 +368,7 @@ export const readReviewSnapshot = Effect.fn("readReviewSnapshot")(
       base: params.base,
       branch: params.branch,
       reviewDir,
+      root: params.root,
     });
     const [changes, findings, walkthroughs, viewed] = yield* Effect.all(
       [
@@ -378,6 +417,7 @@ export const appendViewedEvent = Effect.fn("appendViewedEvent")(
       base: params.base,
       branch: params.branch,
       reviewDir,
+      root: params.root,
     });
 
     const viewedDir = path.join(reviewDir, "viewed");
@@ -395,32 +435,5 @@ export const appendViewedEvent = Effect.fn("appendViewedEvent")(
       `${JSON.stringify(event, null, 2)}\n`
     );
     return event;
-  }
-);
-
-/**
- * Ensure `.docent/` stays out of git history by adding it to the repo's
- * `.gitignore` (data-model.md §1: in-repo but gitignored). Idempotent and
- * best-effort — a missing or unwritable `.gitignore` is not fatal.
- */
-export const ensureGitignore = Effect.fn("ensureGitignore")(
-  function* ensureGitignore(root: string) {
-    const fs = yield* FileSystem;
-    const path = yield* Path;
-    const file = path.join(root, ".gitignore");
-
-    const current = yield* fs
-      .readFileString(file)
-      .pipe(Effect.orElseSucceed(() => ""));
-    const ignored = current
-      .split("\n")
-      .some((line) => line.trim().replace(/\/$/, "") === STATE_ROOT);
-    if (ignored) {
-      return;
-    }
-
-    const prefix =
-      current === "" || current.endsWith("\n") ? current : `${current}\n`;
-    yield* fs.writeFileString(file, `${prefix}${GITIGNORE_ENTRY}\n`);
   }
 );
