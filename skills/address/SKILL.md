@@ -7,7 +7,7 @@ description: Address the open findings on a local branch — fetch the needs-act
 
 The **fixer** half of the docent review loop (agent-integration.md §3.1). You fetch **needs-action** Findings, make ordinary code edits, and reply on each with a **Disposition** recording how you ended your turn. You are reviewed _by_ the queue; you act on it and hand back.
 
-**You never write a resolve.** That single rule is what keeps you the fixer, not the resolver — it realizes the loop's **fixer ≠ resolver** guidance by construction (agent-integration.md §2.6, §3.1). Verifying and closing a fix is `/review`'s job, a separate pass. Your writes are code edits plus **reply** records — nothing else.
+**You never write a resolve.** That single rule is what keeps you the fixer, not the resolver — the loop's **fixer ≠ resolver** guidance (agent-integration.md §2.6, §3.1). Verifying and closing a fix is a separate pass, recorded via `/to-docent`. Your writes are code edits plus **reply** records — nothing else.
 
 Load **`/docent-cli`** for the exact `docent finding` command surface. Everything below drives that CLI, the canonical non-gating path to `.docent/`; with `docent serve` running, each reply you write appears live in the UI over SSE.
 
@@ -20,7 +20,7 @@ docent finding list --whats-next needs-action        # your worklist
 docent finding list --whats-next needs-action --anchor-file src/app.ts   # scope to one file
 ```
 
-That is your whole inbox. **needs-action** is the only state you clear — you never pick up the others, because none is yours to clear. A `question` you raised (**needs-answer**) is answered, and a `declined` you returned (**needs-decision**) is decided, by a human or a reviewer, whose plain reply routes the Finding back to **needs-action** for you to pick up next; **needs-verify** is `/review`'s to verify and resolve. Disposition is "how a **fixer** ends its turn" (agent-integration.md §2.3), so those three states are ones you _produce_, not consume.
+That is your whole inbox. **needs-action** is the only state you clear — you never pick up the others, because none is yours to clear. A `question` you raised (**needs-answer**) is answered, and a `declined` you returned (**needs-decision**) is decided, by a human or a reviewer, whose plain reply routes the Finding back to **needs-action** for you to pick up next; **needs-verify** is for a separate verify pass to resolve. Disposition is "how a **fixer** ends its turn" (agent-integration.md §2.3), so those three states are ones you _produce_, not consume.
 
 Each folded Finding gives you its `id`, `anchor` (the file/line the concern is about), and `body` (what to fix) — enough to act without a second read.
 
@@ -56,7 +56,7 @@ docent finding reply --finding fnd_… --disposition question --agent <your-slug
 
 Every reply you write carries one of these three — a fixer always ends its turn with a Disposition. A plain reply (no Disposition) is a reviewer's re-comment, not a fixer's move.
 
-- **Reply, never resolve.** Even a fix you are certain of ends with `--disposition actioned`, not a resolve — a distinct `/review` pass verifies and closes it. If you resolve, you have collapsed fixer and resolver.
+- **Reply, never resolve.** Even a fix you are certain of ends with `--disposition actioned`, not a resolve — a distinct verify pass verifies and closes it. If you resolve, you have collapsed fixer and resolver.
 - **`actioned` means the edit is made**, even if uncommitted — a reviewer verifies against head after commit; the Pending surface covers the uncommitted interim (agent-integration.md §5, deferred).
 - **Attribution** — pass `--agent <your-slug>` so the reply reads as yours (metadata, never permission, §2.1).
 
@@ -68,10 +68,10 @@ Re-list to confirm every Finding you touched moved off needs-action:
 docent finding list --whats-next needs-action     # should no longer list the ones you addressed
 ```
 
-With `docent serve` running, the human watches each reply land live and can verify your `actioned` fixes via `/review`.
+With `docent serve` running, the human watches each reply land live and can verify your `actioned` fixes in a later pass.
 
 ## Boundaries
 
 - **Never write a resolve** — not for any Finding, not even your own. That is the one invariant that keeps you the fixer (agent-integration.md §3.1).
-- **Never author fresh Findings** — raising new concerns is `/review`'s job; you act on the ones already in the queue.
+- **Never author fresh Findings** — raising new concerns is the reviewer's job (recorded via `/to-docent`); you act on the ones already in the queue.
 - **Commit / push is the human's git workflow** — out of scope (agent-integration.md §3.4). Make the edits; the human commits.

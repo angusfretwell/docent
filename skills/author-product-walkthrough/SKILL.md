@@ -5,7 +5,7 @@ description: Author the Product walkthrough for a Change from already-produced c
 
 # author-product-walkthrough
 
-The **editorial half** of the product pillar (agent-integration.md §3.2, walkthroughs.md §10). Reads a Change and the **already-produced captures**, and drops the product walkthrough's sections — prose with `{{capture:i}}` interleave and pinned `annotations[]`. It **touches no browser**: capture is expensive and separable, so this half re-runs cheaply against the same captures — structure and narration iterate without re-driving anything. Driving the browser is the sibling `/capture-product-walkthrough`; Findings belong to `/review`.
+The **editorial half** of the product pillar (agent-integration.md §3.2, walkthroughs.md §10). Reads a Change and the **already-produced captures**, and drops the product walkthrough's sections — prose with `{{capture:i}}` interleave and pinned `annotations[]`. It **touches no browser**: capture is expensive and separable, so this half re-runs cheaply against the same captures — structure and narration iterate without re-driving anything. Driving the browser is the sibling `/capture-product-walkthrough`; Findings belong to `/to-docent`.
 
 The output is plain files the running tool re-renders live. Load **`/docent-cli`** for the exact `docent walkthrough` command surface — the `add-section` flags, the `{{capture:i}}` interleave rule, the annotation JSON arms, output shape. It is non-gating (hand-authoring the identical files works too, agent-integration.md §3.3); the steps below drive it, and your work is the editorial judgment.
 
@@ -72,6 +72,6 @@ The tour is done when the title is set and every section is dropped in order. If
 ## Boundaries
 
 - **No browser.** This half only narrates; it re-runs cheaply against the same captures. Re-driving capture is the sibling skill's job.
-- **Walkthroughs only, never Findings** — single-purpose (walkthroughs.md §10). Author annotations; leave Findings to `/review`.
+- **Walkthroughs only, never Findings** — single-purpose (walkthroughs.md §10). Author annotations; leave Findings to `/to-docent`.
 - **Regeneration mints a fresh `wlk_`** — never re-narrate a prior, already-authored walkthrough in place (walkthroughs.md §2); a product walkthrough is durable and immutable. A fresh tour for a later Change re-drives capture into a new shell — `/docent`'s call (agent-integration.md §3.1). Because `add-section` appends, author into a captures-only shell with empty `sections`; don't append onto a tour already narrated.
 - **Commit / push is the human's git workflow** — out of scope (agent-integration.md §3.4).

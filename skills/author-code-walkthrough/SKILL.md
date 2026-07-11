@@ -5,7 +5,7 @@ description: Author the Code walkthrough for a Change — an ordered tour of sel
 
 # author-code-walkthrough
 
-Drops the **Code walkthrough** — `walkthroughs/code/wlk_*/`, a manifest plus ordered section files whose targets are diff **ranges** narrated in prose (walkthroughs.md §4, §5, §10). Code has no capture phase, so this is the **single** skill of the code pillar (agent-integration.md §3.2). You **author**, not review — you produce the tour only; Findings belong to the review loop (`/review`).
+Drops the **Code walkthrough** — `walkthroughs/code/wlk_*/`, a manifest plus ordered section files whose targets are diff **ranges** narrated in prose (walkthroughs.md §4, §5, §10). Code has no capture phase, so this is the **single** skill of the code pillar (agent-integration.md §3.2). You **author**, not review — you produce the tour only; Findings belong to the review loop (`/to-docent`).
 
 The output is plain files the running tool re-renders live (`docent serve` watches `.docent/`). Load **`/docent-cli`** for the exact `docent walkthrough` command surface — subcommands, flags, the `{{range:i}}` interleave rule, output shape. It is the single home for `wlk_`/`sec_` minting, lazy `bornChangeId`, and git-resolved `blobSha`, and **non-gating**: hand-authoring the identical files re-renders just the same (agent-integration.md §3.3). The steps below drive it; your work is the editorial judgment.
 
@@ -62,6 +62,6 @@ The tour is done when every section is dropped and the manifest lists them in or
 
 ## Boundaries
 
-- **Walkthroughs only, never Findings** — single-purpose (walkthroughs.md §10). The review → Findings loop is `/review`, a separate flow.
+- **Walkthroughs only, never Findings** — single-purpose (walkthroughs.md §10). The review → Findings loop is `/to-docent`, a separate flow.
 - **Regeneration mints a fresh `wlk_`** — never edit a prior walkthrough in place (walkthroughs.md §2). A code walkthrough is durable and immutable; a new tour for a later Change is a new `create`. When and whether to regenerate is `/docent`'s call (agent-integration.md §3.1), not this skill's.
 - **Commit / push is the human's git workflow** — out of scope (agent-integration.md §3.4).

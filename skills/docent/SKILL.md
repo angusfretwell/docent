@@ -102,7 +102,7 @@ If `docent serve` is running, each regenerated tour appears live in its walkthro
 - **You reconcile and dispatch; you do not author.** The three reference skills own the file writes and the editorial judgment; the `docent walkthrough` / `docent capture` write path owns id minting and content-addressing (`/docent-cli`). Your only writes are the composed skills' — you never hand-author a walkthrough file to shortcut them.
 - **A fresh `wlk_` per regenerated pillar — never edit in place.** Regeneration mints a new immutable walkthrough bound to the head; the prior one persists (walkthroughs.md §2). Patching an existing tour's files to "update" it is never correct.
 - **Selective on pillars.** Each pillar is judged on its own `bornChangeId`: a stale or missing pillar is regenerated, a **live** pillar is left untouched. Never re-mint a live pillar because its sibling drifted, and never skip a stale one — v1 regenerates every stale or missing pillar (walkthroughs.md §8).
-- **Walkthroughs only, never Findings.** Reconciliation produces tours; the review → Findings loop is `/review` and `/address`, separate flows (agent-integration.md §3.1).
+- **Walkthroughs only, never Findings.** Reconciliation produces tours; the review → Findings loop is `/to-docent` and `/address`, separate flows (agent-integration.md §3.1).
 - **Human-invoked only.** docent-the-tool never triggers you — it can only surface staleness. Regeneration happens exactly when the human runs `/docent` (walkthroughs.md §8, agent-integration.md §3.1).
 - **Commit / push and serving the app are the human's workflow** — out of scope (agent-integration.md §3.4, §4).
 

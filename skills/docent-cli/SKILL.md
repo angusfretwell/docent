@@ -1,6 +1,6 @@
 ---
 name: docent-cli
-description: Reference for the `docent` binary's non-`serve` subcommands — the `docent finding` review-loop primitives and the `docent walkthrough` / `docent capture` write path. Use when a skill (`/review`, `/address`, `/author-code-walkthrough`, `/author-product-walkthrough`, `/capture-product-walkthrough`) or a power user needs to read or write Findings, walkthroughs, or captures in `.docent/` from the command line.
+description: Reference for the `docent` binary's non-`serve` subcommands — the `docent finding` review-loop primitives and the `docent walkthrough` / `docent capture` write path. Use when a skill (`/to-docent`, `/address`, `/author-code-walkthrough`, `/author-product-walkthrough`, `/capture-product-walkthrough`) or a power user needs to read or write Findings, walkthroughs, or captures in `.docent/` from the command line.
 ---
 
 # docent-cli
@@ -130,7 +130,7 @@ docent finding resolve --finding fnd_…                          # close, no re
 docent finding resolve --finding fnd_… --body "Verified against head — the guard holds."
 ```
 
-Resolution is **unconstrained**: any actor may resolve any Finding, including an agent resolving another agent's. It is safe because a resolve is an append-only, attributed, **reopenable** event — a later reply reopens the Finding (agent-integration.md §2.6). Whether a given skill _should_ resolve is a role question, not a mechanism one: `/review` resolves, `/address` never does (§3.1).
+Resolution is **unconstrained**: any actor may resolve any Finding, including an agent resolving another agent's. It is safe because a resolve is an append-only, attributed, **reopenable** event — a later reply reopens the Finding (agent-integration.md §2.6). Whether a given actor _should_ resolve is a role question, not a mechanism one: a verify pass resolves; a fixer never resolves what it just fixed (§3.1, §2.6).
 
 ## `docent walkthrough` — the walkthrough write path
 

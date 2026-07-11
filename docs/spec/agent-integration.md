@@ -69,7 +69,7 @@ A reviewer defaults to the **live head** of the branch, minting a Change on refe
 
 ### 2.6 Resolution is unconstrained
 
-Any actor may write a resolve record, including an agent resolving another agent's Finding. This is safe because resolution is an append-only, attributed, **reopenable** event ([#18](https://github.com/angusfretwell/docent/issues/18)). Motivating cases: **verify-and-resolve** in a fix pipeline (a distinct verify pass closes the fixes that hold), **autonomous / headless** passes (nothing leaves the queue otherwise), and **review housekeeping** (dedup / stale-check). **Fixer ≠ resolver** is recommended guidance — realized by construction in the skill split (§3.1) — not a mechanism-level rule ([#18](https://github.com/angusfretwell/docent/issues/18)).
+Any actor may write a resolve record, including an agent resolving another agent's Finding. This is safe because resolution is an append-only, attributed, **reopenable** event ([#18](https://github.com/angusfretwell/docent/issues/18)). Motivating cases: **verify-and-resolve** in a fix pipeline (a distinct verify pass closes the fixes that hold), **autonomous / headless** passes (nothing leaves the queue otherwise), and **review housekeeping** (dedup / stale-check). **Fixer ≠ resolver** is recommended guidance — not a mechanism-level rule ([#18](https://github.com/angusfretwell/docent/issues/18)). It once held by construction, when a separate `/review` skill owned resolves; now that `/to-docent` carries the full write vocabulary, it holds as **prose guidance in that skill** ("don't resolve a Finding you claimed to fix in the same turn", §3.1) — realization moved, the rule did not ([#79](https://github.com/angusfretwell/docent/issues/79)).
 
 ## 3. The skills catalogue
 
@@ -80,7 +80,7 @@ docent ships **7 skills**, pinned by [#21](https://github.com/angusfretwell/doce
 
 | Skill | Kind | Role | Reads | Writes |
 | --- | --- | --- | --- | --- |
-| `/review` | Invokable | Reviewer + verifier/resolver | Head Change (plain `git`), optional focus, open findings queue | Fresh Findings; resolve / re-comment records on needs-verify Findings |
+| `/to-docent` | Invokable | Recorder — writes the session's review outcomes | The session's own outcomes (a review pass, a fix pass over `/from-docent` findings), the open findings queue | Fresh Findings; Disposition-carrying replies; resolves / re-comments — the full write vocabulary |
 | `/address` | Invokable | Fixer | Needs-action Findings, the code | Code edits; reply records carrying a Disposition. **Never a resolve** |
 | `/docent` | Invokable | Walkthrough reconciler | Head Change; each pillar's latest walkthrough's `bornChangeId` | Fresh immutable `wlk_*` for stale/missing pillars only |
 | `/docent-cli` | Reference | CLI usage guide | — | — (describes the `docent` binary's non-`serve` subcommands) |
@@ -92,7 +92,7 @@ Artifact schemas the walkthrough skills produce are owned by [walkthroughs.md](w
 
 ### 3.1 Invokable skills
 
-**`/review` — review + verify.** Reads the head Change (plain `git` in the agent's own session) plus an optional focus, and the open findings queue. Writes **fresh Findings** (born needs-action) **and** resolve / re-comment records on open **needs-verify** Findings. It is reviewer and verifier/resolver in one skill — one act of "assess the head against the queue," since resolving a fix that now holds is the same write, against the same head, as authoring a fresh Finding. Because it is **not** the fixer, the loop's _fixer ≠ resolver_ guidance holds by construction ([#21](https://github.com/angusfretwell/docent/issues/21)).
+**`/to-docent` — record the session's review outcomes.** docent is out of the reviewing business: the outcomes come from whatever process the human already ran this session — `/code-review`, an ad-hoc conversation, another tool, or a fix pass over findings pulled via `/from-docent`. The skill **records what that session produced**, driving the finding CLI's **full write vocabulary**: **fresh Findings** (born needs-action), **Disposition-carrying replies** (`actioned` / `declined` / `question`), and **resolves** — distinguishing "a reply to an existing Finding" from "a new Finding" by matching against the open queue. It reviews and fixes nothing of its own; it transcribes outcomes already in the session, and it never invents a Finding, Disposition, or resolution the work did not produce. Because one skill now carries the full write vocabulary, the loop's _fixer ≠ resolver_ guidance holds **as prose in the skill** ("don't resolve a Finding you claimed to fix in the same turn"), no longer by construction — the old `/review` (reviewer + verifier/resolver) is retired ([#21](https://github.com/angusfretwell/docent/issues/21), [#79](https://github.com/angusfretwell/docent/issues/79)).
 
 **`/address` — fix.** Reads **needs-action** Findings plus the code; writes code edits (ordinary file edits) plus reply records carrying a **Disposition** (`actioned` / `declined` / `question`). **It never writes a resolve** — that is what keeps it the fixer, not the resolver ([#21](https://github.com/angusfretwell/docent/issues/21)).
 
@@ -121,7 +121,7 @@ The `docent` binary has two faces ([#21](https://github.com/angusfretwell/docent
 
 Tool / UI / human concerns, kept out of the catalogue so the invocation model stays crisp ([#21](https://github.com/angusfretwell/docent/issues/21), as amended by [#24](https://github.com/angusfretwell/docent/issues/24)):
 
-- **Review creation and Change minting** → the **tool**. The Review auto-creates on first use; a Change mints lazily on first reference (a Finding, a Walkthrough, a `/review` pass referencing the head). [#21](https://github.com/angusfretwell/docent/issues/21)'s original "materialize a Review from a PR / mint a new Round" items are superseded by this local-branch model ([#24](https://github.com/angusfretwell/docent/issues/24)).
+- **Review creation and Change minting** → the **tool**. The Review auto-creates on first use; a Change mints lazily on first reference (a Finding, a Walkthrough, a `/to-docent` write referencing the head). [#21](https://github.com/angusfretwell/docent/issues/21)'s original "materialize a Review from a PR / mint a new Round" items are superseded by this local-branch model ([#24](https://github.com/angusfretwell/docent/issues/24)).
 - **Mark-as-viewed** → a **human UI** action ([diff-review.md](diff-review.md)); agents never mark files viewed.
 - **Serving the app** → the **human's** dev workflow (§4); capture only consumes a served app.
 - **Commit / push** → the **human's** git workflow, unspecified by this spec ([#18](https://github.com/angusfretwell/docent/issues/18)).
