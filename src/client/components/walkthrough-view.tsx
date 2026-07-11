@@ -13,7 +13,6 @@
 
 import type { CodeViewFileItem } from "@pierre/diffs";
 import { CodeView, WorkerPoolContextProvider } from "@pierre/diffs/react";
-import { splitLines } from "@shared/lib/drift";
 import { findingLocation, foldFinding } from "@shared/lib/finding";
 import type { FoldedFinding } from "@shared/lib/finding";
 import {
@@ -39,6 +38,8 @@ import { useEffect, useState } from "react";
 import { fetchBlobText } from "../lib/blobs";
 import { themes, workerFactory } from "../lib/code-view";
 import type { DriftResult } from "../lib/drift";
+import { CONTEXT_STEP, rangeWindow } from "../lib/walkthrough-context";
+import type { RangeWindow } from "../lib/walkthrough-context";
 import { useRangeDrift } from "../lib/walkthrough-drift";
 import type { KeyedRange } from "../lib/walkthrough-drift";
 
@@ -59,9 +60,16 @@ function rangeKey(sectionId: string, index: number): string {
   return `${sectionId}#${index}`;
 }
 
-/** The `CodeView` item id for a range — its content coordinate, not a drift key. */
-function rangeItemId(range: WalkthroughRange): string {
-  return `${range.file}:${range.blobSha}:${range.lines[0]}-${range.lines[1]}`;
+/**
+ * The `CodeView` item id / highlighter cache key for a shown window — its
+ * content coordinate, not a drift key. Keyed on the shown lines so expanding
+ * context re-tokenizes the widened slice rather than reusing the narrow one.
+ */
+function windowId(
+  range: WalkthroughRange,
+  lines: readonly [number, number]
+): string {
+  return `${range.file}:${range.blobSha}:${lines[0]}-${lines[1]}`;
 }
 
 /** Whether two 1-based inclusive line ranges overlap. */
@@ -184,11 +192,11 @@ function RangeCodeView({
 /** The range's rendered body: a loading note, a load-failure note, or the code. */
 function RangeBody({
   range,
-  text,
+  codeWindow,
   failed,
 }: {
   range: WalkthroughRange;
-  text: string | null;
+  codeWindow: RangeWindow | null;
   failed: boolean;
 }) {
   if (failed) {
@@ -198,24 +206,25 @@ function RangeBody({
       </p>
     );
   }
-  if (text === null) {
+  if (codeWindow === null) {
     return (
       <p style={{ fontSize: "0.8rem", opacity: 0.6 }}>Loading {range.file}…</p>
     );
   }
+  const id = windowId(range, codeWindow.lines);
   return (
     <div
       style={{
         border: "1px solid rgba(128,128,128,0.25)",
         borderRadius: "0.4rem",
-        height: rangeHeight(range.lines[1] - range.lines[0] + 1),
+        height: rangeHeight(codeWindow.lines[1] - codeWindow.lines[0] + 1),
         overflow: "hidden",
       }}
     >
       <RangeCodeView
-        cacheKey={`${range.blobSha}:${range.lines[0]}-${range.lines[1]}`}
-        contents={text}
-        id={rangeItemId(range)}
+        cacheKey={id}
+        contents={codeWindow.text}
+        id={id}
         name={range.file}
       />
     </div>
@@ -225,11 +234,14 @@ function RangeBody({
 /**
  * One range rendered through `CodeView`. The bytes come from the range's
  * content-addressed born blob (`/api/blob/:sha`) — immutable, so always
- * addressable — sliced to the range's lines. Drift never changes what is shown
- * (a shifted block is byte-identical; an outdated one detaches and renders
- * against its born text — walkthroughs.md §8); it only drives the badge and the
- * Diff deep-link's target line. A `base`/`head` label and the born line range
- * head the block, since the slice renumbers from 1.
+ * addressable — sliced to the range's lines. The whole blob is fetched once and
+ * held, so the reader can **expand context** inline: widening the slice is a
+ * pure re-slice of bytes already in hand, the same content-addressed sourcing
+ * the Diff tab expands from (walkthroughs.md §1), never a second fetch. Drift
+ * never changes what is shown (a shifted block is byte-identical; an outdated
+ * one detaches and renders against its born text — walkthroughs.md §8); it only
+ * drives the badge and the Diff deep-link's target line. A `base`/`head` label
+ * and the born line range head the block, since the slice renumbers from 1.
  */
 function RangeCode({
   range,
@@ -242,18 +254,17 @@ function RangeCode({
   findings: readonly FoldedFinding[];
   onOpenInDiff: OpenInDiff;
 }) {
-  const [text, setText] = useState<string | null>(null);
+  const [full, setFull] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  // Context lines revealed on each side of the range, grown by "Expand context".
+  const [context, setContext] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     fetchBlobText(range.blobSha)
-      .then((full) => {
+      .then((text) => {
         if (!cancelled) {
-          const sliced = splitLines(full)
-            .slice(range.lines[0] - 1, range.lines[1])
-            .join("\n");
-          setText(sliced);
+          setFull(text);
         }
       })
       .catch(() => {
@@ -264,7 +275,10 @@ function RangeCode({
     return () => {
       cancelled = true;
     };
-  }, [range.blobSha, range.lines]);
+  }, [range.blobSha]);
+
+  const codeWindow =
+    full === null ? null : rangeWindow(full, range.lines, context);
 
   const targetLine = drift?.lines?.[0] ?? range.lines[0];
   const state = drift?.state ?? "live";
@@ -274,6 +288,8 @@ function RangeCode({
       finding.anchor.file === range.file &&
       overlaps(finding.anchor.lines, range.lines)
   );
+  const canExpand =
+    codeWindow !== null && (codeWindow.canExpandUp || codeWindow.canExpandDown);
 
   return (
     <div style={{ margin: "0.6rem 0" }}>
@@ -290,8 +306,26 @@ function RangeCode({
         >
           Open in Diff
         </button>
+        {canExpand ? (
+          <button
+            onClick={() => setContext((prev) => prev + CONTEXT_STEP)}
+            style={buttonStyle}
+            type="button"
+          >
+            Expand context
+          </button>
+        ) : null}
+        {context > 0 ? (
+          <button
+            onClick={() => setContext(0)}
+            style={buttonStyle}
+            type="button"
+          >
+            Collapse
+          </button>
+        ) : null}
       </div>
-      <RangeBody failed={failed} range={range} text={text} />
+      <RangeBody codeWindow={codeWindow} failed={failed} range={range} />
       {codeFindings.map((finding) => (
         <div key={finding.id} style={findingStyle}>
           {finding.body}
