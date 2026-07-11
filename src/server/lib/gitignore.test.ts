@@ -69,6 +69,14 @@ describe("makeMatcher", () => {
     expect(matcher.ignores("src/app.ts")).toBe(false);
   });
 
+  test("always ignores the .docent state root, absent from .gitignore", () => {
+    const matcher = makeMatcher([]);
+
+    expect(matcher.ignores(".docent")).toBe(true);
+    expect(matcher.ignores(".docent/reviews/main/review.json")).toBe(true);
+    expect(matcher.ignores("src/app.ts")).toBe(false);
+  });
+
   test("treats OS-native backslash separators as path separators", () => {
     const matcher = makeMatcher(["node_modules/"]);
 

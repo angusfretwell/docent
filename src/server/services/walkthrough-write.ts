@@ -164,6 +164,7 @@ export const writeWalkthrough = Effect.fn("writeWalkthrough")(
       base: params.base,
       branch: params.branch,
       reviewDir,
+      root: params.root,
     });
     const change = yield* mintChange({ refs: params.refs, reviewDir });
     const id = yield* makeId("wlk");
@@ -210,6 +211,7 @@ export const addWalkthroughSection = Effect.fn("addWalkthroughSection")(
       base: params.base,
       branch: params.branch,
       reviewDir,
+      root: params.root,
     });
     const { dir, manifest } = yield* loadWalkthrough(
       reviewDir,
@@ -311,6 +313,7 @@ export const addWalkthroughCapture = Effect.fn("addWalkthroughCapture")(
       base: params.base,
       branch: params.branch,
       reviewDir,
+      root: params.root,
     });
     const { dir, manifest } = yield* loadWalkthrough(
       reviewDir,

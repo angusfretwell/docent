@@ -28,7 +28,9 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 *.tsbuildinfo
 
 .repos/
-.docent/
+
+# `.docent/` is no longer ignored wholesale — its own `.docent/.gitignore`
+# carries the commit policy (only capture.md and that policy travel with the repo).
 
 # dev fixture repo, materialized by `bun run fixture`
 .dev/

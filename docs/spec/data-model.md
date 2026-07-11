@@ -16,7 +16,7 @@ Store conventions, all from [#2](https://github.com/angusfretwell/docent/issues/
 
 | Convention | Decision |
 | --- | --- |
-| Location | In-repo but **gitignored** — agents find it in the tree, it stays greppable and diff-inspectable, and it never pollutes git history. Cost accepted: it does not travel across clones (fine for a solo local tool). |
+| Location | In-repo and **machine-local by default** — a committed `.docent/.gitignore` (`*` / `!capture.md` / `!.gitignore`) ignores everything under the state root except the capture runbook and the policy file itself, so agents find it in the tree and it stays greppable and diff-inspectable, while Findings, Changes, and Walkthroughs stay per-machine working state. Cost accepted: that working state does not travel across clones (fine for a solo local tool); only the capture runbook — earned setup knowledge — and the ignore policy travel with the repo ([#78](https://github.com/angusfretwell/docent/issues/78)). Any code path that lazily creates `.docent` seeds this policy if absent. |
 | Granularity | **Directory-of-files, append-only.** A mutation is a new file, never a rewrite. |
 | Format | **Frontmatter-markdown** for prose bodies; **JSON** for pure manifests. |
 | Versioning | Every record self-describes with `schema: <name>@<version>`. No central version file. |
@@ -29,9 +29,11 @@ The state root is **`.docent/`** ([#14](https://github.com/angusfretwell/docent/
 Layout pinned by [#24](https://github.com/angusfretwell/docent/issues/24) (superseding [#3](https://github.com/angusfretwell/docent/issues/3)'s PR-keyed layout), with Finding record dirs under `findings/` per the consolidation naming alignment (see [§9](#9-schema-lineage)).
 
 ```
-.docent/                            # in-repo, gitignored (#2); the state root (#24)
+.docent/                            # in-repo, machine-local by default (#2, #78); the state root (#24)
+  .gitignore                        # the commit policy: * / !capture.md / !.gitignore — only
+                                    #   these two files travel with the repo (#78)
   capture.md                        # optional serving runbook — markdown brief the capture
-                                    #   skill reads/authors; detail in agent-integration.md (#19)
+                                    #   skill reads/authors; committed, so it survives a clone (#19, #78)
   reviews/
     feat-stream/                    # one Review per branch; dir = branch-name slug,
                                     #   slashes → dashes (#24)
