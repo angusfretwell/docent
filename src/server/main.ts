@@ -14,6 +14,7 @@ import { Console, Effect, Schema } from "effect";
 import open from "open";
 import type { ClientAssets } from "../client/assets.ts";
 import { runFinding } from "./cli.ts";
+import { runCapture, runWalkthrough } from "./cli-walkthrough.ts";
 import { resolveChange } from "./git.ts";
 import { layer as serveLayer, serverUrl } from "./serve.ts";
 
@@ -66,27 +67,41 @@ function crash(error: unknown) {
   );
 }
 
+// The non-serve CLI subcommands, each an argv → effect the binary runs against
+// git + fs (architecture.md §5). `finding` is the review loop's I/O; `walkthrough`
+// and `capture` the walkthrough write path — one binary, one write implementation.
+// Each carries its own typed error channel, so they are matched (not unified into
+// one callable) and run through the shared `provide + crash` tail below.
+const CLI_SUBCOMMANDS = ["finding", "walkthrough", "capture"] as const;
+
+/** Run one non-serve CLI effect: provide the Bun services and crash on failure. */
+function runCli<E>(effect: Effect.Effect<void, E, BunServices.BunServices>): void {
+  BunRuntime.runMain(effect.pipe(Effect.provide(BunServices.layer), Effect.catch(crash)));
+}
+
 /**
  * The process entry: dispatch the subcommand and run it. `serve` — the default
- * when no subcommand is given — boots the server; `finding` is the non-serve
- * CLI (list / add / reply / resolve). Every subcommand is served by this one
- * binary (architecture.md §5).
+ * when no subcommand is given — boots the server; the non-serve subcommands
+ * (`finding`, `walkthrough`, `capture`) are the CLI write path. Every subcommand
+ * is served by this one binary (architecture.md §5).
  */
 export function runMain(assets: ClientAssets): void {
   const subcommand = process.argv[2] ?? "serve";
+  const argv = process.argv.slice(3);
 
   if (subcommand === "finding") {
-    BunRuntime.runMain(
-      runFinding(process.cwd(), process.argv.slice(3)).pipe(
-        Effect.provide(BunServices.layer),
-        Effect.catch(crash),
-      ),
-    );
-    return;
+    return runCli(runFinding(process.cwd(), argv));
+  }
+  if (subcommand === "walkthrough") {
+    return runCli(runWalkthrough(process.cwd(), argv));
+  }
+  if (subcommand === "capture") {
+    return runCli(runCapture(process.cwd(), argv));
   }
 
   if (subcommand !== "serve") {
-    console.error(`unknown subcommand: ${subcommand} (expected "serve" or "finding")`);
+    const known = ["serve", ...CLI_SUBCOMMANDS].map((name) => `"${name}"`).join(", ");
+    console.error(`unknown subcommand: ${subcommand} (expected one of ${known})`);
     process.exit(1);
   }
 

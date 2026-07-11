@@ -41,7 +41,7 @@ export class CliUsageError extends Schema.TaggedErrorClass<CliUsageError>()("Cli
  * parsers throw for readable, colocated validation; this converts the throw into
  * an Effect failure so it never escapes an `Effect.fn` generator as a defect.
  */
-function attempt<A>(parse: () => A): Effect.Effect<A, CliUsageError> {
+export function attempt<A>(parse: () => A): Effect.Effect<A, CliUsageError> {
   return Effect.try({
     catch: (error) =>
       error instanceof CliUsageError ? error : new CliUsageError({ reason: String(error) }),
@@ -67,7 +67,7 @@ const DISPOSITION_VALUES: readonly Disposition[] = ["actioned", "declined", "que
  * `--whats-next`. The sets are tiny (2–5 members), so a linear membership check
  * is fine.
  */
-function parseEnum<T extends string>(flag: string, value: string, values: readonly T[]): T {
+export function parseEnum<T extends string>(flag: string, value: string, values: readonly T[]): T {
   if (!values.includes(value as T)) {
     throw new CliUsageError({
       reason: `unknown --${flag}: ${value} (one of ${values.join(", ")})`,
@@ -126,12 +126,12 @@ export function parseArgs(args: readonly string[], booleans: ReadonlySet<string>
 }
 
 /** The last value given for a flag, or `undefined`. */
-function one(args: ParsedArgs, key: string): string | undefined {
+export function one(args: ParsedArgs, key: string): string | undefined {
   return args.values.get(key)?.at(-1);
 }
 
 /** Every value given for a (repeatable) flag, flattened across `,`-lists. */
-function many(args: ParsedArgs, key: string): string[] {
+export function many(args: ParsedArgs, key: string): string[] {
   const out: string[] = [];
   for (const value of args.values.get(key) ?? []) {
     for (const part of value.split(",")) {
@@ -380,7 +380,7 @@ interface WriteContext {
   root: string;
 }
 
-const writeContext = Effect.fn("writeContext")(function* writeContext(cwd: string) {
+export const writeContext = Effect.fn("writeContext")(function* writeContext(cwd: string) {
   const refs = yield* resolveChangeRefs(cwd);
   return {
     base: refs.defaultBranch.name,
@@ -467,12 +467,13 @@ export const resolveFinding = Effect.fn("resolveFinding")(function* resolveFindi
 
 // ── argv dispatch ────────────────────────────────────────────────────────────
 
-function requireFinding(args: ParsedArgs): string {
-  const findingId = one(args, "finding")?.trim();
-  if (findingId === undefined || findingId === "") {
-    throw new CliUsageError({ reason: "--finding <id> is required" });
+/** The last value of a required flag, or a usage error naming it. */
+export function requireFlag(args: ParsedArgs, key: string): string {
+  const value = one(args, key)?.trim();
+  if (value === undefined || value === "") {
+    throw new CliUsageError({ reason: `--${key} <value> is required` });
   }
-  return findingId;
+  return value;
 }
 
 function parseDisposition(value: string | undefined): Disposition | undefined {
@@ -485,7 +486,7 @@ function parseDisposition(value: string | undefined): Disposition | undefined {
  * distinguishes `add`/`reply` (a body is the record) from `resolve` (the body is
  * an optional reason).
  */
-const resolveBody = Effect.fn("resolveBody")(function* resolveBody(
+export const resolveBody = Effect.fn("resolveBody")(function* resolveBody(
   args: ParsedArgs,
   required: boolean,
 ) {
@@ -507,7 +508,7 @@ const resolveBody = Effect.fn("resolveBody")(function* resolveBody(
 });
 
 /** Print a value as pretty JSON on stdout — the machine-readable result shape. */
-function printJson(value: unknown) {
+export function printJson(value: unknown) {
   return Console.log(JSON.stringify(value, null, 2));
 }
 
@@ -537,7 +538,7 @@ export const runFinding = Effect.fn("runFinding")(function* runFinding(
   }
   if (op === "reply") {
     const args = yield* attempt(() => parseArgs(rest, new Set()));
-    const findingId = yield* attempt(() => requireFinding(args));
+    const findingId = yield* attempt(() => requireFlag(args, "finding"));
     const disposition = yield* attempt(() => parseDisposition(one(args, "disposition")));
     const body = yield* resolveBody(args, true);
     return yield* printJson(
@@ -551,7 +552,7 @@ export const runFinding = Effect.fn("runFinding")(function* runFinding(
   }
   if (op === "resolve") {
     const args = yield* attempt(() => parseArgs(rest, new Set()));
-    const findingId = yield* attempt(() => requireFinding(args));
+    const findingId = yield* attempt(() => requireFlag(args, "finding"));
     const body = yield* resolveBody(args, false);
     return yield* printJson(
       yield* resolveFinding(cwd, {
