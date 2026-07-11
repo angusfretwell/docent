@@ -12,7 +12,7 @@
 
 import path from "node:path";
 import { chromium } from "playwright";
-import { Change } from "../src/shared/change.ts";
+import { Change } from "../src/shared/schemas/change.ts";
 
 const repoRoot = path.join(import.meta.dir, "..");
 const fixturePath =

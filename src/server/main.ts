@@ -12,11 +12,11 @@
 import { BunRuntime, BunServices } from "@effect/platform-bun";
 import { Console, Effect, Schema } from "effect";
 import open from "open";
-import type { ClientAssets } from "../client/assets.ts";
-import { runFinding } from "./cli.ts";
-import { runCapture, runWalkthrough } from "./cli-walkthrough.ts";
-import { resolveChange } from "./git.ts";
-import { layer as serveLayer, serverUrl } from "./serve.ts";
+import type { ClientAssets } from "../shared/lib/assets.ts";
+import { runFinding } from "./cli/index.ts";
+import { runCapture, runWalkthrough } from "./cli/walkthrough.ts";
+import { resolveChange } from "./services/git.ts";
+import { layer as serveLayer, serverUrl } from "./lib/serve.ts";
 
 class ClientAssetsMissing extends Schema.TaggedErrorClass<ClientAssetsMissing>()(
   "ClientAssetsMissing",
