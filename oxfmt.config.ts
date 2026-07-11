@@ -3,5 +3,5 @@ import ultracite from "ultracite/oxfmt";
 
 export default defineConfig({
   ...ultracite,
-  ignorePatterns: [".agents/skills"],
+  ignorePatterns: [".agents/skills", "fixtures", ".dev"],
 });

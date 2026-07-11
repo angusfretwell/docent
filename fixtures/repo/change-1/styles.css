@@ -1,0 +1,15 @@
+body {
+  font-family: system-ui, sans-serif;
+  margin: 2rem;
+}
+
+#swatches {
+  display: flex;
+  gap: 8px;
+}
+
+.swatch {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+}

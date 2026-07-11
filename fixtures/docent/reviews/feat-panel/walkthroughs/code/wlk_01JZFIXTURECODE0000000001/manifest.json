@@ -1,0 +1,8 @@
+{
+  "schema": "docent/walkthrough@2",
+  "id": "wlk_01JZFIXTURECODE0000000001",
+  "kind": "code",
+  "bornChangeId": "chg_001",
+  "title": "How Palette builds a swatch",
+  "sections": ["s01-random-color.md", "s02-render.md", "s03-generate.md"]
+}

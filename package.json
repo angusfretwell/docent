@@ -7,6 +7,7 @@
     "compile": "bun run build && bun build --compile --outfile dist/docent bin.ts",
     "serve": "bun run build && bun bin.ts",
     "dev": "bun run build && bun --watch dev.ts",
+    "fixture": "bun scripts/fixture.ts",
     "typecheck": "tsc --noEmit",
     "fix": "ultracite fix",
     "check": "ultracite check",

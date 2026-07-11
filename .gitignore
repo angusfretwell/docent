@@ -29,3 +29,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 .repos/
 .docent/
+
+# dev fixture repo, materialized by `bun run fixture`
+.dev/
