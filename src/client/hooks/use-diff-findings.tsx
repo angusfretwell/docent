@@ -1,6 +1,6 @@
 /**
  * The diff's Finding layer, factored out of `diff-view.tsx`: it folds the
- * Dossier's Findings, drives the inline-compose lifecycle, and produces the
+ * Review's Findings, drives the inline-compose lifecycle, and produces the
  * annotated `CodeViewItem` list plus the `renderAnnotation` the renderer calls.
  * Keeping it here lets DiffView stay about the diff model and navigation.
  */
@@ -13,8 +13,8 @@ import type {
 import { processPatch } from "@pierre/diffs";
 import type { CodeViewHandle } from "@pierre/diffs/react";
 import { foldFinding } from "@shared/lib/finding";
-import type { FindingEntry } from "@shared/schemas/dossier";
 import type { FindingWrite } from "@shared/schemas/finding-write";
+import type { FindingEntry } from "@shared/schemas/review";
 
 import { DiffAnnotationView } from "../components/diff-annotation-view";
 import type { Annotation } from "../lib/diff-annotations";

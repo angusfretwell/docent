@@ -1,6 +1,6 @@
 ---
 name: address
-description: Address the open findings on a local branch — fetch the needs-action queue, make the code edits, and reply on each with a Disposition. Use when the human asks to address, fix, or work through the review findings in a docent Dossier.
+description: Address the open findings on a local branch — fetch the needs-action queue, make the code edits, and reply on each with a Disposition. Use when the human asks to address, fix, or work through the review findings in a docent Review.
 ---
 
 # address

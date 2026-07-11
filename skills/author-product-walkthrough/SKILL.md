@@ -14,7 +14,7 @@ The output is plain files the running tool re-renders live. Load **`/docent-cli`
 Capture runs **first** and mints the product walkthrough shell: `walkthroughs/product/wlk_*/` with its `captures[]` registry populated and `sections` still empty (`/capture-product-walkthrough` §6). You author **into that shell** — read its manifest to get the captures you have to work with:
 
 ```bash
-cat .docent/dossiers/<branch-slug>/walkthroughs/product/wlk_*/manifest.json
+cat .docent/reviews/<branch-slug>/walkthroughs/product/wlk_*/manifest.json
 ```
 
 Take the latest product `wlk_` that has `captures[]` and empty `sections` (or the `--walkthrough` id an orchestrator handed you). Each registry entry is `{ id: cap_…, kind, media, route, viewport, … }`; the `media` sha addresses the blob at `captures/<sha>.{png,rrweb.json}`. Inspect a screenshot blob if you need to see what it shows before narrating it. If no such shell exists, capture has not run — see Stop conditions.

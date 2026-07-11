@@ -1,13 +1,13 @@
 /**
  * The live-reload watch: debounced `node:fs` watches that broadcast a coarse
  * "something changed" signal over a PubSub. The SSE route fans that signal out
- * to every connected browser, which re-fetches `GET /api/dossier` and
+ * to every connected browser, which re-fetches `GET /api/review` and
  * `GET /api/pending` (architecture.md §2). Coarse by design in v1 — one event,
  * the client re-reads what it needs.
  *
  * Three watch surfaces feed the one PubSub:
  *  1. `.docent/` — an external agent (or the UI) dropping a record file trips
- *     the dossier refresh, exactly as before.
+ *     the review refresh, exactly as before.
  *  2. The **repo root** (gitignore-aware, so `node_modules`/`dist` don't drown
  *     it) — an agent editing the working tree recomputes the Pending diff live.
  *  3. The **git directory** (`HEAD`/`index` moves) — a commit empties the
@@ -24,8 +24,8 @@ import { Context, Effect, Layer, Option, PubSub } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 
-import { ensureGitignore } from "../services/dossier";
 import { resolveGitDir, resolveRepo } from "../services/git";
+import { ensureGitignore } from "../services/review";
 import { makeMatcher, parseGitignore } from "./gitignore";
 import type { IgnoreMatcher } from "./gitignore";
 
@@ -137,7 +137,7 @@ const makeWatch = Effect.fn("makeWatch")(function* makeWatch(cwd: string) {
   }
   yield* Effect.addFinalizer(() => Effect.sync(() => clearTimeout(timer)));
 
-  // Surface 1: `.docent/` — dossier writes (external agents and the UI alike).
+  // Surface 1: `.docent/` — review writes (external agents and the UI alike).
   yield* watchDir(stateRoot, { recursive: true }, schedule);
   // Surface 2: repo root — working-tree edits, minus gitignored/`.git`/`.docent`
   // churn, so the Pending diff recomputes live as an agent edits.

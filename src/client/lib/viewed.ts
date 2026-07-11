@@ -1,5 +1,5 @@
 /**
- * The mark-as-viewed read-model: a pure fold of the Dossier's append-only
+ * The mark-as-viewed read-model: a pure fold of the Review's append-only
  * viewed events against the current Change's files. Nothing here is persisted —
  * viewed state, the "changed since viewed" flag, and review progress are all
  * derived on every render, so a new Change recomputes them automatically
@@ -26,7 +26,7 @@
  *   (content-addressed), so the marks are kept — no special case needed.
  */
 
-import type { ViewedEvent } from "@shared/schemas/dossier";
+import type { ViewedEvent } from "@shared/schemas/review";
 
 import type { FileEntry } from "./nav";
 

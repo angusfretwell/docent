@@ -4,7 +4,7 @@
  * §2.2, §3.3):
  *
  * - **fetch-findings** → `docent finding list --filter …`: walks the active
- *   Dossier, folds each Finding, and filters the queue on open/resolved +
+ *   Review, folds each Finding, and filters the queue on open/resolved +
  *   what's-next (+ anchor / author scope), emitting machine-readable JSON.
  * - **write-findings** → `docent finding add / reply / resolve`: appends the
  *   same validated `docent/finding@3` records as `POST /api/findings`, through
@@ -25,7 +25,6 @@ import type { Disposition } from "@shared/schemas/finding";
 import { FindingWrite } from "@shared/schemas/finding-write";
 import { Console, Effect, Schema } from "effect";
 
-import { readDossierSnapshot } from "../services/dossier";
 import type { AuthorInput } from "../services/findings-write";
 import { writeFindingRecord } from "../services/findings-write";
 import {
@@ -34,6 +33,7 @@ import {
   resolveChangeRefs,
   resolveRepo,
 } from "../services/git";
+import { readReviewSnapshot } from "../services/review";
 
 /** A CLI usage error — a bad flag, missing anchor, or unknown subcommand. */
 export class CliUsageError extends Schema.TaggedErrorClass<CliUsageError>()(
@@ -254,7 +254,7 @@ export function applyFindingFilter(
 }
 
 /**
- * fetch-findings: walk the active Dossier, fold every Finding, filter the queue,
+ * fetch-findings: walk the active Review, fold every Finding, filter the queue,
  * and return it in reading order. The identical fold the Findings panel renders
  * (`foldFinding`) — one derivation of resolved / what's-next / participants.
  */
@@ -263,7 +263,7 @@ export const listFindings = Effect.fn("listFindings")(function* listFindings(
   filter: FindingFilter
 ) {
   const repo = yield* resolveRepo(cwd);
-  const snapshot = yield* readDossierSnapshot({
+  const snapshot = yield* readReviewSnapshot({
     base: repo.defaultBranch.name,
     branch: repo.branch,
     root: repo.root,

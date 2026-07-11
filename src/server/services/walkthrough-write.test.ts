@@ -6,7 +6,7 @@ import { BunServices } from "@effect/platform-bun";
 import { ManagedRuntime } from "effect";
 
 import { cleanupScratchDirs, scratchDir } from "../lib/test-fixtures";
-import { readDossierSnapshot } from "./dossier";
+import { readReviewSnapshot } from "./review";
 import {
   addWalkthroughCapture,
   addWalkthroughSection,
@@ -29,8 +29,8 @@ const REFS = {
 };
 const base = { base: "main", branch: "feature" };
 
-function dossierDir(root: string) {
-  return path.join(root, ".docent", "dossiers", "feature");
+function reviewDir(root: string) {
+  return path.join(root, ".docent", "reviews", "feature");
 }
 
 function create(root: string, kind: "code" | "product", title: string) {
@@ -38,7 +38,7 @@ function create(root: string, kind: "code" | "product", title: string) {
 }
 
 function snapshot(root: string) {
-  return run(readDossierSnapshot({ ...base, root }));
+  return run(readReviewSnapshot({ ...base, root }));
 }
 
 function walkthrough(root: string, id: string) {
@@ -244,7 +244,7 @@ describe("addWalkthroughCapture", () => {
     expect(result.media).toMatch(/^[0-9a-f]{64}$/);
 
     const blob = path.join(
-      dossierDir(root),
+      reviewDir(root),
       "walkthroughs",
       "product",
       walkthroughId,
@@ -294,7 +294,7 @@ describe("addWalkthroughCapture", () => {
 
     expect(second.media).toBe(first.media);
     const captureDir = path.join(
-      dossierDir(root),
+      reviewDir(root),
       "walkthroughs",
       "product",
       walkthroughId,
@@ -327,7 +327,7 @@ describe("addWalkthroughCapture", () => {
     );
 
     const blob = path.join(
-      dossierDir(root),
+      reviewDir(root),
       "walkthroughs",
       "product",
       walkthroughId,

@@ -20,13 +20,13 @@ import {
   rollupDrift,
   walkthroughStaleness,
 } from "@shared/lib/walkthrough";
+import type { DriftState } from "@shared/schemas/drift";
+import type { Anchor } from "@shared/schemas/finding";
 import type {
   ChangeRecord,
   FindingEntry,
   WalkthroughEntry,
-} from "@shared/schemas/dossier";
-import type { DriftState } from "@shared/schemas/drift";
-import type { Anchor } from "@shared/schemas/finding";
+} from "@shared/schemas/review";
 import type {
   WalkthroughRange,
   WalkthroughSection,

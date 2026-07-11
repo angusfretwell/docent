@@ -9,8 +9,8 @@ import type {
 import { processPatch } from "@pierre/diffs";
 import type { CodeViewHandle } from "@pierre/diffs/react";
 import { CodeView, WorkerPoolContextProvider } from "@pierre/diffs/react";
-import type { FindingEntry, ViewedEvent } from "@shared/schemas/dossier";
 import type { FindingWrite } from "@shared/schemas/finding-write";
+import type { FindingEntry, ViewedEvent } from "@shared/schemas/review";
 import { sift } from "radashi";
 import { useEffect, useImperativeHandle, useRef, useState } from "react";
 
@@ -351,7 +351,7 @@ function buildRowStates(
  * the scroll share a single ordered file model, so position stays in sync.
  *
  * Mark-as-viewed (diff-review.md §3) rides on that same model: each file's
- * head-blob SHA folds the Dossier's append-only viewed events into per-file
+ * head-blob SHA folds the Review's append-only viewed events into per-file
  * viewed state, which collapses the file body, checks the tree row, and drives
  * the progress read-model. Toggling posts an event and optimistically overlays
  * the fold until the SSE snapshot catches up.

@@ -1,12 +1,12 @@
 /**
  * The Walkthrough write path over `.docent/` — the CLI/server home for minting
  * walkthroughs, sections, and captures (agent-integration.md §3.3,
- * walkthroughs.md §3–6). The mirror of `dossier.ts`'s read path: every write
+ * walkthroughs.md §3–6). The mirror of `review.ts`'s read path: every write
  * lands the exact plain files the walk parses back, in the shape an agent could
  * hand-author (walkthroughs.md §10; non-gating).
  *
  * It shares the finding write path's minting primitives verbatim — `mintChange`
- * for the lazy `bornChangeId`, `makeId` for the ULID ids, `ensureDossier`, and
+ * for the lazy `bornChangeId`, `makeId` for the ULID ids, `ensureReview`, and
  * the `records.ts` frontmatter envelope — so there is one implementation of
  * ULID/Change/anchor minting and validation, never a second (issue #44).
  *
@@ -32,9 +32,9 @@ import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 
 import { recordFile, serializeFrontmatter } from "../lib/records";
-import { dossierDirPath, ensureDossier, makeId, readRecord } from "./dossier";
 import type { ChangeRefs } from "./findings-write";
 import { mintChange } from "./findings-write";
+import { ensureReview, makeId, readRecord, reviewDirPath } from "./review";
 
 const KINDS = ["code", "product"] as const;
 type WalkthroughKind = (typeof KINDS)[number];
@@ -45,7 +45,7 @@ export class WalkthroughNotFound extends Schema.TaggedErrorClass<WalkthroughNotF
   { id: Schema.String }
 ) {
   override get message(): string {
-    return `no walkthrough ${this.id} in this Dossier`;
+    return `no walkthrough ${this.id} in this Review`;
   }
 }
 
@@ -72,7 +72,7 @@ export class SectionArmMismatch extends Schema.TaggedErrorClass<SectionArmMismat
   }
 }
 
-/** The shared read scope every write resolves its Dossier against. */
+/** The shared read scope every write resolves its Review against. */
 interface WriteBase {
   root: string;
   branch: string;
@@ -96,9 +96,9 @@ function slug(title: string): string {
   return slugged === "" ? "section" : slugged;
 }
 
-/** The walkthroughs root under a Dossier: `<dossierDir>/walkthroughs/`. */
-function walkthroughsRoot(path: Path, dossierDir: string): string {
-  return path.join(dossierDir, "walkthroughs");
+/** The walkthroughs root under a Review: `<reviewDir>/walkthroughs/`. */
+function walkthroughsRoot(path: Path, reviewDir: string): string {
+  return path.join(reviewDir, "walkthroughs");
 }
 
 /** Write a manifest canonically: 2-space JSON with a trailing newline. */
@@ -125,11 +125,11 @@ interface LoadedWalkthrough {
  * manifest's own `kind` is authoritative; a missing manifest is a not-found.
  */
 const loadWalkthrough = Effect.fn("loadWalkthrough")(function* loadWalkthrough(
-  dossierDir: string,
+  reviewDir: string,
   id: string
 ) {
   const path = yield* Path;
-  const root = walkthroughsRoot(path, dossierDir);
+  const root = walkthroughsRoot(path, reviewDir);
   for (const kind of KINDS) {
     const dir = path.join(root, kind, id);
     const manifest = yield* readRecord(
@@ -159,13 +159,13 @@ export const writeWalkthrough = Effect.fn("writeWalkthrough")(
     const fs = yield* FileSystem;
     const path = yield* Path;
 
-    const dossierDir = dossierDirPath(params.root, params.branch);
-    yield* ensureDossier({
+    const reviewDir = reviewDirPath(params.root, params.branch);
+    yield* ensureReview({
       base: params.base,
       branch: params.branch,
-      dossierDir,
+      reviewDir,
     });
-    const change = yield* mintChange({ dossierDir, refs: params.refs });
+    const change = yield* mintChange({ refs: params.refs, reviewDir });
     const id = yield* makeId("wlk");
 
     const manifest = Walkthrough.make({
@@ -176,7 +176,7 @@ export const writeWalkthrough = Effect.fn("writeWalkthrough")(
       sections: [],
       title: params.title,
     });
-    const dir = path.join(walkthroughsRoot(path, dossierDir), params.kind, id);
+    const dir = path.join(walkthroughsRoot(path, reviewDir), params.kind, id);
     yield* fs.makeDirectory(dir, { recursive: true });
     yield* writeManifest(dir, manifest);
 
@@ -205,14 +205,14 @@ export const addWalkthroughSection = Effect.fn("addWalkthroughSection")(
     const fs = yield* FileSystem;
     const path = yield* Path;
 
-    const dossierDir = dossierDirPath(params.root, params.branch);
-    yield* ensureDossier({
+    const reviewDir = reviewDirPath(params.root, params.branch);
+    yield* ensureReview({
       base: params.base,
       branch: params.branch,
-      dossierDir,
+      reviewDir,
     });
     const { dir, manifest } = yield* loadWalkthrough(
-      dossierDir,
+      reviewDir,
       params.walkthroughId
     );
 
@@ -306,14 +306,14 @@ export const addWalkthroughCapture = Effect.fn("addWalkthroughCapture")(
     const fs = yield* FileSystem;
     const path = yield* Path;
 
-    const dossierDir = dossierDirPath(params.root, params.branch);
-    yield* ensureDossier({
+    const reviewDir = reviewDirPath(params.root, params.branch);
+    yield* ensureReview({
       base: params.base,
       branch: params.branch,
-      dossierDir,
+      reviewDir,
     });
     const { dir, manifest } = yield* loadWalkthrough(
-      dossierDir,
+      reviewDir,
       params.walkthroughId
     );
     if (manifest.kind !== "product") {
