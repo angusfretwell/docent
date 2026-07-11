@@ -28,10 +28,12 @@ export class WalkthroughRange extends Schema.Class<WalkthroughRange>(
 }) {}
 
 /**
- * One authored callout on a product section (walkthroughs.md §7): a body pinned
- * to a capture-region / recording-timestamp / text-span anchor (the same anchor
- * vocabulary Findings use, reused here). Durable, not a thread, not resolvable —
- * the annotation lives in the section, distinct from a Finding.
+ * One authored callout on a product section (walkthroughs.md §7): a body plus an
+ * anchor drawn from the full Finding anchor union (reused here, deliberately not
+ * narrowed to capture arms). A capture arm pins onto its capture; every other
+ * arm renders as a section-level note, so any arm an author writes surfaces
+ * rather than being dropped (§7's rendering contract). Durable, not a thread,
+ * not resolvable — the annotation lives in the section, distinct from a Finding.
  */
 export class WalkthroughAnnotation extends Schema.Class<WalkthroughAnnotation>(
   "WalkthroughAnnotation"

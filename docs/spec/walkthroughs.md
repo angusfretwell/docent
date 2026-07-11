@@ -154,7 +154,7 @@ A **capture** is one media artifact — one screenshot **or** one recording. It 
 
 Two distinct acts point at walkthrough content, kept as **separate mechanisms sharing one pointer vocabulary** ([#15](https://github.com/angusfretwell/docent/issues/15)):
 
-- **Annotation** — the generation agent's authored callout; lives _in the section_ (frontmatter `annotations[]`), rendered as a pin overlaid on its capture; durable; not a thread; not resolvable.
+- **Annotation** — the generation agent's authored callout; lives _in the section_ (frontmatter `annotations[]`); durable; not a thread; not resolvable. A capture-arm annotation renders as a pin overlaid on its capture; every other arm it can carry renders instead as a **section-level note** (see the rendering contract below).
 - **Finding** — a reviewer's anchored, append-only thread; lives in the Review's Finding records; replied-to, resolved, drifts ([data-model.md](data-model.md)).
 
 Both render through the same overlay framework, but they are different data with different lifecycles — which also keeps a section a self-contained authored artifact ([#15](https://github.com/angusfretwell/docent/issues/15)).
@@ -164,6 +164,16 @@ The anchor arms themselves are **owned by [data-model.md](data-model.md)** — t
 - `walkthrough-section` — `{ walkthroughId, sectionId }`; identity-based, narrative-only; anchors a Finding on the section _as an authored unit_ ("this explanation is misleading"). Pillar-agnostic — the same arm serves code and product sections ([#14](https://github.com/angusfretwell/docent/issues/14)).
 - `screenshot-region`, `recording-timestamp`, `text-span` — the product arms (normalized rect; ms offsets from recording start; quote-based into section prose). A whole-capture Finding is the fine arm with its coordinate omitted; there is no `side` on capture anchors ([#15](https://github.com/angusfretwell/docent/issues/15)).
 - **Findings on code inside a code section fall through to the existing `line`/`file` arms** (content-addressed). Payoff: a Finding on _code_ surfaces in **both** the Diff tab and the walkthrough (one source of truth); a Finding on the _narrative_ surfaces only in the walkthrough ([#14](https://github.com/angusfretwell/docent/issues/14)).
+
+**Rendering contract — everything that validates renders; no silent drops** ([#68](https://github.com/angusfretwell/docent/issues/68)). An annotation's `anchor` spans the full Finding union, so the supported set is the whole union, not just the capture arms — the schema stays wide, and each arm renders in its natural surface:
+
+- `screenshot-region` / `recording-timestamp` → a pin/marker on the capture (annotations and Findings alike).
+- `text-span` → highlighted into the section prose, plus a note carrying the body.
+- `walkthrough-section` → a narrative note under the section.
+- `line` → beside its range (code Findings); `file` → a whole-file note at the section level (Findings in the code tab; annotations in a product section).
+- `change` → a section-level note.
+
+A capture-less annotation arm (`file` / `line` / `change` / `walkthrough-section`) is a **section-level note** located by its anchor rather than a pin — an authored callout with no capture to overlay. Narrowing the schema to capture arms was rejected in favour of rendering the whole set, so an agent that hand-authors any arm sees it surface rather than vanish ([#68](https://github.com/angusfretwell/docent/issues/68)).
 
 ## 8. Drift and staleness
 
