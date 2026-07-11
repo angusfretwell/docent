@@ -484,7 +484,7 @@ export function routes(options: ServeOptions) {
  * `Bun.serve`'s `fetch` and the serve tests call directly. Effect lives one
  * level down here (the entry points are plain Bun) because Effect's Bun server
  * swaps handlers via `server.reload`, which wipes Bun's HTML-bundle `routes`
- * table (@see docs/adr — Vite→Bun-fullstack move).
+ * table (@see docs/adr/0001-serve-via-bun-fullstack.md).
  *
  * The watch and Bun-services layers are `provideMerge`d, not `provide`d: the
  * route handlers read `FileSystem` / `Path` / the git spawner and the
