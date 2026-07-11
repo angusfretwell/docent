@@ -313,9 +313,10 @@ function PendingBody({
 }
 
 /**
- * The Diff tab: the Change/Pending selector over the diff surface plus the
- * global Findings panel. Split out so `App` picks a tab without carrying the
- * diff surface's own derivations (dirty/effective/branch).
+ * The Diff tab: the Change/Pending selector over the diff surface. The global
+ * Findings panel is mounted by `App` beside every tab, so it isn't rendered
+ * here. Split out so `App` picks a tab without carrying the diff surface's own
+ * derivations (dirty/effective/branch).
  */
 function DiffTab({
   change,
@@ -354,27 +355,17 @@ function DiffTab({
         range={range}
         selected={effective}
       />
-      <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          {effective === "pending" && pending ? (
-            <PendingBody diffRef={diffRef} pending={pending} />
-          ) : (
-            <ChangeBody
-              diffRef={diffRef}
-              review={review}
-              drift={drift}
-              state={change}
-            />
-          )}
-        </div>
-        {review ? (
-          <FindingsPanel
+      <div style={{ flex: 1, minHeight: 0, minWidth: 0 }}>
+        {effective === "pending" && pending ? (
+          <PendingBody diffRef={diffRef} pending={pending} />
+        ) : (
+          <ChangeBody
+            diffRef={diffRef}
+            review={review}
             drift={drift}
-            findings={review.findings}
-            onJump={(file, line) => diffRef.current?.scrollToLine(file, line)}
-            onWrite={handleWrite}
+            state={change}
           />
-        ) : null}
+        )}
       </div>
     </>
   );
@@ -520,10 +511,12 @@ export function App() {
     patch: change.kind === "loaded" ? change.change.patch : "",
   });
 
-  // The deep-link loop: a range in the walkthrough tab opens the Diff tab at its
+  // The deep-link loop: a walkthrough range or a Findings-panel row (the panel is
+  // global, so the click can come from any tab) opens the Diff tab at its
   // file/line. Switching to Diff mounts DiffView; the effect then scrolls once
   // DiffView's imperative handle is live, given a frame for the renderer to lay
-  // out, and clears the one-shot request.
+  // out, and clears the one-shot request. When Diff is already active the tab set
+  // is a no-op and the same effect still scrolls.
   function openInDiff(file: string, line: number, side: "base" | "head") {
     setTab("diff");
     setPendingJump({ file, line, side });
@@ -572,7 +565,26 @@ export function App() {
     <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       {review ? <ReviewStatus review={review} /> : null}
       <TabBar onTab={setTab} tab={tab} />
-      {body}
+      <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
+        <div
+          style={{
+            display: "flex",
+            flex: 1,
+            flexDirection: "column",
+            minWidth: 0,
+          }}
+        >
+          {body}
+        </div>
+        {review ? (
+          <FindingsPanel
+            drift={drift}
+            findings={review.findings}
+            onJump={(file, line) => openInDiff(file, line, "head")}
+            onWrite={handleWrite}
+          />
+        ) : null}
+      </div>
     </div>
   );
 }
