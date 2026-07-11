@@ -19,9 +19,11 @@ import open from "open";
 
 import { runFinding } from "./cli/index";
 import { runInstall } from "./cli/install";
+import { runStatus } from "./cli/status";
 import { runValidate } from "./cli/validate";
 import { runCapture, runWalkthrough } from "./cli/walkthrough";
 import { webHandler } from "./lib/serve";
+import { removeServeAddress, writeServeAddress } from "./lib/serve-address";
 import { resolveChange } from "./services/git";
 
 /** What an entry point hands `runMain`: the bundled client and dev/prod knobs. */
@@ -84,6 +86,11 @@ function serve(entry: EntryOptions) {
     );
     const url = server.url.href;
 
+    // Record the live URL so `docent status` (and `/docent`) can detect and
+    // reuse this server instead of starting a second one; cleared on shutdown.
+    // Best-effort — a serve that cannot write its address still serves.
+    yield* writeServeAddress(change.root, url).pipe(Effect.ignore);
+
     yield* Console.log(
       `docent  ·  ${change.branch} → ${change.defaultBranch} @ ${change.root}`
     );
@@ -94,7 +101,11 @@ function serve(entry: EntryOptions) {
     }
 
     // Serve until interrupted (Ctrl+C); Bun keeps the server alive meanwhile.
-    return yield* Effect.never;
+    // `ensuring` runs on interruption too, so the address file is cleared when
+    // the process is stopped.
+    return yield* Effect.never.pipe(
+      Effect.ensuring(removeServeAddress(change.root).pipe(Effect.ignore))
+    );
   }).pipe(Effect.provide(BunServices.layer));
 }
 
@@ -111,8 +122,9 @@ function crash(error: unknown) {
 // git + fs (architecture.md §5). `install` is the onboarding wizard; `finding`
 // is the review loop's I/O; `walkthrough` and `capture` the walkthrough write
 // path — one binary, one write implementation; `validate` the non-gating schema
-// oracle over any `.docent/` tree (§3). Each carries its own typed error channel,
-// so they are matched (not unified into one callable) and run through the shared
+// oracle over any `.docent/` tree (§3); `status` reports whether a docent server
+// is already serving this repo. Each carries its own typed error channel, so
+// they are matched (not unified into one callable) and run through the shared
 // `provide + crash` tail below.
 const CLI_SUBCOMMANDS = [
   "install",
@@ -120,6 +132,7 @@ const CLI_SUBCOMMANDS = [
   "walkthrough",
   "capture",
   "validate",
+  "status",
 ] as const;
 
 /** Run one non-serve CLI effect: provide the Bun services and crash on failure. */
@@ -156,6 +169,9 @@ export function runMain(entry: EntryOptions): void {
   }
   if (subcommand === "validate") {
     return runCli(runValidate(process.cwd(), argv));
+  }
+  if (subcommand === "status") {
+    return runCli(runStatus(process.cwd()));
   }
 
   if (subcommand !== "serve") {

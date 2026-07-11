@@ -303,6 +303,31 @@ function worktreeRoute(cwd: string) {
 }
 
 /**
+ * `GET /api/health` — the repo root this server serves, as `{ root }`. A cheap
+ * liveness-and-identity probe (no diff, no `.docent/` walk) that `docent status`
+ * uses to confirm a recorded `serve.json` address is a live docent server for
+ * *this* repo before `/docent` reuses it: identity is the root alone, which is
+ * all `resolveServeStatus` matches on (serve-address.ts). A git failure 500s.
+ */
+function healthRoute(cwd: string) {
+  return HttpRouter.add(
+    "GET",
+    "/api/health",
+    resolveRepo(cwd).pipe(
+      Effect.flatMap((repo) => HttpServerResponse.json({ root: repo.root })),
+      Effect.catch((error) =>
+        Effect.succeed(
+          HttpServerResponse.jsonUnsafe(
+            { error: error.message },
+            { status: 500 }
+          )
+        )
+      )
+    )
+  );
+}
+
+/**
  * `GET /api/review` — the JSON snapshot of the active Review (the one for the
  * checked-out branch), walked live off `.docent/` on every request (uncached).
  * The Review auto-creates on first use; the branch/base come from git.
@@ -472,6 +497,7 @@ export function routes(options: ServeOptions) {
     captureRoute(options.cwd),
     pendingRoute(options.cwd),
     worktreeRoute(options.cwd),
+    healthRoute(options.cwd),
     reviewRoute(options.cwd),
     viewedRoute(options.cwd),
     findingsRoute(options.cwd),
