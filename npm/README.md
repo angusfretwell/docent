@@ -1,4 +1,4 @@
-# docent
+# Docent
 
 Run docent with nothing installed:
 

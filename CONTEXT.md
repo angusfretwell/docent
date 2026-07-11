@@ -1,4 +1,4 @@
-# docent
+# Docent
 
 An interactive, local-first tool for reviewing code changes — especially agent-authored ones — on local git branches. This glossary is the ubiquitous language; the Change / Dossier model is pinned by [#3](https://github.com/angusfretwell/docent/issues/3) as amended by [#24](https://github.com/angusfretwell/docent/issues/24), which hold its schemas.
 
