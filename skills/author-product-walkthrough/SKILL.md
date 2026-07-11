@@ -53,11 +53,11 @@ Drag a file onto the dropzone {{capture:0}} and the upload begins {{capture:1}}.
 EOF
 ```
 
-Each annotation's `capture` must be a `cap_` id this section embeds — the CLI validates the annotation's schema shape but **not** that membership, so keeping it true is on you. One `add-section` call per section, in order.
+Each annotation's `capture` must be a `cap_` id this section embeds — the CLI checks the annotation's schema, not that membership, so it is yours to keep true (`/docent-cli`). One `add-section` call per section, in order.
 
 ## 5. Set the title and confirm
 
-Give the shell its `title` — capture leaves it empty because a title is editorial. There is no title flag on `add-section`, so set it directly in `manifest.json` (a plain field; the write is non-gating and `docent serve` re-renders it):
+Give the shell its `title` — capture leaves it empty because a title is editorial. No subcommand renames the shell after `create`, so set its title directly in `manifest.json` (a plain field; the write is non-gating and `docent serve` re-renders it):
 
 ```jsonc
 // manifest.json → "title": "…"

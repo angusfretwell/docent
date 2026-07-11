@@ -146,15 +146,15 @@ docent walkthrough add-section --walkthrough wlk_… --title "…" [targets] [--
 #   → { "section": "sNN-<slug>.md", "sectionId": "sec_…", "walkthroughId": "wlk_…" }
 ```
 
-**`create`** requires `--kind code|product` and a non-empty `--title`. There is **no title flag on `add-section`** and no update subcommand — to set a shell's title later (e.g. a product shell `/capture-product-walkthrough` minted with an empty title), edit `manifest.json`'s `title` field directly. That is safe and non-gating: the file is plain and `docent serve` re-renders the edit.
+**`create`** requires `--kind code|product` and a non-empty `--title` (the walkthrough's title). `add-section` also requires a `--title`, but that one names the **section**. There is **no subcommand to rename the walkthrough shell** after `create` — to set a shell's title later (e.g. a product shell `/capture-product-walkthrough` minted with an empty title), edit `manifest.json`'s `title` field directly. That is safe and non-gating: the file is plain and `docent serve` re-renders the edit.
 
 **`add-section`** carries the arm for the walkthrough's `kind` — the **code** arm is `--range`, the **product** arm is `--capture` / `--annotation`. The crossed arm (a `--range` on a product tour, or `--capture`/`--annotation` on a code tour) is refused.
 
-| Flag           | Arm     | Value                                                                                                        |
-| -------------- | ------- | ------------------------------------------------------------------------------------------------------------ |
+| Flag           | Arm     | Value                                                                                                                      |
+| -------------- | ------- | -------------------------------------------------------------------------------------------------------------------------- |
 | `--range`      | code    | `file:start[-end][@side]` — e.g. `src/index.ts:10-24@head`, `src/a.ts:40` (single line, side defaults `head`). Repeatable. |
-| `--capture`    | product | A `cap_` id from the manifest's `captures[]`. Repeatable (or comma-joined).                                   |
-| `--annotation` | product | One JSON callout (see below). Repeat the flag per annotation — never comma-join (the JSON embeds commas).     |
+| `--capture`    | product | A `cap_` id from the manifest's `captures[]`. Repeatable (or comma-joined).                                                |
+| `--annotation` | product | One JSON callout (see below). Repeat the flag per annotation — never comma-join (the JSON embeds commas).                  |
 
 - Each `--range` resolves its content-addressed **`blobSha` from git** at write time, landing the range in the same `line`-anchor coordinate a Finding uses (walkthroughs.md §5), frozen to the exact bytes on its `side`.
 - **Body** — `--body <text>`, or omit it and pipe the body on **stdin** (heredoc / pipe) for multi-line prose.
