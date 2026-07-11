@@ -82,7 +82,7 @@ docent ships **7 skills**, pinned by [#21](https://github.com/angusfretwell/doce
 | --- | --- | --- | --- | --- |
 | `/to-docent` | Invokable | Recorder — writes the session's review outcomes | The session's own outcomes (a review pass, a fix pass over `/from-docent` findings), the open findings queue | Fresh Findings; Disposition-carrying replies; resolves / re-comments — the full write vocabulary |
 | `/address` | Invokable | Fixer | Needs-action Findings, the code | Code edits; reply records carrying a Disposition. **Never a resolve** |
-| `/docent` | Invokable | Walkthrough reconciler | Head Change; each pillar's latest walkthrough's `bornChangeId` | Fresh immutable `wlk_*` for stale/missing pillars only |
+| `/docent` | Invokable | Walkthrough reconciler, end-to-end | `.docent/capture.md` (the drivability gate); Head Change; each pillar's latest walkthrough's `bornChangeId`; `docent status` | Fresh immutable `wlk_*` for stale/missing pillars only; `.docent/capture.md` first-run; then starts `docent serve` (if none is up) and opens the browser |
 | `/docent-cli` | Reference | CLI usage guide | — | — (describes the `docent` binary's non-`serve` subcommands) |
 | `/author-code-walkthrough` | Reference | Code-walkthrough author | A Change (via `git`), optional focus | `walkthroughs/code/wlk_*/` — manifest + ordered sections, `bornChangeId`-bound, immutable |
 | `/author-product-walkthrough` | Reference | Product-walkthrough author (editorial half) | A Change, already-produced captures, optional focus | `walkthroughs/product/wlk_*/` — manifest + sections with `{{capture:i}}` interleave + annotations. **No browser** |
@@ -96,7 +96,11 @@ Artifact schemas the walkthrough skills produce are owned by [walkthroughs.md](w
 
 **`/address` — fix.** Reads **needs-action** Findings plus the code; writes code edits (ordinary file edits) plus reply records carrying a **Disposition** (`actioned` / `declined` / `question`). **It never writes a resolve** — that is what keeps it the fixer, not the resolver ([#21](https://github.com/angusfretwell/docent/issues/21)).
 
-**`/docent` — the walkthrough reconciler** (a docent gives the guided tour). Per pillar, it reads the head Change and the `bornChangeId` of the pillar's latest walkthrough, and decides what to do from **existence + drift**: it regenerates only the pillar(s) the diff actually affects (**selective on pillars**), minting a fresh immutable `wlk_*` — never editing in place. For a stale product walkthrough it re-drives capture **wholesale**; content-addressing dedups byte-identical screens ([#21](https://github.com/angusfretwell/docent/issues/21)). It composes the three reference walkthrough skills below.
+**`/docent` — the walkthrough reconciler, end-to-end** (a docent gives the guided tour). "Type `/docent`, get a browser tab with the tour." The run is three acts ([#81](https://github.com/angusfretwell/docent/issues/81)):
+
+1. **Preflight — always first.** Before any authoring, the skill makes sure it can **drive the app** (the product pillar is a browser/user-facing review). A **non-empty `.docent/capture.md` short-circuits the preflight** — it is the "we know how to drive the app" signal. Otherwise the skill runs the discovery precedence (repo context → ask the human, §4.2), **verifies the app actually renders** (§4.4), and authors `capture.md` from what it learned — front-loading the one human-in-the-loop moment to the start of the run, where the human is present, instead of stalling mid-capture. If the app cannot be reached: **hard stop, early**, with an actionable message, before any expensive authoring. This absorbs and closes the idea of a separate `/docent-setup` skill — setup **is** the preflight, folded in — so the catalogue stays at seven.
+2. **Reconcile.** Per pillar, it reads the head Change and the `bornChangeId` of the pillar's latest walkthrough, and decides what to do from **existence + drift**: it regenerates only the pillar(s) the diff actually affects (**selective on pillars**), minting a fresh immutable `wlk_*` — never editing in place. For a stale product walkthrough it re-drives capture **wholesale**; content-addressing dedups byte-identical screens ([#21](https://github.com/angusfretwell/docent/issues/21)). It composes the three reference walkthrough skills below.
+3. **Serve and open.** The skill checks whether a docent server is already running for this repo (`docent status`, §3.3), starts `docent serve` in the background if not, and opens the browser at the walkthrough. The "docent never spawns processes" decision (§4) concerns the **app under review**, not docent itself — starting docent's own server is unchanged by it.
 
 **`/docent` is the answer to "how and when is a walkthrough regenerated"**: the human runs it; the tool can only _surface_ staleness (the `bornChangeId`-vs-head badge, [#15](https://github.com/angusfretwell/docent/issues/15)), never auto-regenerate — decision B ([#21](https://github.com/angusfretwell/docent/issues/21)). This closes the regen-trigger question [#14](https://github.com/angusfretwell/docent/issues/14) and [#15](https://github.com/angusfretwell/docent/issues/15) deferred.
 
@@ -115,7 +119,7 @@ Artifact schemas the walkthrough skills produce are owned by [walkthroughs.md](w
 The `docent` binary has two faces ([#21](https://github.com/angusfretwell/docent/issues/21)):
 
 - **`docent serve`** — the server + UI ([architecture.md](architecture.md)): watches `.docent/`, renders, streams updates over SSE.
-- **Non-`serve` subcommands** — `docent finding list / add / reply / resolve / reopen / edit`, plus `walkthrough` and `capture` write subcommands: the single home for ULID minting, anchor construction, append semantics, content-addressing, and what's-next / Disposition derivation. Both the UI's write path and agents use it; neither is required to (non-gating).
+- **Non-`serve` subcommands** — `docent finding list / add / reply / resolve / reopen / edit`, plus `walkthrough` and `capture` write subcommands: the single home for ULID minting, anchor construction, append semantics, content-addressing, and what's-next / Disposition derivation. Both the UI's write path and agents use it; neither is required to (non-gating). `docent status` reports whether a docent server is already up for this repo (reading the address `docent serve` records on boot and probing it for liveness) — the cheap detection `/docent`'s serve-and-open act uses to reuse a running server instead of starting a second ([#81](https://github.com/angusfretwell/docent/issues/81)).
 
 ### 3.4 Deliberately _not_ skills
 
@@ -130,7 +134,7 @@ Tool / UI / human concerns, kept out of the catalogue so the invocation model st
 
 ## 4. Serving the app under review
 
-**Serving is the human's responsibility; the capture skill consumes a served app — it never owns the process** ([#19](https://github.com/angusfretwell/docent/issues/19)). docent-the-tool never spawns the app; this keeps decision B intact.
+**Serving is the human's responsibility; the capture skill consumes a served app — it never owns the process** ([#19](https://github.com/angusfretwell/docent/issues/19)). docent-the-tool never spawns the app; this keeps decision B intact. This concerns the **app under review** only: `/docent` starting **docent's own** `docent serve` in its serve-and-open act (§3.1) is a different process and unaffected by this rule ([#81](https://github.com/angusfretwell/docent/issues/81)).
 
 ### 4.1 Who boots the app
 
@@ -143,6 +147,8 @@ The human invoking the capture skill owns serving: either the dev server is alre
 3. **Ask the human.**
 
 The runbook is **markdown, not a config schema** — a fallback brief the agent both _reads and authors_, carrying prose setup instructions: how to log in, how to seed data, which port the dev server uses. It is not the source of truth; it is consulted only when the knowledge isn't discoverable elsewhere. **First-run generation:** when nothing is discoverable, the skill generates the runbook from what it learned (asked the human / inferred) so later captures don't re-ask ([#19](https://github.com/angusfretwell/docent/issues/19)).
+
+**The runbook's role, amended by [#81](https://github.com/angusfretwell/docent/issues/81): for `/docent`'s preflight (§3.1) it is promoted from fallback-consulted-on-discovery-failure to the _gate_.** A **non-empty `.docent/capture.md` short-circuits the whole preflight** — it is the "we know how to drive the app" signal, so the run proceeds to reconcile without touching discovery. Only when it is absent or empty does `/docent` run the discovery rungs (codebase context → ask the human), verify the app renders, and author the runbook up front — front-loading the one human-in-the-loop moment to where the human is present. Within `/capture-product-walkthrough` the runbook keeps its rung-2 fallback role above; the gate promotion is `/docent`'s preflight reading of it, not a change to capture's own precedence.
 
 ### 4.3 Viewport and starting route
 
