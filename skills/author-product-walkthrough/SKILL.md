@@ -1,13 +1,13 @@
 ---
 name: author-product-walkthrough
-description: Author the Product walkthrough for a Change from already-produced captures — ordered sections with {{capture:i}} interleave and pinned annotations, no browser. Use when narrating a product tour over existing captures, or when /docent needs the product pillar's editorial half.
+description: Author the Product walkthrough for a Change from already-produced captures — the editorial, no-browser half of the product pillar. Use when narrating a product tour over existing captures, or when /docent needs the product pillar's editorial half.
 ---
 
 # author-product-walkthrough
 
 The **editorial half** of the product pillar (agent-integration.md §3.2, walkthroughs.md §10). Reads a Change and the **already-produced captures**, and drops the product walkthrough's sections — prose with `{{capture:i}}` interleave and pinned `annotations[]`. It **touches no browser**: capture is expensive and separable, so this half re-runs cheaply against the same captures — structure and narration iterate without re-driving anything. Driving the browser is the sibling `/capture-product-walkthrough`; Findings belong to `/review`.
 
-The output is plain files the running tool re-renders live. Prefer the `docent walkthrough` CLI below (non-gating — hand-authoring the identical files works too, agent-integration.md §3.3).
+The output is plain files the running tool re-renders live. Load **`/docent-cli`** for the exact `docent walkthrough` command surface — the `add-section` flags, the `{{capture:i}}` interleave rule, the annotation JSON arms, output shape. It is non-gating (hand-authoring the identical files works too, agent-integration.md §3.3); the steps below drive it, and your work is the editorial judgment.
 
 ## 1. Find the captured shell — the captures you narrate over
 
@@ -17,9 +17,7 @@ Capture runs **first** and mints the product walkthrough shell: `walkthroughs/pr
 cat .docent/dossiers/<branch-slug>/walkthroughs/product/wlk_*/manifest.json
 ```
 
-Take the latest product `wlk_` that has `captures[]` and empty `sections` (or the `--walkthrough` id an orchestrator handed you). Each registry entry is `{ id: cap_…, kind, media, route, viewport, … }`; the `media` sha addresses the blob at `captures/<sha>.{png,rrweb.json}`. Inspect a screenshot blob if you need to see what it shows before narrating it.
-
-- **No product shell with captures exists** → **stop**: capture has not run. This skill authors nothing without captures — run `/capture-product-walkthrough` first (or `/docent`, which composes capture → author).
+Take the latest product `wlk_` that has `captures[]` and empty `sections` (or the `--walkthrough` id an orchestrator handed you). Each registry entry is `{ id: cap_…, kind, media, route, viewport, … }`; the `media` sha addresses the blob at `captures/<sha>.{png,rrweb.json}`. Inspect a screenshot blob if you need to see what it shows before narrating it. If no such shell exists, capture has not run — see Stop conditions.
 
 ## 2. Read the Change and intent
 
@@ -43,7 +41,7 @@ The prose-primary spine: an ordered list of authored sections, each narration pl
 
 ## 4. Drop each section — captures + interleave + annotations
 
-Append sections **in tour order**. `--capture` takes the `cap_` ids from the registry; `--annotation` takes one JSON callout each (repeat the flag), pinned to a capture region or recording timestamp:
+Append sections **in tour order**. `--capture` takes the `cap_` ids from the registry; `--annotation` takes one JSON callout each (repeat the flag), pinned to a region of a capture or a recording timestamp. Place `{{capture:i}}` markers to narrate _between_ captures. See `/docent-cli` for the flags, the annotation anchor arms, and the no-markers fallback.
 
 ```bash
 docent walkthrough add-section --walkthrough wlk_… \
@@ -55,9 +53,7 @@ Drag a file onto the dropzone {{capture:0}} and the upload begins {{capture:1}}.
 EOF
 ```
 
-- **Body on stdin** (heredoc / pipe) for multi-line prose, or `--body "…"` for a one-liner.
-- **Literate interleave** — `{{capture:i}}` markers place captures _between_ prose; `i` is the capture's position in the `--capture` list, in the order you passed them. **No markers ⇒ the captures render in order after the prose** (walkthroughs.md §5).
-- **Annotation anchors** — `screenshot-region` `{ capture, rect: [x,y,w,h] }` (rect normalized 0–1), `recording-timestamp` `{ capture, fromMs, toMs }` (ms from recording start), or `text-span` into the prose. Each `capture` must be a `cap_` id this section embeds. The CLI validates every annotation against the schema on write.
+Each annotation's `capture` must be a `cap_` id this section embeds — the CLI validates the annotation's schema shape but **not** that membership, so keeping it true is on you. One `add-section` call per section, in order.
 
 ## 5. Set the title and confirm
 
@@ -68,6 +64,10 @@ Give the shell its `title` — capture leaves it empty because a title is editor
 ```
 
 The tour is done when the title is set and every section is dropped in order. If `docent serve` is running, the Product walkthrough tab shows each section, capture, and annotation pin appear live (walkthroughs.md §1). Schemas are validated on write, so a tour that lands renders with no hand-editing.
+
+## Stop conditions
+
+- **No product shell with captures exists** → **stop**: capture has not run. This skill authors nothing without captures — run `/capture-product-walkthrough` first (or `/docent`, which composes capture → author).
 
 ## Boundaries
 

@@ -1,6 +1,6 @@
 ---
 name: docent-cli
-description: Reference for the `docent` binary's non-`serve` subcommands — the `docent finding list / add / reply / resolve` review-loop primitives. Use when a skill (`/review`, `/address`) or a power user needs to read or write Findings in `.docent/` from the command line.
+description: Reference for the `docent` binary's non-`serve` subcommands — the `docent finding` review-loop primitives and the `docent walkthrough` / `docent capture` write path. Use when a skill (`/review`, `/address`, `/author-code-walkthrough`, `/author-product-walkthrough`, `/capture-product-walkthrough`) or a power user needs to read or write Findings, walkthroughs, or captures in `.docent/` from the command line.
 ---
 
 # docent-cli
@@ -8,7 +8,7 @@ description: Reference for the `docent` binary's non-`serve` subcommands — the
 The `docent` binary has **two faces** (agent-integration.md §3.3):
 
 - **`docent serve`** — the server + UI. Watches `.docent/`, renders the Dossier, streams updates over SSE. Not covered here.
-- **Non-`serve` subcommands** — `docent finding list / add / reply / resolve`. This skill documents them.
+- **Non-`serve` subcommands** — `docent finding list / add / reply / resolve`, plus the `docent walkthrough` / `docent capture` write path. This skill documents them.
 
 The finding subcommands are the CLI half of the review loop's **two I/O primitives** (agent-integration.md §2.2):
 
@@ -132,6 +132,56 @@ docent finding resolve --finding fnd_… --body "Verified against head — the g
 
 Resolution is **unconstrained**: any actor may resolve any Finding, including an agent resolving another agent's. It is safe because a resolve is an append-only, attributed, **reopenable** event — a later reply reopens the Finding (agent-integration.md §2.6). Whether a given skill _should_ resolve is a role question, not a mechanism one: `/review` resolves, `/address` never does (§3.1).
 
+## `docent walkthrough` — the walkthrough write path
+
+Mints and grows a walkthrough (walkthroughs.md §4, §5). A manifest is assembled incrementally: `create` writes the shell, then `add-section` appends. Two subcommands:
+
+```bash
+# create — mint a wlk_ shell, bind bornChangeId to the live head (minting the Change if the head has none)
+docent walkthrough create --kind code --title "…"        # or --kind product
+#   → { "changeId": "chg_…", "walkthroughId": "wlk_…" }
+
+# add-section — validate + append one section, in tour order (the manifest array IS the order)
+docent walkthrough add-section --walkthrough wlk_… --title "…" [targets] [--body <text> | stdin]
+#   → { "section": "sNN-<slug>.md", "sectionId": "sec_…", "walkthroughId": "wlk_…" }
+```
+
+**`create`** requires `--kind code|product` and a non-empty `--title`. There is **no title flag on `add-section`** and no update subcommand — to set a shell's title later (e.g. a product shell `/capture-product-walkthrough` minted with an empty title), edit `manifest.json`'s `title` field directly. That is safe and non-gating: the file is plain and `docent serve` re-renders the edit.
+
+**`add-section`** carries the arm for the walkthrough's `kind` — the **code** arm is `--range`, the **product** arm is `--capture` / `--annotation`. The crossed arm (a `--range` on a product tour, or `--capture`/`--annotation` on a code tour) is refused.
+
+| Flag           | Arm     | Value                                                                                                        |
+| -------------- | ------- | ------------------------------------------------------------------------------------------------------------ |
+| `--range`      | code    | `file:start[-end][@side]` — e.g. `src/index.ts:10-24@head`, `src/a.ts:40` (single line, side defaults `head`). Repeatable. |
+| `--capture`    | product | A `cap_` id from the manifest's `captures[]`. Repeatable (or comma-joined).                                   |
+| `--annotation` | product | One JSON callout (see below). Repeat the flag per annotation — never comma-join (the JSON embeds commas).     |
+
+- Each `--range` resolves its content-addressed **`blobSha` from git** at write time, landing the range in the same `line`-anchor coordinate a Finding uses (walkthroughs.md §5), frozen to the exact bytes on its `side`.
+- **Body** — `--body <text>`, or omit it and pipe the body on **stdin** (heredoc / pipe) for multi-line prose.
+- **Literate interleave** — the body may place `{{range:i}}` (code) / `{{capture:i}}` (product) markers to narrate _between_ targets; `i` is the target's position in the `--range` / `--capture` list, in the order passed. **No markers ⇒ targets render in order after the prose** (the flat fallback, walkthroughs.md §5).
+- **Annotation JSON** — `{ "anchor": <arm>, "body": "…" }`, validated against the same `Anchor` schema Findings use. The product arms:
+
+  ```jsonc
+  { "kind": "screenshot-region", "capture": "cap_a", "rect": [0.1, 0.2, 0.3, 0.1] } // rect [x,y,w,h], normalized 0–1
+  { "kind": "recording-timestamp", "capture": "cap_b", "fromMs": 3200, "toMs": 5000 } // ms from recording start
+  ```
+
+  The CLI validates the annotation's **schema shape only** — it does **not** check that `anchor.capture` is one of the section's `--capture` ids; keeping that true is the author's job.
+
+## `docent capture` — content-address a capture blob
+
+Registers one media file on a **product** walkthrough (walkthroughs.md §6) — content-addresses the bytes into `captures/<sha>.{png,rrweb.json}` (byte-identical media dedups to one blob) and appends the `captures[]` registry entry. A code walkthrough has no capture arm, so it is refused.
+
+```bash
+docent capture add --walkthrough wlk_… --kind screenshot --media shot.png \
+  --route /signup --viewport 1280x800 --dims 1280x2400          # screenshot: --dims WxH
+docent capture add --walkthrough wlk_… --kind recording --media rec.rrweb.json \
+  --route /signup --viewport 1280x800 --duration-ms 8200        # recording: --duration-ms
+#   → { "captureId": "cap_…", "media": "<sha>", "registry": { … }, "walkthroughId": "wlk_…" }
+```
+
+`--dims` is for screenshots and `--duration-ms` for recordings; the mismatch is refused. `--media` is a file path read relative to the cwd. This is the CLI half of `/capture-product-walkthrough`, which drives the browser to produce the media.
+
 ## Attribution — metadata, never permission
 
 Every write records **who** did it; it never gates **who may** (agent-integration.md §2.1). By default the write is attributed to the git-config human (matching the UI's write path). Override to attribute to an agent:
@@ -151,7 +201,9 @@ When you run one of these subcommands **as an agent inside a skill**, pass `--ag
 
 ## Output shape
 
-- `list` → `{ "findings": [ { "id", "anchor", "body", "participants", "replies", "resolved", "whatsNext" }, … ] }`
-- `add` / `reply` / `resolve` → `{ "changeId": "chg_…", "findingId": "fnd_…", "record": "NNN-<type>.md" }`
+- `finding list` → `{ "findings": [ { "id", "anchor", "body", "participants", "replies", "resolved", "whatsNext" }, … ] }`
+- `finding add` / `reply` / `resolve` → `{ "changeId": "chg_…", "findingId": "fnd_…", "record": "NNN-<type>.md" }`
+- `walkthrough create` → `{ "changeId", "walkthroughId" }`; `walkthrough add-section` → `{ "section", "sectionId", "walkthroughId" }`
+- `capture add` → `{ "captureId", "media", "registry", "walkthroughId" }`
 
 Errors go to stderr and exit non-zero, with a human-readable message (a bad flag, a missing anchor, an unknown subcommand).
