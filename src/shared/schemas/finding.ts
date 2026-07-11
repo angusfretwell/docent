@@ -35,7 +35,9 @@ export const ANCHOR_KIND = {
 } as const;
 
 const Side = Schema.Literals(["base", "head"]);
-const ChangeAnchor = Schema.Struct({ kind: Schema.Literal(ANCHOR_KIND.change) });
+const ChangeAnchor = Schema.Struct({
+  kind: Schema.Literal(ANCHOR_KIND.change),
+});
 const FileAnchor = Schema.Struct({
   blobSha: Schema.String,
   file: Schema.String,
@@ -57,7 +59,9 @@ const WalkthroughSectionAnchor = Schema.Struct({
 const ScreenshotRegionAnchor = Schema.Struct({
   capture: Schema.String,
   kind: Schema.Literal(ANCHOR_KIND.screenshotRegion),
-  rect: Schema.optional(Schema.Tuple([Schema.Number, Schema.Number, Schema.Number, Schema.Number])),
+  rect: Schema.optional(
+    Schema.Tuple([Schema.Number, Schema.Number, Schema.Number, Schema.Number])
+  ),
 });
 const RecordingTimestampAnchor = Schema.Struct({
   capture: Schema.String,
@@ -85,11 +89,21 @@ export const Anchor = Schema.Union([
 export type Anchor = typeof Anchor.Type;
 
 /** How a fixer ended its turn (data-model.md §7); optional on reply records. */
-export const Disposition = Schema.Literals(["actioned", "declined", "question"]);
+export const Disposition = Schema.Literals([
+  "actioned",
+  "declined",
+  "question",
+]);
 export type Disposition = typeof Disposition.Type;
 
 /** The record types, derived from the `NNN-<type>.md` filename (data-model.md §5.1). */
-export const RECORD_TYPES = ["open", "reply", "resolve", "reopen", "edit"] as const;
+export const RECORD_TYPES = [
+  "open",
+  "reply",
+  "resolve",
+  "reopen",
+  "edit",
+] as const;
 export const RecordType = Schema.Literals(RECORD_TYPES);
 export type RecordType = typeof RecordType.Type;
 
@@ -99,17 +113,19 @@ export type RecordType = typeof RecordType.Type;
  * optional reply field; `edits` names the record an edit supersedes (its
  * filename) — the append-only equivalent of an in-place body edit.
  */
-export class FindingRecord extends Schema.Class<FindingRecord>("FindingRecord")({
-  anchor: Schema.optional(Anchor),
-  author: Author,
-  body: Schema.String,
-  changeId: Schema.String,
-  createdAt: Schema.String,
-  disposition: Schema.optional(Disposition),
-  edits: Schema.optional(Schema.String),
-  /** The record's filename, e.g. `002-reply.md` — orders the log and is the edit target. */
-  name: Schema.String,
-  /** The envelope discriminant; a record without it fails to decode and is skipped. */
-  schema: Schema.Literal("docent/finding@3"),
-  type: RecordType,
-}) {}
+export class FindingRecord extends Schema.Class<FindingRecord>("FindingRecord")(
+  {
+    anchor: Schema.optional(Anchor),
+    author: Author,
+    body: Schema.String,
+    changeId: Schema.String,
+    createdAt: Schema.String,
+    disposition: Schema.optional(Disposition),
+    edits: Schema.optional(Schema.String),
+    /** The record's filename, e.g. `002-reply.md` — orders the log and is the edit target. */
+    name: Schema.String,
+    /** The envelope discriminant; a record without it fails to decode and is skipped. */
+    schema: Schema.Literal("docent/finding@3"),
+    type: RecordType,
+  }
+) {}

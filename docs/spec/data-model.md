@@ -14,13 +14,13 @@ Chosen over a tool-owned store because the product is agent-first (agents author
 
 Store conventions, all from [#2](https://github.com/angusfretwell/docent/issues/2):
 
-| Convention  | Decision                                                                                                                                                                                                           |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Location    | In-repo but **gitignored** — agents find it in the tree, it stays greppable and diff-inspectable, and it never pollutes git history. Cost accepted: it does not travel across clones (fine for a solo local tool). |
-| Granularity | **Directory-of-files, append-only.** A mutation is a new file, never a rewrite.                                                                                                                                    |
-| Format      | **Frontmatter-markdown** for prose bodies; **JSON** for pure manifests.                                                                                                                                            |
-| Versioning  | Every record self-describes with `schema: <name>@<version>`. No central version file.                                                                                                                              |
-| Write path  | Agents drop files in the documented shape — no lock, no read-modify-write. docent watches `.docent/` and re-renders live. Optional CLI sugar writes the _same_ file, validated and atomic.                         |
+| Convention | Decision |
+| --- | --- |
+| Location | In-repo but **gitignored** — agents find it in the tree, it stays greppable and diff-inspectable, and it never pollutes git history. Cost accepted: it does not travel across clones (fine for a solo local tool). |
+| Granularity | **Directory-of-files, append-only.** A mutation is a new file, never a rewrite. |
+| Format | **Frontmatter-markdown** for prose bodies; **JSON** for pure manifests. |
+| Versioning | Every record self-describes with `schema: <name>@<version>`. No central version file. |
+| Write path | Agents drop files in the documented shape — no lock, no read-modify-write. docent watches `.docent/` and re-renders live. Optional CLI sugar writes the _same_ file, validated and atomic. |
 
 The state root is **`.docent/`** ([#14](https://github.com/angusfretwell/docent/issues/14) renamed the provisional `.review/`; [#24](https://github.com/angusfretwell/docent/issues/24) confirms). v1 input is a **local git branch checked out in the repo** — there is no GitHub integration in v1; everything resolves from local git alone ([#24](https://github.com/angusfretwell/docent/issues/24)).
 
@@ -76,12 +76,12 @@ The **Dossier** is the durable per-branch file of record — everything docent h
 
 ### `docent/dossier@3`
 
-| Field    | Type   | Meaning                                                      |
-| -------- | ------ | ------------------------------------------------------------ |
-| `schema` | string | `"docent/dossier@3"`                                         |
-| `id`     | string | Stable opaque id (ULID-based)                                |
-| `branch` | string | The branch name — the Dossier's identity                     |
-| `base`   | string | Base ref recorded at creation (default: repo default branch) |
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `schema` | string | `"docent/dossier@3"` |
+| `id` | string | Stable opaque id (ULID-based) |
+| `branch` | string | The branch name — the Dossier's identity |
+| `base` | string | Base ref recorded at creation (default: repo default branch) |
 
 ```json
 {
@@ -157,14 +157,14 @@ Folds to: `{ anchor, body, replies[], resolved, participants[] }` ([#7](https://
 
 Every record in the directory carries this frontmatter envelope over a plain-markdown body:
 
-| Field         | On                 | Type   | Meaning                                                                                                                                                                                                                                                                                                                                     |
-| ------------- | ------------------ | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `schema`      | every record       | string | `"docent/finding@3"`                                                                                                                                                                                                                                                                                                                        |
-| `author`      | every record       | object | Attribution `{ kind, id, display, model? }` — see [§5.4](#54-attribution)                                                                                                                                                                                                                                                                   |
-| `changeId`    | every record       | string | The Change current when the record was authored ([#20](https://github.com/angusfretwell/docent/issues/20)). The root record's `changeId` **is** the Finding's `bornChangeId` — the born anchor's provenance and drift fast path. Writing any record is a minting reference: it mints (or idempotently reuses) the Change for the live head. |
-| `createdAt`   | every record       | string | ISO-8601 timestamp                                                                                                                                                                                                                                                                                                                          |
-| `anchor`      | root (`open`) only | object | One arm of the anchor union — see [§5.3](#53-the-anchor-union)                                                                                                                                                                                                                                                                              |
-| `disposition` | replies, optional  | string | `actioned` \| `declined` \| `question` ([#18](https://github.com/angusfretwell/docent/issues/18)) — see [§7](#7-whats-next)                                                                                                                                                                                                                 |
+| Field | On | Type | Meaning |
+| --- | --- | --- | --- |
+| `schema` | every record | string | `"docent/finding@3"` |
+| `author` | every record | object | Attribution `{ kind, id, display, model? }` — see [§5.4](#54-attribution) |
+| `changeId` | every record | string | The Change current when the record was authored ([#20](https://github.com/angusfretwell/docent/issues/20)). The root record's `changeId` **is** the Finding's `bornChangeId` — the born anchor's provenance and drift fast path. Writing any record is a minting reference: it mints (or idempotently reuses) the Change for the live head. |
+| `createdAt` | every record | string | ISO-8601 timestamp |
+| `anchor` | root (`open`) only | object | One arm of the anchor union — see [§5.3](#53-the-anchor-union) |
+| `disposition` | replies, optional | string | `actioned` \| `declined` \| `question` ([#18](https://github.com/angusfretwell/docent/issues/18)) — see [§7](#7-whats-next) |
 
 `changeId` on every record is **capture-now-or-lose-forever** ([#20](https://github.com/angusfretwell/docent/issues/20)): drift and resolved-state are derived at read time and always recoverable, but which Change a past reply or resolve was written against is knowable only at write time. It powers the Findings panel's cross-Change timeline labels ("opened on chg_001 · resolved on chg_004"). No new files, no read-path cost.
 
@@ -173,14 +173,26 @@ Example root record — `findings/fnd_01J9GQ4W7X…/001-open.md`:
 ```markdown
 ---
 schema: docent/finding@3
-author: { kind: agent, id: claude-code, display: "Claude Code", model: claude-fable-5 }
+author:
+  {
+    kind: agent,
+    id: claude-code,
+    display: "Claude Code",
+    model: claude-fable-5,
+  }
 changeId: chg_001
 createdAt: 2026-07-10T02:14:00Z
-anchor: { kind: line, file: src/parser/stream.ts, side: head, blobSha: 9c2a1f0…, lines: [42, 47] }
+anchor:
+  {
+    kind: line,
+    file: src/parser/stream.ts,
+    side: head,
+    blobSha: 9c2a1f0…,
+    lines: [42, 47],
+  }
 ---
 
-This backpressure handling drops chunks when the consumer stalls — the
-`highWaterMark` check on line 44 races the flush.
+This backpressure handling drops chunks when the consumer stalls — the `highWaterMark` check on line 44 races the flush.
 ```
 
 Example reply with disposition — `002-reply.md`:
@@ -280,10 +292,10 @@ Plain **markdown** ([#7](https://github.com/angusfretwell/docent/issues/7)).
 
 Re-anchor by a **blob-to-blob diff on the anchor's own side**: diff the born blob (via `blobSha`) against the newest Change's blob for that file, and map the anchored range through the edit script ([#7](https://github.com/angusfretwell/docent/issues/7)):
 
-| State        | Meaning                                                   | Render                                                                                                |
-| ------------ | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| **live**     | present, byte-identical, same line numbers                | pinned in place; no badge                                                                             |
-| **shifted**  | present, byte-identical, moved                            | re-anchored to new lines; **informational** badge, not a warning                                      |
+| State | Meaning | Render |
+| --- | --- | --- |
+| **live** | present, byte-identical, same line numbers | pinned in place; no badge |
+| **shifted** | present, byte-identical, moved | re-anchored to new lines; **informational** badge, not a warning |
 | **outdated** | anchored bytes edited or deleted — no confident re-anchor | **detaches**, renders against its **born text** (recoverable via `blobSha`); never pins to wrong code |
 
 The live/shifted boundary is forced by the three-state vocabulary: `outdated` already owns "content changed," so a pure line-move must be `shifted` or the middle state has no referent ([#7](https://github.com/angusfretwell/docent/issues/7)).
@@ -303,10 +315,10 @@ Walkthrough-level staleness (`bornChangeId` vs the newest Change) and per-range/
 
 `resolve`/`reopen` are records; resolution **persists across Changes** (minting appends nothing to any Finding) and drift **never auto-toggles** resolution. The UI surfaces the **(drift × resolved) matrix** instead of automating ([#7](https://github.com/angusfretwell/docent/issues/7)):
 
-|                | **live**           | **outdated**                                                           |
-| -------------- | ------------------ | ---------------------------------------------------------------------- |
+|  | **live** | **outdated** |
+| --- | --- | --- |
 | **unresolved** | the live work item | **re-check signal**: you flagged this, the code changed underneath you |
-| **resolved**   | settled; collapsed | the healthy end state (flagged → fixed → resolved); collapsed          |
+| **resolved** | settled; collapsed | the healthy end state (flagged → fixed → resolved); collapsed |
 
 (`shifted` renders as live-with-badge on the drift axis.) Where detached/outdated Findings surface — the Findings panel — is owned by [diff-review.md](diff-review.md) ([#20](https://github.com/angusfretwell/docent/issues/20) as reworded by [#24](https://github.com/angusfretwell/docent/issues/24)).
 
@@ -319,13 +331,13 @@ The **actor-blind** queue read pinned by [#18](https://github.com/angusfretwell/
 - **Axis 1 — open / resolved**, folded from `resolve`/`reopen` records.
 - **Axis 2 — what's-next** (for open Findings), derived from the **latest record's** disposition, blind to who authored it:
 
-| Latest record                                                  | What's-next        |
-| -------------------------------------------------------------- | ------------------ |
-| fresh Finding · plain comment · "do it again" (no disposition) | **needs action**   |
-| reply with `disposition: actioned`                             | **needs verify**   |
-| reply with `disposition: question`                             | **needs answer**   |
-| reply with `disposition: declined`                             | **needs decision** |
-| resolve                                                        | **closed**         |
+| Latest record | What's-next |
+| --- | --- |
+| fresh Finding · plain comment · "do it again" (no disposition) | **needs action** |
+| reply with `disposition: actioned` | **needs verify** |
+| reply with `disposition: question` | **needs answer** |
+| reply with `disposition: declined` | **needs decision** |
+| resolve | **closed** |
 
 - **Disposition** ∈ `{actioned, declined, question}` is MECE for how a fixer ends its turn; a fresh Finding or plain comment carries none — it simply needs action. This is the only schema addition [#18](https://github.com/angusfretwell/docent/issues/18) makes: an optional field on the reply record.
 - **Author-kind is not a routing signal.** A first-pass rule that routed by human-vs-agent authorship was replaced by disposition; "the agent reviews me" and "I review the agent" differ only in who authors record `001`.
@@ -345,18 +357,22 @@ Semantics (manual-only checkbox, collapse-on-view, progress read-model, edge cas
 - **Progress** (viewed files / total files in the Change) is a pure read-model over the viewed events — nothing else is persisted; it recomputes per Change automatically.
 
 ```json
-{ "path": "src/parser/stream.ts", "blobSha": "9c2a1f0…", "ts": "2026-07-10T02:31:07Z" }
+{
+  "path": "src/parser/stream.ts",
+  "blobSha": "9c2a1f0…",
+  "ts": "2026-07-10T02:31:07Z"
+}
 ```
 
 ## 9. Schema lineage
 
-| Schema                         | Current version                                     | Pinned by                                                                                                                                                          | Supersedes / lineage                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| ------------------------------ | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `docent/dossier@3`             | `@3`                                                | [#24](https://github.com/angusfretwell/docent/issues/24)                                                                                                           | `docent/review@1` ([#2](https://github.com/angusfretwell/docent/issues/2), provisional) → `docent/review@2` ([#3](https://github.com/angusfretwell/docent/issues/3), PR-keyed, `currentChangeId`/`changeIds`) → renamed Dossier, pointers dropped ([#24](https://github.com/angusfretwell/docent/issues/24))                                                                                                                                                                                                                                                                          |
-| `docent/change@3`              | `@3`                                                | [#24](https://github.com/angusfretwell/docent/issues/24)                                                                                                           | `docent/change@1` ([#2](https://github.com/angusfretwell/docent/issues/2), provisional) → `docent/change@2` ([#3](https://github.com/angusfretwell/docent/issues/3), `source` union + PR metadata) → flattened, GitHub source deferred ([#24](https://github.com/angusfretwell/docent/issues/24))                                                                                                                                                                                                                                                                                     |
-| `docent/finding@3`             | `@3`                                                | consolidation (this spec), folding the amendments below                                                                                                            | `docent/comment@1` ([#2](https://github.com/angusfretwell/docent/issues/2), single file, `resolved:` frontmatter) → `docent/comment@2` ([#7](https://github.com/angusfretwell/docent/issues/7), event-sourced `comments/thr_*` dirs) → + optional `disposition` on replies ([#18](https://github.com/angusfretwell/docent/issues/18)) → + `changeId` on every record ([#20](https://github.com/angusfretwell/docent/issues/20)) → renamed `findings/fnd_*` + `docent/finding@3`, resolving the naming-alignment item [#24](https://github.com/angusfretwell/docent/issues/24) flagged |
-| `docent/walkthrough@2`         | `@2` — detail in [walkthroughs.md](walkthroughs.md) | [#14](https://github.com/angusfretwell/docent/issues/14) (`kind: code`), [#15](https://github.com/angusfretwell/docent/issues/15) (`kind: product` + `captures[]`) | `docent/walkthrough@1` ([#2](https://github.com/angusfretwell/docent/issues/2), draft)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `docent/walkthrough-section@2` | `@2` — detail in [walkthroughs.md](walkthroughs.md) | [#14](https://github.com/angusfretwell/docent/issues/14) / [#15](https://github.com/angusfretwell/docent/issues/15)                                                | `docent/walkthrough-section@1` ([#2](https://github.com/angusfretwell/docent/issues/2), draft)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| viewed event                   | `{path, blobSha, ts}`                               | [#9](https://github.com/angusfretwell/docent/issues/9)                                                                                                             | —                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| Schema | Current version | Pinned by | Supersedes / lineage |
+| --- | --- | --- | --- |
+| `docent/dossier@3` | `@3` | [#24](https://github.com/angusfretwell/docent/issues/24) | `docent/review@1` ([#2](https://github.com/angusfretwell/docent/issues/2), provisional) → `docent/review@2` ([#3](https://github.com/angusfretwell/docent/issues/3), PR-keyed, `currentChangeId`/`changeIds`) → renamed Dossier, pointers dropped ([#24](https://github.com/angusfretwell/docent/issues/24)) |
+| `docent/change@3` | `@3` | [#24](https://github.com/angusfretwell/docent/issues/24) | `docent/change@1` ([#2](https://github.com/angusfretwell/docent/issues/2), provisional) → `docent/change@2` ([#3](https://github.com/angusfretwell/docent/issues/3), `source` union + PR metadata) → flattened, GitHub source deferred ([#24](https://github.com/angusfretwell/docent/issues/24)) |
+| `docent/finding@3` | `@3` | consolidation (this spec), folding the amendments below | `docent/comment@1` ([#2](https://github.com/angusfretwell/docent/issues/2), single file, `resolved:` frontmatter) → `docent/comment@2` ([#7](https://github.com/angusfretwell/docent/issues/7), event-sourced `comments/thr_*` dirs) → + optional `disposition` on replies ([#18](https://github.com/angusfretwell/docent/issues/18)) → + `changeId` on every record ([#20](https://github.com/angusfretwell/docent/issues/20)) → renamed `findings/fnd_*` + `docent/finding@3`, resolving the naming-alignment item [#24](https://github.com/angusfretwell/docent/issues/24) flagged |
+| `docent/walkthrough@2` | `@2` — detail in [walkthroughs.md](walkthroughs.md) | [#14](https://github.com/angusfretwell/docent/issues/14) (`kind: code`), [#15](https://github.com/angusfretwell/docent/issues/15) (`kind: product` + `captures[]`) | `docent/walkthrough@1` ([#2](https://github.com/angusfretwell/docent/issues/2), draft) |
+| `docent/walkthrough-section@2` | `@2` — detail in [walkthroughs.md](walkthroughs.md) | [#14](https://github.com/angusfretwell/docent/issues/14) / [#15](https://github.com/angusfretwell/docent/issues/15) | `docent/walkthrough-section@1` ([#2](https://github.com/angusfretwell/docent/issues/2), draft) |
+| viewed event | `{path, blobSha, ts}` | [#9](https://github.com/angusfretwell/docent/issues/9) | — |
 
 Superseded shapes exist only in ticket history; nothing on disk ever migrates in place — a repo starts at the current versions, and every record self-describes.

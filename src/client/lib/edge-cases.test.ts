@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import {
   autoViewed,
   bodyReplaced,
@@ -167,7 +168,9 @@ describe("classifyFiles — per-case detection", () => {
 
 describe("classifyFiles — large / minified", () => {
   test("a diff past the changed-line threshold is large", () => {
-    const lines = Array.from({ length: 2100 }, (_, i) => `+line ${i}`).join("\n");
+    const lines = Array.from({ length: 2100 }, (_, i) => `+line ${i}`).join(
+      "\n"
+    );
     const patch = `diff --git a/big.txt b/big.txt
 index 1..2 100644
 --- a/big.txt
@@ -218,7 +221,7 @@ describe("isGeneratedPath — default glob set", () => {
     "%s is not generated",
     (path) => {
       expect(isGeneratedPath(path)).toBe(false);
-    },
+    }
   );
 });
 

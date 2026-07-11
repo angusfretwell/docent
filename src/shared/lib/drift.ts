@@ -14,7 +14,6 @@
  * timeline labels (diff-review.md §7).
  */
 
-import type { Anchor, FindingRecord } from "../schemas/finding";
 import type {
   AnchorContext,
   ChangeEvent,
@@ -24,6 +23,7 @@ import type {
   DriftState,
   Reanchor,
 } from "../schemas/drift";
+import type { Anchor, FindingRecord } from "../schemas/finding";
 
 /**
  * Split blob text into content lines, dropping the single trailing newline so a
@@ -52,7 +52,7 @@ export function splitLines(text: string): string[] {
 export function reanchorRange(
   born: readonly string[],
   current: readonly string[],
-  range: readonly [number, number],
+  range: readonly [number, number]
 ): Reanchor {
   const [start, end] = range;
   if (start < 1 || end < start || end > born.length) {
@@ -100,7 +100,10 @@ export function reanchorRange(
  * outdated Finding detaches and renders against (data-model.md §6.1). The range
  * is clamped so a stale range never throws.
  */
-export function excerptLines(text: string, range: readonly [number, number]): string {
+export function excerptLines(
+  text: string,
+  range: readonly [number, number]
+): string {
   const lines = splitLines(text);
   const [start, end] = range;
   return lines.slice(Math.max(0, start - 1), Math.max(0, end)).join("\n");
@@ -120,7 +123,10 @@ export function planDrift(anchor: Anchor, ctx: AnchorContext): DriftPlan {
     return { kind: "resolved", state };
   }
   if (anchor.kind === "line") {
-    if (ctx.currentSideSha === undefined || ctx.currentSideSha === anchor.blobSha) {
+    if (
+      ctx.currentSideSha === undefined ||
+      ctx.currentSideSha === anchor.blobSha
+    ) {
       return { kind: "resolved", state: "live" };
     }
     return {
@@ -138,12 +144,17 @@ export function planDrift(anchor: Anchor, ctx: AnchorContext): DriftPlan {
  * none; `shifted` is always an informational "moved" note; `outdated` is a
  * re-check signal while unresolved and the settled end state once resolved.
  */
-export function driftBadge(state: DriftState, resolved: boolean): DriftBadge | undefined {
+export function driftBadge(
+  state: DriftState,
+  resolved: boolean
+): DriftBadge | undefined {
   if (state === "shifted") {
     return { label: "Shifted", tone: "info" };
   }
   if (state === "outdated") {
-    return resolved ? { label: "Outdated", tone: "muted" } : { label: "Re-check", tone: "signal" };
+    return resolved
+      ? { label: "Outdated", tone: "muted" }
+      : { label: "Re-check", tone: "signal" };
   }
   return undefined;
 }
@@ -162,8 +173,12 @@ const RECORD_VERB: Partial<Record<FindingRecord["type"], ChangeVerb>> = {
  * milestones of the same kind collapse into one — so a burst of replies reads as
  * a single "replied on …".
  */
-export function changeHistory(records: readonly FindingRecord[]): ChangeEvent[] {
-  const ordered = records.toSorted((left, right) => left.name.localeCompare(right.name));
+export function changeHistory(
+  records: readonly FindingRecord[]
+): ChangeEvent[] {
+  const ordered = records.toSorted((left, right) =>
+    left.name.localeCompare(right.name)
+  );
   const events: ChangeEvent[] = [];
   for (const record of ordered) {
     const verb = RECORD_VERB[record.type];

@@ -1,8 +1,4 @@
-import { useState } from "react";
-import type { FindingEntry } from "@shared/schemas/dossier";
-import type { DriftState } from "@shared/schemas/drift";
 import { changeHistoryLabel } from "@shared/lib/drift";
-import type { FindingWrite } from "@shared/schemas/finding-write";
 import type { FoldedFinding } from "@shared/lib/finding";
 import {
   findingJumpTarget,
@@ -11,9 +7,14 @@ import {
   sortFoldedFindings,
   WHATS_NEXT_LABEL,
 } from "@shared/lib/finding";
+import type { FindingEntry } from "@shared/schemas/dossier";
+import type { DriftState } from "@shared/schemas/drift";
+import type { FindingWrite } from "@shared/schemas/finding-write";
+import { useState } from "react";
+
+import type { DriftResult } from "../lib/drift";
 import { Composer } from "./composer";
 import { DRIFT_SIGNAL, DriftPill } from "./drift-badge";
-import type { DriftResult } from "../lib/drift";
 import { FindingThread } from "./finding-thread";
 
 // The Dossier-global Findings panel (diff-review.md §7): a flat list of every
@@ -156,12 +157,14 @@ export function FindingsPanel({
   // Keep each Finding's records beside its fold so the row can render the
   // cross-Change timeline (which reads per-record changeId) without re-walking.
   const historyById = new Map(
-    findings.map((finding) => [finding.id, changeHistoryLabel(finding.records)]),
+    findings.map((finding) => [finding.id, changeHistoryLabel(finding.records)])
   );
   const folded = sortFoldedFindings(
-    findings.map((finding) => foldFinding(finding.id, finding.records)),
+    findings.map((finding) => foldFinding(finding.id, finding.records))
   );
-  const visible = showResolved ? folded : folded.filter((finding) => !finding.resolved);
+  const visible = showResolved
+    ? folded
+    : folded.filter((finding) => !finding.resolved);
 
   function toggle(finding: FoldedFinding) {
     setExpandedId((current) => (current === finding.id ? null : finding.id));
@@ -181,9 +184,22 @@ export function FindingsPanel({
   return (
     <aside style={panelStyle}>
       <header style={headerStyle}>
-        <div style={{ alignItems: "center", display: "flex", justifyContent: "space-between" }}>
+        <div
+          style={{
+            alignItems: "center",
+            display: "flex",
+            justifyContent: "space-between",
+          }}
+        >
           <strong>Findings · {visible.length}</strong>
-          <label style={{ alignItems: "center", display: "flex", gap: "0.25rem", opacity: 0.8 }}>
+          <label
+            style={{
+              alignItems: "center",
+              display: "flex",
+              gap: "0.25rem",
+              opacity: 0.8,
+            }}
+          >
             <input
               checked={showResolved}
               onChange={(event) => setShowResolved(event.target.checked)}

@@ -12,15 +12,27 @@
 
 import type { CodeViewFileItem } from "@pierre/diffs";
 import { CodeView, WorkerPoolContextProvider } from "@pierre/diffs/react";
-import { useEffect, useState } from "react";
-import type { ChangeRecord, FindingEntry, WalkthroughEntry } from "@shared/schemas/dossier";
 import { splitLines } from "@shared/lib/drift";
-import type { DriftState } from "@shared/schemas/drift";
 import { foldFinding } from "@shared/lib/finding";
 import type { FoldedFinding } from "@shared/lib/finding";
+import {
+  interleaveSegments,
+  rollupDrift,
+  walkthroughStaleness,
+} from "@shared/lib/walkthrough";
+import type {
+  ChangeRecord,
+  FindingEntry,
+  WalkthroughEntry,
+} from "@shared/schemas/dossier";
+import type { DriftState } from "@shared/schemas/drift";
 import type { Anchor } from "@shared/schemas/finding";
-import { interleaveSegments, rollupDrift, walkthroughStaleness } from "@shared/lib/walkthrough";
-import type { WalkthroughRange, WalkthroughSection } from "@shared/schemas/walkthrough";
+import type {
+  WalkthroughRange,
+  WalkthroughSection,
+} from "@shared/schemas/walkthrough";
+import { useEffect, useState } from "react";
+
 import { fetchBlobText } from "../lib/blobs";
 import { themes, workerFactory } from "../lib/code-view";
 import type { DriftResult } from "../lib/drift";
@@ -38,7 +50,10 @@ function rangeItemId(range: WalkthroughRange): string {
 }
 
 /** Whether two 1-based inclusive line ranges overlap. */
-function overlaps(a: readonly [number, number], b: readonly [number, number]): boolean {
+function overlaps(
+  a: readonly [number, number],
+  b: readonly [number, number]
+): boolean {
   return a[0] <= b[1] && b[0] <= a[1];
 }
 
@@ -119,7 +134,10 @@ const RANGE_CHROME = 52;
 const RANGE_MAX_HEIGHT = 480;
 
 function rangeHeight(lineCount: number): number {
-  return Math.min(RANGE_MAX_HEIGHT, Math.max(2, lineCount) * RANGE_LINE_HEIGHT + RANGE_CHROME);
+  return Math.min(
+    RANGE_MAX_HEIGHT,
+    Math.max(2, lineCount) * RANGE_LINE_HEIGHT + RANGE_CHROME
+  );
 }
 
 /** The lone `CodeView` file item for a range — the Diff tab's renderer, one blob. */
@@ -159,10 +177,16 @@ function RangeBody({
   failed: boolean;
 }) {
   if (failed) {
-    return <p style={{ fontSize: "0.8rem", opacity: 0.6 }}>Could not load {range.file}.</p>;
+    return (
+      <p style={{ fontSize: "0.8rem", opacity: 0.6 }}>
+        Could not load {range.file}.
+      </p>
+    );
   }
   if (text === null) {
-    return <p style={{ fontSize: "0.8rem", opacity: 0.6 }}>Loading {range.file}…</p>;
+    return (
+      <p style={{ fontSize: "0.8rem", opacity: 0.6 }}>Loading {range.file}…</p>
+    );
   }
   return (
     <div
@@ -233,7 +257,7 @@ function RangeCode({
     (finding) =>
       finding.anchor?.kind === "line" &&
       finding.anchor.file === range.file &&
-      overlaps(finding.anchor.lines, range.lines),
+      overlaps(finding.anchor.lines, range.lines)
   );
 
   return (
@@ -285,12 +309,17 @@ function Section({
 }) {
   const ranges = section.ranges ?? [];
   const rollup = rollupDrift(
-    ranges.map((_, index) => drift.get(rangeKey(section.id, index))?.state),
+    ranges.map((_, index) => drift.get(rangeKey(section.id, index))?.state)
   );
   const segments = interleaveSegments(section.body, ranges.length);
 
   return (
-    <section style={{ borderTop: "1px solid rgba(128,128,128,0.2)", padding: "1rem 0" }}>
+    <section
+      style={{
+        borderTop: "1px solid rgba(128,128,128,0.2)",
+        padding: "1rem 0",
+      }}
+    >
       <div style={{ alignItems: "center", display: "flex", gap: "0.5rem" }}>
         <h2 style={{ fontSize: "1.05rem", margin: 0 }}>{section.title}</h2>
         <DriftTag state={rollup} />
@@ -314,7 +343,7 @@ function Section({
             onOpenInDiff={onOpenInDiff}
             range={ranges[segment.index] as WalkthroughRange}
           />
-        ),
+        )
       )}
     </section>
   );
@@ -322,18 +351,24 @@ function Section({
 
 /** Whether a folded finding is a narrative anchor on this walkthrough. */
 function isNarrative(anchor: Anchor | undefined, walkthroughId: string) {
-  return anchor?.kind === "walkthrough-section" && anchor.walkthroughId === walkthroughId;
+  return (
+    anchor?.kind === "walkthrough-section" &&
+    anchor.walkthroughId === walkthroughId
+  );
 }
 
 /** Group narrative Findings by the section id they anchor. */
 function narrativeBySectionId(
   folded: readonly FoldedFinding[],
-  walkthroughId: string,
+  walkthroughId: string
 ): Map<string, FoldedFinding[]> {
   const bySection = new Map<string, FoldedFinding[]>();
   for (const finding of folded) {
     const { anchor } = finding;
-    if (anchor?.kind === "walkthrough-section" && isNarrative(anchor, walkthroughId)) {
+    if (
+      anchor?.kind === "walkthrough-section" &&
+      isNarrative(anchor, walkthroughId)
+    ) {
       const list = bySection.get(anchor.sectionId) ?? [];
       list.push(finding);
       bySection.set(anchor.sectionId, list);
@@ -366,22 +401,35 @@ export function WalkthroughView({
   // Every range across every section, keyed stably, so one drift pass covers the
   // whole tour (walkthroughs.md §8).
   const keyed: KeyedRange[] = sections.flatMap((section) =>
-    (section.ranges ?? []).map((range, index) => ({ key: rangeKey(section.id, index), range })),
+    (section.ranges ?? []).map((range, index) => ({
+      key: rangeKey(section.id, index),
+      range,
+    }))
   );
   const drift = useRangeDrift(keyed, patch);
 
-  const folded = findings.map((finding) => foldFinding(finding.id, finding.records));
+  const folded = findings.map((finding) =>
+    foldFinding(finding.id, finding.records)
+  );
   const narrative = narrativeBySectionId(folded, walkthrough.id);
-  const codeFindings = folded.filter((finding) => finding.anchor?.kind === "line");
+  const codeFindings = folded.filter(
+    (finding) => finding.anchor?.kind === "line"
+  );
 
-  const staleness = walkthroughStaleness(walkthrough.manifest?.bornChangeId ?? "", changes);
+  const staleness = walkthroughStaleness(
+    walkthrough.manifest?.bornChangeId ?? "",
+    changes
+  );
   const firstRange = keyed[0]?.range;
 
   return (
     <div style={{ height: "100%", overflow: "auto", padding: "0 1.5rem 3rem" }}>
       <WorkerPoolContextProvider
         highlighterOptions={{ theme: themes, useTokenTransformer: true }}
-        poolOptions={{ poolSize: Math.min(8, navigator.hardwareConcurrency || 4), workerFactory }}
+        poolOptions={{
+          poolSize: Math.min(8, navigator.hardwareConcurrency || 4),
+          workerFactory,
+        }}
       >
         <header style={{ padding: "1rem 0" }}>
           <div style={headerRowStyle}>
@@ -390,12 +438,19 @@ export function WalkthroughView({
             </h1>
             {staleness.stale ? (
               <span style={staleStyle}>
-                {staleness.behind} change{staleness.behind === 1 ? "" : "s"} behind
+                {staleness.behind} change{staleness.behind === 1 ? "" : "s"}{" "}
+                behind
               </span>
             ) : null}
             {firstRange ? (
               <button
-                onClick={() => onOpenInDiff(firstRange.file, firstRange.lines[0], firstRange.side)}
+                onClick={() =>
+                  onOpenInDiff(
+                    firstRange.file,
+                    firstRange.lines[0],
+                    firstRange.side
+                  )
+                }
                 style={{ ...buttonStyle, marginLeft: "auto" }}
                 type="button"
               >
@@ -405,7 +460,9 @@ export function WalkthroughView({
           </div>
         </header>
         {sections.length === 0 ? (
-          <p style={{ opacity: 0.7 }}>This walkthrough has no readable sections.</p>
+          <p style={{ opacity: 0.7 }}>
+            This walkthrough has no readable sections.
+          </p>
         ) : (
           sections.map((section) => (
             <Section

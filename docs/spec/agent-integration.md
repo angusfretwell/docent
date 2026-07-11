@@ -27,10 +27,10 @@ The round-trip collapses to a **single actor-agnostic findings queue** over `.do
 
 ### 2.2 Two interface primitives
 
-| Primitive          | Does                                                                                          | UI equivalent                                 | CLI surface (§3.3)                     |
-| ------------------ | --------------------------------------------------------------------------------------------- | --------------------------------------------- | -------------------------------------- |
-| **write-findings** | Append findings / replies / resolves                                                          | The UI performs this when you write a comment | `docent finding add / reply / resolve` |
-| **fetch-findings** | Read findings (any author), filtered on open/resolved + what's-next (+ anchor / author scope) | The UI performs this when it renders          | `docent finding list` + filter flags   |
+| Primitive | Does | UI equivalent | CLI surface (§3.3) |
+| --- | --- | --- | --- |
+| **write-findings** | Append findings / replies / resolves | The UI performs this when you write a comment | `docent finding add / reply / resolve` |
+| **fetch-findings** | Read findings (any author), filtered on open/resolved + what's-next (+ anchor / author scope) | The UI performs this when it renders | `docent finding list` + filter flags |
 
 Chosen over manual copy-paste or a UI "copy as prompt" button: it keeps `.docent/` authoritative, preserves anchors, and scales to a whole review pass ([#18](https://github.com/angusfretwell/docent/issues/18)). Every finding-touching skill conforms to these two primitives ([#18](https://github.com/angusfretwell/docent/issues/18)).
 
@@ -78,15 +78,15 @@ docent ships **7 skills**, pinned by [#21](https://github.com/angusfretwell/doce
 - **Invokable** — the blessed entry points a human types.
 - **Reference** — building blocks the invokable skills load; still directly runnable by a power user, but not the headline surface.
 
-| Skill                          | Kind      | Role                                        | Reads                                                                                       | Writes                                                                                                                                |
-| ------------------------------ | --------- | ------------------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `/review`                      | Invokable | Reviewer + verifier/resolver                | Head Change (plain `git`), optional focus, open findings queue                              | Fresh Findings; resolve / re-comment records on needs-verify Findings                                                                 |
-| `/address`                     | Invokable | Fixer                                       | Needs-action Findings, the code                                                             | Code edits; reply records carrying a Disposition. **Never a resolve**                                                                 |
-| `/docent`                      | Invokable | Walkthrough reconciler                      | Head Change; each pillar's latest walkthrough's `bornChangeId`                              | Fresh immutable `wlk_*` for stale/missing pillars only                                                                                |
-| `/docent-cli`                  | Reference | CLI usage guide                             | —                                                                                           | — (describes the `docent` binary's non-`serve` subcommands)                                                                           |
-| `/author-code-walkthrough`     | Reference | Code-walkthrough author                     | A Change (via `git`), optional focus                                                        | `walkthroughs/code/wlk_*/` — manifest + ordered sections, `bornChangeId`-bound, immutable                                             |
-| `/author-product-walkthrough`  | Reference | Product-walkthrough author (editorial half) | A Change, already-produced captures, optional focus                                         | `walkthroughs/product/wlk_*/` — manifest + sections with `{{capture:i}}` interleave + annotations. **No browser**                     |
-| `/capture-product-walkthrough` | Reference | Capture recorder                            | A served, reachable app; the dev-server contract (URL + route + viewport); a capture target | Content-addressed capture blobs (`captures/<sha>.{png,rrweb.json}`) + `captures[]` registry entries; the `.docent/capture.md` runbook |
+| Skill | Kind | Role | Reads | Writes |
+| --- | --- | --- | --- | --- |
+| `/review` | Invokable | Reviewer + verifier/resolver | Head Change (plain `git`), optional focus, open findings queue | Fresh Findings; resolve / re-comment records on needs-verify Findings |
+| `/address` | Invokable | Fixer | Needs-action Findings, the code | Code edits; reply records carrying a Disposition. **Never a resolve** |
+| `/docent` | Invokable | Walkthrough reconciler | Head Change; each pillar's latest walkthrough's `bornChangeId` | Fresh immutable `wlk_*` for stale/missing pillars only |
+| `/docent-cli` | Reference | CLI usage guide | — | — (describes the `docent` binary's non-`serve` subcommands) |
+| `/author-code-walkthrough` | Reference | Code-walkthrough author | A Change (via `git`), optional focus | `walkthroughs/code/wlk_*/` — manifest + ordered sections, `bornChangeId`-bound, immutable |
+| `/author-product-walkthrough` | Reference | Product-walkthrough author (editorial half) | A Change, already-produced captures, optional focus | `walkthroughs/product/wlk_*/` — manifest + sections with `{{capture:i}}` interleave + annotations. **No browser** |
+| `/capture-product-walkthrough` | Reference | Capture recorder | A served, reachable app; the dev-server contract (URL + route + viewport); a capture target | Content-addressed capture blobs (`captures/<sha>.{png,rrweb.json}`) + `captures[]` registry entries; the `.docent/capture.md` runbook |
 
 Artifact schemas the walkthrough skills produce are owned by [walkthroughs.md](walkthroughs.md); Finding record schemas by [data-model.md](data-model.md).
 

@@ -1,13 +1,15 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+
 import { BunServices } from "@effect/platform-bun";
-import { ManagedRuntime } from "effect";
 import { foldFinding } from "@shared/lib/finding";
 import type { FindingWrite } from "@shared/schemas/finding-write";
+import { ManagedRuntime } from "effect";
+
+import { cleanupScratchDirs, scratchDir } from "../lib/test-fixtures";
 import { readDossierSnapshot } from "./dossier";
 import { mintChange, writeFindingRecord } from "./findings-write";
-import { cleanupScratchDirs, scratchDir } from "../lib/test-fixtures";
 
 const runtime = ManagedRuntime.make(BunServices.layer);
 
@@ -16,8 +18,17 @@ afterAll(async () => {
   cleanupScratchDirs();
 });
 
-const REFS = { baseRef: "main", baseSha: "aaaa", headRef: "feature", headSha: "bbbb" };
-const angus = { display: "Angus", id: "angus@example.com", kind: "human" as const };
+const REFS = {
+  baseRef: "main",
+  baseSha: "aaaa",
+  headRef: "feature",
+  headSha: "bbbb",
+};
+const angus = {
+  display: "Angus",
+  id: "angus@example.com",
+  kind: "human" as const,
+};
 const lineAnchor = {
   blobSha: "9c2a1f0",
   file: "src/parser/stream.ts",
@@ -39,17 +50,21 @@ function write(root: string, wr: FindingWrite, refs = REFS) {
       refs,
       root,
       write: wr,
-    }),
+    })
   );
 }
 
 function snapshot(root: string) {
-  return runtime.runPromise(readDossierSnapshot({ base: "main", branch: "feature", root }));
+  return runtime.runPromise(
+    readDossierSnapshot({ base: "main", branch: "feature", root })
+  );
 }
 
 describe("mintChange", () => {
   function mint(root: string, refs = REFS) {
-    return runtime.runPromise(mintChange({ dossierDir: dossierDir(root), refs }));
+    return runtime.runPromise(
+      mintChange({ dossierDir: dossierDir(root), refs })
+    );
   }
 
   test("mints chg_001 in docent/change@3 shape with base at the merge-base", async () => {
@@ -84,7 +99,10 @@ describe("mintChange", () => {
 
     expect(next.id).toBe("chg_002");
     const snap = await snapshot(root);
-    expect(snap.changes.map((change) => change.id)).toEqual(["chg_001", "chg_002"]);
+    expect(snap.changes.map((change) => change.id)).toEqual([
+      "chg_001",
+      "chg_002",
+    ]);
   });
 });
 
@@ -92,7 +110,11 @@ describe("writeFindingRecord", () => {
   test("open mints a Finding whose root record carries the anchor and changeId", async () => {
     const root = scratchDir("docent-write-");
 
-    const result = await write(root, { anchor: lineAnchor, body: "the flush races", op: "open" });
+    const result = await write(root, {
+      anchor: lineAnchor,
+      body: "the flush races",
+      op: "open",
+    });
 
     expect(result.findingId).toMatch(/^fnd_/);
     expect(result.record).toBe("001-open.md");
@@ -107,7 +129,10 @@ describe("writeFindingRecord", () => {
     expect(folded.anchor).toEqual(lineAnchor);
     expect(folded.body).toBe("the flush races");
     const root001 = entry.records.at(0);
-    expect(root001?.author).toMatchObject({ id: "angus@example.com", kind: "human" });
+    expect(root001?.author).toMatchObject({
+      id: "angus@example.com",
+      kind: "human",
+    });
     expect(root001?.changeId).toBe("chg_001");
   });
 
@@ -115,11 +140,20 @@ describe("writeFindingRecord", () => {
     const root = scratchDir("docent-write-");
 
     await write(root, {
-      anchor: { blobSha: "abc", file: "src/main.ts", kind: "file", side: "head" },
+      anchor: {
+        blobSha: "abc",
+        file: "src/main.ts",
+        kind: "file",
+        side: "head",
+      },
       body: "whole file",
       op: "open",
     });
-    await write(root, { anchor: { kind: "change" }, body: "whole change", op: "open" });
+    await write(root, {
+      anchor: { kind: "change" },
+      body: "whole change",
+      op: "open",
+    });
 
     const snap = await snapshot(root);
     const kinds = snap.findings
@@ -150,22 +184,39 @@ describe("writeFindingRecord", () => {
       throw new Error("expected the finding");
     }
     const folded = foldFinding(entry.id, entry.records);
-    expect(folded.replies.at(0)).toMatchObject({ body: "fixed", disposition: "actioned" });
+    expect(folded.replies.at(0)).toMatchObject({
+      body: "fixed",
+      disposition: "actioned",
+    });
     expect(folded.whatsNext).toBe("needs-verify");
   });
 
   test("resolve then reopen fold through the append-only records", async () => {
     const root = scratchDir("docent-write-");
-    const { findingId } = await write(root, { anchor: lineAnchor, body: "flagged", op: "open" });
+    const { findingId } = await write(root, {
+      anchor: lineAnchor,
+      body: "flagged",
+      op: "open",
+    });
 
-    await write(root, { body: "verified under load", findingId, op: "resolve" });
+    await write(root, {
+      body: "verified under load",
+      findingId,
+      op: "resolve",
+    });
     const afterResolve = await snapshot(root);
-    const resolvedEntry = afterResolve.findings.find((finding) => finding.id === findingId);
-    expect(foldFinding(findingId, resolvedEntry?.records ?? []).resolved).toBe(true);
+    const resolvedEntry = afterResolve.findings.find(
+      (finding) => finding.id === findingId
+    );
+    expect(foldFinding(findingId, resolvedEntry?.records ?? []).resolved).toBe(
+      true
+    );
 
     await write(root, { findingId, op: "reopen" });
     const afterReopen = await snapshot(root);
-    const reopenedEntry = afterReopen.findings.find((finding) => finding.id === findingId);
+    const reopenedEntry = afterReopen.findings.find(
+      (finding) => finding.id === findingId
+    );
     const folded = foldFinding(findingId, reopenedEntry?.records ?? []);
     expect(folded.resolved).toBe(false);
     expect(folded.whatsNext).toBe("needs-action");
@@ -173,18 +224,33 @@ describe("writeFindingRecord", () => {
 
   test("every record stamps the changeId current at write", async () => {
     const root = scratchDir("docent-write-");
-    const { findingId } = await write(root, { anchor: lineAnchor, body: "flagged", op: "open" });
+    const { findingId } = await write(root, {
+      anchor: lineAnchor,
+      body: "flagged",
+      op: "open",
+    });
     // A later record written against a new head stamps the newer Change.
-    await write(root, { body: "fixed", findingId, op: "reply" }, { ...REFS, headSha: "cccc" });
+    await write(
+      root,
+      { body: "fixed", findingId, op: "reply" },
+      { ...REFS, headSha: "cccc" }
+    );
 
     const snap = await snapshot(root);
     const entry = snap.findings.find((finding) => finding.id === findingId);
-    expect(entry?.records.map((record) => record.changeId)).toEqual(["chg_001", "chg_002"]);
+    expect(entry?.records.map((record) => record.changeId)).toEqual([
+      "chg_001",
+      "chg_002",
+    ]);
   });
 
   test("records are append-only file drops, never rewrites", async () => {
     const root = scratchDir("docent-write-");
-    const { findingId } = await write(root, { anchor: lineAnchor, body: "flagged", op: "open" });
+    const { findingId } = await write(root, {
+      anchor: lineAnchor,
+      body: "flagged",
+      op: "open",
+    });
     await write(root, { body: "one", findingId, op: "reply" });
     await write(root, { body: "two", findingId, op: "reply" });
 

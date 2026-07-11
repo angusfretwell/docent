@@ -12,7 +12,7 @@
  */
 
 import { manifest } from "./dist/embedded/manifest";
-import { assetsFromManifest } from "./src/shared/lib/assets";
 import { runMain } from "./src/server/main";
+import { assetsFromManifest } from "./src/shared/lib/assets";
 
 runMain(assetsFromManifest(manifest));

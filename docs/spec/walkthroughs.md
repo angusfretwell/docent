@@ -125,9 +125,11 @@ id: sec_…
 title: "Uploading a file"
 captures: [cap_a, cap_b]
 annotations:
-  - anchor: { kind: screenshot-region, capture: cap_a, rect: [0.1, 0.2, 0.3, 0.1] }
+  - anchor:
+      { kind: screenshot-region, capture: cap_a, rect: [0.1, 0.2, 0.3, 0.1] }
     body: "The new upload control."
-  - anchor: { kind: recording-timestamp, capture: cap_b, fromMs: 3200, toMs: 5000 }
+  - anchor:
+      { kind: recording-timestamp, capture: cap_b, fromMs: 3200, toMs: 5000 }
     body: "Validation fires on blur."
 ---
 Drag a file onto the dropzone {{capture:0}} and the upload begins {{capture:1}}.
@@ -223,13 +225,13 @@ Properties both pillars share ([#14](https://github.com/angusfretwell/docent/iss
 
 Recorded as the tickets flagged them; none are v1 work.
 
-| Deferred item                                                                                                              | Seam preserved                                                                                     | Source                                                   |
-| -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| Multiple walkthroughs per Change per pillar (e.g. an "architecture tour" + a "security tour")                              | `wlk_`/`sec_` ids + `walkthroughId`-carrying anchor; additive layout + tab-subselector change only | [#14](https://github.com/angusfretwell/docent/issues/14) |
-| Before/after captures across refs in one tour                                                                              | a per-capture `capturedAgainst` field would be additive                                            | [#15](https://github.com/angusfretwell/docent/issues/15) |
-| Factoring `text-span` out of the pillars if the code side wants prose anchoring too                                        | shape-identical arm already defined                                                                | [#15](https://github.com/angusfretwell/docent/issues/15) |
-| Selective capture-reuse on regeneration (v1 re-drives capture wholesale; content-addressing dedups byte-identical screens) | the per-capture `route` field                                                                      | [#21](https://github.com/angusfretwell/docent/issues/21) |
-| Human-driven / hybrid capture                                                                                              | the seam is "who calls the driver"                                                                 | [#5](https://github.com/angusfretwell/docent/issues/5)   |
-| rrweb live from first paint                                                                                                | agent-browser `--init-script`                                                                      | [#12](https://github.com/angusfretwell/docent/issues/12) |
-| Capture in CI / without a system Chrome                                                                                    | out of scope per the map; Lightpanda/cloud fallbacks exist                                         | [#12](https://github.com/angusfretwell/docent/issues/12) |
-| An optional walkthrough/branch description field for intent                                                                | additive field                                                                                     | [#24](https://github.com/angusfretwell/docent/issues/24) |
+| Deferred item | Seam preserved | Source |
+| --- | --- | --- |
+| Multiple walkthroughs per Change per pillar (e.g. an "architecture tour" + a "security tour") | `wlk_`/`sec_` ids + `walkthroughId`-carrying anchor; additive layout + tab-subselector change only | [#14](https://github.com/angusfretwell/docent/issues/14) |
+| Before/after captures across refs in one tour | a per-capture `capturedAgainst` field would be additive | [#15](https://github.com/angusfretwell/docent/issues/15) |
+| Factoring `text-span` out of the pillars if the code side wants prose anchoring too | shape-identical arm already defined | [#15](https://github.com/angusfretwell/docent/issues/15) |
+| Selective capture-reuse on regeneration (v1 re-drives capture wholesale; content-addressing dedups byte-identical screens) | the per-capture `route` field | [#21](https://github.com/angusfretwell/docent/issues/21) |
+| Human-driven / hybrid capture | the seam is "who calls the driver" | [#5](https://github.com/angusfretwell/docent/issues/5) |
+| rrweb live from first paint | agent-browser `--init-script` | [#12](https://github.com/angusfretwell/docent/issues/12) |
+| Capture in CI / without a system Chrome | out of scope per the map; Lightpanda/cloud fallbacks exist | [#12](https://github.com/angusfretwell/docent/issues/12) |
+| An optional walkthrough/branch description field for intent | additive field | [#24](https://github.com/angusfretwell/docent/issues/24) |

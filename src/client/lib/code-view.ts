@@ -15,7 +15,10 @@ export const themes = { dark: "github-dark", light: "github-light" } as const;
  * worker-off scroll at p95 225 ms with 15 long frames vs. zero with the pool on.
  */
 export function workerFactory() {
-  return new Worker(new URL("@pierre/diffs/worker/worker.js", import.meta.url), {
-    type: "module",
-  });
+  return new Worker(
+    new URL("@pierre/diffs/worker/worker.js", import.meta.url),
+    {
+      type: "module",
+    }
+  );
 }

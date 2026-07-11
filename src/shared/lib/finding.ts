@@ -11,8 +11,14 @@
  */
 
 import { unique } from "radashi";
+
 import { ANCHOR_KIND } from "../schemas/finding";
-import type { Anchor, Author, Disposition, FindingRecord } from "../schemas/finding";
+import type {
+  Anchor,
+  Author,
+  Disposition,
+  FindingRecord,
+} from "../schemas/finding";
 
 /** The actor-blind queue read derived from a Finding's records (data-model.md §7). */
 export type WhatsNext =
@@ -70,8 +76,13 @@ function dispositionNext(disposition: Disposition | undefined): WhatsNext {
  * latest content record's disposition (blind to who authored it), and each
  * record's body is superseded by the latest edit that names it.
  */
-export function foldFinding(id: string, records: readonly FindingRecord[]): FoldedFinding {
-  const ordered = records.toSorted((left, right) => left.name.localeCompare(right.name));
+export function foldFinding(
+  id: string,
+  records: readonly FindingRecord[]
+): FoldedFinding {
+  const ordered = records.toSorted((left, right) =>
+    left.name.localeCompare(right.name)
+  );
 
   // Latest edit wins per target record; a record's effective body is that edit's
   // body, or its own when unedited.
@@ -113,7 +124,7 @@ export function foldFinding(id: string, records: readonly FindingRecord[]): Fold
 
   const participants = unique(
     ordered.map((record) => record.author),
-    (author) => author.id,
+    (author) => author.id
   );
 
   const latest = ordered.findLast((record) => record.type !== "edit");
@@ -141,7 +152,7 @@ export function foldFinding(id: string, records: readonly FindingRecord[]): Fold
  * one module (the panel drives this through `DiffViewHandle.scrollToLine`).
  */
 export function findingJumpTarget(
-  anchor: Anchor | undefined,
+  anchor: Anchor | undefined
 ): { file: string; line: number } | undefined {
   if (anchor?.kind === ANCHOR_KIND.line) {
     return { file: anchor.file, line: anchor.lines[0] };
@@ -212,11 +223,17 @@ function sortKey(anchor: Anchor | undefined): [number, string, number] {
 }
 
 /** Order folded Findings by location — the panel's flat reading order. */
-export function sortFoldedFindings(findings: readonly FoldedFinding[]): FoldedFinding[] {
+export function sortFoldedFindings(
+  findings: readonly FoldedFinding[]
+): FoldedFinding[] {
   return findings.toSorted((left, right) => {
     const [leftPillar, leftPath, leftLine] = sortKey(left.anchor);
     const [rightPillar, rightPath, rightLine] = sortKey(right.anchor);
 
-    return leftPillar - rightPillar || leftPath.localeCompare(rightPath) || leftLine - rightLine;
+    return (
+      leftPillar - rightPillar ||
+      leftPath.localeCompare(rightPath) ||
+      leftLine - rightLine
+    );
   });
 }

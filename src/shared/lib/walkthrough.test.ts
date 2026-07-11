@@ -1,6 +1,14 @@
 import { describe, expect, test } from "bun:test";
+
 import { Schema } from "effect";
+
 import type { DriftState } from "../schemas/drift";
+import {
+  Capture,
+  Walkthrough,
+  WalkthroughSection,
+} from "../schemas/walkthrough";
+import type { WalkthroughRange } from "../schemas/walkthrough";
 import {
   captureById,
   identityDrift,
@@ -12,8 +20,6 @@ import {
   rollupDrift,
   walkthroughStaleness,
 } from "./walkthrough";
-import { Capture, Walkthrough, WalkthroughSection } from "../schemas/walkthrough";
-import type { WalkthroughRange } from "../schemas/walkthrough";
 
 const decodeManifest = Schema.decodeUnknownSync(Walkthrough);
 const decodeSection = Schema.decodeUnknownSync(WalkthroughSection);
@@ -52,7 +58,10 @@ describe("interleaveSegments", () => {
 
   test("markers interleave prose and ranges in document order", () => {
     expect(
-      interleaveSegments("The request enters {{range:0}} and is parsed {{range:1}}.", 2),
+      interleaveSegments(
+        "The request enters {{range:0}} and is parsed {{range:1}}.",
+        2
+      )
     ).toEqual([
       { kind: "prose", text: "The request enters" },
       { index: 0, kind: "range" },
@@ -87,7 +96,9 @@ describe("interleaveSegments", () => {
   });
 
   test("no ranges yields the prose alone", () => {
-    expect(interleaveSegments("just words", 0)).toEqual([{ kind: "prose", text: "just words" }]);
+    expect(interleaveSegments("just words", 0)).toEqual([
+      { kind: "prose", text: "just words" },
+    ]);
   });
 });
 
@@ -112,19 +123,31 @@ describe("walkthroughStaleness", () => {
   const changes = [{ id: "chg_001" }, { id: "chg_002" }, { id: "chg_003" }];
 
   test("born on the current head is not stale", () => {
-    expect(walkthroughStaleness("chg_003", changes)).toEqual({ behind: 0, stale: false });
+    expect(walkthroughStaleness("chg_003", changes)).toEqual({
+      behind: 0,
+      stale: false,
+    });
   });
 
   test("born on an earlier Change counts the Changes since", () => {
-    expect(walkthroughStaleness("chg_001", changes)).toEqual({ behind: 2, stale: true });
+    expect(walkthroughStaleness("chg_001", changes)).toEqual({
+      behind: 2,
+      stale: true,
+    });
   });
 
   test("an unknown born Change reads as maximally stale", () => {
-    expect(walkthroughStaleness("chg_xxx", changes)).toEqual({ behind: 3, stale: true });
+    expect(walkthroughStaleness("chg_xxx", changes)).toEqual({
+      behind: 3,
+      stale: true,
+    });
   });
 
   test("no Changes yet is not stale", () => {
-    expect(walkthroughStaleness("chg_001", [])).toEqual({ behind: 0, stale: false });
+    expect(walkthroughStaleness("chg_001", [])).toEqual({
+      behind: 0,
+      stale: false,
+    });
   });
 });
 
@@ -169,7 +192,10 @@ describe("schema — code and product arms", () => {
       sections: ["s01-upload.md"],
       title: "Uploading",
     });
-    expect(manifest.captures?.map((capture) => capture.id)).toEqual(["cap_a", "cap_b"]);
+    expect(manifest.captures?.map((capture) => capture.id)).toEqual([
+      "cap_a",
+      "cap_b",
+    ]);
     expect(manifest.captures?.at(0)).toBeInstanceOf(Capture);
   });
 
@@ -177,7 +203,14 @@ describe("schema — code and product arms", () => {
     const section = decodeSection({
       body: "The request enters here {{range:0}}.",
       id: "sec_1",
-      ranges: [{ blobSha: "9c2a", file: "src/index.ts", lines: [10, 24], side: "head" }],
+      ranges: [
+        {
+          blobSha: "9c2a",
+          file: "src/index.ts",
+          lines: [10, 24],
+          side: "head",
+        },
+      ],
       schema: "docent/walkthrough-section@2",
       title: "Entry point",
     });
@@ -188,7 +221,11 @@ describe("schema — code and product arms", () => {
     const section = decodeSection({
       annotations: [
         {
-          anchor: { capture: "cap_a", kind: "screenshot-region", rect: [0.1, 0.2, 0.3, 0.1] },
+          anchor: {
+            capture: "cap_a",
+            kind: "screenshot-region",
+            rect: [0.1, 0.2, 0.3, 0.1],
+          },
           body: "The upload control.",
         },
       ],
@@ -204,7 +241,13 @@ describe("schema — code and product arms", () => {
 
   test("a capture with a bad kind fails to decode", () => {
     expect(() =>
-      decodeCapture({ id: "cap_x", kind: "video", media: "sha", route: "/", viewport: [1, 2] }),
+      decodeCapture({
+        id: "cap_x",
+        kind: "video",
+        media: "sha",
+        route: "/",
+        viewport: [1, 2],
+      })
     ).toThrow();
   });
 });
@@ -220,7 +263,9 @@ describe("latestCodeWalkthrough", () => {
   });
 
   test("no code walkthrough yields undefined", () => {
-    expect(latestCodeWalkthrough([{ id: "wlk_01C", kind: "product" as const }])).toBeUndefined();
+    expect(
+      latestCodeWalkthrough([{ id: "wlk_01C", kind: "product" as const }])
+    ).toBeUndefined();
   });
 });
 
@@ -235,13 +280,17 @@ describe("latestProductWalkthrough", () => {
   });
 
   test("no product walkthrough yields undefined", () => {
-    expect(latestProductWalkthrough([{ id: "wlk_01A", kind: "code" as const }])).toBeUndefined();
+    expect(
+      latestProductWalkthrough([{ id: "wlk_01A", kind: "code" as const }])
+    ).toBeUndefined();
   });
 });
 
 describe("interleaveCaptureSegments", () => {
   test("no markers renders prose then every capture in order", () => {
-    expect(interleaveCaptureSegments("Drag a file onto the dropzone.", 2)).toEqual([
+    expect(
+      interleaveCaptureSegments("Drag a file onto the dropzone.", 2)
+    ).toEqual([
       { kind: "prose", text: "Drag a file onto the dropzone." },
       { index: 0, kind: "capture" },
       { index: 1, kind: "capture" },
@@ -250,7 +299,10 @@ describe("interleaveCaptureSegments", () => {
 
   test("markers interleave prose and captures in document order", () => {
     expect(
-      interleaveCaptureSegments("Drag {{capture:0}} and the upload begins {{capture:1}}.", 2),
+      interleaveCaptureSegments(
+        "Drag {{capture:0}} and the upload begins {{capture:1}}.",
+        2
+      )
     ).toEqual([
       { kind: "prose", text: "Drag" },
       { index: 0, kind: "capture" },
@@ -280,7 +332,9 @@ describe("interleaveCaptureSegments", () => {
   test("range and capture markers do not cross-fire", () => {
     // A `{{range:0}}` marker is inert in a product body — it stays literal prose,
     // and the lone capture still appends after (the flat fallback).
-    expect(interleaveCaptureSegments("uses {{range:0}} not captures", 1)).toEqual([
+    expect(
+      interleaveCaptureSegments("uses {{range:0}} not captures", 1)
+    ).toEqual([
       { kind: "prose", text: "uses {{range:0}} not captures" },
       { index: 0, kind: "capture" },
     ]);
@@ -353,7 +407,10 @@ describe("Walkthrough product manifest", () => {
 
   test("decodes the captures[] registry as typed captures", () => {
     const decoded = decodeManifest(manifest);
-    expect(decoded.captures?.map((capture) => capture.id)).toEqual(["cap_a", "cap_b"]);
+    expect(decoded.captures?.map((capture) => capture.id)).toEqual([
+      "cap_a",
+      "cap_b",
+    ]);
     expect(decoded.captures?.[0]?.kind).toBe("screenshot");
   });
 
@@ -369,11 +426,20 @@ describe("WalkthroughSection product frontmatter", () => {
     const section = decodeSection({
       annotations: [
         {
-          anchor: { capture: "cap_a", kind: "screenshot-region", rect: [0.1, 0.2, 0.3, 0.1] },
+          anchor: {
+            capture: "cap_a",
+            kind: "screenshot-region",
+            rect: [0.1, 0.2, 0.3, 0.1],
+          },
           body: "The upload control.",
         },
         {
-          anchor: { capture: "cap_b", fromMs: 3200, kind: "recording-timestamp", toMs: 5000 },
+          anchor: {
+            capture: "cap_b",
+            fromMs: 3200,
+            kind: "recording-timestamp",
+            toMs: 5000,
+          },
           body: "Validation fires.",
         },
       ],
@@ -392,7 +458,10 @@ describe("WalkthroughSection product frontmatter", () => {
   test("decodes a whole-capture annotation with the coordinate omitted", () => {
     const section = decodeSection({
       annotations: [
-        { anchor: { capture: "cap_a", kind: "screenshot-region" }, body: "This whole screen." },
+        {
+          anchor: { capture: "cap_a", kind: "screenshot-region" },
+          body: "This whole screen.",
+        },
       ],
       body: "Overview.",
       captures: ["cap_a"],
@@ -402,6 +471,8 @@ describe("WalkthroughSection product frontmatter", () => {
     });
     const anchor = section.annotations?.[0]?.anchor;
     expect(anchor?.kind).toBe("screenshot-region");
-    expect(anchor?.kind === "screenshot-region" ? anchor.rect : "x").toBeUndefined();
+    expect(
+      anchor?.kind === "screenshot-region" ? anchor.rect : "x"
+    ).toBeUndefined();
   });
 });

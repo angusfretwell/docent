@@ -18,15 +18,23 @@
  * Findings append-only does not apply to one agent building one tour).
  */
 
+import type {
+  WalkthroughAnnotation,
+  WalkthroughRange,
+} from "@shared/schemas/walkthrough";
+import {
+  Capture,
+  Walkthrough,
+  WalkthroughSection,
+} from "@shared/schemas/walkthrough";
 import { Effect, Option, Schema } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
-import type { WalkthroughAnnotation, WalkthroughRange } from "@shared/schemas/walkthrough";
-import { Capture, Walkthrough, WalkthroughSection } from "@shared/schemas/walkthrough";
+
+import { recordFile, serializeFrontmatter } from "../lib/records";
 import { dossierDirPath, ensureDossier, makeId, readRecord } from "./dossier";
 import type { ChangeRefs } from "./findings-write";
 import { mintChange } from "./findings-write";
-import { recordFile, serializeFrontmatter } from "../lib/records";
 
 const KINDS = ["code", "product"] as const;
 type WalkthroughKind = (typeof KINDS)[number];
@@ -34,7 +42,7 @@ type WalkthroughKind = (typeof KINDS)[number];
 /** A referenced walkthrough was not found under `walkthroughs/{code,product}/`. */
 export class WalkthroughNotFound extends Schema.TaggedErrorClass<WalkthroughNotFound>()(
   "WalkthroughNotFound",
-  { id: Schema.String },
+  { id: Schema.String }
 ) {
   override get message(): string {
     return `no walkthrough ${this.id} in this Dossier`;
@@ -44,7 +52,7 @@ export class WalkthroughNotFound extends Schema.TaggedErrorClass<WalkthroughNotF
 /** A capture write targeted a `code` walkthrough — captures are the product arm. */
 export class CaptureKindMismatch extends Schema.TaggedErrorClass<CaptureKindMismatch>()(
   "CaptureKindMismatch",
-  { id: Schema.String },
+  { id: Schema.String }
 ) {
   override get message(): string {
     return `walkthrough ${this.id} is a code tour; captures belong to product tours`;
@@ -57,7 +65,7 @@ export class CaptureKindMismatch extends Schema.TaggedErrorClass<CaptureKindMism
  */
 export class SectionArmMismatch extends Schema.TaggedErrorClass<SectionArmMismatch>()(
   "SectionArmMismatch",
-  { arm: Schema.String, id: Schema.String, kind: Schema.String },
+  { arm: Schema.String, id: Schema.String, kind: Schema.String }
 ) {
   override get message(): string {
     return `walkthrough ${this.id} is a ${this.kind} tour; ${this.arm} is the ${this.kind === "code" ? "product" : "code"} arm`;
@@ -81,7 +89,10 @@ const EDGE_DASHES = /^-+|-+$/g;
 
 /** A filename-safe slug of a section title; empty titles fall back to `section`. */
 function slug(title: string): string {
-  const slugged = title.toLowerCase().replaceAll(NON_SLUG, "-").replaceAll(EDGE_DASHES, "");
+  const slugged = title
+    .toLowerCase()
+    .replaceAll(NON_SLUG, "-")
+    .replaceAll(EDGE_DASHES, "");
   return slugged === "" ? "section" : slugged;
 }
 
@@ -93,13 +104,13 @@ function walkthroughsRoot(path: Path, dossierDir: string): string {
 /** Write a manifest canonically: 2-space JSON with a trailing newline. */
 const writeManifest = Effect.fn("writeManifest")(function* writeManifest(
   dir: string,
-  manifest: Walkthrough,
+  manifest: Walkthrough
 ) {
   const fs = yield* FileSystem;
   const path = yield* Path;
   yield* fs.writeFileString(
     path.join(dir, "manifest.json"),
-    `${JSON.stringify(manifest, null, 2)}\n`,
+    `${JSON.stringify(manifest, null, 2)}\n`
   );
 });
 
@@ -115,13 +126,16 @@ interface LoadedWalkthrough {
  */
 const loadWalkthrough = Effect.fn("loadWalkthrough")(function* loadWalkthrough(
   dossierDir: string,
-  id: string,
+  id: string
 ) {
   const path = yield* Path;
   const root = walkthroughsRoot(path, dossierDir);
   for (const kind of KINDS) {
     const dir = path.join(root, kind, id);
-    const manifest = yield* readRecord(path.join(dir, "manifest.json"), Walkthrough);
+    const manifest = yield* readRecord(
+      path.join(dir, "manifest.json"),
+      Walkthrough
+    );
     if (Option.isSome(manifest)) {
       return { dir, manifest: manifest.value } satisfies LoadedWalkthrough;
     }
@@ -134,31 +148,41 @@ const loadWalkthrough = Effect.fn("loadWalkthrough")(function* loadWalkthrough(
  * Change as `bornChangeId` (the shared lazy-mint), and write an empty-`sections`
  * `docent/walkthrough@2` manifest. Sections and captures append later.
  */
-export const writeWalkthrough = Effect.fn("writeWalkthrough")(function* writeWalkthrough(
-  params: WriteBase & { refs: ChangeRefs; kind: WalkthroughKind; title: string },
-) {
-  const fs = yield* FileSystem;
-  const path = yield* Path;
+export const writeWalkthrough = Effect.fn("writeWalkthrough")(
+  function* writeWalkthrough(
+    params: WriteBase & {
+      refs: ChangeRefs;
+      kind: WalkthroughKind;
+      title: string;
+    }
+  ) {
+    const fs = yield* FileSystem;
+    const path = yield* Path;
 
-  const dossierDir = dossierDirPath(params.root, params.branch);
-  yield* ensureDossier({ base: params.base, branch: params.branch, dossierDir });
-  const change = yield* mintChange({ dossierDir, refs: params.refs });
-  const id = yield* makeId("wlk");
+    const dossierDir = dossierDirPath(params.root, params.branch);
+    yield* ensureDossier({
+      base: params.base,
+      branch: params.branch,
+      dossierDir,
+    });
+    const change = yield* mintChange({ dossierDir, refs: params.refs });
+    const id = yield* makeId("wlk");
 
-  const manifest = Walkthrough.make({
-    bornChangeId: change.id,
-    id,
-    kind: params.kind,
-    schema: "docent/walkthrough@2",
-    sections: [],
-    title: params.title,
-  });
-  const dir = path.join(walkthroughsRoot(path, dossierDir), params.kind, id);
-  yield* fs.makeDirectory(dir, { recursive: true });
-  yield* writeManifest(dir, manifest);
+    const manifest = Walkthrough.make({
+      bornChangeId: change.id,
+      id,
+      kind: params.kind,
+      schema: "docent/walkthrough@2",
+      sections: [],
+      title: params.title,
+    });
+    const dir = path.join(walkthroughsRoot(path, dossierDir), params.kind, id);
+    yield* fs.makeDirectory(dir, { recursive: true });
+    yield* writeManifest(dir, manifest);
 
-  return { changeId: change.id, walkthroughId: id };
-});
+    return { changeId: change.id, walkthroughId: id };
+  }
+);
 
 /**
  * Append a section to a walkthrough: mint a `sec_` id, validate the assembled
@@ -176,23 +200,35 @@ export const addWalkthroughSection = Effect.fn("addWalkthroughSection")(
       ranges?: readonly WalkthroughRange[];
       captureIds?: readonly string[];
       annotations?: readonly WalkthroughAnnotation[];
-    },
+    }
   ) {
     const fs = yield* FileSystem;
     const path = yield* Path;
 
     const dossierDir = dossierDirPath(params.root, params.branch);
-    yield* ensureDossier({ base: params.base, branch: params.branch, dossierDir });
-    const { dir, manifest } = yield* loadWalkthrough(dossierDir, params.walkthroughId);
+    yield* ensureDossier({
+      base: params.base,
+      branch: params.branch,
+      dossierDir,
+    });
+    const { dir, manifest } = yield* loadWalkthrough(
+      dossierDir,
+      params.walkthroughId
+    );
 
     // A section carries the arm for its tour's kind (walkthroughs.md §5): ranges
     // for code, captures/annotations for product. Refuse the crossed arm.
     const hasRanges = (params.ranges?.length ?? 0) > 0;
     const hasProduct =
-      (params.captureIds?.length ?? 0) > 0 || (params.annotations?.length ?? 0) > 0;
+      (params.captureIds?.length ?? 0) > 0 ||
+      (params.annotations?.length ?? 0) > 0;
     if (manifest.kind === "product" && hasRanges) {
       return yield* Effect.fail(
-        new SectionArmMismatch({ arm: "--range", id: params.walkthroughId, kind: manifest.kind }),
+        new SectionArmMismatch({
+          arm: "--range",
+          id: params.walkthroughId,
+          kind: manifest.kind,
+        })
       );
     }
     if (manifest.kind === "code" && hasProduct) {
@@ -201,7 +237,7 @@ export const addWalkthroughSection = Effect.fn("addWalkthroughSection")(
           arm: "--capture/--annotation",
           id: params.walkthroughId,
           kind: manifest.kind,
-        }),
+        })
       );
     }
 
@@ -212,8 +248,12 @@ export const addWalkthroughSection = Effect.fn("addWalkthroughSection")(
       schema: "docent/walkthrough-section@2",
       title: params.title,
       ...(params.ranges === undefined ? {} : { ranges: params.ranges }),
-      ...(params.captureIds === undefined ? {} : { captures: params.captureIds }),
-      ...(params.annotations === undefined ? {} : { annotations: params.annotations }),
+      ...(params.captureIds === undefined
+        ? {}
+        : { captures: params.captureIds }),
+      ...(params.annotations === undefined
+        ? {}
+        : { annotations: params.annotations }),
     });
 
     const filename = `s${String(manifest.sections.length + 1).padStart(2, "0")}-${slug(params.title)}.md`;
@@ -225,13 +265,23 @@ export const addWalkthroughSection = Effect.fn("addWalkthroughSection")(
       ["captures", section.captures],
       ["annotations", section.annotations],
     ]);
-    yield* fs.writeFileString(path.join(dir, filename), recordFile(frontmatter, section.body));
+    yield* fs.writeFileString(
+      path.join(dir, filename),
+      recordFile(frontmatter, section.body)
+    );
 
-    const updated = Walkthrough.make({ ...manifest, sections: [...manifest.sections, filename] });
+    const updated = Walkthrough.make({
+      ...manifest,
+      sections: [...manifest.sections, filename],
+    });
     yield* writeManifest(dir, updated);
 
-    return { section: filename, sectionId: id, walkthroughId: params.walkthroughId };
-  },
+    return {
+      section: filename,
+      sectionId: id,
+      walkthroughId: params.walkthroughId,
+    };
+  }
 );
 
 /**
@@ -251,23 +301,35 @@ export const addWalkthroughCapture = Effect.fn("addWalkthroughCapture")(
       viewport: readonly [number, number];
       dims?: readonly [number, number];
       durationMs?: number;
-    },
+    }
   ) {
     const fs = yield* FileSystem;
     const path = yield* Path;
 
     const dossierDir = dossierDirPath(params.root, params.branch);
-    yield* ensureDossier({ base: params.base, branch: params.branch, dossierDir });
-    const { dir, manifest } = yield* loadWalkthrough(dossierDir, params.walkthroughId);
+    yield* ensureDossier({
+      base: params.base,
+      branch: params.branch,
+      dossierDir,
+    });
+    const { dir, manifest } = yield* loadWalkthrough(
+      dossierDir,
+      params.walkthroughId
+    );
     if (manifest.kind !== "product") {
-      return yield* Effect.fail(new CaptureKindMismatch({ id: params.walkthroughId }));
+      return yield* Effect.fail(
+        new CaptureKindMismatch({ id: params.walkthroughId })
+      );
     }
 
     const sha = contentSha(params.media);
     const extension = params.kind === "screenshot" ? "png" : "rrweb.json";
     const captureDir = path.join(dir, "captures");
     yield* fs.makeDirectory(captureDir, { recursive: true });
-    yield* fs.writeFile(path.join(captureDir, `${sha}.${extension}`), params.media);
+    yield* fs.writeFile(
+      path.join(captureDir, `${sha}.${extension}`),
+      params.media
+    );
 
     const id = yield* makeId("cap");
     const entry = yield* Schema.decodeUnknownEffect(Capture)({
@@ -277,7 +339,9 @@ export const addWalkthroughCapture = Effect.fn("addWalkthroughCapture")(
       route: params.route,
       viewport: params.viewport,
       ...(params.dims === undefined ? {} : { dims: params.dims }),
-      ...(params.durationMs === undefined ? {} : { durationMs: params.durationMs }),
+      ...(params.durationMs === undefined
+        ? {}
+        : { durationMs: params.durationMs }),
     });
 
     const updated = Walkthrough.make({
@@ -286,6 +350,11 @@ export const addWalkthroughCapture = Effect.fn("addWalkthroughCapture")(
     });
     yield* writeManifest(dir, updated);
 
-    return { captureId: id, media: sha, registry: entry, walkthroughId: params.walkthroughId };
-  },
+    return {
+      captureId: id,
+      media: sha,
+      registry: entry,
+      walkthroughId: params.walkthroughId,
+    };
+  }
 );

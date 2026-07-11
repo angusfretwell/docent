@@ -46,7 +46,16 @@ const MINIFIED_COLS = 5000;
 
 // Raster image extensions rendered as before/after. SVG is intentionally absent:
 // git treats it as text, so it never reaches the binary path and diffs normally.
-const IMAGE_EXTENSIONS = new Set(["avif", "bmp", "gif", "ico", "jpeg", "jpg", "png", "webp"]);
+const IMAGE_EXTENSIONS = new Set([
+  "avif",
+  "bmp",
+  "gif",
+  "ico",
+  "jpeg",
+  "jpg",
+  "png",
+  "webp",
+]);
 
 // Exact lockfile basenames that are machine-written and reviewed by their source.
 const LOCKFILES = new Set([
@@ -146,19 +155,27 @@ function maxLineLength(file: FileDiffMetadata): number {
 }
 
 /** Classify one file from its parsed metadata, raw block, and generated flag. */
-function classifyFile(file: FileDiffMetadata, block: string, generated: boolean): FileClass {
+function classifyFile(
+  file: FileDiffMetadata,
+  block: string,
+  generated: boolean
+): FileClass {
   const submodule = file.mode === "160000" || file.prevMode === "160000";
   const binary = !submodule && BINARY_MARKER.test(block);
   const image = binary && isImagePath(file.name);
   const modeChanged =
-    file.prevMode !== undefined && file.mode !== undefined && file.prevMode !== file.mode;
-  const modeOnly = !binary && !submodule && file.hunks.length === 0 && modeChanged;
+    file.prevMode !== undefined &&
+    file.mode !== undefined &&
+    file.prevMode !== file.mode;
+  const modeOnly =
+    !binary && !submodule && file.hunks.length === 0 && modeChanged;
   const renamePure = file.type === "rename-pure";
   const renameModify = file.type === "rename-changed";
   const large =
     !binary &&
     !submodule &&
-    (changedLineCount(file) > LARGE_LINES || maxLineLength(file) > MINIFIED_COLS);
+    (changedLineCount(file) > LARGE_LINES ||
+      maxLineLength(file) > MINIFIED_COLS);
   return {
     binary,
     generated,
@@ -178,14 +195,17 @@ function classifyFile(file: FileDiffMetadata, block: string, generated: boolean)
  */
 export function classifyFiles(
   patch: string,
-  generatedPaths: readonly string[],
+  generatedPaths: readonly string[]
 ): Map<string, FileClass> {
   const generatedSet = new Set(generatedPaths);
   const blocks = parsePatchBlocks(patch);
   const classes = new Map<string, FileClass>();
   for (const [index, file] of processPatch(patch).files.entries()) {
     const generated = generatedSet.has(file.name) || isGeneratedPath(file.name);
-    classes.set(`${file.name}#${index}`, classifyFile(file, blocks[index] ?? "", generated));
+    classes.set(
+      `${file.name}#${index}`,
+      classifyFile(file, blocks[index] ?? "", generated)
+    );
   }
   return classes;
 }
@@ -207,7 +227,10 @@ export function autoViewed(file: FileClass): boolean {
  */
 export function bodyReplaced(file: FileClass): boolean {
   return (
-    file.binary === true || file.image === true || file.modeOnly === true || file.submodule === true
+    file.binary === true ||
+    file.image === true ||
+    file.modeOnly === true ||
+    file.submodule === true
   );
 }
 

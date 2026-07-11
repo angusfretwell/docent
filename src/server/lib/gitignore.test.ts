@@ -1,10 +1,18 @@
 import { describe, expect, test } from "bun:test";
+
 import { makeMatcher, parseGitignore } from "./gitignore";
 
 describe("parseGitignore", () => {
   test("drops blanks, comments, and (unsupported) negations", () => {
     const patterns = parseGitignore(
-      ["# a comment", "", "node_modules/", "  dist  ", "!keep.log", "*.log"].join("\n"),
+      [
+        "# a comment",
+        "",
+        "node_modules/",
+        "  dist  ",
+        "!keep.log",
+        "*.log",
+      ].join("\n")
     );
 
     expect(patterns).toEqual(["node_modules/", "dist", "*.log"]);

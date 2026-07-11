@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import {
   buildTree,
   changeAnchors,
@@ -11,7 +12,11 @@ import {
 } from "./nav";
 
 /** A patch touching one file, with the given hunk of +adds/-dels. */
-function filePatch(header: string, body: string, index = "index 0000000..1111111 100644"): string {
+function filePatch(
+  header: string,
+  body: string,
+  index = "index 0000000..1111111 100644"
+): string {
   return `diff --git ${header}\n${index}\n${body}`;
 }
 
@@ -23,7 +28,7 @@ const MODIFY = filePatch(
  a
 +b
  c
-`,
+`
 );
 
 const ADD = filePatch(
@@ -35,7 +40,7 @@ const ADD = filePatch(
 +one
 +two
 `,
-  "index 0000000..2222222",
+  "index 0000000..2222222"
 );
 
 const DELETE = filePatch(
@@ -47,7 +52,7 @@ const DELETE = filePatch(
 -gone
 -away
 `,
-  "index 3333333..0000000",
+  "index 3333333..0000000"
 );
 
 const RENAME = `diff --git a/src/a.ts b/src/b.ts
@@ -121,7 +126,7 @@ describe("buildTree", () => {
 @@ -1 +1,2 @@
  x
 +y
-`,
+`
     );
     const tree = buildTree(parseFiles(deep));
     expect(tree[0]).toMatchObject({
@@ -141,7 +146,9 @@ describe("filterEntries", () => {
   const entries = parseFiles(MODIFY + ADD + DELETE);
 
   test("keeps entries whose path contains the substring, case-insensitively", () => {
-    expect(filterEntries(entries, "APP").map((f) => f.path)).toEqual(["src/app.ts"]);
+    expect(filterEntries(entries, "APP").map((f) => f.path)).toEqual([
+      "src/app.ts",
+    ]);
   });
 
   test("an empty query keeps everything", () => {
@@ -174,7 +181,7 @@ describe("jump primitives", () => {
  x
 +z
  y
-`,
+`
     );
     const entries = sortEntries(parseFiles(twoHunk + ADD), "path");
     const [mFile, addFile] = entries;

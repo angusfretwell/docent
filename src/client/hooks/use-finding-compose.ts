@@ -7,8 +7,9 @@
 
 import type { CodeViewLineSelection, FileDiffMetadata } from "@pierre/diffs";
 import type { CodeViewHandle } from "@pierre/diffs/react";
-import { useState } from "react";
 import type { FindingWrite } from "@shared/schemas/finding-write";
+import { useState } from "react";
+
 import type { Annotation, Composing } from "../lib/diff-annotations";
 import { annotationSide } from "../lib/diff-annotations";
 
@@ -16,11 +17,13 @@ import { annotationSide } from "../lib/diff-annotations";
 // the path to freeze into the anchor. A side with no blob (e.g. an add's base
 // side) can't be anchored, so it yields nothing.
 function anchorTarget(fileDiff: FileDiffMetadata, side: "base" | "head") {
-  const blobSha = side === "head" ? fileDiff.newObjectId : fileDiff.prevObjectId;
+  const blobSha =
+    side === "head" ? fileDiff.newObjectId : fileDiff.prevObjectId;
   if (blobSha === undefined) {
     return;
   }
-  const file = side === "head" ? fileDiff.name : (fileDiff.prevName ?? fileDiff.name);
+  const file =
+    side === "head" ? fileDiff.name : (fileDiff.prevName ?? fileDiff.name);
   return { blobSha, file };
 }
 
@@ -102,7 +105,12 @@ export function useFindingCompose(params: {
     }
     codeRef.current?.clearSelectedLines();
     setComposing({
-      anchor: { blobSha: target.blobSha, file: target.file, kind: "file", side },
+      anchor: {
+        blobSha: target.blobSha,
+        file: target.file,
+        kind: "file",
+        side,
+      },
       annotationSide: annotationSide(side),
       itemId,
       lineNumber: 0,

@@ -5,10 +5,11 @@
  */
 
 import type { FindingWrite } from "@shared/schemas/finding-write";
-import { Composer } from "./composer";
-import type { Annotation } from "../lib/diff-annotations";
-import { FindingThread } from "./finding-thread";
+
 import type { FindingCompose } from "../hooks/use-finding-compose";
+import type { Annotation } from "../lib/diff-annotations";
+import { Composer } from "./composer";
+import { FindingThread } from "./finding-thread";
 
 export function DiffAnnotationView({
   annotation,

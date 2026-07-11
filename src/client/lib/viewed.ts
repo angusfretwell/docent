@@ -27,6 +27,7 @@
  */
 
 import type { ViewedEvent } from "@shared/schemas/dossier";
+
 import type { FileEntry } from "./nav";
 
 export interface ViewedState {
@@ -48,7 +49,9 @@ export interface ViewedModel {
 const UNVIEWED: ViewedState = { changedSinceViewed: false, viewed: false };
 
 /** Group events by path into a `blobSha → event count` map (parity source). */
-function countByPath(events: readonly ViewedEvent[]): Map<string, Map<string, number>> {
+function countByPath(
+  events: readonly ViewedEvent[]
+): Map<string, Map<string, number>> {
   const byPath = new Map<string, Map<string, number>>();
   for (const event of events) {
     let counts = byPath.get(event.path);
@@ -75,7 +78,7 @@ function isOdd(count: number | undefined): boolean {
 function foldFile(
   counts: Map<string, number> | undefined,
   blobSha: string,
-  autoViewed: boolean,
+  autoViewed: boolean
 ): ViewedState {
   if (autoViewed) {
     return { changedSinceViewed: false, viewed: !isOdd(counts?.get(blobSha)) };
@@ -102,13 +105,17 @@ function foldFile(
 export function computeViewed(
   events: readonly ViewedEvent[],
   entries: readonly FileEntry[],
-  isAutoViewed?: (entry: FileEntry) => boolean,
+  isAutoViewed?: (entry: FileEntry) => boolean
 ): ViewedModel {
   const byPath = countByPath(events);
   const states = new Map<string, ViewedState>();
   let viewed = 0;
   for (const entry of entries) {
-    const state = foldFile(byPath.get(entry.path), entry.blobSha, isAutoViewed?.(entry) ?? false);
+    const state = foldFile(
+      byPath.get(entry.path),
+      entry.blobSha,
+      isAutoViewed?.(entry) ?? false
+    );
     states.set(entry.id, state);
     if (state.viewed) {
       viewed += 1;

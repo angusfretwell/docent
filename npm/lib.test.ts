@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+
 import { assetNameFor, downloadUrl } from "./lib.mjs";
 
 describe("assetNameFor", () => {
@@ -20,7 +21,7 @@ describe("assetNameFor", () => {
 describe("downloadUrl", () => {
   test("builds a tagged GitHub Release asset URL", () => {
     expect(downloadUrl("1.2.3", "docent-linux-x64")).toBe(
-      "https://github.com/angusfretwell/docent/releases/download/v1.2.3/docent-linux-x64",
+      "https://github.com/angusfretwell/docent/releases/download/v1.2.3/docent-linux-x64"
     );
   });
 });

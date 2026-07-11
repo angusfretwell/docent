@@ -11,9 +11,10 @@ import type {
   DiffLineAnnotation,
   FileDiffMetadata,
 } from "@pierre/diffs";
-import type { DriftState } from "@shared/schemas/drift";
 import type { FoldedFinding } from "@shared/lib/finding";
+import type { DriftState } from "@shared/schemas/drift";
 import type { Anchor } from "@shared/schemas/finding";
+
 import type { DriftResult } from "./drift";
 import type { FileEntry } from "./nav";
 
@@ -66,17 +67,19 @@ function inlineLine(
   anchor: Extract<Anchor, { kind: "file" | "line" }>,
   fileDiff: FileDiffMetadata,
   drift: DriftResult | undefined,
-  hasDrift: boolean,
+  hasDrift: boolean
 ): { drift?: DriftState; lineNumber: number } | undefined {
   if (hasDrift) {
     if (drift === undefined || drift.state === "outdated") {
       return undefined;
     }
-    const lineNumber = anchor.kind === "line" ? (drift.lines?.[0] ?? anchor.lines[0]) : 0;
+    const lineNumber =
+      anchor.kind === "line" ? (drift.lines?.[0] ?? anchor.lines[0]) : 0;
     return { drift: drift.state, lineNumber };
   }
   if (anchor.kind === "line") {
-    const sideBlob = anchor.side === "head" ? fileDiff.newObjectId : fileDiff.prevObjectId;
+    const sideBlob =
+      anchor.side === "head" ? fileDiff.newObjectId : fileDiff.prevObjectId;
     if (anchor.blobSha !== sideBlob) {
       return undefined;
     }
@@ -92,17 +95,25 @@ function findingAnnotations(
   findings: readonly FoldedFinding[],
   entry: FileEntry,
   fileDiff: FileDiffMetadata,
-  driftFor: ((id: string) => DriftResult | undefined) | undefined,
+  driftFor: ((id: string) => DriftResult | undefined) | undefined
 ): DiffLineAnnotation<Annotation>[] {
   return findings.flatMap((finding): DiffLineAnnotation<Annotation>[] => {
     const { anchor } = finding;
-    if (anchor === undefined || (anchor.kind !== "line" && anchor.kind !== "file")) {
+    if (
+      anchor === undefined ||
+      (anchor.kind !== "line" && anchor.kind !== "file")
+    ) {
       return [];
     }
     if (anchor.file !== entry.path && anchor.file !== entry.prevPath) {
       return [];
     }
-    const placement = inlineLine(anchor, fileDiff, driftFor?.(finding.id), driftFor !== undefined);
+    const placement = inlineLine(
+      anchor,
+      fileDiff,
+      driftFor?.(finding.id),
+      driftFor !== undefined
+    );
     if (placement === undefined) {
       return [];
     }
@@ -123,7 +134,7 @@ function itemAnnotations(
   entry: FileEntry,
   fileDiff: FileDiffMetadata,
   composing: Composing | null,
-  driftFor: ((id: string) => DriftResult | undefined) | undefined,
+  driftFor: ((id: string) => DriftResult | undefined) | undefined
 ): DiffLineAnnotation<Annotation>[] {
   const annotations = findingAnnotations(findings, entry, fileDiff, driftFor);
   if (composing !== null && composing.itemId === entry.id) {
@@ -141,13 +152,13 @@ function itemAnnotations(
 function itemKey(
   annotations: readonly DiffLineAnnotation<Annotation>[],
   expanded: boolean,
-  collapsed: boolean,
+  collapsed: boolean
 ): string {
   const annotationsKey = annotations
     .map((annotation) =>
       annotation.metadata.kind === "finding"
         ? `${annotation.side}:${annotation.lineNumber}:${annotation.metadata.finding.id}:${annotation.metadata.finding.resolved}:${annotation.metadata.finding.replies.length}:${annotation.metadata.finding.whatsNext}:${annotation.metadata.drift ?? ""}`
-        : `composer:${annotation.side}:${annotation.lineNumber}`,
+        : `composer:${annotation.side}:${annotation.lineNumber}`
     )
     .join("|");
   return `${expanded ? "E" : ""}${collapsed ? "C" : ""}|${annotationsKey}`;
@@ -175,15 +186,27 @@ export function buildDiffItems(params: {
     if (fileDiff === undefined) {
       return [];
     }
-    const collapsed = params.isViewed(entry.id) || params.isEdgeCollapsed(entry.id);
+    const collapsed =
+      params.isViewed(entry.id) || params.isEdgeCollapsed(entry.id);
     const annotations = itemAnnotations(
       params.findings,
       entry,
       fileDiff,
       params.composing,
-      params.driftFor,
+      params.driftFor
     );
-    const version = hashString(itemKey(annotations, params.isExpanded(entry.id), collapsed));
-    return [{ annotations, collapsed, fileDiff, id: entry.id, type: "diff" as const, version }];
+    const version = hashString(
+      itemKey(annotations, params.isExpanded(entry.id), collapsed)
+    );
+    return [
+      {
+        annotations,
+        collapsed,
+        fileDiff,
+        id: entry.id,
+        type: "diff" as const,
+        version,
+      },
+    ];
   });
 }

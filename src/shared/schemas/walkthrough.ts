@@ -13,10 +13,13 @@
  */
 
 import { Schema } from "effect";
+
 import { Anchor } from "./finding";
 
 /** A code range: the same coordinate as the `line` anchor arm (walkthroughs.md §5). */
-export class WalkthroughRange extends Schema.Class<WalkthroughRange>("WalkthroughRange")({
+export class WalkthroughRange extends Schema.Class<WalkthroughRange>(
+  "WalkthroughRange"
+)({
   blobSha: Schema.String,
   file: Schema.String,
   /** 1-based inclusive `[start, end]`, matching the `line` arm. */
@@ -31,7 +34,7 @@ export class WalkthroughRange extends Schema.Class<WalkthroughRange>("Walkthroug
  * the annotation lives in the section, distinct from a Finding.
  */
 export class WalkthroughAnnotation extends Schema.Class<WalkthroughAnnotation>(
-  "WalkthroughAnnotation",
+  "WalkthroughAnnotation"
 )({
   anchor: Anchor,
   body: Schema.String,
@@ -44,7 +47,9 @@ export class WalkthroughAnnotation extends Schema.Class<WalkthroughAnnotation>(
  * Finding record). `ranges` is the code arm; `captures`/`annotations` are the
  * product arm — a section carries the arm for its walkthrough's `kind`.
  */
-export class WalkthroughSection extends Schema.Class<WalkthroughSection>("WalkthroughSection")({
+export class WalkthroughSection extends Schema.Class<WalkthroughSection>(
+  "WalkthroughSection"
+)({
   /** Product arm: authored callouts pinned to captures/recordings/prose (§7). */
   annotations: Schema.optional(Schema.Array(WalkthroughAnnotation)),
   body: Schema.String,

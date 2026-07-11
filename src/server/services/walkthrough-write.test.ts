@@ -1,10 +1,12 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
+
 import { BunServices } from "@effect/platform-bun";
 import { ManagedRuntime } from "effect";
-import { readDossierSnapshot } from "./dossier";
+
 import { cleanupScratchDirs, scratchDir } from "../lib/test-fixtures";
+import { readDossierSnapshot } from "./dossier";
 import {
   addWalkthroughCapture,
   addWalkthroughSection,
@@ -19,7 +21,12 @@ afterAll(async () => {
   cleanupScratchDirs();
 });
 
-const REFS = { baseRef: "main", baseSha: "aaaa", headRef: "feature", headSha: "bbbb" };
+const REFS = {
+  baseRef: "main",
+  baseSha: "aaaa",
+  headRef: "feature",
+  headSha: "bbbb",
+};
 const base = { base: "main", branch: "feature" };
 
 function dossierDir(root: string) {
@@ -35,7 +42,9 @@ function snapshot(root: string) {
 }
 
 function walkthrough(root: string, id: string) {
-  return snapshot(root).then((snap) => snap.walkthroughs.find((entry) => entry.id === id));
+  return snapshot(root).then((snap) =>
+    snap.walkthroughs.find((entry) => entry.id === id)
+  );
 }
 
 describe("writeWalkthrough", () => {
@@ -76,11 +85,18 @@ describe("addWalkthroughSection", () => {
       addWalkthroughSection({
         ...base,
         body: "The request enters here {{range:0}}.",
-        ranges: [{ blobSha: "9c2a", file: "src/index.ts", lines: [10, 24], side: "head" }],
+        ranges: [
+          {
+            blobSha: "9c2a",
+            file: "src/index.ts",
+            lines: [10, 24],
+            side: "head",
+          },
+        ],
         root,
         title: "Entry point",
         walkthroughId,
-      }),
+      })
     );
     const second = await run(
       addWalkthroughSection({
@@ -89,7 +105,7 @@ describe("addWalkthroughSection", () => {
         root,
         title: "Dispatch",
         walkthroughId,
-      }),
+      })
     );
 
     expect(first.sectionId).toMatch(/^sec_/);
@@ -97,11 +113,19 @@ describe("addWalkthroughSection", () => {
     expect(second.section).toBe("s02-dispatch.md");
 
     const entry = await walkthrough(root, walkthroughId);
-    expect(entry?.manifest?.sections).toEqual(["s01-entry-point.md", "s02-dispatch.md"]);
-    expect(entry?.sections.map((section) => section.title)).toEqual(["Entry point", "Dispatch"]);
+    expect(entry?.manifest?.sections).toEqual([
+      "s01-entry-point.md",
+      "s02-dispatch.md",
+    ]);
+    expect(entry?.sections.map((section) => section.title)).toEqual([
+      "Entry point",
+      "Dispatch",
+    ]);
     expect(entry?.sections.at(0)?.id).toBe(first.sectionId);
     expect(entry?.sections.at(0)?.ranges?.at(0)?.file).toBe("src/index.ts");
-    expect(entry?.sections.at(0)?.body).toBe("The request enters here {{range:0}}.");
+    expect(entry?.sections.at(0)?.body).toBe(
+      "The request enters here {{range:0}}."
+    );
   });
 
   test("writes the product arm — captures and annotations", async () => {
@@ -113,7 +137,11 @@ describe("addWalkthroughSection", () => {
         ...base,
         annotations: [
           {
-            anchor: { capture: "cap_a", kind: "screenshot-region", rect: [0.1, 0.2, 0.3, 0.1] },
+            anchor: {
+              capture: "cap_a",
+              kind: "screenshot-region",
+              rect: [0.1, 0.2, 0.3, 0.1],
+            },
             body: "The upload control.",
           },
         ],
@@ -122,20 +150,28 @@ describe("addWalkthroughSection", () => {
         root,
         title: "Uploading",
         walkthroughId,
-      }),
+      })
     );
 
     expect(section).toBe("s01-uploading.md");
     const entry = await walkthrough(root, walkthroughId);
     expect(entry?.sections.at(0)?.captures).toEqual(["cap_a", "cap_b"]);
-    expect(entry?.sections.at(0)?.annotations?.at(0)?.anchor.kind).toBe("screenshot-region");
+    expect(entry?.sections.at(0)?.annotations?.at(0)?.anchor.kind).toBe(
+      "screenshot-region"
+    );
   });
 
   test("an unknown walkthrough id is an error, never a stray write", async () => {
     const root = scratchDir("docent-wlk-");
 
     const exit = await runtime.runPromiseExit(
-      addWalkthroughSection({ ...base, body: "x", root, title: "T", walkthroughId: "wlk_nope" }),
+      addWalkthroughSection({
+        ...base,
+        body: "x",
+        root,
+        title: "T",
+        walkthroughId: "wlk_nope",
+      })
     );
 
     expect(exit._tag).toBe("Failure");
@@ -149,11 +185,18 @@ describe("addWalkthroughSection", () => {
       addWalkthroughSection({
         ...base,
         body: "x",
-        ranges: [{ blobSha: "9c2a", file: "src/index.ts", lines: [1, 2], side: "head" }],
+        ranges: [
+          {
+            blobSha: "9c2a",
+            file: "src/index.ts",
+            lines: [1, 2],
+            side: "head",
+          },
+        ],
         root,
         title: "T",
         walkthroughId,
-      }),
+      })
     );
 
     expect(exit._tag).toBe("Failure");
@@ -171,7 +214,7 @@ describe("addWalkthroughSection", () => {
         root,
         title: "T",
         walkthroughId,
-      }),
+      })
     );
 
     expect(exit._tag).toBe("Failure");
@@ -194,7 +237,7 @@ describe("addWalkthroughCapture", () => {
         route: "/signup",
         viewport: [1280, 800],
         walkthroughId,
-      }),
+      })
     );
 
     expect(result.captureId).toMatch(/^cap_/);
@@ -206,7 +249,7 @@ describe("addWalkthroughCapture", () => {
       "product",
       walkthroughId,
       "captures",
-      `${result.media}.png`,
+      `${result.media}.png`
     );
     expect(existsSync(blob)).toBe(true);
 
@@ -235,7 +278,7 @@ describe("addWalkthroughCapture", () => {
         route: "/a",
         viewport: [1, 2],
         walkthroughId,
-      }),
+      })
     );
     const second = await run(
       addWalkthroughCapture({
@@ -246,7 +289,7 @@ describe("addWalkthroughCapture", () => {
         route: "/b",
         viewport: [1, 2],
         walkthroughId,
-      }),
+      })
     );
 
     expect(second.media).toBe(first.media);
@@ -255,7 +298,7 @@ describe("addWalkthroughCapture", () => {
       "walkthroughs",
       "product",
       walkthroughId,
-      "captures",
+      "captures"
     );
     expect(readdirSync(captureDir)).toEqual([`${first.media}.png`]);
 
@@ -280,7 +323,7 @@ describe("addWalkthroughCapture", () => {
         route: "/signup",
         viewport: [1280, 800],
         walkthroughId,
-      }),
+      })
     );
 
     const blob = path.join(
@@ -289,11 +332,14 @@ describe("addWalkthroughCapture", () => {
       "product",
       walkthroughId,
       "captures",
-      `${result.media}.rrweb.json`,
+      `${result.media}.rrweb.json`
     );
     expect(existsSync(blob)).toBe(true);
     const entry = await walkthrough(root, walkthroughId);
-    expect(entry?.manifest?.captures?.at(0)).toMatchObject({ durationMs: 8200, kind: "recording" });
+    expect(entry?.manifest?.captures?.at(0)).toMatchObject({
+      durationMs: 8200,
+      kind: "recording",
+    });
   });
 
   test("registering a capture on a code walkthrough is refused", async () => {
@@ -309,7 +355,7 @@ describe("addWalkthroughCapture", () => {
         route: "/",
         viewport: [1, 2],
         walkthroughId,
-      }),
+      })
     );
 
     expect(exit._tag).toBe("Failure");

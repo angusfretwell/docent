@@ -12,15 +12,16 @@
 import { BunRuntime, BunServices } from "@effect/platform-bun";
 import { Console, Effect, Schema } from "effect";
 import open from "open";
+
 import type { ClientAssets } from "../shared/lib/assets";
 import { runFinding } from "./cli/index";
 import { runCapture, runWalkthrough } from "./cli/walkthrough";
-import { resolveChange } from "./services/git";
 import { layer as serveLayer, serverUrl } from "./lib/serve";
+import { resolveChange } from "./services/git";
 
 class ClientAssetsMissing extends Schema.TaggedErrorClass<ClientAssetsMissing>()(
   "ClientAssetsMissing",
-  {},
+  {}
 ) {
   override get message(): string {
     return "client assets not embedded — run `bun run build` first";
@@ -32,7 +33,7 @@ class ClientAssetsMissing extends Schema.TaggedErrorClass<ClientAssetsMissing>()
 const openBrowser = Effect.fn("openBrowser")(
   (url: string) => Effect.tryPromise(() => open(url)),
   // No opener available — the URL is printed above.
-  (effect) => Effect.ignore(effect),
+  (effect) => Effect.ignore(effect)
 );
 
 function serve(assets: ClientAssets) {
@@ -46,7 +47,9 @@ function serve(assets: ClientAssets) {
     const change = yield* resolveChange(process.cwd());
     const url = yield* serverUrl;
 
-    yield* Console.log(`docent  ·  ${change.branch} → ${change.defaultBranch} @ ${change.root}`);
+    yield* Console.log(
+      `docent  ·  ${change.branch} → ${change.defaultBranch} @ ${change.root}`
+    );
     yield* Console.log(`        ·  ${url}`);
 
     if (process.stdout.isTTY) {
@@ -63,7 +66,7 @@ function serve(assets: ClientAssets) {
 function crash(error: unknown) {
   return Effect.andThen(
     Console.error(error instanceof Error ? error.message : String(error)),
-    Effect.sync(() => process.exit(1)),
+    Effect.sync(() => process.exit(1))
   );
 }
 
@@ -75,8 +78,12 @@ function crash(error: unknown) {
 const CLI_SUBCOMMANDS = ["finding", "walkthrough", "capture"] as const;
 
 /** Run one non-serve CLI effect: provide the Bun services and crash on failure. */
-function runCli<E>(effect: Effect.Effect<void, E, BunServices.BunServices>): void {
-  BunRuntime.runMain(effect.pipe(Effect.provide(BunServices.layer), Effect.catch(crash)));
+function runCli<E>(
+  effect: Effect.Effect<void, E, BunServices.BunServices>
+): void {
+  BunRuntime.runMain(
+    effect.pipe(Effect.provide(BunServices.layer), Effect.catch(crash))
+  );
 }
 
 /**
@@ -100,8 +107,12 @@ export function runMain(assets: ClientAssets): void {
   }
 
   if (subcommand !== "serve") {
-    const known = ["serve", ...CLI_SUBCOMMANDS].map((name) => `"${name}"`).join(", ");
-    console.error(`unknown subcommand: ${subcommand} (expected one of ${known})`);
+    const known = ["serve", ...CLI_SUBCOMMANDS]
+      .map((name) => `"${name}"`)
+      .join(", ");
+    console.error(
+      `unknown subcommand: ${subcommand} (expected one of ${known})`
+    );
     process.exit(1);
   }
 

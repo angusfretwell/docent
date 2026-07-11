@@ -9,9 +9,9 @@ The **walkthrough reconciler** — a docent gives the guided tour. This is the a
 
 Per pillar (**code**, **product**) you read the head Change and the pillar's latest walkthrough's `bornChangeId`, and decide from **existence + drift** what to do. You regenerate **only the stale or missing pillars** — a live pillar is left untouched (**selective on pillars**, agent-integration.md §3.1) — and each regenerated pillar mints a **fresh immutable `wlk_`**; you never edit a prior walkthrough in place (walkthroughs.md §2). You **compose the reference skills**; you reimplement none of them:
 
-| Pillar      | Regeneration composes                                                                           |
-| ----------- | ----------------------------------------------------------------------------------------------- |
-| **code**    | `/author-code-walkthrough`                                                                      |
+| Pillar | Regeneration composes |
+| --- | --- |
+| **code** | `/author-code-walkthrough` |
 | **product** | `/capture-product-walkthrough` (re-drive capture **wholesale**) → `/author-product-walkthrough` |
 
 You author no walkthrough files yourself — the reference skills and the `docent walkthrough` / `docent capture` write path do that (load **`/docent-cli`** for the command surface: `wlk_`/`sec_` minting, lazy `bornChangeId`, git-resolved `blobSha`, content-addressing). Your job is the **reconcile decision** — which pillars are stale, which are missing, which are fresh — and then dispatching the composed skills at the ones that need it.
@@ -63,11 +63,11 @@ The Dossier for the current branch holds each pillar's walkthroughs under its ca
 
 The per-pillar decision — **existence + drift**, nothing else (walkthroughs.md §8, agent-integration.md §3.1):
 
-| State                                  | Do                                                      |
-| -------------------------------------- | ------------------------------------------------------- |
-| **Missing** (no walkthrough)           | **Regenerate** — the pillar has no tour.                |
+| State | Do |
+| --- | --- |
+| **Missing** (no walkthrough) | **Regenerate** — the pillar has no tour. |
 | **Stale** (`bornChangeId` behind head) | **Regenerate** — mint a fresh `wlk_` bound to the head. |
-| **Live** (`bornChangeId` is the head)  | **Leave untouched** — a live tour is never re-minted.   |
+| **Live** (`bornChangeId` is the head) | **Leave untouched** — a live tour is never re-minted. |
 
 **Selective on pillars** means exactly this per-pillar independence (agent-integration.md §3.1): each pillar is judged on its **own** walkthrough's `bornChangeId`, so a stale pillar is regenerated while its **live** sibling is left untouched — you never re-mint a live pillar just because the other drifted, and you never skip a stale one. "The diff actually affects the pillar" **is** its staleness: a stale pillar's `bornChangeId` sits behind head, so the diff since it was born is what makes it stale. There is no second within-pillar filter — v1 regenerates **every** stale or missing pillar (walkthroughs.md §8: "mints a fresh immutable `wlk_` for stale or missing pillars only"); a finer "does this specific drift touch the tour" test is a deferred optimization, not a v1 gate.
 

@@ -10,14 +10,21 @@
  * new file, never a rewrite.
  */
 
-import { Clock, Effect, Option } from "effect";
-import { FileSystem } from "effect/FileSystem";
-import { Path } from "effect/Path";
 import { ChangeRecord } from "@shared/schemas/dossier";
 import type { Anchor, Disposition } from "@shared/schemas/finding";
 import type { FindingWrite } from "@shared/schemas/finding-write";
-import { dossierDirPath, ensureDossier, listDir, makeId, readRecord } from "./dossier";
+import { Clock, Effect, Option } from "effect";
+import { FileSystem } from "effect/FileSystem";
+import { Path } from "effect/Path";
+
 import { recordFile, serializeFrontmatter } from "../lib/records";
+import {
+  dossierDirPath,
+  ensureDossier,
+  listDir,
+  makeId,
+  readRecord,
+} from "./dossier";
 
 /** The plain human/agent attribution a write stamps onto its record. */
 export interface AuthorInput {
@@ -35,7 +42,9 @@ export interface ChangeRefs {
   headRef: string;
 }
 
-const now = Clock.currentTimeMillis.pipe(Effect.map((millis) => new Date(millis).toISOString()));
+const now = Clock.currentTimeMillis.pipe(
+  Effect.map((millis) => new Date(millis).toISOString())
+);
 
 /** The highest `NNN` numeric prefix across `NNN-…`/`chg_NNN` names, or 0. */
 function maxSequence(names: readonly string[], pattern: RegExp): number {
@@ -63,12 +72,14 @@ export const mintChange = Effect.fn("mintChange")(function* mintChange(params: {
   const fs = yield* FileSystem;
   const path = yield* Path;
   const dir = path.join(params.dossierDir, "changes");
-  const names = (yield* listDir(dir)).filter((name) => name.endsWith(".json")).toSorted();
+  const names = (yield* listDir(dir))
+    .filter((name) => name.endsWith(".json"))
+    .toSorted();
 
   const existing = yield* Effect.forEach(
     names,
     (name) => readRecord(path.join(dir, name), ChangeRecord),
-    { concurrency: "unbounded" },
+    { concurrency: "unbounded" }
   );
   for (const option of existing) {
     if (
@@ -91,7 +102,10 @@ export const mintChange = Effect.fn("mintChange")(function* mintChange(params: {
     schema: "docent/change@3",
   });
   yield* fs.makeDirectory(dir, { recursive: true });
-  yield* fs.writeFileString(path.join(dir, `${id}.json`), `${JSON.stringify(record, null, 2)}\n`);
+  yield* fs.writeFileString(
+    path.join(dir, `${id}.json`),
+    `${JSON.stringify(record, null, 2)}\n`
+  );
   return record;
 });
 
@@ -112,7 +126,9 @@ function frontmatter(fields: {
     display: fields.author.display,
     id: fields.author.id,
     kind: fields.author.kind,
-    ...(fields.author.model === undefined ? {} : { model: fields.author.model }),
+    ...(fields.author.model === undefined
+      ? {}
+      : { model: fields.author.model }),
   };
   const ordered: [string, unknown][] = [
     ["schema", "docent/finding@3"],
@@ -145,7 +161,11 @@ export const writeFindingRecord = Effect.fn("writeFindingRecord")(
     const path = yield* Path;
 
     const dossierDir = dossierDirPath(params.root, params.branch);
-    yield* ensureDossier({ base: params.base, branch: params.branch, dossierDir });
+    yield* ensureDossier({
+      base: params.base,
+      branch: params.branch,
+      dossierDir,
+    });
     const change = yield* mintChange({ dossierDir, refs: params.refs });
     const createdAt = yield* now;
 
@@ -154,13 +174,17 @@ export const writeFindingRecord = Effect.fn("writeFindingRecord")(
 
     // Resolve the target finding dir, record type, next filename, body, and the
     // op-specific frontmatter (anchor on open, disposition on reply).
-    const findingId = write.op === "open" ? yield* makeId("fnd") : write.findingId;
+    const findingId =
+      write.op === "open" ? yield* makeId("fnd") : write.findingId;
     const findingDir = path.join(findingsDir, findingId);
     const existing =
       write.op === "open"
         ? []
         : (yield* listDir(findingDir)).filter((name) => name.endsWith(".md"));
-    const sequence = String(maxSequence(existing, /^(?<n>\d+)-/) + 1).padStart(3, "0");
+    const sequence = String(maxSequence(existing, /^(?<n>\d+)-/) + 1).padStart(
+      3,
+      "0"
+    );
     const recordName = `${sequence}-${write.op}.md`;
 
     const meta: Parameters<typeof frontmatter>[0] = {
@@ -178,9 +202,9 @@ export const writeFindingRecord = Effect.fn("writeFindingRecord")(
     yield* fs.makeDirectory(findingDir, { recursive: true });
     yield* fs.writeFileString(
       path.join(findingDir, recordName),
-      recordFile(frontmatter(meta), body),
+      recordFile(frontmatter(meta), body)
     );
 
     return { changeId: change.id, findingId, record: recordName };
-  },
+  }
 );

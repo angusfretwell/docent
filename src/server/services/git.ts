@@ -4,13 +4,13 @@
  * resolves from local git alone (offline; no network, no GitHub).
  */
 
+import { Change } from "@shared/schemas/change";
+import type { PendingRange } from "@shared/schemas/pending";
+import { Pending } from "@shared/schemas/pending";
 import { Effect, Schema, Stream } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 import { ChildProcess } from "effect/unstable/process";
-import { Change } from "@shared/schemas/change";
-import type { PendingRange } from "@shared/schemas/pending";
-import { Pending } from "@shared/schemas/pending";
 
 const TRAILING_NEWLINE = /\n$/;
 
@@ -42,7 +42,7 @@ export class GitCommandFailed extends Schema.TaggedErrorClass<GitCommandFailed>(
     args: Schema.Array(Schema.String),
     exitCode: Schema.Number,
     stderr: Schema.String,
-  },
+  }
 ) {
   override get message(): string {
     return `git ${this.args.join(" ")} failed: ${this.stderr.trim()}`;
@@ -51,7 +51,7 @@ export class GitCommandFailed extends Schema.TaggedErrorClass<GitCommandFailed>(
 
 export class NotAGitRepository extends Schema.TaggedErrorClass<NotAGitRepository>()(
   "NotAGitRepository",
-  { path: Schema.String },
+  { path: Schema.String }
 ) {
   override get message(): string {
     return `not a git repository: ${this.path}`;
@@ -60,16 +60,19 @@ export class NotAGitRepository extends Schema.TaggedErrorClass<NotAGitRepository
 
 export class DefaultBranchNotFound extends Schema.TaggedErrorClass<DefaultBranchNotFound>()(
   "DefaultBranchNotFound",
-  {},
+  {}
 ) {
   override get message(): string {
     return "could not resolve the default branch: no origin/HEAD, main, or master";
   }
 }
 
-export class InvalidObjectId extends Schema.TaggedErrorClass<InvalidObjectId>()("InvalidObjectId", {
-  sha: Schema.String,
-}) {
+export class InvalidObjectId extends Schema.TaggedErrorClass<InvalidObjectId>()(
+  "InvalidObjectId",
+  {
+    sha: Schema.String,
+  }
+) {
   override get message(): string {
     return `not a valid git object id: ${this.sha}`;
   }
@@ -77,7 +80,7 @@ export class InvalidObjectId extends Schema.TaggedErrorClass<InvalidObjectId>()(
 
 export class InvalidWorktreePath extends Schema.TaggedErrorClass<InvalidWorktreePath>()(
   "InvalidWorktreePath",
-  { path: Schema.String },
+  { path: Schema.String }
 ) {
   override get message(): string {
     return `not a valid working-tree path: ${this.path}`;
@@ -111,17 +114,23 @@ function streamBytes<E, R>(stream: Stream.Stream<Uint8Array, E, R>) {
 const gitText = Effect.fn("gitText")(function* gitText(
   cwd: string,
   args: readonly string[],
-  accepts: (exitCode: number) => boolean,
+  accepts: (exitCode: number) => boolean
 ) {
-  const handle = yield* ChildProcess.make("git", args, { cwd, env: GIT_ENV, extendEnv: true });
+  const handle = yield* ChildProcess.make("git", args, {
+    cwd,
+    env: GIT_ENV,
+    extendEnv: true,
+  });
   // Drain stdout/stderr concurrently with the exit wait so a large diff
   // can't deadlock the pipe.
   const [stdout, stderr, exitCode] = yield* Effect.all(
     [streamText(handle.stdout), streamText(handle.stderr), handle.exitCode],
-    { concurrency: "unbounded" },
+    { concurrency: "unbounded" }
   );
   if (!accepts(exitCode)) {
-    return yield* Effect.fail(GitCommandFailed.make({ args, exitCode, stderr }));
+    return yield* Effect.fail(
+      GitCommandFailed.make({ args, exitCode, stderr })
+    );
   }
   return stdout.replace(TRAILING_NEWLINE, "");
 }, Effect.scoped);
@@ -146,14 +155,23 @@ function gitDiffNoIndex(cwd: string, args: readonly string[]) {
  * text decode and no newline trim, so binary blobs survive intact. stderr is
  * still decoded for the error message.
  */
-const gitBytes = Effect.fn("gitBytes")(function* gitBytes(cwd: string, args: readonly string[]) {
-  const handle = yield* ChildProcess.make("git", args, { cwd, env: GIT_ENV, extendEnv: true });
+const gitBytes = Effect.fn("gitBytes")(function* gitBytes(
+  cwd: string,
+  args: readonly string[]
+) {
+  const handle = yield* ChildProcess.make("git", args, {
+    cwd,
+    env: GIT_ENV,
+    extendEnv: true,
+  });
   const [stdout, stderr, exitCode] = yield* Effect.all(
     [streamBytes(handle.stdout), streamText(handle.stderr), handle.exitCode],
-    { concurrency: "unbounded" },
+    { concurrency: "unbounded" }
   );
   if (exitCode !== 0) {
-    return yield* Effect.fail(GitCommandFailed.make({ args, exitCode, stderr }));
+    return yield* Effect.fail(
+      GitCommandFailed.make({ args, exitCode, stderr })
+    );
   }
   return stdout;
 }, Effect.scoped);
@@ -162,38 +180,48 @@ const gitBytes = Effect.fn("gitBytes")(function* gitBytes(cwd: string, args: rea
  * The default branch, as { name, ref }: origin's HEAD branch when the repo
  * has an origin, else the local `main`/`master` branch.
  */
-const resolveDefaultBranch = Effect.fn("resolveDefaultBranch")(function* resolveDefaultBranch(
-  root: string,
-) {
-  const originHead = yield* git(root, ["symbolic-ref", "refs/remotes/origin/HEAD"]).pipe(
-    Effect.catchTag("GitCommandFailed", () => Effect.succeed(null)),
-  );
-  if (originHead !== null) {
-    const name = originHead.replace("refs/remotes/origin/", "");
-    return { name, ref: `origin/${name}` };
-  }
-  for (const name of ["main", "master"]) {
-    const sha = yield* git(root, ["rev-parse", "--verify", `refs/heads/${name}`]).pipe(
-      Effect.catchTag("GitCommandFailed", () => Effect.succeed(null)),
-    );
-    if (sha !== null) {
-      return { name, ref: name };
+const resolveDefaultBranch = Effect.fn("resolveDefaultBranch")(
+  function* resolveDefaultBranch(root: string) {
+    const originHead = yield* git(root, [
+      "symbolic-ref",
+      "refs/remotes/origin/HEAD",
+    ]).pipe(Effect.catchTag("GitCommandFailed", () => Effect.succeed(null)));
+    if (originHead !== null) {
+      const name = originHead.replace("refs/remotes/origin/", "");
+      return { name, ref: `origin/${name}` };
     }
+    for (const name of ["main", "master"]) {
+      const sha = yield* git(root, [
+        "rev-parse",
+        "--verify",
+        `refs/heads/${name}`,
+      ]).pipe(Effect.catchTag("GitCommandFailed", () => Effect.succeed(null)));
+      if (sha !== null) {
+        return { name, ref: name };
+      }
+    }
+    return yield* Effect.fail(DefaultBranchNotFound.make({}));
   }
-  return yield* Effect.fail(DefaultBranchNotFound.make({}));
-});
+);
 
 /**
  * Resolve the repo root, checked-out branch, and default branch — the light
  * identity the Dossier store keys on, without minting the (expensive) diff.
  */
-export const resolveRepo = Effect.fn("resolveRepo")(function* resolveRepo(cwd: string) {
+export const resolveRepo = Effect.fn("resolveRepo")(function* resolveRepo(
+  cwd: string
+) {
   const root = yield* git(cwd, ["rev-parse", "--show-toplevel"]).pipe(
-    Effect.catchTag("GitCommandFailed", () => Effect.fail(NotAGitRepository.make({ path: cwd }))),
+    Effect.catchTag("GitCommandFailed", () =>
+      Effect.fail(NotAGitRepository.make({ path: cwd }))
+    )
   );
   const [branch, defaultBranch] = yield* Effect.all(
-    [git(root, ["rev-parse", "--abbrev-ref", "HEAD"]), resolveDefaultBranch(root)],
-    { concurrency: "unbounded" },
+    [
+      git(root, ["rev-parse", "--abbrev-ref", "HEAD"]),
+      resolveDefaultBranch(root),
+    ],
+    { concurrency: "unbounded" }
   );
   return { branch, defaultBranch, root };
 });
@@ -203,7 +231,9 @@ export const resolveRepo = Effect.fn("resolveRepo")(function* resolveRepo(cwd: s
  * the linked path under `.git/worktrees/<name>` for a git worktree. The watch
  * (watch.ts) watches this for HEAD/index moves so Pending hides live on commit.
  */
-export const resolveGitDir = Effect.fn("resolveGitDir")(function* resolveGitDir(cwd: string) {
+export const resolveGitDir = Effect.fn("resolveGitDir")(function* resolveGitDir(
+  cwd: string
+) {
   return yield* git(cwd, ["rev-parse", "--absolute-git-dir"]);
 });
 
@@ -221,31 +251,44 @@ function isGeneratedValue(value: string): boolean {
  * set. Best-effort: any failure (or no changed paths) yields none, so a repo
  * without attributes still renders.
  */
-const resolveGeneratedPaths = Effect.fn("resolveGeneratedPaths")(function* resolveGeneratedPaths(
-  root: string,
-  baseSha: string,
-  headSha: string,
-) {
-  const names = yield* git(root, [DIFF, NO_COLOR, "--name-only", FIND_RENAMES, baseSha, headSha]);
-  const paths = names.split("\n").filter((line) => line !== "");
-  if (paths.length === 0) {
-    return [];
-  }
-  const attrs = ["linguist-generated", "linguist-vendored"];
-  const output = yield* git(root, ["check-attr", "-z", ...attrs, "--", ...paths]).pipe(
-    Effect.catchTag("GitCommandFailed", () => Effect.succeed("")),
-  );
-  // `check-attr -z` emits NUL-separated (path, attr, value) triples. Collect any
-  // path whose generated/vendored value is set — de-duplicated across attrs.
-  const records = output.split(NUL);
-  const generated = new Set<string>();
-  for (let i = 0; i + 2 < records.length; i += 3) {
-    if (isGeneratedValue(records[i + 2] ?? "")) {
-      generated.add(records[i] ?? "");
+const resolveGeneratedPaths = Effect.fn("resolveGeneratedPaths")(
+  function* resolveGeneratedPaths(
+    root: string,
+    baseSha: string,
+    headSha: string
+  ) {
+    const names = yield* git(root, [
+      DIFF,
+      NO_COLOR,
+      "--name-only",
+      FIND_RENAMES,
+      baseSha,
+      headSha,
+    ]);
+    const paths = names.split("\n").filter((line) => line !== "");
+    if (paths.length === 0) {
+      return [];
     }
+    const attrs = ["linguist-generated", "linguist-vendored"];
+    const output = yield* git(root, [
+      "check-attr",
+      "-z",
+      ...attrs,
+      "--",
+      ...paths,
+    ]).pipe(Effect.catchTag("GitCommandFailed", () => Effect.succeed("")));
+    // `check-attr -z` emits NUL-separated (path, attr, value) triples. Collect any
+    // path whose generated/vendored value is set — de-duplicated across attrs.
+    const records = output.split(NUL);
+    const generated = new Set<string>();
+    for (let i = 0; i + 2 < records.length; i += 3) {
+      if (isGeneratedValue(records[i + 2] ?? "")) {
+        generated.add(records[i] ?? "");
+      }
+    }
+    return [...generated];
   }
-  return [...generated];
-});
+);
 
 /**
  * Resolve the checked-out branch's Change identity — its `(baseSha, headSha)`
@@ -254,18 +297,21 @@ const resolveGeneratedPaths = Effect.fn("resolveGeneratedPaths")(function* resol
  * resolves these refs, then mints or idempotently reuses the Change for the
  * live head (data-model.md §4).
  */
-export const resolveChangeRefs = Effect.fn("resolveChangeRefs")(function* resolveChangeRefs(
-  cwd: string,
-) {
-  const { root, branch, defaultBranch } = yield* resolveRepo(cwd);
-  const headSha = yield* git(root, ["rev-parse", "HEAD"]);
-  const baseSha = yield* git(root, ["merge-base", defaultBranch.ref, "HEAD"]);
-  return { baseSha, branch, defaultBranch, headSha, root };
-});
+export const resolveChangeRefs = Effect.fn("resolveChangeRefs")(
+  function* resolveChangeRefs(cwd: string) {
+    const { root, branch, defaultBranch } = yield* resolveRepo(cwd);
+    const headSha = yield* git(root, ["rev-parse", "HEAD"]);
+    const baseSha = yield* git(root, ["merge-base", defaultBranch.ref, "HEAD"]);
+    return { baseSha, branch, defaultBranch, headSha, root };
+  }
+);
 
 /** Resolve the checked-out branch's live Change against the default branch. */
-export const resolveChange = Effect.fn("resolveChange")(function* resolveChange(cwd: string) {
-  const { root, branch, baseSha, headSha, defaultBranch } = yield* resolveChangeRefs(cwd);
+export const resolveChange = Effect.fn("resolveChange")(function* resolveChange(
+  cwd: string
+) {
+  const { root, branch, baseSha, headSha, defaultBranch } =
+    yield* resolveChangeRefs(cwd);
   // `--full-index` emits the full blob object ids on each index line. The Diff
   // tab keys mark-as-viewed on the head-blob SHA (diff-review.md §3); an
   // abbreviated id's length grows with the repo, so a full id is what stays
@@ -275,10 +321,17 @@ export const resolveChange = Effect.fn("resolveChange")(function* resolveChange(
       ? ["", []]
       : yield* Effect.all(
           [
-            git(root, [DIFF, NO_COLOR, FULL_INDEX, FIND_RENAMES, baseSha, headSha]),
+            git(root, [
+              DIFF,
+              NO_COLOR,
+              FULL_INDEX,
+              FIND_RENAMES,
+              baseSha,
+              headSha,
+            ]),
             resolveGeneratedPaths(root, baseSha, headSha),
           ],
-          { concurrency: "unbounded" },
+          { concurrency: "unbounded" }
         );
   return Change.make({
     baseSha,
@@ -298,12 +351,14 @@ export const resolveChange = Effect.fn("resolveChange")(function* resolveChange(
  * (data-model.md §5.4). A missing config degrades to a usable placeholder
  * rather than failing the write.
  */
-export const resolveAuthor = Effect.fn("resolveAuthor")(function* resolveAuthor(root: string) {
+export const resolveAuthor = Effect.fn("resolveAuthor")(function* resolveAuthor(
+  root: string
+) {
   const email = yield* git(root, ["config", "user.email"]).pipe(
-    Effect.catchTag("GitCommandFailed", () => Effect.succeed("")),
+    Effect.catchTag("GitCommandFailed", () => Effect.succeed(""))
   );
   const name = yield* git(root, ["config", "user.name"]).pipe(
-    Effect.catchTag("GitCommandFailed", () => Effect.succeed("")),
+    Effect.catchTag("GitCommandFailed", () => Effect.succeed(""))
   );
   let display = "You";
   if (name !== "") {
@@ -311,7 +366,11 @@ export const resolveAuthor = Effect.fn("resolveAuthor")(function* resolveAuthor(
   } else if (email !== "") {
     display = email;
   }
-  return { display, id: email === "" ? "unknown" : email, kind: "human" as const };
+  return {
+    display,
+    id: email === "" ? "unknown" : email,
+    kind: "human" as const,
+  };
 });
 
 /**
@@ -323,7 +382,7 @@ export const resolveAuthor = Effect.fn("resolveAuthor")(function* resolveAuthor(
  */
 export const resolveBlob = Effect.fn("resolveBlob")(function* resolveBlob(
   cwd: string,
-  sha: string,
+  sha: string
 ) {
   if (!OBJECT_ID.test(sha)) {
     return yield* Effect.fail(InvalidObjectId.make({ sha }));
@@ -338,17 +397,16 @@ export const resolveBlob = Effect.fn("resolveBlob")(function* resolveBlob(
  * this as the size-delta row on binary files (diff-review.md §5) without
  * fetching the blob. A malformed id short-circuits; an absent id fails.
  */
-export const resolveBlobSize = Effect.fn("resolveBlobSize")(function* resolveBlobSize(
-  cwd: string,
-  sha: string,
-) {
-  if (!OBJECT_ID.test(sha)) {
-    return yield* Effect.fail(InvalidObjectId.make({ sha }));
+export const resolveBlobSize = Effect.fn("resolveBlobSize")(
+  function* resolveBlobSize(cwd: string, sha: string) {
+    if (!OBJECT_ID.test(sha)) {
+      return yield* Effect.fail(InvalidObjectId.make({ sha }));
+    }
+    const { root } = yield* resolveRepo(cwd);
+    const size = yield* git(root, ["cat-file", "-s", sha]);
+    return Math.trunc(Number(size));
   }
-  const { root } = yield* resolveRepo(cwd);
-  const size = yield* git(root, ["cat-file", "-s", sha]);
-  return Math.trunc(Number(size));
-});
+);
 
 /**
  * The blob object id of a file at a committed ref — `git rev-parse <ref>:<path>`.
@@ -358,13 +416,11 @@ export const resolveBlobSize = Effect.fn("resolveBlobSize")(function* resolveBlo
  * `finding add` resolves it so anchor construction has one home, matching the
  * UI's write path. A path absent at that ref fails.
  */
-export const resolveBlobShaAt = Effect.fn("resolveBlobShaAt")(function* resolveBlobShaAt(
-  root: string,
-  ref: string,
-  file: string,
-) {
-  return yield* git(root, ["rev-parse", `${ref}:${file}`]);
-});
+export const resolveBlobShaAt = Effect.fn("resolveBlobShaAt")(
+  function* resolveBlobShaAt(root: string, ref: string, file: string) {
+    return yield* git(root, ["rev-parse", `${ref}:${file}`]);
+  }
+);
 
 /** The untracked (`??`) paths of a `git status --porcelain -z -uall` dump. */
 function untrackedPaths(status: string): string[] {
@@ -397,38 +453,58 @@ function joinPatches(segments: readonly string[]): string {
  * On commit `HEAD` moves, the incremental diff empties, and `dirty` goes false:
  * Pending owns no lifecycle logic of its own.
  */
-export const resolvePending = Effect.fn("resolvePending")(function* resolvePending(
-  cwd: string,
-  range: PendingRange,
-) {
-  const { root, branch, defaultBranch } = yield* resolveRepo(cwd);
-  const [headSha, baseSha, status] = yield* Effect.all(
-    [
-      git(root, ["rev-parse", "HEAD"]),
-      git(root, ["merge-base", defaultBranch.ref, "HEAD"]),
-      git(root, ["status", "--porcelain", "-z", "--untracked-files=all"]),
-    ],
-    { concurrency: "unbounded" },
-  );
-  const dirty = status.length > 0;
+export const resolvePending = Effect.fn("resolvePending")(
+  function* resolvePending(cwd: string, range: PendingRange) {
+    const { root, branch, defaultBranch } = yield* resolveRepo(cwd);
+    const [headSha, baseSha, status] = yield* Effect.all(
+      [
+        git(root, ["rev-parse", "HEAD"]),
+        git(root, ["merge-base", defaultBranch.ref, "HEAD"]),
+        git(root, ["status", "--porcelain", "-z", "--untracked-files=all"]),
+      ],
+      { concurrency: "unbounded" }
+    );
+    const dirty = status.length > 0;
 
-  // A clean tree diffs to nothing — skip the work and return the empty preview.
-  const patch = dirty
-    ? yield* Effect.gen(function* buildPatch() {
-        const diffBase = range === "incremental" ? "HEAD" : baseSha;
-        const tracked = yield* git(root, [DIFF, NO_COLOR, FIND_RENAMES, diffBase]);
-        // Render each untracked file as an add: /dev/null → the working file.
-        const adds = yield* Effect.forEach(
-          untrackedPaths(status),
-          (file) => gitDiffNoIndex(root, [DIFF, NO_COLOR, "--no-index", "--", "/dev/null", file]),
-          { concurrency: "unbounded" },
-        );
-        return joinPatches([tracked, ...adds]);
-      })
-    : "";
+    // A clean tree diffs to nothing — skip the work and return the empty preview.
+    const patch = dirty
+      ? yield* Effect.gen(function* buildPatch() {
+          const diffBase = range === "incremental" ? "HEAD" : baseSha;
+          const tracked = yield* git(root, [
+            DIFF,
+            NO_COLOR,
+            FIND_RENAMES,
+            diffBase,
+          ]);
+          // Render each untracked file as an add: /dev/null → the working file.
+          const adds = yield* Effect.forEach(
+            untrackedPaths(status),
+            (file) =>
+              gitDiffNoIndex(root, [
+                DIFF,
+                NO_COLOR,
+                "--no-index",
+                "--",
+                "/dev/null",
+                file,
+              ]),
+            { concurrency: "unbounded" }
+          );
+          return joinPatches([tracked, ...adds]);
+        })
+      : "";
 
-  return Pending.make({ baseSha, branch, dirty, headSha, patch, range, root });
-});
+    return Pending.make({
+      baseSha,
+      branch,
+      dirty,
+      headSha,
+      patch,
+      range,
+      root,
+    });
+  }
+);
 
 /**
  * Read a working-tree file's live bytes off disk by its repo-relative path —
@@ -437,25 +513,26 @@ export const resolvePending = Effect.fn("resolvePending")(function* resolvePendi
  * resolved repo root: absolute paths and any `..` escape are rejected before a
  * byte is read, so a crafted `path` can never leave the repo.
  */
-export const resolveWorktreeFile = Effect.fn("resolveWorktreeFile")(function* resolveWorktreeFile(
-  cwd: string,
-  relPath: string,
-) {
-  const fs = yield* FileSystem;
-  const path = yield* Path;
-  const { root } = yield* resolveRepo(cwd);
+export const resolveWorktreeFile = Effect.fn("resolveWorktreeFile")(
+  function* resolveWorktreeFile(cwd: string, relPath: string) {
+    const fs = yield* FileSystem;
+    const path = yield* Path;
+    const { root } = yield* resolveRepo(cwd);
 
-  const resolved = path.resolve(root, relPath);
-  const prefix = root.endsWith(path.sep) ? root : `${root}${path.sep}`;
-  if (path.isAbsolute(relPath) || !resolved.startsWith(prefix)) {
-    return yield* Effect.fail(InvalidWorktreePath.make({ path: relPath }));
+    const resolved = path.resolve(root, relPath);
+    const prefix = root.endsWith(path.sep) ? root : `${root}${path.sep}`;
+    if (path.isAbsolute(relPath) || !resolved.startsWith(prefix)) {
+      return yield* Effect.fail(InvalidWorktreePath.make({ path: relPath }));
+    }
+    // Follow symlinks before trusting containment: a symlink inside the repo can
+    // still point outside it, which the lexical check above cannot catch. A
+    // missing file has no real path and falls through to a 404 at the read.
+    const real = yield* fs
+      .realPath(resolved)
+      .pipe(Effect.orElseSucceed(() => resolved));
+    if (!real.startsWith(prefix)) {
+      return yield* Effect.fail(InvalidWorktreePath.make({ path: relPath }));
+    }
+    return yield* fs.readFile(resolved);
   }
-  // Follow symlinks before trusting containment: a symlink inside the repo can
-  // still point outside it, which the lexical check above cannot catch. A
-  // missing file has no real path and falls through to a 404 at the read.
-  const real = yield* fs.realPath(resolved).pipe(Effect.orElseSucceed(() => resolved));
-  if (!real.startsWith(prefix)) {
-    return yield* Effect.fail(InvalidWorktreePath.make({ path: relPath }));
-  }
-  return yield* fs.readFile(resolved);
-});
+);

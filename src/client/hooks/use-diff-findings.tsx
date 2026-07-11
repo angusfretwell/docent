@@ -5,16 +5,21 @@
  * Keeping it here lets DiffView stay about the diff model and navigation.
  */
 
-import type { DiffLineAnnotation, FileDiffMetadata, LineAnnotation } from "@pierre/diffs";
+import type {
+  DiffLineAnnotation,
+  FileDiffMetadata,
+  LineAnnotation,
+} from "@pierre/diffs";
 import { processPatch } from "@pierre/diffs";
 import type { CodeViewHandle } from "@pierre/diffs/react";
+import { foldFinding } from "@shared/lib/finding";
 import type { FindingEntry } from "@shared/schemas/dossier";
 import type { FindingWrite } from "@shared/schemas/finding-write";
-import { foldFinding } from "@shared/lib/finding";
+
 import { DiffAnnotationView } from "../components/diff-annotation-view";
-import type { DriftResult } from "../lib/drift";
 import type { Annotation } from "../lib/diff-annotations";
 import { buildDiffItems } from "../lib/diff-annotations";
+import type { DriftResult } from "../lib/drift";
 import type { FileEntry } from "../lib/nav";
 import { useFindingCompose } from "./use-finding-compose";
 
@@ -38,7 +43,9 @@ export function useDiffFindings(params: {
   /** Per-Finding drift; absent on Pending, where the sync fast path stands in. */
   drift?: ReadonlyMap<string, DriftResult>;
 }) {
-  const byName = new Map(processPatch(params.patch).files.map((f, i) => [`${f.name}#${i}`, f]));
+  const byName = new Map(
+    processPatch(params.patch).files.map((f, i) => [`${f.name}#${i}`, f])
+  );
   function fileDiffFor(id: string) {
     return params.expanded.get(id) ?? byName.get(id);
   }
@@ -48,7 +55,9 @@ export function useDiffFindings(params: {
     fileDiffById: fileDiffFor,
     onWrite: params.onWrite ?? noWrite,
   });
-  const folded = params.findings.map((finding) => foldFinding(finding.id, finding.records));
+  const folded = params.findings.map((finding) =>
+    foldFinding(finding.id, finding.records)
+  );
   const { drift } = params;
   const items = buildDiffItems({
     composing: compose.composing,
@@ -64,7 +73,7 @@ export function useDiffFindings(params: {
   // The comment-rendering substrate (architecture.md §4): an existing Finding
   // renders as a thread; the composer marker renders the authoring form.
   function renderAnnotation(
-    annotation: DiffLineAnnotation<Annotation> | LineAnnotation<Annotation>,
+    annotation: DiffLineAnnotation<Annotation> | LineAnnotation<Annotation>
   ) {
     return (
       <DiffAnnotationView
@@ -75,5 +84,10 @@ export function useDiffFindings(params: {
     );
   }
 
-  return { canAuthor: params.onWrite !== undefined, compose, items, renderAnnotation };
+  return {
+    canAuthor: params.onWrite !== undefined,
+    compose,
+    items,
+    renderAnnotation,
+  };
 }

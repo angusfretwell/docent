@@ -1,9 +1,12 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import path from "node:path";
+
 import { BunServices } from "@effect/platform-bun";
-import { Effect, ManagedRuntime } from "effect";
 import type { FoldedFinding } from "@shared/lib/finding";
+import { Effect, ManagedRuntime } from "effect";
+
+import { cleanupScratchDirs, git, scratchRepo } from "../lib/test-fixtures";
 import {
   addFinding,
   applyFindingFilter,
@@ -17,7 +20,6 @@ import {
   resolveFinding,
   runFinding,
 } from "./index";
-import { cleanupScratchDirs, git, scratchRepo } from "../lib/test-fixtures";
 
 const runtime = ManagedRuntime.make(BunServices.layer);
 
@@ -43,7 +45,9 @@ function anchorSpec(args: string[]) {
 
 /** Whether parsing an anchor spec from argv fails. */
 function anchorSpecFails(args: string[]): boolean {
-  const exit = Effect.runSyncExit(parseAnchorSpec(parseArgs(args, new Set(["change"]))));
+  const exit = Effect.runSyncExit(
+    parseAnchorSpec(parseArgs(args, new Set(["change"])))
+  );
   return exit._tag === "Failure";
 }
 
@@ -62,7 +66,10 @@ function folded(overrides: Partial<FoldedFinding>): FoldedFinding {
 
 describe("parseArgs", () => {
   test("splits --flag value, --flag=value, and bare booleans", () => {
-    const parsed = parseArgs(["--file", "a.ts", "--side=head", "--change"], new Set(["change"]));
+    const parsed = parseArgs(
+      ["--file", "a.ts", "--side=head", "--change"],
+      new Set(["change"])
+    );
 
     expect(parsed.values.get("file")).toEqual(["a.ts"]);
     expect(parsed.values.get("side")).toEqual(["head"]);
@@ -70,7 +77,10 @@ describe("parseArgs", () => {
   });
 
   test("accumulates a repeated flag", () => {
-    const parsed = parseArgs(["--whats-next", "needs-action", "--whats-next", "closed"], new Set());
+    const parsed = parseArgs(
+      ["--whats-next", "needs-action", "--whats-next", "closed"],
+      new Set()
+    );
 
     expect(parsed.values.get("whats-next")).toEqual(["needs-action", "closed"]);
   });
@@ -88,18 +98,24 @@ describe("parseListArgs", () => {
   });
 
   test("splits comma and repeated --whats-next", () => {
-    expect(parseListArgs(["--whats-next", "needs-action,closed"]).whatsNext).toEqual([
-      "needs-action",
-      "closed",
-    ]);
+    expect(
+      parseListArgs(["--whats-next", "needs-action,closed"]).whatsNext
+    ).toEqual(["needs-action", "closed"]);
   });
 
   test("rejects an unknown what's-next value", () => {
-    expect(() => parseListArgs(["--whats-next", "nonsense"])).toThrow(CliUsageError);
+    expect(() => parseListArgs(["--whats-next", "nonsense"])).toThrow(
+      CliUsageError
+    );
   });
 
   test("carries anchor-file and author scope", () => {
-    const filter = parseListArgs(["--anchor-file", "src/a.ts", "--author", "claude"]);
+    const filter = parseListArgs([
+      "--anchor-file",
+      "src/a.ts",
+      "--author",
+      "claude",
+    ]);
 
     expect(filter.anchorFile).toBe("src/a.ts");
     expect(filter.author).toBe("claude");
@@ -107,10 +123,20 @@ describe("parseListArgs", () => {
 });
 
 describe("applyFindingFilter", () => {
-  const open = folded({ id: "open", resolved: false, whatsNext: "needs-action" });
+  const open = folded({
+    id: "open",
+    resolved: false,
+    whatsNext: "needs-action",
+  });
   const closed = folded({ id: "closed", resolved: true, whatsNext: "closed" });
   const onFile = folded({
-    anchor: { blobSha: "s", file: "src/a.ts", kind: "line", lines: [1, 2], side: "head" },
+    anchor: {
+      blobSha: "s",
+      file: "src/a.ts",
+      kind: "line",
+      lines: [1, 2],
+      side: "head",
+    },
     id: "onFile",
   });
   const byAgent = folded({
@@ -121,30 +147,38 @@ describe("applyFindingFilter", () => {
 
   test("status open/resolved narrows", () => {
     expect(
-      applyFindingFilter(all, { status: "open", whatsNext: [] }).map((finding) => finding.id),
+      applyFindingFilter(all, { status: "open", whatsNext: [] }).map(
+        (finding) => finding.id
+      )
     ).toEqual(["open", "onFile", "byAgent"]);
     expect(
-      applyFindingFilter(all, { status: "resolved", whatsNext: [] }).map((finding) => finding.id),
+      applyFindingFilter(all, { status: "resolved", whatsNext: [] }).map(
+        (finding) => finding.id
+      )
     ).toEqual(["closed"]);
   });
 
   test("what's-next any-of narrows", () => {
-    expect(applyFindingFilter(all, { whatsNext: ["closed"] }).map((finding) => finding.id)).toEqual(
-      ["closed"],
-    );
+    expect(
+      applyFindingFilter(all, { whatsNext: ["closed"] }).map(
+        (finding) => finding.id
+      )
+    ).toEqual(["closed"]);
   });
 
   test("anchor-file narrows to the code arm's file", () => {
     expect(
       applyFindingFilter(all, { anchorFile: "src/a.ts", whatsNext: [] }).map(
-        (finding) => finding.id,
-      ),
+        (finding) => finding.id
+      )
     ).toEqual(["onFile"]);
   });
 
   test("author narrows to a participant id", () => {
     expect(
-      applyFindingFilter(all, { author: "claude", whatsNext: [] }).map((finding) => finding.id),
+      applyFindingFilter(all, { author: "claude", whatsNext: [] }).map(
+        (finding) => finding.id
+      )
     ).toEqual(["byAgent"]);
   });
 });
@@ -163,12 +197,18 @@ describe("parseAnchorSpec", () => {
   });
 
   test("--file --line builds a line arm; N:M and N-M and N all parse", () => {
-    expect(anchorSpec(["--file", "src/a.ts", "--line", "42:47"])).toMatchObject({
-      kind: "line",
-      lines: [42, 47],
+    expect(anchorSpec(["--file", "src/a.ts", "--line", "42:47"])).toMatchObject(
+      {
+        kind: "line",
+        lines: [42, 47],
+      }
+    );
+    expect(anchorSpec(["--file", "src/a.ts", "--line", "3-9"])).toMatchObject({
+      lines: [3, 9],
     });
-    expect(anchorSpec(["--file", "src/a.ts", "--line", "3-9"])).toMatchObject({ lines: [3, 9] });
-    expect(anchorSpec(["--file", "src/a.ts", "--line", "5"])).toMatchObject({ lines: [5, 5] });
+    expect(anchorSpec(["--file", "src/a.ts", "--line", "5"])).toMatchObject({
+      lines: [5, 5],
+    });
   });
 
   test("--anchor passes a raw arm through schema validation", () => {
@@ -180,7 +220,9 @@ describe("parseAnchorSpec", () => {
 
   test("a bad --line, --side, --anchor, or no anchor is a usage error", () => {
     expect(anchorSpecFails(["--file", "a.ts", "--line", "nope"])).toBe(true);
-    expect(anchorSpecFails(["--file", "a.ts", "--side", "sideways"])).toBe(true);
+    expect(anchorSpecFails(["--file", "a.ts", "--side", "sideways"])).toBe(
+      true
+    );
     expect(anchorSpecFails(['--anchor={"kind":"bogus"}'])).toBe(true);
     expect(anchorSpecFails([])).toBe(true);
   });
@@ -189,7 +231,7 @@ describe("parseAnchorSpec", () => {
 describe("buildAuthor", () => {
   test("--agent attributes to an agent slug with optional model", async () => {
     const author = await runtime.runPromise(
-      buildAuthor("/tmp", { agent: "claude-code", model: "claude-fable-5" }),
+      buildAuthor("/tmp", { agent: "claude-code", model: "claude-fable-5" })
     );
 
     expect(author).toEqual({
@@ -217,10 +259,15 @@ describe("write + fetch round-trip (shared write path)", () => {
 
     const result = await run(
       addFinding(repo, {
-        anchor: { file: "feature.ts", kind: "line", lines: [1, 1], side: "head" },
+        anchor: {
+          file: "feature.ts",
+          kind: "line",
+          lines: [1, 1],
+          side: "head",
+        },
         author: { agent: "claude-code" },
         body: "this const should be exported lazily",
-      }),
+      })
     );
 
     expect(result.findingId).toMatch(/^fnd_/);
@@ -233,7 +280,10 @@ describe("write + fetch round-trip (shared write path)", () => {
     if (finding?.anchor?.kind === "line") {
       expect(finding.anchor.blobSha).toMatch(/^[0-9a-f]{40}/);
     }
-    expect(finding?.participants.at(0)).toMatchObject({ id: "claude-code", kind: "agent" });
+    expect(finding?.participants.at(0)).toMatchObject({
+      id: "claude-code",
+      kind: "agent",
+    });
   });
 
   test("reply with a disposition drives what's-next; resolve closes it", async () => {
@@ -243,7 +293,7 @@ describe("write + fetch round-trip (shared write path)", () => {
         anchor: { kind: "change" },
         author: {},
         body: "whole-change note",
-      }),
+      })
     );
 
     await run(
@@ -252,12 +302,16 @@ describe("write + fetch round-trip (shared write path)", () => {
         body: "done",
         disposition: "actioned",
         findingId,
-      }),
+      })
     );
     const afterReply = await run(listFindings(repo, { whatsNext: [] }));
-    expect(afterReply.find((finding) => finding.id === findingId)?.whatsNext).toBe("needs-verify");
+    expect(
+      afterReply.find((finding) => finding.id === findingId)?.whatsNext
+    ).toBe("needs-verify");
 
-    await run(resolveFinding(repo, { author: {}, body: "verified", findingId }));
+    await run(
+      resolveFinding(repo, { author: {}, body: "verified", findingId })
+    );
     const afterResolve = await run(listFindings(repo, { whatsNext: [] }));
     const closed = afterResolve.find((finding) => finding.id === findingId);
     expect(closed?.resolved).toBe(true);
@@ -268,20 +322,37 @@ describe("write + fetch round-trip (shared write path)", () => {
     const repo = featureRepo();
     await run(
       addFinding(repo, {
-        anchor: { file: "feature.ts", kind: "line", lines: [1, 1], side: "head" },
+        anchor: {
+          file: "feature.ts",
+          kind: "line",
+          lines: [1, 1],
+          side: "head",
+        },
         author: { agent: "reviewer" },
         body: "on the file",
-      }),
+      })
     );
     const { findingId } = await run(
-      addFinding(repo, { anchor: { kind: "change" }, author: { agent: "other" }, body: "whole" }),
+      addFinding(repo, {
+        anchor: { kind: "change" },
+        author: { agent: "other" },
+        body: "whole",
+      })
     );
     await run(resolveFinding(repo, { author: {}, findingId }));
 
-    const open = await run(listFindings(repo, { status: "open", whatsNext: [] }));
-    const resolved = await run(listFindings(repo, { status: "resolved", whatsNext: [] }));
-    const onFile = await run(listFindings(repo, { anchorFile: "feature.ts", whatsNext: [] }));
-    const byReviewer = await run(listFindings(repo, { author: "reviewer", whatsNext: [] }));
+    const open = await run(
+      listFindings(repo, { status: "open", whatsNext: [] })
+    );
+    const resolved = await run(
+      listFindings(repo, { status: "resolved", whatsNext: [] })
+    );
+    const onFile = await run(
+      listFindings(repo, { anchorFile: "feature.ts", whatsNext: [] })
+    );
+    const byReviewer = await run(
+      listFindings(repo, { author: "reviewer", whatsNext: [] })
+    );
     const closed = await run(listFindings(repo, { whatsNext: ["closed"] }));
 
     expect(open).toHaveLength(1);
@@ -294,9 +365,11 @@ describe("write + fetch round-trip (shared write path)", () => {
   test("reply with a missing or empty --finding is a usage error (never a stray write)", async () => {
     const repo = featureRepo();
 
-    const missing = await runtime.runPromiseExit(runFinding(repo, ["reply", "--body", "x"]));
+    const missing = await runtime.runPromiseExit(
+      runFinding(repo, ["reply", "--body", "x"])
+    );
     const empty = await runtime.runPromiseExit(
-      runFinding(repo, ["reply", "--finding", "", "--body", "x"]),
+      runFinding(repo, ["reply", "--finding", "", "--body", "x"])
     );
 
     expect(missing._tag).toBe("Failure");

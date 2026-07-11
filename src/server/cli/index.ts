@@ -18,21 +18,30 @@
  * (unit-tested directly); the effectful compute layer resolves git + fs.
  */
 
-import { Console, Effect, Schema } from "effect";
 import { foldFinding, sortFoldedFindings } from "@shared/lib/finding";
 import type { FoldedFinding, WhatsNext } from "@shared/lib/finding";
 import { Anchor } from "@shared/schemas/finding";
 import type { Disposition } from "@shared/schemas/finding";
 import { FindingWrite } from "@shared/schemas/finding-write";
+import { Console, Effect, Schema } from "effect";
+
 import { readDossierSnapshot } from "../services/dossier";
 import type { AuthorInput } from "../services/findings-write";
 import { writeFindingRecord } from "../services/findings-write";
-import { resolveAuthor, resolveBlobShaAt, resolveChangeRefs, resolveRepo } from "../services/git";
+import {
+  resolveAuthor,
+  resolveBlobShaAt,
+  resolveChangeRefs,
+  resolveRepo,
+} from "../services/git";
 
 /** A CLI usage error — a bad flag, missing anchor, or unknown subcommand. */
-export class CliUsageError extends Schema.TaggedErrorClass<CliUsageError>()("CliUsageError", {
-  reason: Schema.String,
-}) {
+export class CliUsageError extends Schema.TaggedErrorClass<CliUsageError>()(
+  "CliUsageError",
+  {
+    reason: Schema.String,
+  }
+) {
   override get message(): string {
     return this.reason;
   }
@@ -46,7 +55,9 @@ export class CliUsageError extends Schema.TaggedErrorClass<CliUsageError>()("Cli
 export function attempt<A>(parse: () => A): Effect.Effect<A, CliUsageError> {
   return Effect.try({
     catch: (error) =>
-      error instanceof CliUsageError ? error : new CliUsageError({ reason: String(error) }),
+      error instanceof CliUsageError
+        ? error
+        : new CliUsageError({ reason: String(error) }),
     try: parse,
   });
 }
@@ -61,7 +72,11 @@ const WHATS_NEXT_VALUES: readonly WhatsNext[] = [
   "needs-decision",
   "closed",
 ];
-const DISPOSITION_VALUES: readonly Disposition[] = ["actioned", "declined", "question"];
+const DISPOSITION_VALUES: readonly Disposition[] = [
+  "actioned",
+  "declined",
+  "question",
+];
 
 /**
  * Assert a flag value is one of a closed set, or throw a usage error naming the
@@ -69,7 +84,11 @@ const DISPOSITION_VALUES: readonly Disposition[] = ["actioned", "declined", "que
  * `--whats-next`. The sets are tiny (2–5 members), so a linear membership check
  * is fine.
  */
-export function parseEnum<T extends string>(flag: string, value: string, values: readonly T[]): T {
+export function parseEnum<T extends string>(
+  flag: string,
+  value: string,
+  values: readonly T[]
+): T {
   if (!values.includes(value as T)) {
     throw new CliUsageError({
       reason: `unknown --${flag}: ${value} (one of ${values.join(", ")})`,
@@ -102,7 +121,10 @@ function push(map: Map<string, string[]>, key: string, value: string): void {
  * accumulate. A bare token that is not a flag is rejected — the finding
  * subcommands are all-flags, so a stray positional is a usage error.
  */
-export function parseArgs(args: readonly string[], booleans: ReadonlySet<string>): ParsedArgs {
+export function parseArgs(
+  args: readonly string[],
+  booleans: ReadonlySet<string>
+): ParsedArgs {
   const values = new Map<string, string[]>();
   const bools = new Set<string>();
   for (let i = 0; i < args.length; i += 1) {
@@ -115,7 +137,11 @@ export function parseArgs(args: readonly string[], booleans: ReadonlySet<string>
     const next = args[i + 1];
     if (eq !== -1) {
       push(values, body.slice(0, eq), body.slice(eq + 1));
-    } else if (booleans.has(body) || next === undefined || next.startsWith("--")) {
+    } else if (
+      booleans.has(body) ||
+      next === undefined ||
+      next.startsWith("--")
+    ) {
       // A valueless flag not declared boolean is still tolerated as a bool, so a
       // typo surfaces later as "unknown"/"missing" rather than eating a token.
       bools.add(body);
@@ -173,7 +199,7 @@ export function parseListArgs(args: readonly string[]): FindingFilter {
   }
 
   const whatsNext = many(parsed, "whats-next").map((value) =>
-    parseEnum("whats-next", value, WHATS_NEXT_VALUES),
+    parseEnum("whats-next", value, WHATS_NEXT_VALUES)
   );
 
   return {
@@ -196,7 +222,7 @@ function anchorFileOf(finding: FoldedFinding): string | undefined {
 /** Apply a queue filter to folded Findings — pure, so it is unit-tested alone. */
 export function applyFindingFilter(
   findings: readonly FoldedFinding[],
-  filter: FindingFilter,
+  filter: FindingFilter
 ): FoldedFinding[] {
   const whatsNext = new Set(filter.whatsNext);
   return findings.filter((finding) => {
@@ -209,12 +235,17 @@ export function applyFindingFilter(
     if (whatsNext.size > 0 && !whatsNext.has(finding.whatsNext)) {
       return false;
     }
-    if (filter.anchorFile !== undefined && anchorFileOf(finding) !== filter.anchorFile) {
+    if (
+      filter.anchorFile !== undefined &&
+      anchorFileOf(finding) !== filter.anchorFile
+    ) {
       return false;
     }
     if (
       filter.author !== undefined &&
-      !finding.participants.some((participant) => participant.id === filter.author)
+      !finding.participants.some(
+        (participant) => participant.id === filter.author
+      )
     ) {
       return false;
     }
@@ -229,7 +260,7 @@ export function applyFindingFilter(
  */
 export const listFindings = Effect.fn("listFindings")(function* listFindings(
   cwd: string,
-  filter: FindingFilter,
+  filter: FindingFilter
 ) {
   const repo = yield* resolveRepo(cwd);
   const snapshot = yield* readDossierSnapshot({
@@ -237,7 +268,9 @@ export const listFindings = Effect.fn("listFindings")(function* listFindings(
     branch: repo.branch,
     root: repo.root,
   });
-  const folded = snapshot.findings.map((entry) => foldFinding(entry.id, entry.records));
+  const folded = snapshot.findings.map((entry) =>
+    foldFinding(entry.id, entry.records)
+  );
   return sortFoldedFindings(applyFindingFilter(folded, filter));
 });
 
@@ -271,7 +304,9 @@ const LINE_SPEC = /^(?<start>\d+)(?:[:-](?<end>\d+))?$/;
 function parseLine(value: string): [number, number] {
   const match = LINE_SPEC.exec(value.trim());
   if (match?.groups === undefined) {
-    throw new CliUsageError({ reason: `bad --line: ${value} (N, N:M, or N-M)` });
+    throw new CliUsageError({
+      reason: `bad --line: ${value} (N, N:M, or N-M)`,
+    });
   }
   const start = Number(match.groups.start);
   const end = match.groups.end === undefined ? start : Number(match.groups.end);
@@ -284,16 +319,21 @@ function parseLine(value: string): [number, number] {
  * flags cover the code arms whose `blobSha` git resolves at write:
  * `--change`, `--file <path>` (+ `--side`), and `--file … --line N[:M]`.
  */
-export function parseAnchorSpec(args: ParsedArgs): Effect.Effect<AnchorSpec, CliUsageError> {
+export function parseAnchorSpec(
+  args: ParsedArgs
+): Effect.Effect<AnchorSpec, CliUsageError> {
   return Effect.gen(function* build() {
     const raw = one(args, "anchor");
     if (raw !== undefined) {
       const json = yield* Effect.try({
-        catch: () => new CliUsageError({ reason: `--anchor is not valid JSON: ${raw}` }),
+        catch: () =>
+          new CliUsageError({ reason: `--anchor is not valid JSON: ${raw}` }),
         try: () => JSON.parse(raw) as unknown,
       });
       const anchor = yield* Schema.decodeUnknownEffect(Anchor)(json).pipe(
-        Effect.mapError((error) => new CliUsageError({ reason: `invalid --anchor: ${error}` })),
+        Effect.mapError(
+          (error) => new CliUsageError({ reason: `invalid --anchor: ${error}` })
+        )
       );
       return { anchor, kind: "raw" } satisfies AnchorSpec;
     }
@@ -306,8 +346,9 @@ export function parseAnchorSpec(args: ParsedArgs): Effect.Effect<AnchorSpec, Cli
     if (file === undefined) {
       return yield* Effect.fail(
         new CliUsageError({
-          reason: "an anchor is required: pass --change, --file <path>, or --anchor <json>",
-        }),
+          reason:
+            "an anchor is required: pass --change, --file <path>, or --anchor <json>",
+        })
       );
     }
     const side = yield* attempt(() => parseSide(one(args, "side")));
@@ -322,7 +363,11 @@ export function parseAnchorSpec(args: ParsedArgs): Effect.Effect<AnchorSpec, Cli
 
 /** Parse the shared `--agent`/`--display`/`--model` attribution overrides. */
 function parseAuthorOpts(args: ParsedArgs): AuthorOpts {
-  return { agent: one(args, "agent"), display: one(args, "display"), model: one(args, "model") };
+  return {
+    agent: one(args, "agent"),
+    display: one(args, "display"),
+    model: one(args, "model"),
+  };
 }
 
 /**
@@ -332,7 +377,7 @@ function parseAuthorOpts(args: ParsedArgs): AuthorOpts {
  */
 export const buildAuthor = Effect.fn("buildAuthor")(function* buildAuthor(
   root: string,
-  opts: AuthorOpts,
+  opts: AuthorOpts
 ) {
   if (opts.agent !== undefined) {
     return {
@@ -343,7 +388,10 @@ export const buildAuthor = Effect.fn("buildAuthor")(function* buildAuthor(
     } satisfies AuthorInput;
   }
   const human = yield* resolveAuthor(root);
-  return { ...human, ...(opts.display === undefined ? {} : { display: opts.display }) };
+  return {
+    ...human,
+    ...(opts.display === undefined ? {} : { display: opts.display }),
+  };
 });
 
 /** Turn an `AnchorSpec` into a schema anchor, resolving code-arm `blobSha`s. */
@@ -363,7 +411,12 @@ const buildAnchor = Effect.fn("buildAnchor")(function* buildAnchor(params: {
   const ref = spec.side === "head" ? params.headSha : params.baseSha;
   const blobSha = yield* resolveBlobShaAt(params.root, ref, spec.file);
   if (spec.kind === "file") {
-    return { blobSha, file: spec.file, kind: "file", side: spec.side } satisfies Anchor;
+    return {
+      blobSha,
+      file: spec.file,
+      kind: "file",
+      side: spec.side,
+    } satisfies Anchor;
   }
   return {
     blobSha,
@@ -382,7 +435,9 @@ interface WriteContext {
   root: string;
 }
 
-export const writeContext = Effect.fn("writeContext")(function* writeContext(cwd: string) {
+export const writeContext = Effect.fn("writeContext")(function* writeContext(
+  cwd: string
+) {
   const refs = yield* resolveChangeRefs(cwd);
   return {
     base: refs.defaultBranch.name,
@@ -407,10 +462,13 @@ export const writeContext = Effect.fn("writeContext")(function* writeContext(cwd
 const commitWrite = Effect.fn("commitWrite")(function* commitWrite(
   context: WriteContext,
   author: AuthorInput,
-  draft: FindingWrite,
+  draft: FindingWrite
 ) {
   const write = yield* Schema.decodeUnknownEffect(FindingWrite)(draft).pipe(
-    Effect.mapError((error) => new CliUsageError({ reason: `invalid finding write: ${error}` })),
+    Effect.mapError(
+      (error) =>
+        new CliUsageError({ reason: `invalid finding write: ${error}` })
+    )
   );
   return yield* writeFindingRecord({
     author,
@@ -425,7 +483,7 @@ const commitWrite = Effect.fn("commitWrite")(function* commitWrite(
 /** write-findings `open`: mint an anchored Finding via the shared write path. */
 export const addFinding = Effect.fn("addFinding")(function* addFinding(
   cwd: string,
-  params: { anchor: AnchorSpec; author: AuthorOpts; body: string },
+  params: { anchor: AnchorSpec; author: AuthorOpts; body: string }
 ) {
   const context = yield* writeContext(cwd);
   const author = yield* buildAuthor(context.root, params.author);
@@ -435,13 +493,22 @@ export const addFinding = Effect.fn("addFinding")(function* addFinding(
     root: context.root,
     spec: params.anchor,
   });
-  return yield* commitWrite(context, author, { anchor, body: params.body, op: "open" });
+  return yield* commitWrite(context, author, {
+    anchor,
+    body: params.body,
+    op: "open",
+  });
 });
 
 /** write-findings `reply`, optionally closing the turn with a disposition. */
 export const replyFinding = Effect.fn("replyFinding")(function* replyFinding(
   cwd: string,
-  params: { author: AuthorOpts; body: string; disposition?: Disposition; findingId: string },
+  params: {
+    author: AuthorOpts;
+    body: string;
+    disposition?: Disposition;
+    findingId: string;
+  }
 ) {
   const context = yield* writeContext(cwd);
   const author = yield* buildAuthor(context.root, params.author);
@@ -449,23 +516,27 @@ export const replyFinding = Effect.fn("replyFinding")(function* replyFinding(
     body: params.body,
     findingId: params.findingId,
     op: "reply",
-    ...(params.disposition === undefined ? {} : { disposition: params.disposition }),
+    ...(params.disposition === undefined
+      ? {}
+      : { disposition: params.disposition }),
   });
 });
 
 /** write-findings `resolve`, with an optional reason body. */
-export const resolveFinding = Effect.fn("resolveFinding")(function* resolveFinding(
-  cwd: string,
-  params: { author: AuthorOpts; body?: string; findingId: string },
-) {
-  const context = yield* writeContext(cwd);
-  const author = yield* buildAuthor(context.root, params.author);
-  return yield* commitWrite(context, author, {
-    findingId: params.findingId,
-    op: "resolve",
-    ...(params.body === undefined ? {} : { body: params.body }),
-  });
-});
+export const resolveFinding = Effect.fn("resolveFinding")(
+  function* resolveFinding(
+    cwd: string,
+    params: { author: AuthorOpts; body?: string; findingId: string }
+  ) {
+    const context = yield* writeContext(cwd);
+    const author = yield* buildAuthor(context.root, params.author);
+    return yield* commitWrite(context, author, {
+      findingId: params.findingId,
+      op: "resolve",
+      ...(params.body === undefined ? {} : { body: params.body }),
+    });
+  }
+);
 
 // ── argv dispatch ────────────────────────────────────────────────────────────
 
@@ -479,7 +550,9 @@ export function requireFlag(args: ParsedArgs, key: string): string {
 }
 
 function parseDisposition(value: string | undefined): Disposition | undefined {
-  return value === undefined ? undefined : parseEnum("disposition", value, DISPOSITION_VALUES);
+  return value === undefined
+    ? undefined
+    : parseEnum("disposition", value, DISPOSITION_VALUES);
 }
 
 /**
@@ -490,19 +563,21 @@ function parseDisposition(value: string | undefined): Disposition | undefined {
  */
 export const resolveBody = Effect.fn("resolveBody")(function* resolveBody(
   args: ParsedArgs,
-  required: boolean,
+  required: boolean
 ) {
   const flag = one(args, "body");
   if (flag !== undefined) {
     return flag;
   }
-  const piped = process.stdin.isTTY ? "" : (yield* Effect.promise(() => Bun.stdin.text())).trim();
+  const piped = process.stdin.isTTY
+    ? ""
+    : (yield* Effect.promise(() => Bun.stdin.text())).trim();
   if (piped !== "") {
     return piped;
   }
   if (required) {
     return yield* Effect.fail(
-      new CliUsageError({ reason: "--body <text> is required (or pipe stdin)" }),
+      new CliUsageError({ reason: "--body <text> is required (or pipe stdin)" })
     );
   }
   // No body given and none required: resolve's reason is simply absent ("").
@@ -521,7 +596,7 @@ export function printJson(value: unknown) {
  */
 export const runFinding = Effect.fn("runFinding")(function* runFinding(
   cwd: string,
-  argv: readonly string[],
+  argv: readonly string[]
 ) {
   const [op, ...rest] = argv;
 
@@ -535,13 +610,15 @@ export const runFinding = Effect.fn("runFinding")(function* runFinding(
     const anchor = yield* parseAnchorSpec(args);
     const body = yield* resolveBody(args, true);
     return yield* printJson(
-      yield* addFinding(cwd, { anchor, author: parseAuthorOpts(args), body }),
+      yield* addFinding(cwd, { anchor, author: parseAuthorOpts(args), body })
     );
   }
   if (op === "reply") {
     const args = yield* attempt(() => parseArgs(rest, new Set()));
     const findingId = yield* attempt(() => requireFlag(args, "finding"));
-    const disposition = yield* attempt(() => parseDisposition(one(args, "disposition")));
+    const disposition = yield* attempt(() =>
+      parseDisposition(one(args, "disposition"))
+    );
     const body = yield* resolveBody(args, true);
     return yield* printJson(
       yield* replyFinding(cwd, {
@@ -549,7 +626,7 @@ export const runFinding = Effect.fn("runFinding")(function* runFinding(
         body,
         findingId,
         ...(disposition === undefined ? {} : { disposition }),
-      }),
+      })
     );
   }
   if (op === "resolve") {
@@ -561,13 +638,13 @@ export const runFinding = Effect.fn("runFinding")(function* runFinding(
         author: parseAuthorOpts(args),
         findingId,
         ...(body === "" ? {} : { body }),
-      }),
+      })
     );
   }
 
   return yield* Effect.fail(
     new CliUsageError({
       reason: `unknown finding subcommand: ${op ?? "(none)"} (list | add | reply | resolve)`,
-    }),
+    })
   );
 });

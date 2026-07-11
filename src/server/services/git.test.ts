@@ -1,8 +1,16 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
+
 import { BunServices } from "@effect/platform-bun";
 import { ManagedRuntime } from "effect";
+
+import {
+  cleanupScratchDirs,
+  git,
+  scratchDir,
+  scratchRepo,
+} from "../lib/test-fixtures";
 import {
   resolveAuthor,
   resolveBlob,
@@ -12,7 +20,6 @@ import {
   resolvePending,
   resolveWorktreeFile,
 } from "./git";
-import { cleanupScratchDirs, git, scratchDir, scratchRepo } from "../lib/test-fixtures";
 
 const runtime = ManagedRuntime.make(BunServices.layer);
 
@@ -81,7 +88,7 @@ describe("resolveChange", () => {
 
     // macOS tmpdir is a symlink (/tmp → /private/tmp); compare resolved paths.
     expect(git(change.root, "rev-parse", "--show-toplevel")).toBe(
-      git(repo, "rev-parse", "--show-toplevel"),
+      git(repo, "rev-parse", "--show-toplevel")
     );
     expect(change.patch).toContain("change.txt");
   });
@@ -140,21 +147,27 @@ describe("resolveChange", () => {
     const repo = repoWithOneCommit();
     writeFileSync(
       path.join(repo, ".gitattributes"),
-      "api.gen.ts linguist-generated=true\nvendor/** linguist-vendored\n",
+      "api.gen.ts linguist-generated=true\nvendor/** linguist-vendored\n"
     );
     git(repo, "add", ".");
     git(repo, "commit", "-m", "attributes");
     git(repo, "checkout", "-b", "feature");
     writeFileSync(path.join(repo, "api.gen.ts"), "export const x = 1;\n");
     mkdirSync(path.join(repo, "vendor"), { recursive: true });
-    writeFileSync(path.join(repo, "vendor", "lib.js"), "module.exports = {};\n");
+    writeFileSync(
+      path.join(repo, "vendor", "lib.js"),
+      "module.exports = {};\n"
+    );
     writeFileSync(path.join(repo, "src.ts"), "export const y = 2;\n");
     git(repo, "add", ".");
     git(repo, "commit", "-m", "generated + real work");
 
     const change = await resolve(repo);
 
-    expect([...change.generated].toSorted()).toEqual(["api.gen.ts", "vendor/lib.js"]);
+    expect([...change.generated].toSorted()).toEqual([
+      "api.gen.ts",
+      "vendor/lib.js",
+    ]);
   });
 
   test("generated is empty when the working tree has no attributes", async () => {
@@ -171,7 +184,10 @@ describe("resolveChange", () => {
 });
 
 describe("resolvePending", () => {
-  function pending(cwd: string, range: "incremental" | "cumulative" = "incremental") {
+  function pending(
+    cwd: string,
+    range: "incremental" | "cumulative" = "incremental"
+  ) {
     return runtime.runPromise(resolvePending(cwd, range));
   }
 
@@ -259,11 +275,16 @@ describe("resolveWorktreeFile", () => {
 
   test("reads the live working-tree bytes for a path (uncommitted content)", async () => {
     const repo = repoWithOneCommit();
-    writeFileSync(path.join(repo, "hello.txt"), "live edit not yet committed\n");
+    writeFileSync(
+      path.join(repo, "hello.txt"),
+      "live edit not yet committed\n"
+    );
 
     const bytes = await worktree(repo, "hello.txt");
 
-    expect(new TextDecoder().decode(bytes)).toBe("live edit not yet committed\n");
+    expect(new TextDecoder().decode(bytes)).toBe(
+      "live edit not yet committed\n"
+    );
   });
 
   test("reads a nested path", async () => {
@@ -279,7 +300,9 @@ describe("resolveWorktreeFile", () => {
   test("rejects a path that escapes the repo root", async () => {
     const repo = repoWithOneCommit();
 
-    await expect(worktree(repo, "../../../etc/passwd")).rejects.toThrow(/path/i);
+    await expect(worktree(repo, "../../../etc/passwd")).rejects.toThrow(
+      /path/i
+    );
   });
 
   test("rejects an absolute path", async () => {
@@ -325,7 +348,11 @@ describe("resolveAuthor", () => {
 
     const author = await runtime.runPromise(resolveAuthor(repo));
 
-    expect(author).toEqual({ display: "Angus", id: "angus@example.com", kind: "human" });
+    expect(author).toEqual({
+      display: "Angus",
+      id: "angus@example.com",
+      kind: "human",
+    });
   });
 
   test("degrades to a placeholder when git identity is unset", async () => {
@@ -383,7 +410,9 @@ describe("resolveBlob", () => {
   test("rejects a sha that is not a valid git object", async () => {
     const repo = repoWithOneCommit();
 
-    await expect(blob(repo, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef")).rejects.toThrow();
+    await expect(
+      blob(repo, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
+    ).rejects.toThrow();
   });
 
   test("rejects a malformed (non-hex) object id", async () => {

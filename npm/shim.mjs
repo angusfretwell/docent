@@ -8,11 +8,18 @@
  */
 
 import { spawn } from "node:child_process";
-import { chmodSync, createWriteStream, existsSync, mkdirSync, renameSync } from "node:fs";
+import {
+  chmodSync,
+  createWriteStream,
+  existsSync,
+  mkdirSync,
+  renameSync,
+} from "node:fs";
 import { readFile } from "node:fs/promises";
 import { get } from "node:https";
 import { homedir } from "node:os";
 import path from "node:path";
+
 import { assetNameFor, downloadUrl } from "./lib.mjs";
 
 const here = import.meta.dirname;
@@ -24,7 +31,9 @@ async function version() {
 
 /** Where the downloaded binary for `version` is cached, per platform. */
 function cachePath(v, assetName) {
-  const base = process.env.DOCENT_CACHE_DIR ?? path.join(homedir(), ".cache", "docent", "bin");
+  const base =
+    process.env.DOCENT_CACHE_DIR ??
+    path.join(homedir(), ".cache", "docent", "bin");
   return path.join(base, `${v}-${assetName}`);
 }
 
