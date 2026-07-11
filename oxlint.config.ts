@@ -2,13 +2,12 @@ import { defineConfig } from "oxlint";
 import core from "ultracite/oxlint/core";
 import react from "ultracite/oxlint/react";
 import tanstack from "ultracite/oxlint/tanstack";
-import jsPlugins from "ultracite/oxlint/js-plugins";
 
 export default defineConfig({
   env: {
     builtin: true,
   },
-  extends: [core, react, tanstack, jsPlugins],
+  extends: [core, react, tanstack],
   ignorePatterns: ["prototypes", ".agents"],
   options: {
     typeAware: true,
@@ -30,8 +29,6 @@ export default defineConfig({
   rules: {
     "class-methods-use-this": "off",
     "func-style": ["error", "declaration"],
-    "github/array-foreach": "off",
-    "github/no-then": "off",
     "max-classes-per-file": "off",
     "no-await-in-loop": "off",
     "promise/avoid-new": "off",

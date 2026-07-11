@@ -35,7 +35,6 @@
     "eslint-plugin-sonarjs": "^4.1.0",
     "oxfmt": "^0.58.0",
     "oxlint": "^1.73.0",
-    "oxlint-plugin-react-doctor": "^0.7.4",
     "oxlint-tsgolint": "^0.24.0",
     "playwright": "^1.61.1",
     "react": "^19.2.7",

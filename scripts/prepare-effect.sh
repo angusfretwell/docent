@@ -5,7 +5,7 @@ set -eu
 repo_dir=".repos/effect"
 repo_url="https://github.com/Effect-TS/effect-smol"
 
-if [ "$CI" = "true" ]; then
+if [ "${CI:-false}" = "true" ]; then
   exit 0
 fi
 
