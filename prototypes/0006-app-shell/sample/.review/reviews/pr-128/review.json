@@ -1,8 +1,0 @@
-{
-  "schema": "docent/review@2",
-  "id": "rev_2b9",
-  "target": { "kind": "github", "pr": "angusfretwell/docent#128" },
-  "status": "in-progress",
-  "currentChangeId": "chg_2",
-  "changeIds": ["chg_1", "chg_2"]
-}
