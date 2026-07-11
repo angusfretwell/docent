@@ -36,7 +36,7 @@ docent finding list --whats-next needs-action --anchor-file src/app.ts   # combi
 
 | Filter | Pulls |
 | --- | --- |
-| _(none)_ / `--whats-next needs-action` | The default worklist — Findings needing a turn. |
+| _(none)_ | The whole queue — every Finding. The needs-action worklist is the _skill's_ default, supplied by passing `--whats-next needs-action` (§1), not what a bare list returns. |
 | `--open` / `--resolved` | Unresolved / resolved only (neither, or both, keeps all). |
 | `--whats-next <state…>` | Only these what's-next states — `needs-action`, `needs-verify`, `needs-answer`, `needs-decision`, `closed`; any-of (comma-join or repeat). |
 | `--anchor-file <path>` | Only Findings whose code anchor is this file. |
