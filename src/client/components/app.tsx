@@ -406,6 +406,7 @@ function WalkthroughTab({
       onOpenInDiff={onOpenInDiff}
       patch={patch}
       walkthrough={walkthrough}
+      walkthroughs={review.walkthroughs}
     />
   );
 }

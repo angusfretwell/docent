@@ -358,7 +358,11 @@ function codeWalkthrough(
 
 function productWalkthrough(
   id: string,
-  sections: readonly { body: string; captures?: readonly string[]; id: string }[]
+  sections: readonly {
+    body: string;
+    captures?: readonly string[];
+    id: string;
+  }[]
 ) {
   return { id, kind: "product" as const, sections };
 }

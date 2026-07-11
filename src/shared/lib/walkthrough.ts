@@ -291,14 +291,17 @@ export function identityAnchorDrift(
   walkthroughs: readonly WalkthroughLike[]
 ): IdentityAnchorDrift | undefined {
   if (anchor.kind === "walkthrough-section") {
-    const born = walkthroughs.find((entry) => entry.id === anchor.walkthroughId);
+    const born = walkthroughs.find(
+      (entry) => entry.id === anchor.walkthroughId
+    );
     const latest = born
       ? latestWalkthrough(walkthroughs, born.kind)
       : undefined;
     const section = born?.sections.find(
       (candidate) => candidate.id === anchor.sectionId
     );
-    const present = latest?.id === anchor.walkthroughId && section !== undefined;
+    const present =
+      latest?.id === anchor.walkthroughId && section !== undefined;
 
     return {
       state: identityDrift(present),
@@ -312,13 +315,16 @@ export function identityAnchorDrift(
   ) {
     const latest = latestProductWalkthrough(walkthroughs);
 
-    return { state: identityDrift(placedCaptureIds(latest).has(anchor.capture)) };
+    return {
+      state: identityDrift(placedCaptureIds(latest).has(anchor.capture)),
+    };
   }
 
   if (anchor.kind === "text-span") {
     const latest = latestProductWalkthrough(walkthroughs);
     const present =
-      latest?.sections.some((section) => section.id === anchor.section) ?? false;
+      latest?.sections.some((section) => section.id === anchor.section) ??
+      false;
 
     return { bornText: anchor.quote, state: identityDrift(present) };
   }

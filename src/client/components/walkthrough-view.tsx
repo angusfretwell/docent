@@ -16,6 +16,7 @@ import { splitLines } from "@shared/lib/drift";
 import { foldFinding } from "@shared/lib/finding";
 import type { FoldedFinding } from "@shared/lib/finding";
 import {
+  identityAnchorDrift,
   interleaveSegments,
   rollupDrift,
   walkthroughStaleness,
@@ -288,11 +289,11 @@ function RangeCode({
 
 /**
  * One section: its title, drift rollup, narrative Findings, and interleaved body.
- * A section rendered here belongs to the shown (immutable) walkthrough, so its
- * `walkthrough-section` Findings are identity-live by construction — the
- * outdated arm (§8) arises only for a superseded walkthrough, which v1 does not
- * show (one walkthrough per pillar), so those Findings are filtered out upstream
- * rather than surfaced detached here.
+ * A section rendered here belongs to the shown (latest) walkthrough, so its
+ * narrative Findings are identity-live by construction (§8). A Finding on a
+ * superseded walkthrough is outdated and detaches into the trailing
+ * `DetachedNarrative` section rather than rendering against a section this tour
+ * no longer holds (data-model.md §6.2).
  */
 function Section({
   section,
@@ -377,20 +378,102 @@ function narrativeBySectionId(
   return bySection;
 }
 
+/** A superseded narrative Finding plus the born section prose it detaches to. */
+interface DetachedNote {
+  bornText?: string;
+  finding: FoldedFinding;
+}
+
+/**
+ * The narrative Findings whose walkthrough was superseded: born on an earlier
+ * **code** walkthrough, so they no longer anchor a section this tour holds. Each
+ * is outdated per identity drift and detaches to its born section prose
+ * (data-model.md §6.2). Product-pillar narrative Findings are left for the
+ * Product tab; the Findings panel is the cross-pillar home for both.
+ */
+function detachedNarrative(
+  folded: readonly FoldedFinding[],
+  walkthroughs: readonly WalkthroughEntry[]
+): DetachedNote[] {
+  const detached: DetachedNote[] = [];
+  for (const finding of folded) {
+    const { anchor } = finding;
+    if (anchor?.kind !== "walkthrough-section") {
+      continue;
+    }
+
+    const born = walkthroughs.find(
+      (entry) => entry.id === anchor.walkthroughId
+    );
+    if (born?.kind !== "code") {
+      continue;
+    }
+
+    const drift = identityAnchorDrift(anchor, walkthroughs);
+    if (drift?.state === "outdated") {
+      detached.push({
+        finding,
+        ...(drift.bornText === undefined ? {} : { bornText: drift.bornText }),
+      });
+    }
+  }
+  return detached;
+}
+
+/**
+ * The trailing "Detached findings" section: narrative Findings on a superseded
+ * walkthrough, rendered against their born section prose so they surface rather
+ * than vanish when a newer tour supersedes theirs (data-model.md §6.2).
+ */
+function DetachedNarrative({ notes }: { notes: readonly DetachedNote[] }) {
+  if (notes.length === 0) {
+    return null;
+  }
+  return (
+    <section
+      style={{
+        borderTop: "1px solid rgba(128,128,128,0.2)",
+        padding: "1rem 0",
+      }}
+    >
+      <div style={{ alignItems: "center", display: "flex", gap: "0.5rem" }}>
+        <h2 style={{ fontSize: "1.05rem", margin: 0 }}>Detached findings</h2>
+        <span style={{ ...pillStyle, ...TONE.signal }}>Outdated</span>
+      </div>
+      <p style={{ fontSize: "0.8rem", opacity: 0.6 }}>
+        These Findings were left on a superseded walkthrough; they render
+        against their born section prose.
+      </p>
+      {notes.map(({ finding, bornText }) => (
+        <div key={finding.id} style={{ margin: "0.6rem 0" }}>
+          {bornText === undefined ? null : <p style={proseStyle}>{bornText}</p>}
+          <div style={findingStyle}>
+            <span style={{ opacity: 0.6 }}>note: </span>
+            {finding.body}
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+}
+
 /**
  * The Code walkthrough tab body. Renders the latest code walkthrough's sections
  * in manifest order; surfaces staleness once at the top and per-range/section
- * drift throughout. `onOpenInDiff` deep-links a range (or the whole tour, from
+ * drift throughout. Narrative Findings on a superseded walkthrough detach into a
+ * trailing section. `onOpenInDiff` deep-links a range (or the whole tour, from
  * its first target) into the Diff tab.
  */
 export function WalkthroughView({
   walkthrough,
+  walkthroughs,
   changes,
   findings,
   patch,
   onOpenInDiff,
 }: {
   walkthrough: WalkthroughEntry;
+  walkthroughs: readonly WalkthroughEntry[];
   changes: readonly ChangeRecord[];
   findings: readonly FindingEntry[];
   patch: string;
@@ -415,6 +498,7 @@ export function WalkthroughView({
   const codeFindings = folded.filter(
     (finding) => finding.anchor?.kind === "line"
   );
+  const detached = detachedNarrative(folded, walkthroughs);
 
   const staleness = walkthroughStaleness(
     walkthrough.manifest?.bornChangeId ?? "",
@@ -475,6 +559,7 @@ export function WalkthroughView({
             />
           ))
         )}
+        <DetachedNarrative notes={detached} />
       </WorkerPoolContextProvider>
     </div>
   );
