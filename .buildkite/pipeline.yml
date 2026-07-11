@@ -33,6 +33,17 @@ steps:
   - wait: ~
     continue_on_failure: true
 
-  - plugins:
-      - junit-annotate#v2.7.0:
-          artifacts: junit-*.xml
+  - label: ":junit:"
+    key: test-summary
+    plugins:
+      - bugcrowd/test-summary#v1.11.0:
+          inputs:
+            - label: ":bun: test"
+              artifact_path: junit-test.xml
+              type: junit
+            - label: ":oxc: lint"
+              artifact_path: junit-lint.xml
+              type: junit
+          formatter:
+            type: summary
+          context: test-summary
