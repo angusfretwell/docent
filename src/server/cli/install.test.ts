@@ -35,7 +35,14 @@ describe("skillsAddArgs", () => {
   test("project scope selects all skills non-interactively, no -g", () => {
     const args = skillsAddArgs("project");
 
-    expect(args).toEqual(["skills", "add", "angusfretwell/docent", "-s", "*", "-y"]);
+    expect(args).toEqual([
+      "skills",
+      "add",
+      "angusfretwell/docent",
+      "-s",
+      "*",
+      "-y",
+    ]);
   });
 
   test("global scope appends -g for a machine-wide install", () => {

@@ -84,6 +84,9 @@ const promptScope = Effect.sync((): InstallScope => {
     return "project";
   }
 
+  // `prompt` is the browser-flavored name the rule guards against, but this is
+  // the CLI binary asking its one onboarding question on a TTY — the intended use.
+  // oxlint-disable-next-line no-alert
   const answer = prompt(
     "Install for [1] this repo (default) or [2] all repos? [1/2]"
   );
