@@ -179,7 +179,8 @@ function entryStyle(active: boolean): React.CSSProperties {
  * the working tree is dirty — the read-only **Pending** entry at the top, with a
  * dirty badge (diff-review.md §6). Pending auto-surfaces here when dirty and
  * auto-hides when clean; selecting it exposes the incremental/cumulative range
- * toggle. It is strictly a preview: no Finding authoring, no mark-as-viewed.
+ * toggle. A preview surface: mark-as-viewed applies (keyed on content SHAs),
+ * but no Finding authoring.
  */
 function ChangeSelector({
   branch,
@@ -251,9 +252,9 @@ function ChangeSelector({
 }
 
 /**
- * The committed-Change body: loading / error / empty / the rendered diff. This
- * is the mark-as-viewed surface — the Review's viewed events and findings fold
- * into the diff here (Pending is a read-only preview, so it carries neither).
+ * The committed-Change body: loading / error / empty / the rendered diff. The
+ * Review's viewed events and findings fold into the diff here; Pending folds the
+ * same viewed events (content-SHA keyed) but renders no findings.
  */
 function ChangeBody({
   state,
@@ -294,12 +295,20 @@ function ChangeBody({
   );
 }
 
-/** The Pending body: the working-tree preview, with worktree-sourced expansion. */
+/**
+ * The Pending body: the working-tree preview, with worktree-sourced expansion.
+ * Mark-as-viewed applies here (diff-review.md §6) — the Review's viewed events
+ * fold in, keyed on the working file's full content SHA, so a mark set on
+ * Pending carries into the minted Change once the bytes commit unchanged.
+ * Findings still don't render inline (Pending authors none).
+ */
 function PendingBody({
   pending,
+  review,
   diffRef,
 }: {
   pending: Pending;
+  review: ReviewSnapshot | null;
   diffRef: React.Ref<DiffViewHandle>;
 }) {
   if (pending.patch === "") {
@@ -312,7 +321,7 @@ function PendingBody({
       isFileExpandable={isPendingExpandable}
       patch={pending.patch}
       ref={diffRef}
-      viewed={NO_VIEWED}
+      viewed={review?.viewed ?? NO_VIEWED}
     />
   );
 }
@@ -362,7 +371,7 @@ function DiffTab({
       />
       <div style={{ flex: 1, minHeight: 0, minWidth: 0 }}>
         {effective === "pending" && pending ? (
-          <PendingBody diffRef={diffRef} pending={pending} />
+          <PendingBody diffRef={diffRef} pending={pending} review={review} />
         ) : (
           <ChangeBody
             diffRef={diffRef}
