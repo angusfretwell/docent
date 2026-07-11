@@ -117,10 +117,25 @@ interface Task {
   rel: string;
 }
 
-/** Collapse a read / parse / decode failure into one grep-friendly report line. */
+/**
+ * The most specific message an error carries. `Effect.try` wraps a thrown
+ * `JSON.parse` / `Bun.YAML.parse` error under a generic message, so prefer the
+ * wrapped `cause` when it holds the real one.
+ */
+function errorMessage(error: unknown): string {
+  if (!(error instanceof Error)) {
+    return String(error);
+  }
+  if (error.cause instanceof Error) {
+    return error.cause.message;
+  }
+  return error.message;
+}
+
+/** A read / parse / decode failure as one grep-friendly report line — a
+ * multi-line schema-decode tree collapses onto a single line. */
 function formatError(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
-  return message.replaceAll(/\s+/g, " ").trim();
+  return errorMessage(error).replaceAll(/\s+/g, " ").trim();
 }
 
 /** Read and decode one record; a `Problem` on any failure, else `undefined`. */
