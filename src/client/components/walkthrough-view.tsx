@@ -385,11 +385,13 @@ interface DetachedNote {
 }
 
 /**
- * The narrative Findings whose walkthrough was superseded: born on an earlier
- * **code** walkthrough, so they no longer anchor a section this tour holds. Each
- * is outdated per identity drift and detaches to its born section prose
- * (data-model.md §6.2). Product-pillar narrative Findings are left for the
- * Product tab; the Findings panel is the cross-pillar home for both.
+ * The unresolved narrative Findings whose walkthrough was superseded: born on
+ * an earlier **code** walkthrough, so they no longer anchor a section this tour
+ * holds. Each is outdated per identity drift and detaches to its born section
+ * prose (data-model.md §6.2). Resolved + outdated is the §6.3 collapsed end
+ * state, so those are omitted here as in the Findings panel's default view.
+ * Product-pillar narrative Findings are left for the Product tab; the Findings
+ * panel is the cross-pillar home for both.
  */
 function detachedNarrative(
   folded: readonly FoldedFinding[],
@@ -399,6 +401,13 @@ function detachedNarrative(
   for (const finding of folded) {
     const { anchor } = finding;
     if (anchor?.kind !== "walkthrough-section") {
+      continue;
+    }
+
+    // A resolved + outdated Finding is the §6.3 healthy end state — collapsed,
+    // matching the Findings panel's default-hide-resolved. Only unresolved
+    // detached Findings still warrant the Code tab's re-check surface.
+    if (finding.resolved) {
       continue;
     }
 
