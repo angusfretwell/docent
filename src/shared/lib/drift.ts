@@ -111,11 +111,12 @@ export function excerptLines(
 
 /**
  * Apply the §6.1 fast paths, returning either a settled state or a re-anchor
- * request. `change` never drifts; `file` drifts only on delete/rename; a `line`
- * whose born blob still equals the current side blob is live without computing;
- * a `line` in a file absent from the change is live (unchanged base..head).
- * Identity arms (walkthrough/capture/text-span) carry no content-addressed
- * drift here and stay live.
+ * request. `planDrift` sees only content-addressed anchors — `change`, `file`,
+ * `line`; identity arms (walkthrough-section/capture/text-span) are classified
+ * upstream by `identityAnchorDrift` and never reach here (data-model.md §6.2).
+ * `change` never drifts; `file` drifts only on delete/rename; a `line` whose
+ * born blob still equals the current side blob is live without computing; a
+ * `line` in a file absent from the change is live (unchanged base..head).
  */
 export function planDrift(anchor: Anchor, ctx: AnchorContext): DriftPlan {
   if (anchor.kind === "file") {
@@ -136,6 +137,8 @@ export function planDrift(anchor: Anchor, ctx: AnchorContext): DriftPlan {
       range: [anchor.lines[0], anchor.lines[1]],
     };
   }
+
+  // `change` — the whole-Change anchor never drifts (§6.1).
   return { kind: "resolved", state: "live" };
 }
 

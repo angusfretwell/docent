@@ -20,9 +20,10 @@ import {
   splitLines,
 } from "@shared/lib/drift";
 import { foldFinding } from "@shared/lib/finding";
+import { identityAnchorDrift } from "@shared/lib/walkthrough";
 import type { AnchorContext, DriftState } from "@shared/schemas/drift";
 import type { Anchor } from "@shared/schemas/finding";
-import type { FindingEntry } from "@shared/schemas/review";
+import type { FindingEntry, WalkthroughEntry } from "@shared/schemas/review";
 import { useEffect, useState } from "react";
 
 import { fetchBlobText, isRealObjectId } from "./blobs";
@@ -198,7 +199,8 @@ function anchorLines(anchor: Anchor): [number, number] | undefined {
 
 function planFindings(
   findings: readonly FindingEntry[],
-  files: ReadonlyMap<string, DiffFile>
+  files: ReadonlyMap<string, DiffFile>,
+  walkthroughs: readonly WalkthroughEntry[]
 ) {
   const base = new Map<string, DriftResult>();
   const jobs: ReanchorJob[] = [];
@@ -208,6 +210,22 @@ function planFindings(
     if (anchor === undefined) {
       continue;
     }
+
+    // Identity arms (walkthrough-section, capture, text-span) carry no
+    // content-addressed drift: their live/outdated standing is an identity read
+    // against the current walkthroughs, and an outdated one detaches to its born
+    // target synchronously — no blob fetch (data-model.md §6.2).
+    const identity = identityAnchorDrift(anchor, walkthroughs);
+    if (identity !== undefined) {
+      base.set(finding.id, {
+        state: identity.state,
+        ...(identity.bornText === undefined
+          ? {}
+          : { bornText: identity.bornText }),
+      });
+      continue;
+    }
+
     const plan = planDrift(anchor, anchorContext(anchor, files));
     if (plan.kind === "resolved") {
       const lines = anchorLines(anchor);
@@ -243,9 +261,14 @@ function planFindings(
 export function useDrift(params: {
   findings: readonly FindingEntry[];
   patch: string;
+  walkthroughs: readonly WalkthroughEntry[];
 }): ReadonlyMap<string, DriftResult> {
   const files = indexDiffFiles(params.patch);
-  const { base, excerpts, jobs } = planFindings(params.findings, files);
+  const { base, excerpts, jobs } = planFindings(
+    params.findings,
+    files,
+    params.walkthroughs
+  );
   const resolved = useReanchor(jobs, excerpts);
 
   // A re-anchor job carries no synchronous base entry, so it is simply absent

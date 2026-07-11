@@ -237,6 +237,101 @@ export function identityDrift(present: boolean): DriftState {
   return present ? "live" : "outdated";
 }
 
+/**
+ * The minimal walkthrough shape identity drift reads — a pillar-tagged list of
+ * sections, each with the prose and capture placements presence is judged
+ * against. Structural, so a `WalkthroughEntry` (which carries more) satisfies
+ * it and the tests can hand-build lightweight fixtures.
+ */
+interface WalkthroughLike {
+  id: string;
+  kind: "code" | "product";
+  sections: readonly {
+    body: string;
+    captures?: readonly string[];
+    id: string;
+  }[];
+}
+
+/** The capture ids the sections of a walkthrough place, in any section (walkthroughs.md §6). */
+function placedCaptureIds(entry: WalkthroughLike | undefined): Set<string> {
+  return new Set(
+    (entry?.sections ?? []).flatMap((section) => section.captures ?? [])
+  );
+}
+
+/** A settled identity-arm drift plus the born target an outdated one detaches to. */
+export interface IdentityAnchorDrift {
+  /** The born section prose (walkthrough-section) or born quote (text-span); absent for capture arms. */
+  bornText?: string;
+  state: DriftState;
+}
+
+/**
+ * The identity-addressed drift of an anchor against the current walkthroughs
+ * (data-model.md §6.2) — the analog of `planDrift` for the four identity arms,
+ * which carry no content-addressed re-anchor and never `shift`. `undefined` for
+ * a content anchor (change/file/line), so a caller falls through to `planDrift`.
+ *
+ * An arm is `live` while its target survives in the **latest** walkthrough of
+ * its pillar, `outdated` once the walkthrough is superseded or the target is
+ * gone — then it detaches and renders against its born target:
+ *
+ * - **walkthrough-section** — live only while its `walkthroughId` is still the
+ *   latest of its kind and holds the section; detaches to the born section prose,
+ *   recovered from the superseded walkthrough still walked off disk.
+ * - **screenshot-region / recording-timestamp** — live while its capture is
+ *   still placed in a section of the latest product walkthrough; its born image
+ *   is recovered in the Product tab, so no `bornText` here.
+ * - **text-span** — live while its section survives in the latest product
+ *   walkthrough; detaches to its born quote (carried on the anchor itself).
+ */
+export function identityAnchorDrift(
+  anchor: Anchor,
+  walkthroughs: readonly WalkthroughLike[]
+): IdentityAnchorDrift | undefined {
+  if (anchor.kind === "walkthrough-section") {
+    const born = walkthroughs.find(
+      (entry) => entry.id === anchor.walkthroughId
+    );
+    const latest = born
+      ? latestWalkthrough(walkthroughs, born.kind)
+      : undefined;
+    const section = born?.sections.find(
+      (candidate) => candidate.id === anchor.sectionId
+    );
+    const present =
+      latest?.id === anchor.walkthroughId && section !== undefined;
+
+    return {
+      state: identityDrift(present),
+      ...(section === undefined ? {} : { bornText: section.body }),
+    };
+  }
+
+  if (
+    anchor.kind === "screenshot-region" ||
+    anchor.kind === "recording-timestamp"
+  ) {
+    const latest = latestProductWalkthrough(walkthroughs);
+
+    return {
+      state: identityDrift(placedCaptureIds(latest).has(anchor.capture)),
+    };
+  }
+
+  if (anchor.kind === "text-span") {
+    const latest = latestProductWalkthrough(walkthroughs);
+    const present =
+      latest?.sections.some((section) => section.id === anchor.section) ??
+      false;
+
+    return { bornText: anchor.quote, state: identityDrift(present) };
+  }
+
+  return undefined;
+}
+
 /** Look one capture up in a manifest's `captures[]` registry by id (walkthroughs.md §6). */
 export function captureById(
   manifest: { captures?: readonly Capture[] } | undefined,
