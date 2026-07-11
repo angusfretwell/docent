@@ -16,7 +16,12 @@
 
 import type { DriftState } from "../schemas/drift";
 import type { Anchor } from "../schemas/finding";
-import type { Capture, WalkthroughRange } from "../schemas/walkthrough";
+import type {
+  Capture,
+  WalkthroughAnnotation,
+  WalkthroughRange,
+} from "../schemas/walkthrough";
+import { findingLocation } from "./finding";
 
 /**
  * Lift a range into the `line` anchor arm — verbatim, so the Finding drift
@@ -338,4 +343,58 @@ export function captureById(
   captureId: string
 ): Capture | undefined {
   return manifest?.captures?.find((capture) => capture.id === captureId);
+}
+
+/** A non-capture annotation surfaced as a section-level note, its anchor read as a location. */
+export interface AnnotationNote {
+  body: string;
+  location: string;
+}
+
+/** A product section's annotations folded into the surfaces that render them (walkthroughs.md §7). */
+export interface FoldedAnnotations {
+  /** Every non-capture arm — file / line / change / walkthrough-section / text-span — as a note. */
+  notes: AnnotationNote[];
+  /** The `text-span` quotes to highlight in the section prose, as a text-span Finding is. */
+  quotes: string[];
+}
+
+// The two arms that pin to a capture; every other arm falls through to a note.
+const CAPTURE_ANCHOR_KINDS: ReadonlySet<Anchor["kind"]> = new Set([
+  "screenshot-region",
+  "recording-timestamp",
+]);
+
+/**
+ * Fold a product section's annotations into the surfaces that render them so
+ * that **every arm the annotation schema admits shows somewhere** — nothing an
+ * author writes is silently dropped (walkthroughs.md §7). An annotation carries
+ * the full Finding anchor vocabulary, but only the two capture arms pin to a
+ * capture (handled per-capture by `annotationsFor`); the rest have no capture to
+ * overlay. Each such arm becomes a section-level note located by
+ * `findingLocation` — the file for a `file` anchor, `file:line` for a `line`
+ * one, and so on — and a `text-span` additionally contributes its quote for
+ * in-prose highlighting, mirroring a text-span Finding.
+ */
+export function foldSectionAnnotations(
+  annotations: readonly WalkthroughAnnotation[]
+): FoldedAnnotations {
+  const notes: AnnotationNote[] = [];
+  const quotes: string[] = [];
+
+  for (const annotation of annotations) {
+    if (CAPTURE_ANCHOR_KINDS.has(annotation.anchor.kind)) {
+      continue;
+    }
+
+    notes.push({
+      body: annotation.body,
+      location: findingLocation(annotation.anchor),
+    });
+    if (annotation.anchor.kind === "text-span") {
+      quotes.push(annotation.anchor.quote);
+    }
+  }
+
+  return { notes, quotes };
 }

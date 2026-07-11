@@ -5,7 +5,9 @@
  * recording captures replay through rrweb, self-contained with no network
  * (walkthroughs.md §6, the #5 spike). The generator's annotation pins overlay
  * their capture — durable, not resolvable, distinct from Findings
- * (walkthroughs.md §7). Reviewer Findings anchor via the capture arms
+ * (walkthroughs.md §7); a capture-less annotation arm (file / line / change /
+ * walkthrough-section / text-span) renders as a section note so none is dropped.
+ * Reviewer Findings anchor via the capture arms
  * (`screenshot-region`, `recording-timestamp`, `text-span`) and render beside
  * their target; a whole-capture Finding is the arm with its coordinate omitted.
  * Drift is identity-based (walkthroughs.md §8): a capture/section anchor is live
@@ -19,6 +21,7 @@ import { foldFinding } from "@shared/lib/finding";
 import type { FoldedFinding } from "@shared/lib/finding";
 import {
   captureById,
+  foldSectionAnnotations,
   identityDrift,
   interleaveCaptureSegments,
   walkthroughStaleness,
@@ -105,6 +108,14 @@ const ANNOTATION_TONE: Tone = {
   chip: "rgba(56,132,255,0.9)",
 };
 const FINDING_TONE: Tone = { border: "#e0863c", chip: "rgba(224,108,32,0.9)" };
+
+// An authored annotation note (durable, blue) that has no capture to pin to —
+// a file / line / change / walkthrough-section / text-span arm (walkthroughs.md
+// §7). Toned like the annotation pins so a reader tells the two acts apart.
+const annotationNoteStyle: React.CSSProperties = {
+  ...findingStyle,
+  borderLeftColor: ANNOTATION_TONE.border,
+};
 
 // The capture anchor arms, named once so narrowing and filters read one token.
 const SCREENSHOT_REGION = "screenshot-region";
@@ -551,9 +562,10 @@ function CaptureView({
 }
 
 /**
- * The annotations in a section that target a given capture id. An annotation's
- * anchor spans the full Finding vocabulary (§7), so a non-capture arm (e.g.
- * text-span) simply never matches a capture id and is skipped here.
+ * The annotations in a section that target a given capture id — the capture-arm
+ * annotations that pin onto this capture. An annotation's anchor spans the full
+ * Finding vocabulary (§7), so a non-capture arm never matches a capture id here;
+ * `foldSectionAnnotations` surfaces those as section notes so none is dropped.
  */
 function annotationsFor(
   section: WalkthroughSection,
@@ -629,9 +641,17 @@ function Section({
   const captureIds = section.captures ?? [];
   const walkthroughId = manifest?.id ?? "";
   const segments = interleaveCaptureSegments(section.body, captureIds.length);
-  const quotes = textSpans.map((finding) =>
-    finding.anchor?.kind === TEXT_SPAN ? finding.anchor.quote : ""
-  );
+
+  // Annotations carry the full anchor vocabulary, but only the capture arms pin
+  // to a capture; every other arm surfaces as a section note (and a text-span
+  // also highlights in the prose) so nothing an author writes is dropped (§7).
+  const annotations = foldSectionAnnotations(section.annotations ?? []);
+  const quotes = [
+    ...textSpans.map((finding) =>
+      finding.anchor?.kind === TEXT_SPAN ? finding.anchor.quote : ""
+    ),
+    ...annotations.quotes,
+  ];
 
   return (
     <section
@@ -654,6 +674,15 @@ function Section({
             ”:{" "}
           </span>
           {finding.body}
+        </div>
+      ))}
+      {annotations.notes.map((note) => (
+        <div
+          key={`annotation:${note.location}:${note.body.slice(0, 24)}`}
+          style={annotationNoteStyle}
+        >
+          <span style={{ opacity: 0.6 }}>{note.location}: </span>
+          {note.body}
         </div>
       ))}
       {segments.map((segment) => {
