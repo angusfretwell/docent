@@ -185,7 +185,7 @@ const resolveDefaultBranch = Effect.fn("resolveDefaultBranch")(function* resolve
 
 /**
  * Resolve the repo root, checked-out branch, and default branch — the light
- * identity the Dossier store keys on, without minting the (expensive) diff.
+ * identity the Review store keys on, without minting the (expensive) diff.
  */
 export const resolveRepo = Effect.fn("resolveRepo")(function* resolveRepo(cwd: string) {
   const root = yield* git(cwd, ["rev-parse", "--show-toplevel"]).pipe(

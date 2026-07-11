@@ -13,7 +13,7 @@
 import type { CodeViewFileItem } from "@pierre/diffs";
 import { CodeView, WorkerPoolContextProvider } from "@pierre/diffs/react";
 import { useEffect, useState } from "react";
-import type { ChangeRecord, FindingEntry, WalkthroughEntry } from "@shared/schemas/dossier";
+import type { ChangeRecord, FindingEntry, WalkthroughEntry } from "@shared/schemas/review";
 import { splitLines } from "@shared/lib/drift";
 import type { DriftState } from "@shared/schemas/drift";
 import { foldFinding } from "@shared/lib/finding";

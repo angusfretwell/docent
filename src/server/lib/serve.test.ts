@@ -5,7 +5,7 @@ import { ManagedRuntime, Schema } from "effect";
 import { assetsFromManifest } from "@shared/lib/assets";
 import type { ClientAssets } from "@shared/lib/assets";
 import { Change, DiffError } from "@shared/schemas/change";
-import { DossierSnapshot } from "@shared/schemas/dossier";
+import { ReviewSnapshot } from "@shared/schemas/review";
 import { FindingWriteResult } from "@shared/schemas/finding-write";
 import { foldFinding } from "@shared/lib/finding";
 import { Pending } from "@shared/schemas/pending";
@@ -17,7 +17,7 @@ const disposers: (() => Promise<void>)[] = [];
 // Sync decode boundary: bun:test assertions are synchronous by design.
 const decodeChange = Schema.decodeUnknownSync(Change);
 const decodeDiffError = Schema.decodeUnknownSync(DiffError);
-const decodeSnapshot = Schema.decodeUnknownSync(DossierSnapshot);
+const decodeSnapshot = Schema.decodeUnknownSync(ReviewSnapshot);
 const decodePending = Schema.decodeUnknownSync(Pending);
 const decodeWriteResult = Schema.decodeUnknownSync(FindingWriteResult);
 
@@ -41,12 +41,12 @@ async function readSse(
   return done || value === undefined ? "" : decoder.decode(value);
 }
 
-/** Write a product-walkthrough capture blob under a feature branch's Dossier. */
+/** Write a product-walkthrough capture blob under a feature branch's Review. */
 function writeCapture(repo: string, walkthroughId: string, file: string, bytes: string) {
   const dir = path.join(
     repo,
     ".docent",
-    "dossiers",
+    "reviews",
     "feature",
     "walkthroughs",
     "product",
@@ -119,9 +119,9 @@ function postFinding(url: string, body: unknown): Promise<Response> {
   });
 }
 
-/** Fetch and decode the live Dossier snapshot. */
-async function fetchDossier(url: string) {
-  const res = await fetch(new URL("/api/dossier", url));
+/** Fetch and decode the live Review snapshot. */
+async function fetchReview(url: string) {
+  const res = await fetch(new URL("/api/review", url));
   return decodeSnapshot(await res.json());
 }
 
@@ -367,23 +367,21 @@ describe("server layer", () => {
     expect(res.status).toBe(404);
   });
 
-  test("GET /api/dossier auto-creates and returns the branch's snapshot", async () => {
+  test("GET /api/review auto-creates and returns the branch's snapshot", async () => {
     const repo = featureRepo();
     const { url } = await serve(repo);
 
-    const res = await fetch(new URL("/api/dossier", url));
+    const res = await fetch(new URL("/api/review", url));
 
     expect(res.status).toBe(200);
     const snap = decodeSnapshot(await res.json());
-    expect(snap.dossier.schema).toBe("docent/dossier@3");
-    expect(snap.dossier.branch).toBe("feature");
-    expect(snap.dossier.base).toBe("main");
-    expect(existsSync(path.join(repo, ".docent", "dossiers", "feature", "dossier.json"))).toBe(
-      true,
-    );
+    expect(snap.review.schema).toBe("docent/review@4");
+    expect(snap.review.branch).toBe("feature");
+    expect(snap.review.base).toBe("main");
+    expect(existsSync(path.join(repo, ".docent", "reviews", "feature", "review.json"))).toBe(true);
   });
 
-  test("POST /api/viewed appends an event the dossier snapshot then reports", async () => {
+  test("POST /api/viewed appends an event the review snapshot then reports", async () => {
     const repo = featureRepo();
     const { url } = await serve(repo);
 
@@ -396,8 +394,8 @@ describe("server layer", () => {
     expect(post.status).toBe(200);
     const event = await post.json();
     expect(event).toMatchObject({ blobSha: "9c2a1f0", path: "feature.txt" });
-    const dossier = await fetch(new URL("/api/dossier", url));
-    const snap = decodeSnapshot(await dossier.json());
+    const review = await fetch(new URL("/api/review", url));
+    const snap = decodeSnapshot(await review.json());
     expect(snap.viewed).toEqual([{ blobSha: "9c2a1f0", path: "feature.txt", ts: event.ts }]);
   });
 
@@ -430,7 +428,7 @@ describe("server layer", () => {
     expect(result.changeId).toBe("chg_001");
 
     // The record and its minted Change are both visible in the live snapshot.
-    const snap = await fetchDossier(url);
+    const snap = await fetchReview(url);
     expect(snap.changes.map((change) => change.id)).toEqual(["chg_001"]);
     const finding = snap.findings.find((entry) => entry.id === result.findingId);
     const folded = foldFinding(result.findingId, finding?.records ?? []);
@@ -455,7 +453,7 @@ describe("server layer", () => {
 
     expect(res.status).toBe(200);
     expect(decodeWriteResult(await res.json()).record).toBe("002-reply.md");
-    const snap = await fetchDossier(url);
+    const snap = await fetchReview(url);
     const finding = snap.findings.find((entry) => entry.id === opened.findingId);
     expect(foldFinding(opened.findingId, finding?.records ?? []).whatsNext).toBe("needs-verify");
   });
@@ -488,7 +486,7 @@ describe("server layer", () => {
       // An external agent dropping a record file into `.docent/`, not a UI write.
       writeFileSync(path.join(repo, ".docent", "external.txt"), "hi\n");
 
-      expect(await readSse(reader, decoder)).toContain("dossier-changed");
+      expect(await readSse(reader, decoder)).toContain("review-changed");
     } finally {
       // Close the socket so the server's graceful shutdown doesn't wait on it.
       controller.abort();
@@ -513,7 +511,7 @@ describe("server layer", () => {
       // live-refresh trigger, rooted at the repo, not `.docent/`.
       writeFileSync(path.join(repo, "feature.txt"), "edited by an agent\n");
 
-      expect(await readSse(reader, decoder)).toContain("dossier-changed");
+      expect(await readSse(reader, decoder)).toContain("review-changed");
     } finally {
       controller.abort();
     }

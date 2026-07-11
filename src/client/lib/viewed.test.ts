@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { ViewedEvent } from "@shared/schemas/dossier";
+import type { ViewedEvent } from "@shared/schemas/review";
 import type { FileEntry } from "./nav";
 import { computeViewed, viewedStateFor } from "./viewed";
 

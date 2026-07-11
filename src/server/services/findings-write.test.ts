@@ -5,7 +5,7 @@ import { BunServices } from "@effect/platform-bun";
 import { ManagedRuntime } from "effect";
 import { foldFinding } from "@shared/lib/finding";
 import type { FindingWrite } from "@shared/schemas/finding-write";
-import { readDossierSnapshot } from "./dossier";
+import { readReviewSnapshot } from "./review";
 import { mintChange, writeFindingRecord } from "./findings-write";
 import { cleanupScratchDirs, scratchDir } from "../lib/test-fixtures";
 
@@ -26,8 +26,8 @@ const lineAnchor = {
   side: "head" as const,
 };
 
-function dossierDir(root: string) {
-  return path.join(root, ".docent", "dossiers", "feature");
+function reviewDir(root: string) {
+  return path.join(root, ".docent", "reviews", "feature");
 }
 
 function write(root: string, wr: FindingWrite, refs = REFS) {
@@ -44,12 +44,12 @@ function write(root: string, wr: FindingWrite, refs = REFS) {
 }
 
 function snapshot(root: string) {
-  return runtime.runPromise(readDossierSnapshot({ base: "main", branch: "feature", root }));
+  return runtime.runPromise(readReviewSnapshot({ base: "main", branch: "feature", root }));
 }
 
 describe("mintChange", () => {
   function mint(root: string, refs = REFS) {
-    return runtime.runPromise(mintChange({ dossierDir: dossierDir(root), refs }));
+    return runtime.runPromise(mintChange({ refs, reviewDir: reviewDir(root) }));
   }
 
   test("mints chg_001 in docent/change@3 shape with base at the merge-base", async () => {
@@ -61,7 +61,7 @@ describe("mintChange", () => {
     expect(change.schema).toBe("docent/change@3");
     expect(change.baseSha).toBe("aaaa");
     expect(change.headSha).toBe("bbbb");
-    const file = path.join(dossierDir(root), "changes", "chg_001.json");
+    const file = path.join(reviewDir(root), "changes", "chg_001.json");
     expect(JSON.parse(readFileSync(file, "utf-8")).id).toBe("chg_001");
   });
 

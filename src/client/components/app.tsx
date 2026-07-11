@@ -1,8 +1,8 @@
 import { Schema } from "effect";
 import { useEffect, useRef, useState } from "react";
 import { Change, DiffError } from "@shared/schemas/change";
-import { DossierSnapshot } from "@shared/schemas/dossier";
-import type { FindingEntry, ViewedEvent } from "@shared/schemas/dossier";
+import { ReviewSnapshot } from "@shared/schemas/review";
+import type { FindingEntry, ViewedEvent } from "@shared/schemas/review";
 import type { FindingWrite } from "@shared/schemas/finding-write";
 import type { PendingRange } from "@shared/schemas/pending";
 import { Pending } from "@shared/schemas/pending";
@@ -31,7 +31,7 @@ const NO_FINDINGS: readonly FindingEntry[] = [];
 // Sync decode boundary: the fetch handlers below own the try/catch.
 const decodeChange = Schema.decodeUnknownSync(Change);
 const decodeDiffError = Schema.decodeUnknownSync(DiffError);
-const decodeSnapshot = Schema.decodeUnknownSync(DossierSnapshot);
+const decodeSnapshot = Schema.decodeUnknownSync(ReviewSnapshot);
 const decodePending = Schema.decodeUnknownSync(Pending);
 
 // Which selector entry is showing: the committed Change, or the read-only
@@ -73,11 +73,11 @@ const statusStyle: React.CSSProperties = {
  * A live status pill proving the watch → SSE → re-fetch loop end to end. Floats
  * over the diff (fixed) so it never disturbs `CodeView`'s scroll container.
  */
-function DossierStatus({ dossier }: { dossier: DossierSnapshot }) {
+function ReviewStatus({ review }: { review: ReviewSnapshot }) {
   return (
     <div style={statusStyle}>
-      <code>{dossier.dossier.branch}</code> · {dossier.changes.length} changes ·{" "}
-      {dossier.findings.length} findings · {dossier.walkthroughs.length} walkthroughs
+      <code>{review.review.branch}</code> · {review.changes.length} changes ·{" "}
+      {review.findings.length} findings · {review.walkthroughs.length} walkthroughs
     </div>
   );
 }
@@ -234,17 +234,17 @@ function ChangeSelector({
 
 /**
  * The committed-Change body: loading / error / empty / the rendered diff. This
- * is the mark-as-viewed surface — the Dossier's viewed events and findings fold
+ * is the mark-as-viewed surface — the Review's viewed events and findings fold
  * into the diff here (Pending is a read-only preview, so it carries neither).
  */
 function ChangeBody({
   state,
-  dossier,
+  review,
   diffRef,
   drift,
 }: {
   state: LoadState;
-  dossier: DossierSnapshot | null;
+  review: ReviewSnapshot | null;
   diffRef: React.Ref<DiffViewHandle>;
   drift: ReadonlyMap<string, DriftResult>;
 }) {
@@ -265,12 +265,12 @@ function ChangeBody({
   return (
     <DiffView
       drift={drift}
-      findings={dossier?.findings ?? NO_FINDINGS}
+      findings={review?.findings ?? NO_FINDINGS}
       generated={change.generated}
       onWrite={handleWrite}
       patch={change.patch}
       ref={diffRef}
-      viewed={dossier?.viewed ?? NO_VIEWED}
+      viewed={review?.viewed ?? NO_VIEWED}
     />
   );
 }
@@ -306,7 +306,7 @@ function PendingBody({
 function DiffTab({
   change,
   pending,
-  dossier,
+  review,
   drift,
   diffRef,
   selected,
@@ -316,7 +316,7 @@ function DiffTab({
 }: {
   change: LoadState;
   pending: Pending | null;
-  dossier: DossierSnapshot | null;
+  review: ReviewSnapshot | null;
   drift: ReadonlyMap<string, DriftResult>;
   diffRef: React.RefObject<DiffViewHandle | null>;
   selected: Selection;
@@ -343,13 +343,13 @@ function DiffTab({
           {effective === "pending" && pending ? (
             <PendingBody diffRef={diffRef} pending={pending} />
           ) : (
-            <ChangeBody diffRef={diffRef} dossier={dossier} drift={drift} state={change} />
+            <ChangeBody diffRef={diffRef} review={review} drift={drift} state={change} />
           )}
         </div>
-        {dossier ? (
+        {review ? (
           <FindingsPanel
             drift={drift}
-            findings={dossier.findings}
+            findings={review.findings}
             onJump={(file, line) => diffRef.current?.scrollToLine(file, line)}
             onWrite={handleWrite}
           />
@@ -361,22 +361,22 @@ function DiffTab({
 
 /** The Code walkthrough tab, or a prompt to author one when none exists. */
 function WalkthroughTab({
-  dossier,
+  review,
   patch,
   onOpenInDiff,
 }: {
-  dossier: DossierSnapshot | null;
+  review: ReviewSnapshot | null;
   patch: string;
   onOpenInDiff: (file: string, line: number, side: "base" | "head") => void;
 }) {
-  const walkthrough = latestCodeWalkthrough(dossier?.walkthroughs ?? []);
-  if (!(walkthrough && dossier)) {
+  const walkthrough = latestCodeWalkthrough(review?.walkthroughs ?? []);
+  if (!(walkthrough && review)) {
     return <Notice>No code walkthrough yet. Run /docent to author one.</Notice>;
   }
   return (
     <WalkthroughView
-      changes={dossier.changes}
-      findings={dossier.findings}
+      changes={review.changes}
+      findings={review.findings}
       onOpenInDiff={onOpenInDiff}
       patch={patch}
       walkthrough={walkthrough}
@@ -385,17 +385,17 @@ function WalkthroughTab({
 }
 
 /** The Product walkthrough tab, or a prompt to author one when none exists. */
-function ProductWalkthroughTab({ dossier }: { dossier: DossierSnapshot | null }) {
-  const walkthrough = latestProductWalkthrough(dossier?.walkthroughs ?? []);
-  if (!(walkthrough && dossier)) {
+function ProductWalkthroughTab({ review }: { review: ReviewSnapshot | null }) {
+  const walkthrough = latestProductWalkthrough(review?.walkthroughs ?? []);
+  if (!(walkthrough && review)) {
     return <Notice>No product walkthrough yet. Run /docent to author one.</Notice>;
   }
   return (
     <ProductWalkthroughView
-      changes={dossier.changes}
-      findings={dossier.findings}
+      changes={review.changes}
+      findings={review.findings}
       walkthrough={walkthrough}
-      walkthroughs={dossier.walkthroughs}
+      walkthroughs={review.walkthroughs}
     />
   );
 }
@@ -403,7 +403,7 @@ function ProductWalkthroughTab({ dossier }: { dossier: DossierSnapshot | null })
 export function App() {
   const [change, setChange] = useState<LoadState>({ kind: "loading" });
   const [pending, setPending] = useState<Pending | null>(null);
-  const [dossier, setDossier] = useState<DossierSnapshot | null>(null);
+  const [review, setReview] = useState<ReviewSnapshot | null>(null);
   const [selected, setSelected] = useState<Selection>("change");
   const [range, setRange] = useState<PendingRange>("incremental");
   const [tab, setTab] = useState<Tab>("diff");
@@ -417,7 +417,7 @@ export function App() {
   const diffRef = useRef<DiffViewHandle>(null);
 
   // One live loop for the whole tab: fetch the Change, the Pending preview (at
-  // the current range), and the dossier once, then re-fetch all three on every
+  // the current range), and the review once, then re-fetch all three on every
   // SSE change event — an agent editing the working tree pushes a coarse event
   // and Pending refreshes live (architecture.md §2). Re-runs when the range
   // toggles, which reloads Pending for the new range.
@@ -446,7 +446,7 @@ export function App() {
       }
     }
     // Best-effort read: on any failure keep the last good value until the next
-    // event, so a transient error never blanks the Pending preview or dossier.
+    // event, so a transient error never blanks the Pending preview or review.
     async function loadBestEffort<T>(
       url: string,
       decode: (value: unknown) => T,
@@ -465,19 +465,19 @@ export function App() {
       // oxlint-disable-next-line react-compiler
       return loadBestEffort(`/api/pending?range=${range}`, decodePending, setPending);
     }
-    function loadDossier() {
+    function loadReview() {
       // oxlint-disable-next-line react-compiler
-      return loadBestEffort("/api/dossier", decodeSnapshot, setDossier);
+      return loadBestEffort("/api/review", decodeSnapshot, setReview);
     }
     function refetchAll() {
       void loadChange();
       void loadPending();
-      void loadDossier();
+      void loadReview();
     }
     // oxlint-disable-next-line react-doctor/query-no-query-in-effect
     refetchAll();
     const events = new EventSource("/api/events");
-    events.addEventListener("dossier-changed", refetchAll);
+    events.addEventListener("review-changed", refetchAll);
     return () => {
       cancelled = true;
       events.close();
@@ -489,7 +489,7 @@ export function App() {
   // feeds both the panel's (drift × resolved) badges and the inline diff's
   // shifted re-anchoring.
   const drift = useDrift({
-    findings: dossier?.findings ?? NO_FINDINGS,
+    findings: review?.findings ?? NO_FINDINGS,
     patch: change.kind === "loaded" ? change.change.patch : "",
   });
 
@@ -516,15 +516,15 @@ export function App() {
 
   let body: React.ReactNode;
   if (tab === "walkthrough") {
-    body = <WalkthroughTab dossier={dossier} onOpenInDiff={openInDiff} patch={patch} />;
+    body = <WalkthroughTab review={review} onOpenInDiff={openInDiff} patch={patch} />;
   } else if (tab === "product") {
-    body = <ProductWalkthroughTab dossier={dossier} />;
+    body = <ProductWalkthroughTab review={review} />;
   } else {
     body = (
       <DiffTab
         change={change}
         diffRef={diffRef}
-        dossier={dossier}
+        review={review}
         drift={drift}
         onRange={setRange}
         onSelect={setSelected}
@@ -537,7 +537,7 @@ export function App() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
-      {dossier ? <DossierStatus dossier={dossier} /> : null}
+      {review ? <ReviewStatus review={review} /> : null}
       <TabBar onTab={setTab} tab={tab} />
       {body}
     </div>

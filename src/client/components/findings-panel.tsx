@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { FindingEntry } from "@shared/schemas/dossier";
+import type { FindingEntry } from "@shared/schemas/review";
 import type { DriftState } from "@shared/schemas/drift";
 import { changeHistoryLabel } from "@shared/lib/drift";
 import type { FindingWrite } from "@shared/schemas/finding-write";
@@ -16,7 +16,7 @@ import { DRIFT_SIGNAL, DriftPill } from "./drift-badge";
 import type { DriftResult } from "../lib/drift";
 import { FindingThread } from "./finding-thread";
 
-// The Dossier-global Findings panel (diff-review.md §7): a flat list of every
+// The Review-global Findings panel (diff-review.md §7): a flat list of every
 // Finding sorted by location, with a show-resolved toggle (off by default) and a
 // change-level composer. It is the home for triage and for detached Findings —
 // which have no line in the diff to pin to. Rows expand to a thread in place, so
@@ -38,7 +38,7 @@ const headerStyle: React.CSSProperties = {
   display: "flex",
   flexDirection: "column",
   gap: "0.5rem",
-  // Top padding clears the fixed DossierStatus pill (top-right, over every tab),
+  // Top padding clears the fixed ReviewStatus pill (top-right, over every tab),
   // so the panel's controls are never covered by it.
   padding: "2rem 0.75rem 0.5rem",
   position: "sticky",

@@ -19,7 +19,7 @@ import { Replayer } from "rrweb";
 import type { eventWithTime } from "rrweb";
 import { useEffect, useRef, useState } from "react";
 import "rrweb/dist/style.css";
-import type { ChangeRecord, FindingEntry, WalkthroughEntry } from "@shared/schemas/dossier";
+import type { ChangeRecord, FindingEntry, WalkthroughEntry } from "@shared/schemas/review";
 import type { DriftState } from "@shared/schemas/drift";
 import { foldFinding } from "@shared/lib/finding";
 import type { FoldedFinding } from "@shared/lib/finding";
@@ -314,7 +314,7 @@ function ScreenshotCapture({
           width: "100%",
         }}
       >
-        {/* A content-addressed capture blob served from the Dossier, not a
+        {/* A content-addressed capture blob served from the Review, not a
             build asset — a plain img is the right primitive here. */}
         {/* oxlint-disable-next-line react-doctor/nextjs-no-img-element */}
         <img

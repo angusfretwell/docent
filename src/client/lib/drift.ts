@@ -1,5 +1,5 @@
 /**
- * The client's drift layer: it turns the Dossier's Findings and the current
+ * The client's drift layer: it turns the Review's Findings and the current
  * Change's patch into a per-Finding drift read the panel and the inline diff
  * both consume (data-model.md §6). The synchronous fast paths (`planDrift`)
  * settle most Findings without touching the network; only a line anchor whose
@@ -16,7 +16,7 @@ import { processPatch } from "@pierre/diffs";
 import { useEffect, useState } from "react";
 import type { AnchorContext, DriftState } from "@shared/schemas/drift";
 import { excerptLines, planDrift, reanchorRange, splitLines } from "@shared/lib/drift";
-import type { FindingEntry } from "@shared/schemas/dossier";
+import type { FindingEntry } from "@shared/schemas/review";
 import type { Anchor } from "@shared/schemas/finding";
 import { foldFinding } from "@shared/lib/finding";
 import { fetchBlobText, isRealObjectId } from "./blobs";

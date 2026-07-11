@@ -25,7 +25,7 @@ export function worktreeUrl(path: string): string {
  * (walkthroughs.md §6). A screenshot's media sha resolves to `<sha>.png`, a
  * recording's to `<sha>.rrweb.json` — the extension the server keys its
  * content-type off. Served from the walkthrough's own `captures/` dir, not
- * `git cat-file`, since capture media is a gitignored Dossier file.
+ * `git cat-file`, since capture media is a gitignored Review file.
  */
 export function captureUrl(
   walkthroughId: string,

@@ -1,6 +1,6 @@
 /**
- * The Dossier store: the read path over `.docent/`. Resolves (auto-creating on
- * first use) the Dossier for a branch and walks its append-only record
+ * The Review store: the read path over `.docent/`. Resolves (auto-creating on
+ * first use) the Review for a branch and walks its append-only record
  * directories into a plain JSON snapshot the browser renders.
  *
  * The filesystem is the interface (data-model.md §1): docent is a renderer over
@@ -13,27 +13,27 @@ import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 import {
   ChangeRecord,
-  Dossier,
-  DossierSnapshot,
+  Review,
+  ReviewSnapshot,
   FindingEntry,
   ViewedEvent,
   WalkthroughEntry,
-} from "@shared/schemas/dossier";
-import type { ViewedRequest } from "@shared/schemas/dossier";
+} from "@shared/schemas/review";
+import type { ViewedRequest } from "@shared/schemas/review";
 import { FindingRecord, RECORD_TYPES } from "@shared/schemas/finding";
 import { Walkthrough, WalkthroughSection } from "@shared/schemas/walkthrough";
 
 const STATE_ROOT = ".docent";
 const GITIGNORE_ENTRY = `${STATE_ROOT}/`;
 
-/** Directory name for a branch's Dossier: the branch name, slashes → dashes. */
+/** Directory name for a branch's Review: the branch name, slashes → dashes. */
 export function branchSlug(branch: string): string {
   return branch.replaceAll("/", "-");
 }
 
-/** The absolute directory of a branch's Dossier under `<root>/.docent/`. */
-export function dossierDirPath(root: string, branch: string): string {
-  return `${root}/${STATE_ROOT}/dossiers/${branchSlug(branch)}`;
+/** The absolute directory of a branch's Review under `<root>/.docent/`. */
+export function reviewDirPath(root: string, branch: string): string {
+  return `${root}/${STATE_ROOT}/reviews/${branchSlug(branch)}`;
 }
 
 const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
@@ -88,39 +88,39 @@ export const listDir = Effect.fn("listDir")(function* listDir(dir: string) {
   return yield* fs.readDirectory(dir).pipe(Effect.orElseSucceed(() => []));
 });
 
-/** Read `dossier.json`, creating it (auto-create on first use) when absent. */
-export const ensureDossier = Effect.fn("ensureDossier")(function* ensureDossier(params: {
-  dossierDir: string;
+/** Read `review.json`, creating it (auto-create on first use) when absent. */
+export const ensureReview = Effect.fn("ensureReview")(function* ensureReview(params: {
+  reviewDir: string;
   branch: string;
   base: string;
 }) {
   const fs = yield* FileSystem;
   const path = yield* Path;
-  const file = path.join(params.dossierDir, "dossier.json");
+  const file = path.join(params.reviewDir, "review.json");
 
-  const existing = yield* readRecord(file, Dossier);
+  const existing = yield* readRecord(file, Review);
   if (Option.isSome(existing)) {
     return existing.value;
   }
 
-  const id = yield* makeId("dsr");
-  const dossier = Dossier.make({
+  const id = yield* makeId("rev");
+  const review = Review.make({
     base: params.base,
     branch: params.branch,
     id,
-    schema: "docent/dossier@3",
+    schema: "docent/review@4",
   });
-  yield* fs.makeDirectory(params.dossierDir, { recursive: true });
-  yield* fs.writeFileString(file, `${JSON.stringify(dossier, null, 2)}\n`);
-  return dossier;
+  yield* fs.makeDirectory(params.reviewDir, { recursive: true });
+  yield* fs.writeFileString(file, `${JSON.stringify(review, null, 2)}\n`);
+  return review;
 });
 
-/** Decode every `*.json` in `<dossierDir>/<sub>`, skipping records that fail. */
+/** Decode every `*.json` in `<reviewDir>/<sub>`, skipping records that fail. */
 const readJsonRecords = Effect.fn("readJsonRecords")(function* readJsonRecords<
   S extends Schema.Constraint,
->(dossierDir: string, sub: string, schema: S) {
+>(reviewDir: string, sub: string, schema: S) {
   const path = yield* Path;
-  const dir = path.join(dossierDir, sub);
+  const dir = path.join(reviewDir, sub);
   const names = (yield* listDir(dir)).filter((name) => name.endsWith(".json")).toSorted();
   const records = yield* Effect.forEach(names, (name) => readRecord(path.join(dir, name), schema), {
     concurrency: "unbounded",
@@ -217,9 +217,9 @@ const readFinding = Effect.fn("readFinding")(function* readFinding(dir: string, 
   return FindingEntry.make({ id, records: somes(parsed), ...anchor });
 });
 
-const readFindings = Effect.fn("readFindings")(function* readFindings(dossierDir: string) {
+const readFindings = Effect.fn("readFindings")(function* readFindings(reviewDir: string) {
   const path = yield* Path;
-  const dir = path.join(dossierDir, "findings");
+  const dir = path.join(reviewDir, "findings");
   const ids = (yield* listDir(dir)).filter((name) => name.startsWith("fnd_")).toSorted();
   return yield* Effect.forEach(ids, (id) => readFinding(dir, id), { concurrency: "unbounded" });
 });
@@ -284,10 +284,10 @@ const readWalkthroughKind = Effect.fn("readWalkthroughKind")(function* readWalkt
 });
 
 const readWalkthroughs = Effect.fn("readWalkthroughs")(function* readWalkthroughs(
-  dossierDir: string,
+  reviewDir: string,
 ) {
   const path = yield* Path;
-  const root = path.join(dossierDir, "walkthroughs");
+  const root = path.join(reviewDir, "walkthroughs");
   const entries = yield* Effect.forEach(
     ["code", "product"] as const,
     (kind) => readWalkthroughKind(root, kind),
@@ -297,34 +297,34 @@ const readWalkthroughs = Effect.fn("readWalkthroughs")(function* readWalkthrough
 });
 
 /**
- * Resolve the Dossier for `branch` under `root` (auto-creating it on first use)
+ * Resolve the Review for `branch` under `root` (auto-creating it on first use)
  * and walk its records into a snapshot. Uncached: the caller re-reads on every
  * request, and the client re-fetches on every SSE change event.
  */
-export const readDossierSnapshot = Effect.fn("readDossierSnapshot")(
-  function* readDossierSnapshot(params: { root: string; branch: string; base: string }) {
+export const readReviewSnapshot = Effect.fn("readReviewSnapshot")(
+  function* readReviewSnapshot(params: { root: string; branch: string; base: string }) {
     const path = yield* Path;
-    const dossierDir = path.join(params.root, STATE_ROOT, "dossiers", branchSlug(params.branch));
+    const reviewDir = path.join(params.root, STATE_ROOT, "reviews", branchSlug(params.branch));
 
-    const dossier = yield* ensureDossier({
+    const review = yield* ensureReview({
       base: params.base,
       branch: params.branch,
-      dossierDir,
+      reviewDir,
     });
     const [changes, findings, walkthroughs, viewed] = yield* Effect.all(
       [
-        readJsonRecords(dossierDir, "changes", ChangeRecord),
-        readFindings(dossierDir),
-        readWalkthroughs(dossierDir),
-        readJsonRecords(dossierDir, "viewed", ViewedEvent),
+        readJsonRecords(reviewDir, "changes", ChangeRecord),
+        readFindings(reviewDir),
+        readWalkthroughs(reviewDir),
+        readJsonRecords(reviewDir, "viewed", ViewedEvent),
       ],
       { concurrency: "unbounded" },
     );
 
-    return DossierSnapshot.make({
+    return ReviewSnapshot.make({
       changes,
-      dossier,
       findings,
+      review,
       viewed,
       walkthroughs,
     });
@@ -332,10 +332,10 @@ export const readDossierSnapshot = Effect.fn("readDossierSnapshot")(
 );
 
 /**
- * Append one mark-as-viewed event to the Dossier's `viewed/` directory
+ * Append one mark-as-viewed event to the Review's `viewed/` directory
  * (data-model.md §8). Directory-of-files, append-only: every toggle is a new
  * `vew_*.json`, never a rewrite — so there is no lock and no read-modify-write.
- * The server stamps `ts`; the Dossier auto-creates on first use so the very
+ * The server stamps `ts`; the Review auto-creates on first use so the very
  * first mark has a home. The write trips the `.docent/` watch, which re-pushes
  * the snapshot over SSE — the client's viewed state and progress refresh live.
  */
@@ -348,10 +348,10 @@ export const appendViewedEvent = Effect.fn("appendViewedEvent")(
   }) {
     const fs = yield* FileSystem;
     const path = yield* Path;
-    const dossierDir = path.join(params.root, STATE_ROOT, "dossiers", branchSlug(params.branch));
-    yield* ensureDossier({ base: params.base, branch: params.branch, dossierDir });
+    const reviewDir = path.join(params.root, STATE_ROOT, "reviews", branchSlug(params.branch));
+    yield* ensureReview({ base: params.base, branch: params.branch, reviewDir });
 
-    const viewedDir = path.join(dossierDir, "viewed");
+    const viewedDir = path.join(reviewDir, "viewed");
     yield* fs.makeDirectory(viewedDir, { recursive: true });
 
     const now = yield* Clock.currentTimeMillis;
