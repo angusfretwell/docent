@@ -232,6 +232,26 @@ describe("resolvePending", () => {
     expect(result.patch).not.toContain("ignored.txt");
   });
 
+  test("renders an untracked binary file as a no-preview add", async () => {
+    const repo = repoWithOneCommit();
+    // A NUL byte makes git classify the file as binary, so the add is emitted
+    // as the "Binary files differ" marker — the same no-preview presentation as
+    // a tracked binary change — rather than a textual hunk. `git diff
+    // --no-index` exits 1 on this ("files differ"), which must not read as a
+    // failure and 500 the whole Pending view.
+    const bytes = new Uint8Array([
+      0x00, 0xff, 0x0a, 0x42, 0x89, 0x50, 0x4e, 0x47,
+    ]);
+    writeFileSync(path.join(repo, "asset.bin"), bytes);
+
+    const result = await pending(repo);
+
+    expect(result.dirty).toBe(true);
+    expect(result.patch).toContain("asset.bin");
+    expect(result.patch).toContain("new file mode");
+    expect(result.patch).toContain("Binary files");
+  });
+
   test("incremental empties the moment HEAD moves (commit hides Pending)", async () => {
     const repo = repoWithOneCommit();
     writeFileSync(path.join(repo, "hello.txt"), "hello\nedit\n");
