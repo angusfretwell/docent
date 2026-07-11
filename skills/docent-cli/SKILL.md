@@ -1,6 +1,6 @@
 ---
 name: docent-cli
-description: Reference for the `docent` binary's non-`serve` subcommands — the `docent finding` review-loop primitives and the `docent walkthrough` / `docent capture` write path. Use when a skill (`/to-docent`, `/address`, `/author-code-walkthrough`, `/author-product-walkthrough`, `/capture-product-walkthrough`) or a power user needs to read or write Findings, walkthroughs, or captures in `.docent/` from the command line.
+description: Reference for the `docent` binary's non-`serve` subcommands — the `docent finding` review-loop primitives and the `docent walkthrough` / `docent capture` write path. Use when a skill (`/to-docent`, `/from-docent`, `/author-code-walkthrough`, `/author-product-walkthrough`, `/capture-product-walkthrough`) or a power user needs to read or write Findings, walkthroughs, or captures in `.docent/` from the command line.
 ---
 
 # docent-cli
