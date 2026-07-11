@@ -1,12 +1,12 @@
 # Docent
 
-An interactive, local-first tool for reviewing code changes — especially agent-authored ones — on local git branches. This glossary is the ubiquitous language; the Change / Dossier model is pinned by [#3](https://github.com/angusfretwell/docent/issues/3) as amended by [#24](https://github.com/angusfretwell/docent/issues/24), which hold its schemas.
+An interactive, local-first tool for reviewing code changes — especially agent-authored ones — on local git branches. This glossary is the ubiquitous language; the Change / Review model is pinned by [#3](https://github.com/angusfretwell/docent/issues/3) as amended by [#24](https://github.com/angusfretwell/docent/issues/24) and [#61](https://github.com/angusfretwell/docent/issues/61), which hold its schemas.
 
 ## Language
 
-**Dossier**:
-The durable per-branch file of record — everything docent holds about one branch under review: its append-only history of Changes, its Findings, and its Walkthroughs. Identified by its branch name (one Dossier per branch), with the base ref recorded at creation; created automatically on first use.
-_Avoid_: Review (names the act, as in the `/review` skill, never the artifact), Session, Workspace
+**Review**:
+The durable per-branch file of record — everything docent holds about one branch under review: its append-only history of Changes, its Findings, and its Walkthroughs. Identified by its branch name (one Review per branch), with the base ref recorded at creation; created automatically on first use. Names the artifact; the act is a "review pass". Renamed from Dossier by [#61](https://github.com/angusfretwell/docent/issues/61), accepting the act/artifact overlap that [#24](https://github.com/angusfretwell/docent/issues/24) had renamed away.
+_Avoid_: Dossier (the pre-#61 name), Tour, Session, Workspace
 
 **Change**:
 An immutable snapshot of a diff, identified by its resolved `(baseSha, headSha)` with `base` at the merge-base. Minted lazily on first reference — when a Finding, Walkthrough, or review pass must refer to the branch's current head — and never edited in place; the diff itself always renders live from git.
@@ -21,7 +21,7 @@ A Finding anchor's standing against the newest Change, given it was born on an e
 _Avoid_: Staleness
 
 **Walkthrough**:
-A curated, ordered tour of a Change authored for a reader — prose woven through selected diff ranges (code) or captures (product). Durable and bound to the Change it was born on; drifts as later Changes are minted, and is superseded (not mutated) by regeneration. Held by a Dossier; the code walkthrough model is pinned by [#14](https://github.com/angusfretwell/docent/issues/14).
+A curated, ordered tour of a Change authored for a reader — prose woven through selected diff ranges (code) or captures (product). Durable and bound to the Change it was born on; drifts as later Changes are minted, and is superseded (not mutated) by regeneration. Held by a Review; the code walkthrough model is pinned by [#14](https://github.com/angusfretwell/docent/issues/14).
 _Avoid_: Tour, Guide, Narrative
 
 **Section**:
@@ -29,7 +29,7 @@ One step of a Walkthrough: a titled unit of prose interleaved with its targets �
 _Avoid_: Step, Slide
 
 **Finding**:
-A single review conversation: an anchored, append-only thread of comments held by a Dossier, authored by any actor — reviewing, fixing, and resolving are roles, not actors, so attribution is metadata, never permission. Open or resolved, plus, while open, a _what's-next_ read off the latest reply's Disposition — actor-blind. Anchors and records are pinned by [#7](https://github.com/angusfretwell/docent/issues/7); the queue convention by [#18](https://github.com/angusfretwell/docent/issues/18).
+A single review conversation: an anchored, append-only thread of comments held by a Review, authored by any actor — reviewing, fixing, and resolving are roles, not actors, so attribution is metadata, never permission. Open or resolved, plus, while open, a _what's-next_ read off the latest reply's Disposition — actor-blind. Anchors and records are pinned by [#7](https://github.com/angusfretwell/docent/issues/7); the queue convention by [#18](https://github.com/angusfretwell/docent/issues/18).
 _Avoid_: Comment, Thread (as entity names — plain-English inside a Finding), Issue, Ticket, Note
 
 **Disposition**:
