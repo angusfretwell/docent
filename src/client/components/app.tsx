@@ -26,6 +26,7 @@ import type { DiffViewHandle } from "./diff-view";
 import { DiffView } from "./diff-view";
 import { FindingsPanel } from "./findings-panel";
 import { ProductWalkthroughView } from "./product-walkthrough-view";
+import type { OpenInDiff } from "./walkthrough-view";
 import { WalkthroughView } from "./walkthrough-view";
 
 // Append a Finding record. The write lands a file in `.docent/`, which trips the
@@ -396,12 +397,7 @@ function WalkthroughTab({
 }: {
   review: ReviewSnapshot | null;
   patch: string;
-  onOpenInDiff: (
-    file: string,
-    line: number,
-    side: "base" | "head",
-    order?: readonly string[]
-  ) => void;
+  onOpenInDiff: OpenInDiff;
 }) {
   const walkthrough = latestCodeWalkthrough(review?.walkthroughs ?? []);
   if (!(walkthrough && review)) {
@@ -545,6 +541,9 @@ export function App() {
   // DiffView's imperative handle is live, given a frame for the renderer to lay
   // out, and clears the one-shot request. When Diff is already active the tab set
   // is a no-op and the same effect still scrolls.
+  // The OpenInDiff seam's implementation. `func-style` requires a declaration
+  // here, so this one site spells the signature out; every consuming prop wears
+  // the OpenInDiff alias, so widening the seam no longer edits them in lockstep.
   function openInDiff(
     file: string,
     line: number,

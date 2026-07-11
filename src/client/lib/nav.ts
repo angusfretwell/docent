@@ -8,6 +8,7 @@
 
 import type { ChangeTypes, FileDiffMetadata } from "@pierre/diffs";
 import { processPatch } from "@pierre/diffs";
+import { fork } from "radashi";
 
 /** VS Code-style single-letter change badge. */
 export type ChangeType = "A" | "M" | "D" | "R";
@@ -146,11 +147,7 @@ export function orderByFiles(
     }
   }
 
-  const listed: FileEntry[] = [];
-  const rest: FileEntry[] = [];
-  for (const entry of entries) {
-    (rankByPath.has(entry.path) ? listed : rest).push(entry);
-  }
+  const [listed, rest] = fork(entries, (entry) => rankByPath.has(entry.path));
 
   listed.sort(
     (a, b) => (rankByPath.get(a.path) ?? 0) - (rankByPath.get(b.path) ?? 0)

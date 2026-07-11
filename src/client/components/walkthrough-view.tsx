@@ -41,6 +41,18 @@ import type { DriftResult } from "../lib/drift";
 import { useRangeDrift } from "../lib/walkthrough-drift";
 import type { KeyedRange } from "../lib/walkthrough-drift";
 
+/**
+ * Deep-link into the Diff tab at a file/line/side. The optional fourth argument
+ * carries the tour's file sequence, reordering the Diff surface into walkthrough
+ * order rather than merely jumping to the first range (walkthroughs.md §1).
+ */
+export type OpenInDiff = (
+  file: string,
+  line: number,
+  side: "base" | "head",
+  order?: readonly string[]
+) => void;
+
 /** A stable key for a section's range, so drift and rendering agree. */
 function rangeKey(sectionId: string, index: number): string {
   return `${sectionId}#${index}`;
@@ -227,7 +239,7 @@ function RangeCode({
   range: WalkthroughRange;
   drift: DriftResult | undefined;
   findings: readonly FoldedFinding[];
-  onOpenInDiff: (file: string, line: number, side: "base" | "head") => void;
+  onOpenInDiff: OpenInDiff;
 }) {
   const [text, setText] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
@@ -307,7 +319,7 @@ function Section({
   drift: ReadonlyMap<string, DriftResult>;
   narrative: readonly FoldedFinding[];
   code: readonly FoldedFinding[];
-  onOpenInDiff: (file: string, line: number, side: "base" | "head") => void;
+  onOpenInDiff: OpenInDiff;
 }) {
   const ranges = section.ranges ?? [];
   const rollup = rollupDrift(
@@ -487,12 +499,7 @@ export function WalkthroughView({
   changes: readonly ChangeRecord[];
   findings: readonly FindingEntry[];
   patch: string;
-  onOpenInDiff: (
-    file: string,
-    line: number,
-    side: "base" | "head",
-    order?: readonly string[]
-  ) => void;
+  onOpenInDiff: OpenInDiff;
 }) {
   const { sections } = walkthrough;
 
