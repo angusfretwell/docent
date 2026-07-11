@@ -6,7 +6,7 @@
     "build": "bun scripts/bundle-worker.ts",
     "compile": "bun run build && bun build --compile --outfile dist/docent bin.ts",
     "serve": "bun run build && bun bin.ts",
-    "dev": "bun run build && bun --watch dev.ts",
+    "dev": "bun scripts/dev.ts",
     "fixture": "bun scripts/fixture.ts",
     "typecheck": "tsc --noEmit",
     "fix": "ultracite fix",

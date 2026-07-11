@@ -3,8 +3,10 @@
 /**
  * The `docent` dev entry: one `bun --watch dev.ts` process serving the client
  * (HMR + browser-console forwarding via `development`) and the Effect `/api/*`
- * routes on one fixed port, against the current working directory. Run via
- * `bun run dev`, which pre-bundles the worker first.
+ * routes on one fixed port, against the current working directory. Not run
+ * directly: the `scripts/dev.ts` runner behind `bun run dev` ensures the worker
+ * bundle, materializes the fixture, and execs `bun --watch` on this file with
+ * its cwd set to the target repo (the fixture by default).
  *
  * `bun --watch` restarts the process on server-code edits; `development.hmr`
  * hot-reloads client edits without a restart. The port is fixed (not the prod
