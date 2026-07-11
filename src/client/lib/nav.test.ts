@@ -5,6 +5,7 @@ import {
   changeAnchors,
   filterEntries,
   flattenFiles,
+  orderByFiles,
   parseFiles,
   sortEntries,
   stepChange,
@@ -107,6 +108,32 @@ describe("sortEntries", () => {
       "src/new.ts",
       "src/app.ts",
     ]);
+  });
+});
+
+describe("orderByFiles", () => {
+  const entries = parseFiles(MODIFY + ADD + DELETE);
+
+  test("listed files lead in list order, the rest trail in path order", () => {
+    expect(
+      orderByFiles(entries, ["src/new.ts", "old.ts"]).map((f) => f.path)
+    ).toEqual(["src/new.ts", "old.ts", "src/app.ts"]);
+  });
+
+  test("a listed path the Change no longer contains is skipped", () => {
+    expect(
+      orderByFiles(entries, ["does/not/exist.ts", "src/app.ts"]).map(
+        (f) => f.path
+      )
+    ).toEqual(["src/app.ts", "old.ts", "src/new.ts"]);
+  });
+
+  test("a duplicated path collapses to its first appearance", () => {
+    expect(
+      orderByFiles(entries, ["src/app.ts", "src/app.ts", "old.ts"]).map(
+        (f) => f.path
+      )
+    ).toEqual(["src/app.ts", "old.ts", "src/new.ts"]);
   });
 });
 
