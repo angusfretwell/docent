@@ -1,19 +1,19 @@
 /**
- * The `docent serve` app shell: a Bun-native local server that serves the built
- * browser UI, the live branch diff (`GET /api/diff`), raw git blobs for context
- * expansion (`GET /api/blob/:sha`), the active Review snapshot
- * (`GET /api/review`), and the SSE live-reload stream (`GET /api/events`) fed
- * by a `.docent/` watch. Exposed as an Effect `Layer`; runtime boundaries
- * (bin.ts, tests) build it and keep it alive for the server's lifetime.
+ * The `docent serve` API surface: the Effect routes behind the local server —
+ * the live branch diff (`GET /api/diff`), raw git blobs for context expansion
+ * (`GET /api/blob/:sha`), the active Review snapshot (`GET /api/review`), the
+ * append-write endpoints (`POST /api/viewed`, `POST /api/findings`), and the
+ * SSE live-reload stream (`GET /api/events`) fed by a `.docent/` watch.
  *
- * The UI is served from an in-memory `ClientAssets` map, not an on-disk root,
- * so the identical code path serves the `dist/client/` build in dev and the
- * assets embedded into the compiled binary (docs/spec/architecture.md §5).
+ * The browser UI itself is served by Bun's fullstack bundler at the entry
+ * points (`bin.ts`, `dev.ts`), not by these routes: Bun's HTML-bundle route
+ * owns `/` and the client assets, while these routes run one level down behind
+ * `HttpRouter.toWebHandler` and see only the `/api/*` requests Bun falls
+ * through. `webHandler` builds that handler with the watch and Bun services
+ * merged in, so the entry points and the serve tests share one wiring.
  */
 
-import { BunHttpServer } from "@effect/platform-bun";
-import { lookupAsset } from "@shared/lib/assets";
-import type { ClientAssets } from "@shared/lib/assets";
+import { BunServices } from "@effect/platform-bun";
 import { FindingWrite } from "@shared/schemas/finding-write";
 import type { PendingRange } from "@shared/schemas/pending";
 import { ViewedRequest } from "@shared/schemas/review";
@@ -22,7 +22,6 @@ import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 import {
   HttpRouter,
-  HttpServer,
   HttpServerRequest,
   HttpServerResponse,
 } from "effect/unstable/http";
@@ -46,18 +45,9 @@ import {
 import { DocentWatch, layer as watchLayer } from "./watch";
 
 export interface ServeOptions {
-  /** Built browser UI, keyed by request path (dev disk or embedded binary). */
-  assets: ClientAssets;
   /** Directory to resolve the git repo from (any path inside the repo). */
   cwd: string;
 }
-
-/** The running server's base URL (with trailing slash), e.g. for printing. */
-export const serverUrl: Effect.Effect<string, never, HttpServer.HttpServer> =
-  Effect.map(
-    Effect.service(HttpServer.HttpServer),
-    (server) => new URL(HttpServer.formatAddress(server.address)).href
-  );
 
 function diffRoute(cwd: string) {
   return HttpRouter.add(
@@ -313,30 +303,6 @@ function worktreeRoute(cwd: string) {
 }
 
 /**
- * Serve the built UI from the in-memory asset map. A `*` wildcard falls in
- * behind the explicit `/api/*` routes, so it only sees UI requests. Unmapped
- * paths 404 — which also closes off path traversal, since only keys that were
- * put in the map can ever be served.
- */
-function assetRoute(assets: ClientAssets) {
-  return HttpRouter.add("GET", "*", (request) =>
-    Effect.gen(function* serveAsset() {
-      const { pathname } = new URL(request.url, REQUEST_URL_BASE);
-      const asset = lookupAsset(assets, pathname);
-      if (asset === undefined) {
-        return HttpServerResponse.empty({ status: 404 });
-      }
-      const bytes = yield* Effect.promise(() =>
-        Bun.file(asset.filePath).bytes()
-      );
-      return HttpServerResponse.uint8Array(bytes, {
-        contentType: asset.contentType,
-      });
-    })
-  );
-}
-
-/**
  * `GET /api/review` — the JSON snapshot of the active Review (the one for the
  * checked-out branch), walked live off `.docent/` on every request (uncached).
  * The Review auto-creates on first use; the branch/base come from git.
@@ -493,11 +459,13 @@ const eventsRoute = HttpRouter.add(
 );
 
 /**
- * The full server as a layer: building it binds the port and serves until the
- * layer's scope closes. Exposes `HttpServer` so callers can read `serverUrl`.
+ * Every `/api/*` route as one layer — the app behind the entry points' web
+ * handler and driven directly by the serve tests. The browser UI is not here:
+ * Bun's HTML-bundle route serves it at the entry level, and these routes see
+ * only the requests Bun falls through to `fetch`.
  */
-export function layer(options: ServeOptions) {
-  const routes = Layer.mergeAll(
+export function routes(options: ServeOptions) {
+  return Layer.mergeAll(
     diffRoute(options.cwd),
     blobSizeRoute(options.cwd),
     blobRoute(options.cwd),
@@ -507,22 +475,28 @@ export function layer(options: ServeOptions) {
     reviewRoute(options.cwd),
     viewedRoute(options.cwd),
     findingsRoute(options.cwd),
-    eventsRoute,
-    assetRoute(options.assets)
+    eventsRoute
   );
-  return HttpRouter.serve(routes, {
-    disableListenLog: true,
-    disableLogger: true,
-  }).pipe(
-    // The SSE route reads the `.docent/` watch; the watch reads git + fs, which
-    // BunHttpServer's BunServices supply below.
-    Layer.provide(watchLayer(options.cwd)),
-    Layer.provideMerge(
-      // Loopback only, IPv4: `127.0.0.1` (not `localhost`) so the printed URL
-      // is reachable on hosts where `localhost` resolves to IPv6-only.
-      // Port 0: the OS picks an ephemeral port; read it back via `serverUrl`.
-      // idleTimeout 0: never drop the long-lived SSE connection for being idle.
-      BunHttpServer.layer({ hostname: "127.0.0.1", idleTimeout: 0, port: 0 })
-    )
+}
+
+/**
+ * Build the `request → Promise<Response>` handler the entry points hand to
+ * `Bun.serve`'s `fetch` and the serve tests call directly. Effect lives one
+ * level down here (the entry points are plain Bun) because Effect's Bun server
+ * swaps handlers via `server.reload`, which wipes Bun's HTML-bundle `routes`
+ * table (@see docs/adr — Vite→Bun-fullstack move).
+ *
+ * The watch and Bun-services layers are `provideMerge`d, not `provide`d: the
+ * route handlers read `FileSystem` / `Path` / the git spawner and the
+ * `.docent/` watch per request, so those services must stay in the handler's
+ * output context (`toWebHandler` excludes what a plain `provide` hides).
+ */
+export function webHandler(options: ServeOptions) {
+  return HttpRouter.toWebHandler(
+    routes(options).pipe(
+      Layer.provideMerge(watchLayer(options.cwd)),
+      Layer.provideMerge(BunServices.layer)
+    ),
+    { disableLogger: true }
   );
 }

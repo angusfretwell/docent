@@ -1,31 +1,37 @@
 /**
- * The `docent` entry logic, parameterised by the built client assets so the
- * compile entry (`bin.ts`) can hand it either the on-disk dev build or the
- * assets embedded into the `bun build --compile` binary
- * (docs/spec/architecture.md §5).
+ * The `docent` entry logic, parameterised by the bundled client so the two
+ * entry points hand it what Bun's fullstack bundler produced: `bin.ts` (the
+ * `bun build --compile` target, `development: false`) and `dev.ts` (the
+ * `bun --watch` dev entry, HMR on). Both import the client's `index.html` and
+ * the pre-bundled diff worker and pass them in here.
  *
- * `docent serve` — the default when no subcommand is given — boots the local
- * server for the repo containing the current directory, prints the URL, and
- * opens the browser. Non-serve subcommands route through this same binary.
+ * `docent serve` — the default when no subcommand is given — boots one plain
+ * `Bun.serve` process for the repo containing the current directory: Bun's
+ * HTML-bundle route serves the UI, the pre-bundled worker is served at
+ * `/diff-worker.js`, and the Effect `/api/*` routes run one level down behind
+ * `webHandler`'s `fetch`. Non-serve subcommands route through this same binary.
  */
 
 import { BunRuntime, BunServices } from "@effect/platform-bun";
-import { Console, Effect, Schema } from "effect";
+import type { HTMLBundle } from "bun";
+import { Console, Effect } from "effect";
 import open from "open";
 
-import type { ClientAssets } from "../shared/lib/assets";
 import { runFinding } from "./cli/index";
 import { runCapture, runWalkthrough } from "./cli/walkthrough";
-import { layer as serveLayer, serverUrl } from "./lib/serve";
+import { webHandler } from "./lib/serve";
 import { resolveChange } from "./services/git";
 
-class ClientAssetsMissing extends Schema.TaggedErrorClass<ClientAssetsMissing>()(
-  "ClientAssetsMissing",
-  {}
-) {
-  override get message(): string {
-    return "client assets not embedded — run `bun run build` first";
-  }
+/** What an entry point hands `runMain`: the bundled client and dev/prod knobs. */
+export interface EntryOptions {
+  /** `Bun.serve` development mode: `false` in the compiled binary, HMR in dev. */
+  development: boolean | { console?: boolean; hmr?: boolean };
+  /** The client bundle (`import index from "./src/client/index.html"`). */
+  index: HTMLBundle;
+  /** TCP port; `0` lets the OS pick (prod), a fixed port survives dev reloads. */
+  port: number;
+  /** `Bun.file` path to the pre-bundled diff worker (disk in dev, embedded in prod). */
+  workerBundle: string;
 }
 
 // Best-effort browser open, only for interactive runs — piped/headless
@@ -36,16 +42,45 @@ const openBrowser = Effect.fn("openBrowser")(
   (effect) => Effect.ignore(effect)
 );
 
-function serve(assets: ClientAssets) {
-  return Effect.gen(function* serveApp() {
-    if (assets.size === 0) {
-      return yield* Effect.fail(ClientAssetsMissing.make({}));
-    }
+/**
+ * Boot the fullstack server: Bun's HTML-bundle route serves the client, the
+ * pre-bundled diff worker is served at `/diff-worker.js`, and the Effect
+ * `/api/*` handler is the `fetch` fallback for everything Bun doesn't match.
+ */
+function serve(entry: EntryOptions) {
+  const cwd = process.cwd();
 
-    // Fail fast (and get the log line) before announcing the server; requests
-    // still re-resolve the diff live from git on every load.
-    const change = yield* resolveChange(process.cwd());
-    const url = yield* serverUrl;
+  return Effect.gen(function* serveApp() {
+    // Fail fast (and get the log line) before binding the port; requests still
+    // re-resolve the diff live from git on every load.
+    const change = yield* resolveChange(cwd);
+
+    // Built once; `Bun.serve` calls `fetch(request, server)`, but the Effect
+    // handler reads only the request, so wrap it to drop Bun's second argument.
+    const { handler } = webHandler({ cwd });
+
+    const server = yield* Effect.sync(() =>
+      Bun.serve({
+        development: entry.development,
+        fetch: (request) => handler(request),
+        // Loopback only, IPv4: `127.0.0.1` (not `localhost`) so the printed URL
+        // is reachable on hosts where `localhost` resolves to IPv6-only.
+        hostname: "127.0.0.1",
+        // Never drop the long-lived SSE connection (`/api/events`) for being idle.
+        idleTimeout: 0,
+        port: entry.port,
+        routes: {
+          "/": entry.index,
+          // The pre-bundled diff worker (scripts/bundle-worker.ts); the client's
+          // `workerFactory` in code-view.ts loads it from this exact path.
+          "/diff-worker.js": () =>
+            new Response(Bun.file(entry.workerBundle), {
+              headers: { "content-type": "text/javascript; charset=utf-8" },
+            }),
+        },
+      })
+    );
+    const url = server.url.href;
 
     yield* Console.log(
       `docent  ·  ${change.branch} → ${change.defaultBranch} @ ${change.root}`
@@ -56,9 +91,9 @@ function serve(assets: ClientAssets) {
       yield* openBrowser(url);
     }
 
-    // Serve until interrupted (Ctrl+C); the layer's scope stops the server.
+    // Serve until interrupted (Ctrl+C); Bun keeps the server alive meanwhile.
     return yield* Effect.never;
-  }).pipe(Effect.provide(serveLayer({ assets, cwd: process.cwd() })));
+  }).pipe(Effect.provide(BunServices.layer));
 }
 
 // Print the error message and exit non-zero — the shared failure tail for every
@@ -92,7 +127,7 @@ function runCli<E>(
  * (`finding`, `walkthrough`, `capture`) are the CLI write path. Every subcommand
  * is served by this one binary (architecture.md §5).
  */
-export function runMain(assets: ClientAssets): void {
+export function runMain(entry: EntryOptions): void {
   const subcommand = process.argv[2] ?? "serve";
   const argv = process.argv.slice(3);
 
@@ -116,5 +151,5 @@ export function runMain(assets: ClientAssets): void {
     process.exit(1);
   }
 
-  BunRuntime.runMain(serve(assets).pipe(Effect.catch(crash)));
+  BunRuntime.runMain(serve(entry).pipe(Effect.catch(crash)));
 }

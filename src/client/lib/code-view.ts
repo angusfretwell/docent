@@ -15,10 +15,9 @@ export const themes = { dark: "github-dark", light: "github-light" } as const;
  * worker-off scroll at p95 225 ms with 15 long frames vs. zero with the pool on.
  */
 export function workerFactory() {
-  return new Worker(
-    new URL("@pierre/diffs/worker/worker.js", import.meta.url),
-    {
-      type: "module",
-    }
-  );
+  // Bun's fullstack bundler can't bundle a browser Web Worker referenced by
+  // `new Worker(new URL(…, import.meta.url))` (oven-sh/bun#29478), so the worker
+  // is pre-bundled (scripts/bundle-worker.ts) and served at this fixed route by
+  // the server (see the `/diff-worker.js` route in src/server/main.ts).
+  return new Worker("/diff-worker.js", { type: "module" });
 }
