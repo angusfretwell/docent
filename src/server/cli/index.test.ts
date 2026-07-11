@@ -12,10 +12,12 @@ import {
   applyFindingFilter,
   buildAuthor,
   CliUsageError,
+  editFinding,
   listFindings,
   parseAnchorSpec,
   parseArgs,
   parseListArgs,
+  reopenFinding,
   replyFinding,
   resolveFinding,
   runFinding,
@@ -360,6 +362,81 @@ describe("write + fetch round-trip (shared write path)", () => {
     expect(onFile).toHaveLength(1);
     expect(byReviewer).toHaveLength(1);
     expect(closed).toHaveLength(1);
+  });
+
+  test("reopen returns a resolved finding to open", async () => {
+    const repo = featureRepo();
+    const { findingId } = await run(
+      addFinding(repo, {
+        anchor: { kind: "change" },
+        author: {},
+        body: "flagged",
+      })
+    );
+    await run(resolveFinding(repo, { author: {}, findingId }));
+
+    await run(reopenFinding(repo, { author: {}, findingId }));
+
+    const findings = await run(listFindings(repo, { whatsNext: [] }));
+    const reopened = findings.find((finding) => finding.id === findingId);
+    expect(reopened?.resolved).toBe(false);
+    expect(reopened?.whatsNext).toBe("needs-action");
+  });
+
+  test("edit supersedes the named record's body", async () => {
+    const repo = featureRepo();
+    const { findingId, record } = await run(
+      addFinding(repo, {
+        anchor: { kind: "change" },
+        author: {},
+        body: "the flush races",
+      })
+    );
+
+    await run(
+      editFinding(repo, {
+        author: {},
+        body: "the flush races the drain",
+        edits: record,
+        findingId,
+      })
+    );
+
+    const findings = await run(listFindings(repo, { whatsNext: [] }));
+    const edited = findings.find((finding) => finding.id === findingId);
+    expect(edited?.body).toBe("the flush races the drain");
+  });
+
+  test("edit dispatched through argv requires --finding and --record", async () => {
+    const repo = featureRepo();
+    const { findingId, record } = await run(
+      addFinding(repo, {
+        anchor: { kind: "change" },
+        author: {},
+        body: "original",
+      })
+    );
+
+    await run(
+      runFinding(repo, [
+        "edit",
+        "--finding",
+        findingId,
+        "--record",
+        record,
+        "--body",
+        "revised",
+      ])
+    );
+    const missingRecord = await runtime.runPromiseExit(
+      runFinding(repo, ["edit", "--finding", findingId, "--body", "x"])
+    );
+
+    const findings = await run(listFindings(repo, { whatsNext: [] }));
+    expect(findings.find((finding) => finding.id === findingId)?.body).toBe(
+      "revised"
+    );
+    expect(missingRecord._tag).toBe("Failure");
   });
 
   test("reply with a missing or empty --finding is a usage error (never a stray write)", async () => {
