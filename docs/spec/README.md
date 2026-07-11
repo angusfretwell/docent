@@ -6,7 +6,7 @@ This directory is the build-ready spec: every cross-cutting decision is resolved
 
 ## Shape of the product
 
-- **Solo, local-first.** No backend, auth, or sync. All review state persists as plain, self-describing files under `.docent/` in the repo (gitignored). The filesystem is the interface: agents read and write the files directly; docent renders and optionally validates, but never gates.
+- **Solo, local-first.** No backend, auth, or sync. All review state persists as plain, self-describing files under `.docent/` in the repo, machine-local via a committed `.docent/.gitignore` (only the capture runbook and the policy travel with the repo). The filesystem is the interface: agents read and write the files directly; docent renders and optionally validates, but never gates.
 - **Local-branch-centric.** v1's sole input is a local git branch checked out in the repo. There is no GitHub integration — no PR input, no API reads. (A PR returns later as additive _provenance_ on a Change, never identity.)
 - **docent is inert.** The human drives their agent in their own session (e.g. Claude Code); docent is a renderer over the shared `.docent/` filesystem, never an agent runtime. It ships skills, renders live, and lets the human write Findings the agent then reads.
 

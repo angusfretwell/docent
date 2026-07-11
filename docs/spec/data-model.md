@@ -67,7 +67,7 @@ Layout pinned by [#24](https://github.com/angusfretwell/docent/issues/24) (super
 
 ## 3. Review
 
-The **Review** is the durable per-branch file of record — everything docent holds about one branch under review: its append-only history of Changes, its Findings, and its Walkthroughs. Review names the artifact; the act is a "review pass" ([#61](https://github.com/angusfretwell/docent/issues/61), accepting the act/artifact overlap that [#24](https://github.com/angusfretwell/docent/issues/24) had renamed away).
+The **Review** is the per-branch, machine-local file of record — everything docent holds about one branch under review: its append-only history of Changes, its Findings, and its Walkthroughs. Its durability is per-machine (§1): the records are working state that does not survive a clone. Review names the artifact; the act is a "review pass" ([#61](https://github.com/angusfretwell/docent/issues/61), accepting the act/artifact overlap that [#24](https://github.com/angusfretwell/docent/issues/24) had renamed away).
 
 - **Identity = branch name.** One Review per branch. The directory name is the branch-name slug (slashes → dashes); the `branch` field holds the real name.
 - **Base ref recorded at creation** — default: the repo's default branch.
