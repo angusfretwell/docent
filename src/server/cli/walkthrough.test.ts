@@ -1,8 +1,12 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, writeFileSync } from "node:fs";
 import path from "node:path";
+
 import { BunServices } from "@effect/platform-bun";
 import { ManagedRuntime } from "effect";
+
+import { cleanupScratchDirs, git, scratchRepo } from "../lib/test-fixtures";
+import { readReviewSnapshot } from "../services/review";
 import { CliUsageError } from "./index";
 import {
   parseDimensions,
@@ -11,8 +15,6 @@ import {
   runCapture,
   runWalkthrough,
 } from "./walkthrough";
-import { readReviewSnapshot } from "../services/review";
-import { cleanupScratchDirs, git, scratchRepo } from "../lib/test-fixtures";
 
 const runtime = ManagedRuntime.make(BunServices.layer);
 const run = runtime.runPromise;
@@ -26,7 +28,10 @@ afterAll(async () => {
 function featureRepo(): string {
   const dir = scratchRepo("docent-wlk-cli-");
   git(dir, "checkout", "-b", "feature");
-  writeFileSync(path.join(dir, "feature.ts"), "export const x = 1;\nexport const y = 2;\n");
+  writeFileSync(
+    path.join(dir, "feature.ts"),
+    "export const x = 1;\nexport const y = 2;\n"
+  );
   git(dir, "add", ".");
   git(dir, "commit", "-m", "add feature");
   return dir;
@@ -72,7 +77,9 @@ describe("parseRangeSpec", () => {
   test("a missing line span or bad side is a usage error", () => {
     expect(() => parseRangeSpec("src/index.ts")).toThrow(CliUsageError);
     expect(() => parseRangeSpec("src/index.ts:nope")).toThrow(CliUsageError);
-    expect(() => parseRangeSpec("src/index.ts:1@sideways")).toThrow(CliUsageError);
+    expect(() => parseRangeSpec("src/index.ts:1@sideways")).toThrow(
+      CliUsageError
+    );
   });
 });
 
@@ -103,7 +110,9 @@ describe("runWalkthrough — end to end through git + fs", () => {
   test("create mints a code walkthrough bound to the live head's Change", async () => {
     const repo = featureRepo();
 
-    await run(runWalkthrough(repo, ["create", "--kind", "code", "--title", "Code tour"]));
+    await run(
+      runWalkthrough(repo, ["create", "--kind", "code", "--title", "Code tour"])
+    );
 
     const entry = await onlyWalkthrough(repo);
     expect(entry?.kind).toBe("code");
@@ -125,7 +134,9 @@ describe("runWalkthrough — end to end through git + fs", () => {
 
   test("add-section resolves each --range's blobSha from git and appends the section", async () => {
     const repo = featureRepo();
-    await run(runWalkthrough(repo, ["create", "--kind", "code", "--title", "Tour"]));
+    await run(
+      runWalkthrough(repo, ["create", "--kind", "code", "--title", "Tour"])
+    );
     const created = await onlyWalkthrough(repo);
     const walkthroughId = created?.id ?? "";
 
@@ -140,7 +151,7 @@ describe("runWalkthrough — end to end through git + fs", () => {
         "feature.ts:1-2@head",
         "--body",
         "The values live here {{range:0}}.",
-      ]),
+      ])
     );
 
     const entry = await onlyWalkthrough(repo);
@@ -154,7 +165,15 @@ describe("runWalkthrough — end to end through git + fs", () => {
 
   test("a product tour takes capture ids and annotations on a section", async () => {
     const repo = featureRepo();
-    await run(runWalkthrough(repo, ["create", "--kind", "product", "--title", "Product tour"]));
+    await run(
+      runWalkthrough(repo, [
+        "create",
+        "--kind",
+        "product",
+        "--title",
+        "Product tour",
+      ])
+    );
     const walkthroughId = await currentWalkthroughId(repo);
 
     await run(
@@ -168,12 +187,16 @@ describe("runWalkthrough — end to end through git + fs", () => {
         "cap_a,cap_b",
         "--annotation",
         JSON.stringify({
-          anchor: { capture: "cap_a", kind: "screenshot-region", rect: [0.1, 0.2, 0.3, 0.1] },
+          anchor: {
+            capture: "cap_a",
+            kind: "screenshot-region",
+            rect: [0.1, 0.2, 0.3, 0.1],
+          },
           body: "The upload control.",
         }),
         "--body",
         "Drag a file {{capture:0}}.",
-      ]),
+      ])
     );
 
     const uploaded = await onlyWalkthrough(repo);
@@ -184,7 +207,9 @@ describe("runWalkthrough — end to end through git + fs", () => {
 
   test("an unknown subcommand fails, never a stray write", async () => {
     const repo = featureRepo();
-    const exit = await runtime.runPromiseExit(runWalkthrough(repo, ["frobnicate"]));
+    const exit = await runtime.runPromiseExit(
+      runWalkthrough(repo, ["frobnicate"])
+    );
     expect(exit._tag).toBe("Failure");
   });
 });
@@ -192,7 +217,15 @@ describe("runWalkthrough — end to end through git + fs", () => {
 describe("runCapture — end to end", () => {
   test("add content-addresses a media file and registers it on the product tour", async () => {
     const repo = featureRepo();
-    await run(runWalkthrough(repo, ["create", "--kind", "product", "--title", "Product tour"]));
+    await run(
+      runWalkthrough(repo, [
+        "create",
+        "--kind",
+        "product",
+        "--title",
+        "Product tour",
+      ])
+    );
     const walkthroughId = await currentWalkthroughId(repo);
     writeFileSync(path.join(repo, "shot.png"), "fake-png-bytes");
 
@@ -211,7 +244,7 @@ describe("runCapture — end to end", () => {
         "1280x800",
         "--dims",
         "1280x2400",
-      ]),
+      ])
     );
 
     const entry = await onlyWalkthrough(repo);
@@ -228,14 +261,16 @@ describe("runCapture — end to end", () => {
       "product",
       walkthroughId,
       "captures",
-      `${capture?.media}.png`,
+      `${capture?.media}.png`
     );
     expect(existsSync(blob)).toBe(true);
   });
 
   test("--duration-ms on a screenshot (or --dims on a recording) is refused", async () => {
     const repo = featureRepo();
-    await run(runWalkthrough(repo, ["create", "--kind", "product", "--title", "T"]));
+    await run(
+      runWalkthrough(repo, ["create", "--kind", "product", "--title", "T"])
+    );
     const walkthroughId = await currentWalkthroughId(repo);
     writeFileSync(path.join(repo, "shot.png"), "bytes");
 
@@ -254,7 +289,7 @@ describe("runCapture — end to end", () => {
         "1x1",
         "--duration-ms",
         "8200",
-      ]),
+      ])
     );
     const wrongDims = await runtime.runPromiseExit(
       runCapture(repo, [
@@ -271,7 +306,7 @@ describe("runCapture — end to end", () => {
         "1x1",
         "--dims",
         "1x2",
-      ]),
+      ])
     );
 
     expect(wrongDuration._tag).toBe("Failure");
@@ -280,7 +315,9 @@ describe("runCapture — end to end", () => {
 
   test("a missing media file is a usage error", async () => {
     const repo = featureRepo();
-    await run(runWalkthrough(repo, ["create", "--kind", "product", "--title", "T"]));
+    await run(
+      runWalkthrough(repo, ["create", "--kind", "product", "--title", "T"])
+    );
     const walkthroughId = await currentWalkthroughId(repo);
 
     const exit = await runtime.runPromiseExit(
@@ -296,7 +333,7 @@ describe("runCapture — end to end", () => {
         "/",
         "--viewport",
         "1x1",
-      ]),
+      ])
     );
     expect(exit._tag).toBe("Failure");
   });

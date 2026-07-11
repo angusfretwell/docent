@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
+
 import type { WalkthroughRange } from "@shared/schemas/walkthrough";
+
 import { indexDiffFiles } from "./drift";
 import { planRange } from "./walkthrough-drift";
 

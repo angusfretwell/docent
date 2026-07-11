@@ -12,6 +12,11 @@
  */
 
 import { BunHttpServer } from "@effect/platform-bun";
+import { lookupAsset } from "@shared/lib/assets";
+import type { ClientAssets } from "@shared/lib/assets";
+import { FindingWrite } from "@shared/schemas/finding-write";
+import type { PendingRange } from "@shared/schemas/pending";
+import { ViewedRequest } from "@shared/schemas/review";
 import { Effect, Layer, Stream } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
@@ -21,12 +26,7 @@ import {
   HttpServerRequest,
   HttpServerResponse,
 } from "effect/unstable/http";
-import { lookupAsset } from "@shared/lib/assets";
-import type { ClientAssets } from "@shared/lib/assets";
-import { ViewedRequest } from "@shared/schemas/review";
-import { FindingWrite } from "@shared/schemas/finding-write";
-import type { PendingRange } from "@shared/schemas/pending";
-import { appendViewedEvent, readReviewSnapshot, reviewDirPath } from "../services/review";
+
 import { writeFindingRecord } from "../services/findings-write";
 import {
   resolveAuthor,
@@ -38,6 +38,11 @@ import {
   resolveRepo,
   resolveWorktreeFile,
 } from "../services/git";
+import {
+  appendViewedEvent,
+  readReviewSnapshot,
+  reviewDirPath,
+} from "../services/review";
 import { DocentWatch, layer as watchLayer } from "./watch";
 
 export interface ServeOptions {
@@ -48,10 +53,11 @@ export interface ServeOptions {
 }
 
 /** The running server's base URL (with trailing slash), e.g. for printing. */
-export const serverUrl: Effect.Effect<string, never, HttpServer.HttpServer> = Effect.map(
-  Effect.service(HttpServer.HttpServer),
-  (server) => new URL(HttpServer.formatAddress(server.address)).href,
-);
+export const serverUrl: Effect.Effect<string, never, HttpServer.HttpServer> =
+  Effect.map(
+    Effect.service(HttpServer.HttpServer),
+    (server) => new URL(HttpServer.formatAddress(server.address)).href
+  );
 
 function diffRoute(cwd: string) {
   return HttpRouter.add(
@@ -60,9 +66,14 @@ function diffRoute(cwd: string) {
     resolveChange(cwd).pipe(
       Effect.flatMap((change) => HttpServerResponse.json(change)),
       Effect.catch((error) =>
-        Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 500 })),
-      ),
-    ),
+        Effect.succeed(
+          HttpServerResponse.jsonUnsafe(
+            { error: error.message },
+            { status: 500 }
+          )
+        )
+      )
+    )
   );
 }
 
@@ -97,12 +108,22 @@ function blobRoute(cwd: string) {
       });
     }).pipe(
       Effect.catchTag("InvalidObjectId", (error) =>
-        Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 400 })),
+        Effect.succeed(
+          HttpServerResponse.jsonUnsafe(
+            { error: error.message },
+            { status: 400 }
+          )
+        )
       ),
       Effect.catch((error) =>
-        Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 404 })),
-      ),
-    ),
+        Effect.succeed(
+          HttpServerResponse.jsonUnsafe(
+            { error: error.message },
+            { status: 404 }
+          )
+        )
+      )
+    )
   );
 }
 
@@ -122,16 +143,26 @@ function blobSizeRoute(cwd: string) {
       const size = yield* resolveBlobSize(cwd, params.sha ?? "");
       return yield* HttpServerResponse.json(
         { size },
-        { headers: { "cache-control": BLOB_CACHE_CONTROL } },
+        { headers: { "cache-control": BLOB_CACHE_CONTROL } }
       );
     }).pipe(
       Effect.catchTag("InvalidObjectId", (error) =>
-        Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 400 })),
+        Effect.succeed(
+          HttpServerResponse.jsonUnsafe(
+            { error: error.message },
+            { status: 400 }
+          )
+        )
       ),
       Effect.catch((error) =>
-        Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 404 })),
-      ),
-    ),
+        Effect.succeed(
+          HttpServerResponse.jsonUnsafe(
+            { error: error.message },
+            { status: 404 }
+          )
+        )
+      )
+    )
   );
 }
 
@@ -170,8 +201,14 @@ function captureRoute(cwd: string) {
       const params = yield* HttpRouter.params;
       const walkthrough = params.walkthrough ?? "";
       const file = params.file ?? "";
-      if (!(WALKTHROUGH_ID.test(walkthrough) && CAPTURE_FILE.test(file)) || file.includes("..")) {
-        return HttpServerResponse.jsonUnsafe({ error: "invalid capture path" }, { status: 400 });
+      if (
+        !(WALKTHROUGH_ID.test(walkthrough) && CAPTURE_FILE.test(file)) ||
+        file.includes("..")
+      ) {
+        return HttpServerResponse.jsonUnsafe(
+          { error: "invalid capture path" },
+          { status: 400 }
+        );
       }
       const repo = yield* resolveRepo(cwd);
       const fs = yield* FileSystem;
@@ -182,7 +219,7 @@ function captureRoute(cwd: string) {
         "product",
         walkthrough,
         "captures",
-        file,
+        file
       );
       const bytes = yield* fs.readFile(filePath);
       return HttpServerResponse.uint8Array(bytes, {
@@ -191,9 +228,14 @@ function captureRoute(cwd: string) {
       });
     }).pipe(
       Effect.catch((error) =>
-        Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 404 })),
-      ),
-    ),
+        Effect.succeed(
+          HttpServerResponse.jsonUnsafe(
+            { error: error.message },
+            { status: 404 }
+          )
+        )
+      )
+    )
   );
 }
 
@@ -213,14 +255,21 @@ function pendingRoute(cwd: string) {
     Effect.gen(function* servePending() {
       const { searchParams } = new URL(request.url, REQUEST_URL_BASE);
       const range: PendingRange =
-        searchParams.get("range") === "cumulative" ? "cumulative" : "incremental";
+        searchParams.get("range") === "cumulative"
+          ? "cumulative"
+          : "incremental";
       const pending = yield* resolvePending(cwd, range);
       return yield* HttpServerResponse.json(pending);
     }).pipe(
       Effect.catch((error) =>
-        Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 500 })),
-      ),
-    ),
+        Effect.succeed(
+          HttpServerResponse.jsonUnsafe(
+            { error: error.message },
+            { status: 500 }
+          )
+        )
+      )
+    )
   );
 }
 
@@ -234,19 +283,32 @@ function worktreeRoute(cwd: string) {
   return HttpRouter.add("GET", "/api/worktree", (request) =>
     Effect.gen(function* serveWorktree() {
       const { searchParams } = new URL(request.url, REQUEST_URL_BASE);
-      const bytes = yield* resolveWorktreeFile(cwd, searchParams.get("path") ?? "");
+      const bytes = yield* resolveWorktreeFile(
+        cwd,
+        searchParams.get("path") ?? ""
+      );
       return HttpServerResponse.uint8Array(bytes, {
         contentType: OCTET_STREAM,
         headers: { "cache-control": WORKTREE_CACHE_CONTROL },
       });
     }).pipe(
       Effect.catchTag("InvalidWorktreePath", (error) =>
-        Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 400 })),
+        Effect.succeed(
+          HttpServerResponse.jsonUnsafe(
+            { error: error.message },
+            { status: 400 }
+          )
+        )
       ),
       Effect.catch((error) =>
-        Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 404 })),
-      ),
-    ),
+        Effect.succeed(
+          HttpServerResponse.jsonUnsafe(
+            { error: error.message },
+            { status: 404 }
+          )
+        )
+      )
+    )
   );
 }
 
@@ -264,11 +326,13 @@ function assetRoute(assets: ClientAssets) {
       if (asset === undefined) {
         return HttpServerResponse.empty({ status: 404 });
       }
-      const bytes = yield* Effect.promise(() => Bun.file(asset.filePath).bytes());
+      const bytes = yield* Effect.promise(() =>
+        Bun.file(asset.filePath).bytes()
+      );
       return HttpServerResponse.uint8Array(bytes, {
         contentType: asset.contentType,
       });
-    }),
+    })
   );
 }
 
@@ -287,13 +351,18 @@ function reviewRoute(cwd: string) {
           base: repo.defaultBranch.name,
           branch: repo.branch,
           root: repo.root,
-        }),
+        })
       ),
       Effect.flatMap((snapshot) => HttpServerResponse.json(snapshot)),
       Effect.catch((error) =>
-        Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 500 })),
-      ),
-    ),
+        Effect.succeed(
+          HttpServerResponse.jsonUnsafe(
+            { error: error.message },
+            { status: 500 }
+          )
+        )
+      )
+    )
   );
 }
 
@@ -320,12 +389,22 @@ function viewedRoute(cwd: string) {
       return yield* HttpServerResponse.json(event);
     }).pipe(
       Effect.catchTag("SchemaError", (error) =>
-        Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 400 })),
+        Effect.succeed(
+          HttpServerResponse.jsonUnsafe(
+            { error: error.message },
+            { status: 400 }
+          )
+        )
       ),
       Effect.catch((error) =>
-        Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 500 })),
-      ),
-    ),
+        Effect.succeed(
+          HttpServerResponse.jsonUnsafe(
+            { error: error.message },
+            { status: 500 }
+          )
+        )
+      )
+    )
   );
 }
 
@@ -361,12 +440,22 @@ function findingsRoute(cwd: string) {
       return yield* HttpServerResponse.json(result);
     }).pipe(
       Effect.catchTag("SchemaError", (error) =>
-        Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 400 })),
+        Effect.succeed(
+          HttpServerResponse.jsonUnsafe(
+            { error: error.message },
+            { status: 400 }
+          )
+        )
       ),
       Effect.catch((error) =>
-        Effect.succeed(HttpServerResponse.jsonUnsafe({ error: error.message }, { status: 500 })),
-      ),
-    ),
+        Effect.succeed(
+          HttpServerResponse.jsonUnsafe(
+            { error: error.message },
+            { status: 500 }
+          )
+        )
+      )
+    )
   );
 }
 
@@ -390,7 +479,7 @@ const eventsRoute = HttpRouter.add(
     HttpServerResponse.stream(
       Stream.concat(
         Stream.make(SSE_OPEN),
-        Stream.map(Stream.fromPubSub(watch.events), () => SSE_CHANGED),
+        Stream.map(Stream.fromPubSub(watch.events), () => SSE_CHANGED)
       ),
       {
         headers: {
@@ -398,9 +487,9 @@ const eventsRoute = HttpRouter.add(
           connection: "keep-alive",
           "content-type": "text/event-stream",
         },
-      },
-    ),
-  ),
+      }
+    )
+  )
 );
 
 /**
@@ -419,7 +508,7 @@ export function layer(options: ServeOptions) {
     viewedRoute(options.cwd),
     findingsRoute(options.cwd),
     eventsRoute,
-    assetRoute(options.assets),
+    assetRoute(options.assets)
   );
   return HttpRouter.serve(routes, {
     disableListenLog: true,
@@ -433,7 +522,7 @@ export function layer(options: ServeOptions) {
       // is reachable on hosts where `localhost` resolves to IPv6-only.
       // Port 0: the OS picks an ephemeral port; read it back via `serverUrl`.
       // idleTimeout 0: never drop the long-lived SSE connection for being idle.
-      BunHttpServer.layer({ hostname: "127.0.0.1", idleTimeout: 0, port: 0 }),
-    ),
+      BunHttpServer.layer({ hostname: "127.0.0.1", idleTimeout: 0, port: 0 })
+    )
   );
 }

@@ -112,10 +112,15 @@ function comparePath(a: string, b: string): number {
 }
 
 /** Sort a copy of the entries by full path, or by changed-line size. */
-export function sortEntries(entries: FileEntry[], order: FileOrder): FileEntry[] {
+export function sortEntries(
+  entries: FileEntry[],
+  order: FileOrder
+): FileEntry[] {
   const sorted = [...entries];
   if (order === "size") {
-    sorted.sort((a, b) => changedLines(b) - changedLines(a) || (a.path < b.path ? -1 : 1));
+    sorted.sort(
+      (a, b) => changedLines(b) - changedLines(a) || (a.path < b.path ? -1 : 1)
+    );
   } else {
     sorted.sort((a, b) => comparePath(a.path, b.path));
   }
@@ -158,7 +163,7 @@ export function buildTree(entries: FileEntry[]): TreeNode[] {
       prefix = prefix ? `${prefix}/${part}` : part;
       const dirPath = prefix;
       let dir = cursor.find(
-        (node): node is DirNode => node.kind === "dir" && node.path === dirPath,
+        (node): node is DirNode => node.kind === "dir" && node.path === dirPath
       );
       if (dir === undefined) {
         dir = { children: [], kind: "dir", name: part, path: dirPath };
@@ -185,7 +190,10 @@ export function flattenFiles(nodes: TreeNode[]): FileEntry[] {
 }
 
 /** Keep entries whose path contains `query` (case-insensitive substring). */
-export function filterEntries(entries: FileEntry[], query: string): FileEntry[] {
+export function filterEntries(
+  entries: FileEntry[],
+  query: string
+): FileEntry[] {
   const needle = query.trim().toLowerCase();
   if (needle === "") {
     return entries;
@@ -214,7 +222,7 @@ export function changeAnchors(entries: FileEntry[]): ChangeAnchor[] {
 export function stepFile(
   orderedIds: string[],
   currentId: string | undefined,
-  direction: 1 | -1,
+  direction: 1 | -1
 ): string | undefined {
   const index = currentId === undefined ? -1 : orderedIds.indexOf(currentId);
   const next = index + direction;
@@ -222,7 +230,11 @@ export function stepFile(
 }
 
 /** Next/prev change index, clamped to the anchor list (crosses files). */
-export function stepChange(count: number, currentIndex: number, direction: 1 | -1): number {
+export function stepChange(
+  count: number,
+  currentIndex: number,
+  direction: 1 | -1
+): number {
   const next = currentIndex + direction;
   if (next < 0) {
     return 0;

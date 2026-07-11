@@ -36,5 +36,5 @@
     }
   },
 
-  "exclude": ["prototypes", "dist", "bin.ts"]
+  "exclude": ["dist", "bin.ts"]
 }

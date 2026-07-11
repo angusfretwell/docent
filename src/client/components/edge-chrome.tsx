@@ -10,6 +10,7 @@
 
 import type { ChangeTypes, FileDiffMetadata } from "@pierre/diffs";
 import { useEffect, useState } from "react";
+
 import { blobUrl, fetchBlobSize, isRealObjectId } from "../lib/blobs";
 import { formatBytes } from "../lib/edge-cases";
 import type { FileClass } from "../lib/edge-cases";
@@ -51,7 +52,9 @@ function shortMode(mode: string | undefined): string {
  */
 function BinarySizeRow({ item }: { item: FileDiffMetadata }) {
   const { prevObjectId, newObjectId } = item;
-  const [sizes, setSizes] = useState<{ before: number; after: number } | undefined>();
+  const [sizes, setSizes] = useState<
+    { before: number; after: number } | undefined
+  >();
 
   useEffect(() => {
     let cancelled = false;
@@ -126,11 +129,22 @@ function InfoRow({ label, detail }: { label: string; detail: string }) {
 
 /** The `old → new` rename header (diff-review.md §5). */
 function RenameHeader({ item }: { item: FileDiffMetadata }) {
-  return <InfoRow detail={`${item.prevName ?? "?"} → ${item.name}`} label="Renamed" />;
+  return (
+    <InfoRow
+      detail={`${item.prevName ?? "?"} → ${item.name}`}
+      label="Renamed"
+    />
+  );
 }
 
 /** The `Load diff` / `Collapse` toggle for an oversized or minified file. */
-function LargeToggle({ loaded, onToggle }: { loaded: boolean; onToggle: () => void }) {
+function LargeToggle({
+  loaded,
+  onToggle,
+}: {
+  loaded: boolean;
+  onToggle: () => void;
+}) {
   return (
     <button className="expand-context" onClick={onToggle} type="button">
       {loaded ? "Collapse" : "Load diff"}
@@ -170,14 +184,19 @@ export function EdgeChrome({
   }
   if (file.modeOnly) {
     return (
-      <InfoRow detail={`${shortMode(item.prevMode)} → ${shortMode(item.mode)}`} label="Mode" />
+      <InfoRow
+        detail={`${shortMode(item.prevMode)} → ${shortMode(item.mode)}`}
+        label="Mode"
+      />
     );
   }
   if (file.renamePure || file.renameModify) {
     return (
       <span className="edge-row">
         <RenameHeader item={item} />
-        {file.large ? <LargeToggle loaded={largeLoaded} onToggle={onToggleLarge} /> : null}
+        {file.large ? (
+          <LargeToggle loaded={largeLoaded} onToggle={onToggleLarge} />
+        ) : null}
       </span>
     );
   }

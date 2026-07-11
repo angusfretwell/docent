@@ -13,12 +13,18 @@
  */
 
 import { processPatch } from "@pierre/diffs";
-import { useEffect, useState } from "react";
-import type { AnchorContext, DriftState } from "@shared/schemas/drift";
-import { excerptLines, planDrift, reanchorRange, splitLines } from "@shared/lib/drift";
-import type { FindingEntry } from "@shared/schemas/review";
-import type { Anchor } from "@shared/schemas/finding";
+import {
+  excerptLines,
+  planDrift,
+  reanchorRange,
+  splitLines,
+} from "@shared/lib/drift";
 import { foldFinding } from "@shared/lib/finding";
+import type { AnchorContext, DriftState } from "@shared/schemas/drift";
+import type { Anchor } from "@shared/schemas/finding";
+import type { FindingEntry } from "@shared/schemas/review";
+import { useEffect, useState } from "react";
+
 import { fetchBlobText, isRealObjectId } from "./blobs";
 
 /** One changed file's identity as drift reads it: its shas, its rename/delete standing. */
@@ -57,7 +63,10 @@ export function indexDiffFiles(patch: string): Map<string, DiffFile> {
  * anchor, or a file absent from the change (unchanged base..head), yields the
  * empty context — which `planDrift` reads as live.
  */
-export function anchorContext(anchor: Anchor, files: ReadonlyMap<string, DiffFile>): AnchorContext {
+export function anchorContext(
+  anchor: Anchor,
+  files: ReadonlyMap<string, DiffFile>
+): AnchorContext {
   if (anchor.kind !== "file" && anchor.kind !== "line") {
     return {};
   }
@@ -65,7 +74,8 @@ export function anchorContext(anchor: Anchor, files: ReadonlyMap<string, DiffFil
   if (file === undefined) {
     return {};
   }
-  const currentSideSha = anchor.side === "head" ? file.newObjectId : file.prevObjectId;
+  const currentSideSha =
+    anchor.side === "head" ? file.newObjectId : file.prevObjectId;
   return {
     ...(currentSideSha === undefined ? {} : { currentSideSha }),
     deleted: file.deleted,
@@ -116,9 +126,11 @@ export interface ExcerptJob {
  */
 export function useReanchor(
   jobs: readonly ReanchorJob[],
-  excerpts: readonly ExcerptJob[],
+  excerpts: readonly ExcerptJob[]
 ): ReadonlyMap<string, DriftResult> {
-  const [resolved, setResolved] = useState<ReadonlyMap<string, DriftResult>>(new Map());
+  const [resolved, setResolved] = useState<ReadonlyMap<string, DriftResult>>(
+    new Map()
+  );
 
   const jobsKey = [
     ...jobs.map((job) => `r:${job.id}:${job.bornSha}:${job.currentSha}`),
@@ -138,11 +150,17 @@ export function useReanchor(
           fetchBlobText(job.bornSha),
           fetchBlobText(job.currentSha),
         ]);
-        const result = reanchorRange(splitLines(bornText), splitLines(currentText), job.range);
+        const result = reanchorRange(
+          splitLines(bornText),
+          splitLines(currentText),
+          job.range
+        );
         publish(job.id, {
           lines: result.lines,
           state: result.state,
-          ...(result.state === "outdated" ? { bornText: excerptLines(bornText, job.range) } : {}),
+          ...(result.state === "outdated"
+            ? { bornText: excerptLines(bornText, job.range) }
+            : {}),
         });
       } catch {
         // Leave the entry out of the map until a later render can re-anchor it;
@@ -173,10 +191,15 @@ export function useReanchor(
 
 /** Line range carried straight through for a line anchor; nothing for other arms. */
 function anchorLines(anchor: Anchor): [number, number] | undefined {
-  return anchor.kind === "line" ? [anchor.lines[0], anchor.lines[1]] : undefined;
+  return anchor.kind === "line"
+    ? [anchor.lines[0], anchor.lines[1]]
+    : undefined;
 }
 
-function planFindings(findings: readonly FindingEntry[], files: ReadonlyMap<string, DiffFile>) {
+function planFindings(
+  findings: readonly FindingEntry[],
+  files: ReadonlyMap<string, DiffFile>
+) {
   const base = new Map<string, DriftResult>();
   const jobs: ReanchorJob[] = [];
   const excerpts: ExcerptJob[] = [];
@@ -188,7 +211,10 @@ function planFindings(findings: readonly FindingEntry[], files: ReadonlyMap<stri
     const plan = planDrift(anchor, anchorContext(anchor, files));
     if (plan.kind === "resolved") {
       const lines = anchorLines(anchor);
-      base.set(finding.id, { state: plan.state, ...(lines === undefined ? {} : { lines }) });
+      base.set(finding.id, {
+        state: plan.state,
+        ...(lines === undefined ? {} : { lines }),
+      });
     } else if (isRealObjectId(plan.currentSha)) {
       jobs.push({ ...plan, id: finding.id });
     } else if (isRealObjectId(plan.bornSha)) {
@@ -196,7 +222,11 @@ function planFindings(findings: readonly FindingEntry[], files: ReadonlyMap<stri
       // as outdated at once, then detach against its still-addressable born text
       // once fetched.
       base.set(finding.id, { lines: plan.range, state: "outdated" });
-      excerpts.push({ bornSha: plan.bornSha, id: finding.id, range: plan.range });
+      excerpts.push({
+        bornSha: plan.bornSha,
+        id: finding.id,
+        range: plan.range,
+      });
     } else {
       base.set(finding.id, { lines: plan.range, state: "outdated" });
     }

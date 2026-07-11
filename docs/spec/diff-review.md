@@ -89,15 +89,15 @@ Patch-only input leaves the renderer `isPartial`, which disables hunk expansion 
 
 ([#9](https://github.com/angusfretwell/docent/issues/9)) The renderer handles the diff _body_ (renames, adds/deletes, very large files all validated in [#4](https://github.com/angusfretwell/docent/issues/4)); this is the surrounding chrome:
 
-| Case                                | Chrome                                | Body                                                                                                                                                    | Viewed / progress            |
-| ----------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| **Binary** (non-image)              | row: change type + size delta         | none (placeholder)                                                                                                                                      | viewable at file granularity |
-| **Image**                           | change type                           | **side-by-side before/after** (both blobs via `/api/blob/:sha`)                                                                                         | viewable                     |
-| **Pure rename** (100% similarity)   | `old → new` header                    | collapsed — nothing to review                                                                                                                           | auto-viewable                |
-| **Rename + modify**                 | `old → new` header                    | normal diff                                                                                                                                             | normal                       |
-| **Very large / minified**           | normal header                         | **collapsed past a threshold** (e.g. >2k changed lines, or a minified megabyte-wide line) + "load diff"                                                 | normal                       |
-| **Generated / lockfile / vendored** | de-emphasized in tree                 | **collapsed + auto-marked-viewed** (via `.gitattributes linguist-generated` + a default glob set — lockfiles, `dist/`); reviewer can expand and un-view | auto-viewed, still counted   |
-| **Mode-only / submodule**           | row: mode `x→y` / submodule `sha→sha` | none                                                                                                                                                    | viewable                     |
+| Case | Chrome | Body | Viewed / progress |
+| --- | --- | --- | --- |
+| **Binary** (non-image) | row: change type + size delta | none (placeholder) | viewable at file granularity |
+| **Image** | change type | **side-by-side before/after** (both blobs via `/api/blob/:sha`) | viewable |
+| **Pure rename** (100% similarity) | `old → new` header | collapsed — nothing to review | auto-viewable |
+| **Rename + modify** | `old → new` header | normal diff | normal |
+| **Very large / minified** | normal header | **collapsed past a threshold** (e.g. >2k changed lines, or a minified megabyte-wide line) + "load diff" | normal |
+| **Generated / lockfile / vendored** | de-emphasized in tree | **collapsed + auto-marked-viewed** (via `.gitattributes linguist-generated` + a default glob set — lockfiles, `dist/`); reviewer can expand and un-view | auto-viewed, still counted |
+| **Mode-only / submodule** | row: mode `x→y` / submodule `sha→sha` | none | viewable |
 
 Onion-skin/swipe image comparison is **deferred** behind side-by-side.
 

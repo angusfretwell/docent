@@ -1,6 +1,14 @@
 import { describe, expect, test } from "bun:test";
+
 import { processPatch } from "@pierre/diffs";
-import { blobUrl, expandedFileDiff, isExpandable, isPendingExpandable, worktreeUrl } from "./blobs";
+
+import {
+  blobUrl,
+  expandedFileDiff,
+  isExpandable,
+  isPendingExpandable,
+  worktreeUrl,
+} from "./blobs";
 
 // A git diff of a file with only its first line changed. The unchanged context
 // lines 2–5 are trimmed by git's default 3-line context on such a small file,

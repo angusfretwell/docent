@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
+
 import type { ViewedEvent } from "@shared/schemas/review";
+
 import type { FileEntry } from "./nav";
 import { computeViewed, viewedStateFor } from "./viewed";
 
@@ -16,17 +18,27 @@ function entry(path: string, blobSha: string): FileEntry {
   };
 }
 
-function event(path: string, blobSha: string, ts = "2026-07-10T00:00:00Z"): ViewedEvent {
+function event(
+  path: string,
+  blobSha: string,
+  ts = "2026-07-10T00:00:00Z"
+): ViewedEvent {
   return { blobSha, path, ts } as ViewedEvent;
 }
 
 describe("computeViewed", () => {
   test("no events: every file unviewed, progress 0 / total", () => {
-    const model = computeViewed([], [entry("a.ts", "aaa"), entry("b.ts", "bbb")]);
+    const model = computeViewed(
+      [],
+      [entry("a.ts", "aaa"), entry("b.ts", "bbb")]
+    );
 
     expect(model.viewed).toBe(0);
     expect(model.total).toBe(2);
-    expect(viewedStateFor(model, "a.ts#0")).toEqual({ changedSinceViewed: false, viewed: false });
+    expect(viewedStateFor(model, "a.ts#0")).toEqual({
+      changedSinceViewed: false,
+      viewed: false,
+    });
   });
 
   test("one event marks the matching head blob viewed (odd parity)", () => {
@@ -58,7 +70,7 @@ describe("computeViewed", () => {
   test("a second event on the same blob toggles back to unviewed (even parity)", () => {
     const model = computeViewed(
       [event("a.ts", "aaa"), event("a.ts", "aaa", "2026-07-10T01:00:00Z")],
-      [entry("a.ts", "aaa")],
+      [entry("a.ts", "aaa")]
     );
 
     expect(viewedStateFor(model, "a.ts#0").viewed).toBe(false);
@@ -73,7 +85,7 @@ describe("computeViewed", () => {
         event("a.ts", "aaa", "2026-07-10T01:00:00Z"),
         event("a.ts", "aaa", "2026-07-10T02:00:00Z"),
       ],
-      [entry("a.ts", "aaa")],
+      [entry("a.ts", "aaa")]
     );
 
     expect(viewedStateFor(model, "a.ts#0").viewed).toBe(true);
@@ -81,7 +93,10 @@ describe("computeViewed", () => {
 
   test("a deletion (null-SHA head) is viewable like any other file", () => {
     const nullSha = "0000000000000000000000000000000000000000";
-    const model = computeViewed([event("gone.ts", nullSha)], [entry("gone.ts", nullSha)]);
+    const model = computeViewed(
+      [event("gone.ts", nullSha)],
+      [entry("gone.ts", nullSha)]
+    );
 
     expect(viewedStateFor(model, "gone.ts#0").viewed).toBe(true);
     expect(model.viewed).toBe(1);
@@ -98,7 +113,7 @@ describe("computeViewed", () => {
   test("events for other files do not leak across paths", () => {
     const model = computeViewed(
       [event("a.ts", "aaa")],
-      [entry("a.ts", "aaa"), entry("b.ts", "aaa")],
+      [entry("a.ts", "aaa"), entry("b.ts", "aaa")]
     );
 
     expect(viewedStateFor(model, "a.ts#0").viewed).toBe(true);
@@ -108,7 +123,7 @@ describe("computeViewed", () => {
   test("progress counts viewed files over total", () => {
     const model = computeViewed(
       [event("a.ts", "aaa"), event("c.ts", "ccc")],
-      [entry("a.ts", "aaa"), entry("b.ts", "bbb"), entry("c.ts", "ccc")],
+      [entry("a.ts", "aaa"), entry("b.ts", "bbb"), entry("c.ts", "ccc")]
     );
 
     expect(model.viewed).toBe(2);
@@ -122,7 +137,11 @@ function isAuto(e: FileEntry): boolean {
 
 describe("computeViewed — auto-viewed files (generated, pure renames)", () => {
   test("an auto-viewed file with no events defaults to viewed and counts", () => {
-    const model = computeViewed([], [entry("gen/lock", "aaa"), entry("src/a", "bbb")], isAuto);
+    const model = computeViewed(
+      [],
+      [entry("gen/lock", "aaa"), entry("src/a", "bbb")],
+      isAuto
+    );
 
     expect(viewedStateFor(model, "gen/lock#0")).toEqual({
       changedSinceViewed: false,
@@ -135,7 +154,11 @@ describe("computeViewed — auto-viewed files (generated, pure renames)", () => 
   test("one event un-views an auto-viewed file (parity baseline flipped)", () => {
     // The reviewer un-checked the auto-viewed file; a single appended event
     // persists the un-view instead of re-asserting viewed.
-    const model = computeViewed([event("gen/lock", "aaa")], [entry("gen/lock", "aaa")], isAuto);
+    const model = computeViewed(
+      [event("gen/lock", "aaa")],
+      [entry("gen/lock", "aaa")],
+      isAuto
+    );
 
     expect(viewedStateFor(model, "gen/lock#0").viewed).toBe(false);
     expect(model.viewed).toBe(0);
@@ -143,9 +166,12 @@ describe("computeViewed — auto-viewed files (generated, pure renames)", () => 
 
   test("two events on an auto-viewed file return it to viewed", () => {
     const model = computeViewed(
-      [event("gen/lock", "aaa"), event("gen/lock", "aaa", "2026-07-10T01:00:00Z")],
+      [
+        event("gen/lock", "aaa"),
+        event("gen/lock", "aaa", "2026-07-10T01:00:00Z"),
+      ],
       [entry("gen/lock", "aaa")],
-      isAuto,
+      isAuto
     );
 
     expect(viewedStateFor(model, "gen/lock#0").viewed).toBe(true);
@@ -153,7 +179,11 @@ describe("computeViewed — auto-viewed files (generated, pure renames)", () => 
 
   test("an auto-viewed file whose head blob changed re-applies the default", () => {
     // Auto-view re-applies at the new blob, so no changed-since-viewed flag.
-    const model = computeViewed([event("gen/lock", "aaa")], [entry("gen/lock", "ccc")], isAuto);
+    const model = computeViewed(
+      [event("gen/lock", "aaa")],
+      [entry("gen/lock", "ccc")],
+      isAuto
+    );
 
     expect(viewedStateFor(model, "gen/lock#0")).toEqual({
       changedSinceViewed: false,

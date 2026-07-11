@@ -1,16 +1,23 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { ManagedRuntime, Schema } from "effect";
+
 import { assetsFromManifest } from "@shared/lib/assets";
 import type { ClientAssets } from "@shared/lib/assets";
-import { Change, DiffError } from "@shared/schemas/change";
-import { ReviewSnapshot } from "@shared/schemas/review";
-import { FindingWriteResult } from "@shared/schemas/finding-write";
 import { foldFinding } from "@shared/lib/finding";
+import { Change, DiffError } from "@shared/schemas/change";
+import { FindingWriteResult } from "@shared/schemas/finding-write";
 import { Pending } from "@shared/schemas/pending";
+import { ReviewSnapshot } from "@shared/schemas/review";
+import { ManagedRuntime, Schema } from "effect";
+
 import { layer, serverUrl } from "./serve";
-import { cleanupScratchDirs, git, scratchDir, scratchRepo } from "./test-fixtures";
+import {
+  cleanupScratchDirs,
+  git,
+  scratchDir,
+  scratchRepo,
+} from "./test-fixtures";
 
 const disposers: (() => Promise<void>)[] = [];
 
@@ -29,20 +36,28 @@ afterAll(async () => {
 /** Read the next SSE chunk as text, failing loudly rather than hanging forever. */
 async function readSse(
   reader: ReadableStreamDefaultReader<Uint8Array>,
-  decoder: TextDecoder,
+  decoder: TextDecoder
 ): Promise<string> {
   // Generous: under full-suite load every server runs recursive fs watches, and
   // macOS FSEvents can delay a frame well past a second. This only guards
   // against a truly hung stream, so a high ceiling costs nothing when frames flow.
   const timeout = new Promise<never>((_resolve, reject) => {
-    setTimeout(() => reject(new Error("timed out waiting for an SSE frame")), 10_000);
+    setTimeout(
+      () => reject(new Error("timed out waiting for an SSE frame")),
+      10_000
+    );
   });
   const { value, done } = await Promise.race([reader.read(), timeout]);
   return done || value === undefined ? "" : decoder.decode(value);
 }
 
 /** Write a product-walkthrough capture blob under a feature branch's Review. */
-function writeCapture(repo: string, walkthroughId: string, file: string, bytes: string) {
+function writeCapture(
+  repo: string,
+  walkthroughId: string,
+  file: string,
+  bytes: string
+) {
   const dir = path.join(
     repo,
     ".docent",
@@ -51,7 +66,7 @@ function writeCapture(repo: string, walkthroughId: string, file: string, bytes: 
     "walkthroughs",
     "product",
     walkthroughId,
-    "captures",
+    "captures"
   );
   mkdirSync(dir, { recursive: true });
   writeFileSync(path.join(dir, file), bytes);
@@ -105,7 +120,9 @@ async function reachableBase(url: string): Promise<string> {
 
 /** Boot the server layer and return its base URL; torn down in afterAll. */
 async function serve(repo: string): Promise<{ url: string }> {
-  const runtime = ManagedRuntime.make(layer({ assets: scratchClientAssets(), cwd: repo }));
+  const runtime = ManagedRuntime.make(
+    layer({ assets: scratchClientAssets(), cwd: repo })
+  );
   disposers.push(() => runtime.dispose());
   const url = await runtime.runPromise(serverUrl);
   return { url: await reachableBase(url) };
@@ -212,7 +229,9 @@ describe("server layer", () => {
     const repo = featureRepo();
     const { url } = await serve(repo);
 
-    const res = await fetch(new URL("/api/blob/deadbeefdeadbeefdeadbeefdeadbeefdeadbeef", url));
+    const res = await fetch(
+      new URL("/api/blob/deadbeefdeadbeefdeadbeefdeadbeefdeadbeef", url)
+    );
 
     expect(res.status).toBe(404);
   });
@@ -266,7 +285,9 @@ describe("server layer", () => {
     const { url } = await serve(repo);
     writeCapture(repo, "wlk_01PROD", "shaB.rrweb.json", '[{"type":4}]');
 
-    const res = await fetch(new URL("/api/capture/wlk_01PROD/shaB.rrweb.json", url));
+    const res = await fetch(
+      new URL("/api/capture/wlk_01PROD/shaB.rrweb.json", url)
+    );
 
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("application/json");
@@ -276,7 +297,9 @@ describe("server layer", () => {
   test("GET /api/capture 404s an absent capture file", async () => {
     const { url } = await serve(featureRepo());
 
-    const res = await fetch(new URL("/api/capture/wlk_01PROD/missing.png", url));
+    const res = await fetch(
+      new URL("/api/capture/wlk_01PROD/missing.png", url)
+    );
 
     expect(res.status).toBe(404);
   });
@@ -354,7 +377,9 @@ describe("server layer", () => {
   test("GET /api/worktree 400s a path that escapes the repo root", async () => {
     const { url } = await serve(featureRepo());
 
-    const res = await fetch(new URL("/api/worktree?path=../../../etc/passwd", url));
+    const res = await fetch(
+      new URL("/api/worktree?path=../../../etc/passwd", url)
+    );
 
     expect(res.status).toBe(400);
   });
@@ -378,7 +403,11 @@ describe("server layer", () => {
     expect(snap.review.schema).toBe("docent/review@4");
     expect(snap.review.branch).toBe("feature");
     expect(snap.review.base).toBe("main");
-    expect(existsSync(path.join(repo, ".docent", "reviews", "feature", "review.json"))).toBe(true);
+    expect(
+      existsSync(
+        path.join(repo, ".docent", "reviews", "feature", "review.json")
+      )
+    ).toBe(true);
   });
 
   test("POST /api/viewed appends an event the review snapshot then reports", async () => {
@@ -396,7 +425,9 @@ describe("server layer", () => {
     expect(event).toMatchObject({ blobSha: "9c2a1f0", path: "feature.txt" });
     const review = await fetch(new URL("/api/review", url));
     const snap = decodeSnapshot(await review.json());
-    expect(snap.viewed).toEqual([{ blobSha: "9c2a1f0", path: "feature.txt", ts: event.ts }]);
+    expect(snap.viewed).toEqual([
+      { blobSha: "9c2a1f0", path: "feature.txt", ts: event.ts },
+    ]);
   });
 
   test("POST /api/viewed 400s a malformed body", async () => {
@@ -430,7 +461,9 @@ describe("server layer", () => {
     // The record and its minted Change are both visible in the live snapshot.
     const snap = await fetchReview(url);
     expect(snap.changes.map((change) => change.id)).toEqual(["chg_001"]);
-    const finding = snap.findings.find((entry) => entry.id === result.findingId);
+    const finding = snap.findings.find(
+      (entry) => entry.id === result.findingId
+    );
     const folded = foldFinding(result.findingId, finding?.records ?? []);
     expect(folded.body).toBe("the flush races the mark");
     expect(folded.anchor).toMatchObject({ file: "feature.txt", kind: "line" });
@@ -441,7 +474,11 @@ describe("server layer", () => {
   test("POST /api/findings appends a reply to an existing Finding", async () => {
     const repo = featureRepo();
     const { url } = await serve(repo);
-    const openRes = await postFinding(url, { anchor: lineAnchor, body: "flagged", op: "open" });
+    const openRes = await postFinding(url, {
+      anchor: lineAnchor,
+      body: "flagged",
+      op: "open",
+    });
     const opened = decodeWriteResult(await openRes.json());
 
     const res = await postFinding(url, {
@@ -454,8 +491,12 @@ describe("server layer", () => {
     expect(res.status).toBe(200);
     expect(decodeWriteResult(await res.json()).record).toBe("002-reply.md");
     const snap = await fetchReview(url);
-    const finding = snap.findings.find((entry) => entry.id === opened.findingId);
-    expect(foldFinding(opened.findingId, finding?.records ?? []).whatsNext).toBe("needs-verify");
+    const finding = snap.findings.find(
+      (entry) => entry.id === opened.findingId
+    );
+    expect(
+      foldFinding(opened.findingId, finding?.records ?? []).whatsNext
+    ).toBe("needs-verify");
   });
 
   test("POST /api/findings 400s a malformed body", async () => {
@@ -497,7 +538,9 @@ describe("server layer", () => {
     const repo = featureRepo();
     const { url } = await serve(repo);
     const controller = new AbortController();
-    const res = await fetch(new URL("/api/events", url), { signal: controller.signal });
+    const res = await fetch(new URL("/api/events", url), {
+      signal: controller.signal,
+    });
     const { body } = res;
     if (!body) {
       throw new Error("SSE response had no body");

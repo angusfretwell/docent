@@ -11,6 +11,7 @@
  */
 
 import { Schema } from "effect";
+
 import { FindingRecord } from "./finding";
 import { Walkthrough, WalkthroughSection } from "./walkthrough";
 
@@ -49,10 +50,12 @@ export class ViewedEvent extends Schema.Class<ViewedEvent>("ViewedEvent")({
  * head-blob SHA. The server stamps `ts` and appends the `{path, blobSha, ts}`
  * event — the client never authors the timestamp.
  */
-export class ViewedRequest extends Schema.Class<ViewedRequest>("ViewedRequest")({
-  blobSha: Schema.String,
-  path: Schema.String,
-}) {}
+export class ViewedRequest extends Schema.Class<ViewedRequest>("ViewedRequest")(
+  {
+    blobSha: Schema.String,
+    path: Schema.String,
+  }
+) {}
 
 /**
  * A Finding as walked in this slice: its record-dir id, its append-only records
@@ -80,7 +83,9 @@ export class FindingEntry extends Schema.Class<FindingEntry>("FindingEntry")({
  * sections here (its capture rendering is a separate tab). Best-effort: an
  * unparseable manifest or section is dropped, never fatal.
  */
-export class WalkthroughEntry extends Schema.Class<WalkthroughEntry>("WalkthroughEntry")({
+export class WalkthroughEntry extends Schema.Class<WalkthroughEntry>(
+  "WalkthroughEntry"
+)({
   id: Schema.String,
   kind: Schema.Literals(["code", "product"]),
   manifest: Schema.optional(Walkthrough),
@@ -91,7 +96,9 @@ export class WalkthroughEntry extends Schema.Class<WalkthroughEntry>("Walkthroug
  * The `GET /api/review` body: the Review identity plus its walked records.
  * Uncached — the client re-fetches on every SSE change event.
  */
-export class ReviewSnapshot extends Schema.Class<ReviewSnapshot>("ReviewSnapshot")({
+export class ReviewSnapshot extends Schema.Class<ReviewSnapshot>(
+  "ReviewSnapshot"
+)({
   changes: Schema.Array(ChangeRecord),
   findings: Schema.Array(FindingEntry),
   review: Review,

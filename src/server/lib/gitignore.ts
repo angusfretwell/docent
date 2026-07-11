@@ -26,7 +26,9 @@ export function parseGitignore(text: string): string[] {
   return text
     .split("\n")
     .map((line) => line.trim())
-    .filter((line) => line !== "" && !line.startsWith("#") && !line.startsWith("!"));
+    .filter(
+      (line) => line !== "" && !line.startsWith("#") && !line.startsWith("!")
+    );
 }
 
 /** Escape a literal for use inside a RegExp, leaving glob handling to the caller. */
@@ -66,7 +68,8 @@ function compile(pattern: string): Rule {
 
   // A bare name matches that segment anywhere in the path.
   const regex = new RegExp(`^${segmentSource(body)}$`);
-  return (_relPath, segments) => segments.some((segment) => regex.test(segment));
+  return (_relPath, segments) =>
+    segments.some((segment) => regex.test(segment));
 }
 
 /** Build a matcher from parsed gitignore patterns. */
@@ -76,7 +79,9 @@ export function makeMatcher(patterns: readonly string[]): IgnoreMatcher {
     ignores(relPath) {
       // Normalize OS-native separators; node:fs.watch reports either.
       const normalized = relPath.replaceAll("\\", "/");
-      const segments = normalized.split("/").filter((segment) => segment !== "");
+      const segments = normalized
+        .split("/")
+        .filter((segment) => segment !== "");
       if (segments.includes(ALWAYS_IGNORED)) {
         return true;
       }

@@ -7,9 +7,14 @@
  * landed.
  */
 
-import type { FindingWrite, FindingWriteResult } from "@shared/schemas/finding-write";
+import type {
+  FindingWrite,
+  FindingWriteResult,
+} from "@shared/schemas/finding-write";
 
-export async function writeFinding(write: FindingWrite): Promise<FindingWriteResult> {
+export async function writeFinding(
+  write: FindingWrite
+): Promise<FindingWriteResult> {
   const res = await fetch("/api/findings", {
     body: JSON.stringify(write),
     headers: { "content-type": "application/json" },

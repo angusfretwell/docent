@@ -7,6 +7,7 @@
  */
 
 import { useEffect, useRef } from "react";
+
 import type { FileEntry, FileOrder, TreeNode } from "../lib/nav";
 
 /** Per-file viewed read-out for a tree row (folded upstream in DiffView). */
@@ -32,16 +33,28 @@ function basename(path: string): string {
 
 function Badge({ type }: { type: FileEntry["changeType"] }) {
   return (
-    <span style={{ color: BADGE_COLOR[type], fontWeight: 600, marginLeft: "0.5rem" }}>{type}</span>
+    <span
+      style={{
+        color: BADGE_COLOR[type],
+        fontWeight: 600,
+        marginLeft: "0.5rem",
+      }}
+    >
+      {type}
+    </span>
   );
 }
 
 function Counts({ entry }: { entry: FileEntry }) {
   return (
     <span style={{ fontVariantNumeric: "tabular-nums", marginLeft: "0.5rem" }}>
-      {entry.additions > 0 && <span style={{ color: BADGE_COLOR.A }}>+{entry.additions}</span>}
+      {entry.additions > 0 && (
+        <span style={{ color: BADGE_COLOR.A }}>+{entry.additions}</span>
+      )}
       {entry.deletions > 0 && (
-        <span style={{ color: BADGE_COLOR.D, marginLeft: "0.25rem" }}>−{entry.deletions}</span>
+        <span style={{ color: BADGE_COLOR.D, marginLeft: "0.25rem" }}>
+          −{entry.deletions}
+        </span>
       )}
     </span>
   );
@@ -105,7 +118,9 @@ function FileRow({
           {basename(entry.path)}
         </span>
         <Badge type={entry.changeType} />
-        {state?.generated ? <span className="tree-generated">generated</span> : null}
+        {state?.generated ? (
+          <span className="tree-generated">generated</span>
+        ) : null}
         <span style={{ flex: 1 }} />
         {state?.changed ? (
           <span className="viewed-changed" style={{ marginLeft: "0.4rem" }}>
@@ -313,23 +328,42 @@ export function FileTree({
           />
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem" }}>
-          <button onClick={() => onOrderChange(order === "size" ? "path" : "size")} type="button">
+          <button
+            onClick={() => onOrderChange(order === "size" ? "path" : "size")}
+            type="button"
+          >
             {order === "size" ? "Sort: size" : "Sort: path"}
           </button>
           <button onClick={() => onSplitChange(!split)} type="button">
             {split ? "Split" : "Unified"}
           </button>
           <span style={{ flex: 1 }} />
-          <button aria-label="Previous file" onClick={() => onJump("file", -1)} type="button">
+          <button
+            aria-label="Previous file"
+            onClick={() => onJump("file", -1)}
+            type="button"
+          >
             ↑file
           </button>
-          <button aria-label="Next file" onClick={() => onJump("file", 1)} type="button">
+          <button
+            aria-label="Next file"
+            onClick={() => onJump("file", 1)}
+            type="button"
+          >
             ↓file
           </button>
-          <button aria-label="Previous change" onClick={() => onJump("change", -1)} type="button">
+          <button
+            aria-label="Previous change"
+            onClick={() => onJump("change", -1)}
+            type="button"
+          >
             ↑hunk
           </button>
-          <button aria-label="Next change" onClick={() => onJump("change", 1)} type="button">
+          <button
+            aria-label="Next change"
+            onClick={() => onJump("change", 1)}
+            type="button"
+          >
             ↓hunk
           </button>
         </div>

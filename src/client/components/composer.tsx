@@ -6,8 +6,8 @@
  * caller owns what record the submitted body becomes.
  */
 
-import { useState } from "react";
 import type { Disposition } from "@shared/schemas/finding";
+import { useState } from "react";
 
 // The dispositions a reply may carry, plus a "plain comment" no-op default that
 // leaves the reply undispositioned (needs-action). Labels track data-model.md §7.
@@ -80,13 +80,20 @@ export function Composer({
         }}
         placeholder={placeholder}
         rows={3}
-        style={{ font: "inherit", padding: "0.4rem", resize: "vertical", width: "100%" }}
+        style={{
+          font: "inherit",
+          padding: "0.4rem",
+          resize: "vertical",
+          width: "100%",
+        }}
         value={body}
       />
       <div style={actionsStyle}>
         {withDisposition ? (
           <select
-            onChange={(event) => setDisposition(event.target.value as Disposition | "")}
+            onChange={(event) =>
+              setDisposition(event.target.value as Disposition | "")
+            }
             style={{ font: "inherit", marginRight: "auto" }}
             value={disposition}
           >
@@ -102,7 +109,12 @@ export function Composer({
             Cancel
           </button>
         ) : null}
-        <button className="expand-context" disabled={!canSubmit} onClick={submit} type="button">
+        <button
+          className="expand-context"
+          disabled={!canSubmit}
+          onClick={submit}
+          type="button"
+        >
           {busy ? "Saving…" : submitLabel}
         </button>
       </div>

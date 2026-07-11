@@ -6,8 +6,8 @@
  * settled marker. `live` renders nothing.
  */
 
-import type { DriftState } from "@shared/schemas/drift";
 import { driftBadge } from "@shared/lib/drift";
+import type { DriftState } from "@shared/schemas/drift";
 
 /** The re-check accent — shared with the panel's detached born-text rail so one restyle moves both. */
 export const DRIFT_SIGNAL = "224,108,32";
@@ -26,10 +26,20 @@ const baseStyle: React.CSSProperties = {
 };
 
 /** The drift pill for a Finding, or nothing when it is live (no drift). */
-export function DriftPill({ resolved, state }: { resolved: boolean; state: DriftState }) {
+export function DriftPill({
+  resolved,
+  state,
+}: {
+  resolved: boolean;
+  state: DriftState;
+}) {
   const badge = driftBadge(state, resolved);
   if (badge === undefined) {
     return null;
   }
-  return <span style={{ ...baseStyle, ...TONE_STYLE[badge.tone] }}>{badge.label}</span>;
+  return (
+    <span style={{ ...baseStyle, ...TONE_STYLE[badge.tone] }}>
+      {badge.label}
+    </span>
+  );
 }

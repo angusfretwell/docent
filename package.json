@@ -8,10 +8,8 @@
     "compile": "bun run build && bun build --compile --outfile dist/docent bin.ts",
     "serve": "bun run build && bun bin.ts",
     "typecheck": "tsc --noEmit",
-    "lint": "oxlint",
-    "fix": "oxlint --fix",
-    "format": "oxfmt",
-    "check": "oxfmt --check",
+    "fix": "ultracite fix",
+    "check": "ultracite check",
     "prepare": "./scripts/prepare-effect.sh"
   },
   "dependencies": {
@@ -31,8 +29,6 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
     "babel-plugin-react-compiler": "^1.0.0",
-    "eslint-plugin-github": "^6.1.1",
-    "eslint-plugin-sonarjs": "^4.1.0",
     "oxfmt": "^0.58.0",
     "oxlint": "^1.73.0",
     "oxlint-tsgolint": "^0.24.0",
@@ -40,7 +36,7 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "typescript": "^7.0.2",
-    "ultracite": "^7.9.3",
+    "ultracite": "7.9.3",
     "vite": "^8.1.4"
   }
 }

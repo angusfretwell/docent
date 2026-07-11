@@ -15,26 +15,32 @@
  * the code tab.
  */
 
-import { Replayer } from "rrweb";
-import type { eventWithTime } from "rrweb";
-import { useEffect, useRef, useState } from "react";
-import "rrweb/dist/style.css";
-import type { ChangeRecord, FindingEntry, WalkthroughEntry } from "@shared/schemas/review";
-import type { DriftState } from "@shared/schemas/drift";
 import { foldFinding } from "@shared/lib/finding";
 import type { FoldedFinding } from "@shared/lib/finding";
-import type { Anchor } from "@shared/schemas/finding";
 import {
   captureById,
   identityDrift,
   interleaveCaptureSegments,
   walkthroughStaleness,
 } from "@shared/lib/walkthrough";
+
+import "rrweb/dist/style.css";
+import type { DriftState } from "@shared/schemas/drift";
+import type { Anchor } from "@shared/schemas/finding";
+import type {
+  ChangeRecord,
+  FindingEntry,
+  WalkthroughEntry,
+} from "@shared/schemas/review";
 import type {
   Capture,
   WalkthroughAnnotation,
   WalkthroughSection,
 } from "@shared/schemas/walkthrough";
+import { useEffect, useRef, useState } from "react";
+import { Replayer } from "rrweb";
+import type { eventWithTime } from "rrweb";
+
 import { captureUrl, fetchCaptureEvents } from "../lib/blobs";
 
 const pillStyle: React.CSSProperties = {
@@ -94,7 +100,10 @@ interface Tone {
 // Two visually distinct overlay tones: an authored annotation (durable, blue)
 // versus a reviewer Finding (orange), so a reader tells the two acts apart at a
 // glance (walkthroughs.md §7).
-const ANNOTATION_TONE: Tone = { border: "#4c8dff", chip: "rgba(56,132,255,0.9)" };
+const ANNOTATION_TONE: Tone = {
+  border: "#4c8dff",
+  chip: "rgba(56,132,255,0.9)",
+};
 const FINDING_TONE: Tone = { border: "#e0863c", chip: "rgba(224,108,32,0.9)" };
 
 // The capture anchor arms, named once so narrowing and filters read one token.
@@ -139,7 +148,10 @@ interface WholePin {
 // the Finding union's two capture arms (an annotation anchor is assignable to it),
 // derived so it can't drift from the schema. A pin sourced from an annotation is
 // toned blue and labelled `A`; from a Finding, orange `F`.
-type CaptureAnchor = Extract<Anchor, { kind: "screenshot-region" | "recording-timestamp" }>;
+type CaptureAnchor = Extract<
+  Anchor,
+  { kind: "screenshot-region" | "recording-timestamp" }
+>;
 
 interface RawPin {
   anchor: CaptureAnchor;
@@ -150,7 +162,10 @@ interface RawPin {
 
 /** The capture id an anchor targets, or `undefined` for a non-capture anchor. */
 function captureAnchorId(anchor: FoldedFinding["anchor"]): string | undefined {
-  if (anchor?.kind === SCREENSHOT_REGION || anchor?.kind === RECORDING_TIMESTAMP) {
+  if (
+    anchor?.kind === SCREENSHOT_REGION ||
+    anchor?.kind === RECORDING_TIMESTAMP
+  ) {
     return anchor.capture;
   }
   return undefined;
@@ -166,7 +181,7 @@ function captureAnchorId(anchor: FoldedFinding["anchor"]): string | undefined {
  */
 function captureFindingDrift(
   anchor: FoldedFinding["anchor"],
-  placedCaptureIds: ReadonlySet<string>,
+  placedCaptureIds: ReadonlySet<string>
 ): DriftState | undefined {
   const id = captureAnchorId(anchor);
   return id === undefined ? undefined : identityDrift(placedCaptureIds.has(id));
@@ -182,7 +197,7 @@ function rawPins(
   annotations: readonly WalkthroughAnnotation[],
   findings: readonly FoldedFinding[],
   captureId: string,
-  kind: "screenshot-region" | "recording-timestamp",
+  kind: "screenshot-region" | "recording-timestamp"
 ): RawPin[] {
   const pins: RawPin[] = [];
   let annotationCount = 0;
@@ -202,7 +217,12 @@ function rawPins(
     const { anchor } = finding;
     if (anchor?.kind === kind && anchor.capture === captureId) {
       findingCount += 1;
-      pins.push({ anchor, body: finding.body, label: `F${findingCount}`, tone: FINDING_TONE });
+      pins.push({
+        anchor,
+        body: finding.body,
+        label: `F${findingCount}`,
+        tone: FINDING_TONE,
+      });
     }
   }
   return pins;
@@ -212,12 +232,18 @@ function rawPins(
 function screenshotPins(
   annotations: readonly WalkthroughAnnotation[],
   findings: readonly FoldedFinding[],
-  capture: Capture,
+  capture: Capture
 ): { regions: RegionPin[]; whole: WholePin[] } {
   const regions: RegionPin[] = [];
   const whole: WholePin[] = [];
-  for (const pin of rawPins(annotations, findings, capture.id, SCREENSHOT_REGION)) {
-    const rect = pin.anchor.kind === SCREENSHOT_REGION ? pin.anchor.rect : undefined;
+  for (const pin of rawPins(
+    annotations,
+    findings,
+    capture.id,
+    SCREENSHOT_REGION
+  )) {
+    const rect =
+      pin.anchor.kind === SCREENSHOT_REGION ? pin.anchor.rect : undefined;
     if (rect) {
       regions.push({ body: pin.body, label: pin.label, rect, tone: pin.tone });
     } else {
@@ -231,17 +257,30 @@ function screenshotPins(
 function recordingPins(
   annotations: readonly WalkthroughAnnotation[],
   findings: readonly FoldedFinding[],
-  capture: Capture,
+  capture: Capture
 ): { times: TimePin[]; whole: WholePin[] } {
   const times: TimePin[] = [];
   const whole: WholePin[] = [];
-  for (const pin of rawPins(annotations, findings, capture.id, RECORDING_TIMESTAMP)) {
-    const from = pin.anchor.kind === RECORDING_TIMESTAMP ? pin.anchor.fromMs : undefined;
-    const to = pin.anchor.kind === RECORDING_TIMESTAMP ? pin.anchor.toMs : undefined;
+  for (const pin of rawPins(
+    annotations,
+    findings,
+    capture.id,
+    RECORDING_TIMESTAMP
+  )) {
+    const from =
+      pin.anchor.kind === RECORDING_TIMESTAMP ? pin.anchor.fromMs : undefined;
+    const to =
+      pin.anchor.kind === RECORDING_TIMESTAMP ? pin.anchor.toMs : undefined;
     if (from === undefined) {
       whole.push({ body: pin.body, label: pin.label, tone: pin.tone });
     } else {
-      times.push({ atMs: from, body: pin.body, label: pin.label, toMs: to, tone: pin.tone });
+      times.push({
+        atMs: from,
+        body: pin.body,
+        label: pin.label,
+        toMs: to,
+        tone: pin.tone,
+      });
     }
   }
   return { times, whole };
@@ -266,7 +305,11 @@ function Chip({ label, tone }: { label: string; tone: Tone }) {
 }
 
 /** The caption list under a capture: each pin's chip beside its callout body. */
-function Captions({ pins }: { pins: readonly { body: string; label: string; tone: Tone }[] }) {
+function Captions({
+  pins,
+}: {
+  pins: readonly { body: string; label: string; tone: Tone }[];
+}) {
   if (pins.length === 0) {
     return null;
   }
@@ -429,7 +472,9 @@ function RecordingCapture({
         <div ref={rootRef} style={{ height: "100%", width: "100%" }} />
       </div>
       {failed ? (
-        <p style={{ fontSize: "0.8rem", opacity: 0.6 }}>Could not load the recording.</p>
+        <p style={{ fontSize: "0.8rem", opacity: 0.6 }}>
+          Could not load the recording.
+        </p>
       ) : (
         <div
           style={{
@@ -440,7 +485,12 @@ function RecordingCapture({
             margin: "0.35rem 0",
           }}
         >
-          <button disabled={!ready} onClick={() => seek(0)} style={buttonStyle} type="button">
+          <button
+            disabled={!ready}
+            onClick={() => seek(0)}
+            style={buttonStyle}
+            type="button"
+          >
             ▶ Replay
           </button>
           {times.map((pin) => (
@@ -451,8 +501,10 @@ function RecordingCapture({
               style={{ ...buttonStyle, borderColor: pin.tone.border }}
               type="button"
             >
-              <Chip label={pin.label} tone={pin.tone} /> {(pin.atMs / 1000).toFixed(1)}
-              {pin.toMs === undefined ? "" : `–${(pin.toMs / 1000).toFixed(1)}`}s
+              <Chip label={pin.label} tone={pin.tone} />{" "}
+              {(pin.atMs / 1000).toFixed(1)}
+              {pin.toMs === undefined ? "" : `–${(pin.toMs / 1000).toFixed(1)}`}
+              s
             </button>
           ))}
         </div>
@@ -503,9 +555,12 @@ function CaptureView({
  * anchor spans the full Finding vocabulary (§7), so a non-capture arm (e.g.
  * text-span) simply never matches a capture id and is skipped here.
  */
-function annotationsFor(section: WalkthroughSection, captureId: string): WalkthroughAnnotation[] {
+function annotationsFor(
+  section: WalkthroughSection,
+  captureId: string
+): WalkthroughAnnotation[] {
   return (section.annotations ?? []).filter(
-    (annotation) => captureAnchorId(annotation.anchor) === captureId,
+    (annotation) => captureAnchorId(annotation.anchor) === captureId
   );
 }
 
@@ -517,7 +572,9 @@ function annotationsFor(section: WalkthroughSection, captureId: string): Walkthr
  * above the body).
  */
 function Prose({ text, quotes }: { text: string; quotes: readonly string[] }) {
-  const active = quotes.filter((quote) => quote.length > 0 && text.includes(quote));
+  const active = quotes.filter(
+    (quote) => quote.length > 0 && text.includes(quote)
+  );
   if (active.length === 0) {
     return <p style={proseStyle}>{text}</p>;
   }
@@ -543,7 +600,7 @@ function Prose({ text, quotes }: { text: string; quotes: readonly string[] }) {
     nodes.push(
       <mark key={`mark:${quote}:${nodes.length}`} style={markStyle}>
         {quote}
-      </mark>,
+      </mark>
     );
     rest = rest.slice(at + quote.length);
   }
@@ -573,11 +630,16 @@ function Section({
   const walkthroughId = manifest?.id ?? "";
   const segments = interleaveCaptureSegments(section.body, captureIds.length);
   const quotes = textSpans.map((finding) =>
-    finding.anchor?.kind === TEXT_SPAN ? finding.anchor.quote : "",
+    finding.anchor?.kind === TEXT_SPAN ? finding.anchor.quote : ""
   );
 
   return (
-    <section style={{ borderTop: "1px solid rgba(128,128,128,0.2)", padding: "1rem 0" }}>
+    <section
+      style={{
+        borderTop: "1px solid rgba(128,128,128,0.2)",
+        padding: "1rem 0",
+      }}
+    >
       <h2 style={{ fontSize: "1.05rem", margin: 0 }}>{section.title}</h2>
       {narrative.map((finding) => (
         <div key={finding.id} style={findingStyle}>
@@ -588,7 +650,8 @@ function Section({
       {textSpans.map((finding) => (
         <div key={finding.id} style={findingStyle}>
           <span style={{ opacity: 0.6 }}>
-            on “{finding.anchor?.kind === TEXT_SPAN ? finding.anchor.quote : ""}”:{" "}
+            on “{finding.anchor?.kind === TEXT_SPAN ? finding.anchor.quote : ""}
+            ”:{" "}
           </span>
           {finding.body}
         </div>
@@ -596,14 +659,21 @@ function Section({
       {segments.map((segment) => {
         if (segment.kind === "prose") {
           return (
-            <Prose key={`prose:${segment.text.slice(0, 24)}`} quotes={quotes} text={segment.text} />
+            <Prose
+              key={`prose:${segment.text.slice(0, 24)}`}
+              quotes={quotes}
+              text={segment.text}
+            />
           );
         }
         const captureId = captureIds[segment.index] ?? "";
         const capture = captureById(manifest, captureId);
         if (capture === undefined) {
           return (
-            <p key={`capture:${segment.index}`} style={{ fontSize: "0.8rem", opacity: 0.6 }}>
+            <p
+              key={`capture:${segment.index}`}
+              style={{ fontSize: "0.8rem", opacity: 0.6 }}
+            >
               Missing capture <code>{captureId}</code>.
             </p>
           );
@@ -625,12 +695,15 @@ function Section({
 /** Group narrative (`walkthrough-section`) Findings on this walkthrough by section id. */
 function narrativeBySectionId(
   folded: readonly FoldedFinding[],
-  walkthroughId: string,
+  walkthroughId: string
 ): Map<string, FoldedFinding[]> {
   const bySection = new Map<string, FoldedFinding[]>();
   for (const finding of folded) {
     const { anchor } = finding;
-    if (anchor?.kind === "walkthrough-section" && anchor.walkthroughId === walkthroughId) {
+    if (
+      anchor?.kind === "walkthrough-section" &&
+      anchor.walkthroughId === walkthroughId
+    ) {
       const list = bySection.get(anchor.sectionId) ?? [];
       list.push(finding);
       bySection.set(anchor.sectionId, list);
@@ -640,7 +713,9 @@ function narrativeBySectionId(
 }
 
 /** Group `text-span` Findings by the section id they quote into. */
-function textSpansBySectionId(folded: readonly FoldedFinding[]): Map<string, FoldedFinding[]> {
+function textSpansBySectionId(
+  folded: readonly FoldedFinding[]
+): Map<string, FoldedFinding[]> {
   const bySection = new Map<string, FoldedFinding[]>();
   for (const finding of folded) {
     const { anchor } = finding;
@@ -656,7 +731,7 @@ function textSpansBySectionId(folded: readonly FoldedFinding[]): Map<string, Fol
 /** Find a capture by id across every walkthrough's registry — the born-capture recovery. */
 function findBornCapture(
   walkthroughs: readonly WalkthroughEntry[],
-  captureId: string,
+  captureId: string
 ): { capture: Capture; walkthroughId: string } | undefined {
   for (const entry of walkthroughs) {
     const capture = captureById(entry.manifest, captureId);
@@ -683,20 +758,26 @@ function DetachedFindings({
   placedCaptureIds: ReadonlySet<string>;
 }) {
   const detached = findings.filter(
-    (finding) => captureFindingDrift(finding.anchor, placedCaptureIds) === "outdated",
+    (finding) =>
+      captureFindingDrift(finding.anchor, placedCaptureIds) === "outdated"
   );
   if (detached.length === 0) {
     return null;
   }
   return (
-    <section style={{ borderTop: "1px solid rgba(128,128,128,0.2)", padding: "1rem 0" }}>
+    <section
+      style={{
+        borderTop: "1px solid rgba(128,128,128,0.2)",
+        padding: "1rem 0",
+      }}
+    >
       <div style={{ alignItems: "center", display: "flex", gap: "0.5rem" }}>
         <h2 style={{ fontSize: "1.05rem", margin: 0 }}>Detached findings</h2>
         <span style={outdatedStyle}>Outdated</span>
       </div>
       <p style={{ fontSize: "0.8rem", opacity: 0.6 }}>
-        These Findings point at captures no longer placed in this walkthrough; they render against
-        their born capture.
+        These Findings point at captures no longer placed in this walkthrough;
+        they render against their born capture.
       </p>
       {detached.map((finding) => {
         const captureId = captureAnchorId(finding.anchor) ?? "";
@@ -712,7 +793,9 @@ function DetachedFindings({
               />
             ) : (
               <div style={findingStyle}>
-                <span style={{ opacity: 0.6 }}>capture {captureId} (unavailable): </span>
+                <span style={{ opacity: 0.6 }}>
+                  capture {captureId} (unavailable):{" "}
+                </span>
                 {finding.body}
               </div>
             )}
@@ -741,21 +824,27 @@ export function ProductWalkthroughView({
   walkthroughs: readonly WalkthroughEntry[];
 }) {
   const { sections, manifest } = walkthrough;
-  const folded = findings.map((finding) => foldFinding(finding.id, finding.records));
+  const folded = findings.map((finding) =>
+    foldFinding(finding.id, finding.records)
+  );
   const narrative = narrativeBySectionId(folded, walkthrough.id);
   const textSpans = textSpansBySectionId(folded);
   const captureFindings = folded.filter(
     (finding) =>
-      finding.anchor?.kind === SCREENSHOT_REGION || finding.anchor?.kind === RECORDING_TIMESTAMP,
+      finding.anchor?.kind === SCREENSHOT_REGION ||
+      finding.anchor?.kind === RECORDING_TIMESTAMP
   );
 
   // Placement, not registry membership, decides identity drift: a capture is
   // rendered only where a section places it, so a Finding is live only if its
   // capture is placed. Registry-but-unplaced captures fall through to
   // DetachedFindings, so their Findings surface rather than vanish (§8).
-  const placedCaptureIds = new Set(sections.flatMap((section) => section.captures ?? []));
+  const placedCaptureIds = new Set(
+    sections.flatMap((section) => section.captures ?? [])
+  );
   const liveCaptureFindings = captureFindings.filter(
-    (finding) => captureFindingDrift(finding.anchor, placedCaptureIds) === "live",
+    (finding) =>
+      captureFindingDrift(finding.anchor, placedCaptureIds) === "live"
   );
 
   const staleness = walkthroughStaleness(manifest?.bornChangeId ?? "", changes);
@@ -763,19 +852,29 @@ export function ProductWalkthroughView({
   return (
     <div style={{ height: "100%", overflow: "auto", padding: "0 1.5rem 3rem" }}>
       <header style={{ padding: "1rem 0" }}>
-        <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: "0.6rem" }}>
+        <div
+          style={{
+            alignItems: "center",
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "0.6rem",
+          }}
+        >
           <h1 style={{ fontSize: "1.4rem", margin: 0 }}>
             {manifest?.title ?? "Product walkthrough"}
           </h1>
           {staleness.stale ? (
             <span style={staleStyle}>
-              {staleness.behind} change{staleness.behind === 1 ? "" : "s"} behind
+              {staleness.behind} change{staleness.behind === 1 ? "" : "s"}{" "}
+              behind
             </span>
           ) : null}
         </div>
       </header>
       {sections.length === 0 ? (
-        <p style={{ opacity: 0.7 }}>This walkthrough has no readable sections.</p>
+        <p style={{ opacity: 0.7 }}>
+          This walkthrough has no readable sections.
+        </p>
       ) : (
         sections.map((section) => (
           <Section

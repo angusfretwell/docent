@@ -13,7 +13,9 @@
  * line). Absent optional fields (`value === undefined`) are dropped, and key
  * order is the caller's insertion order.
  */
-export function serializeFrontmatter(ordered: readonly [string, unknown][]): string {
+export function serializeFrontmatter(
+  ordered: readonly [string, unknown][]
+): string {
   return ordered
     .filter(([, value]) => value !== undefined)
     .map(([key, value]) => `${key}: ${Bun.YAML.stringify(value).trim()}`)

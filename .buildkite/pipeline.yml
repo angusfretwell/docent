@@ -11,15 +11,8 @@ steps:
     key: check
     command: |
       mise ci
-      mise check
-    plugins: *plugins
-
-  - label: ":oxc: lint"
-    key: lint
-    command: |
-      mise ci
-      mise lint --format=junit > junit-lint.xml
-    artifact_paths: junit-lint.xml
+      mise check --format=junit > junit-lint.xml
+    artifact_paths: junit-check.xml
     plugins: *plugins
 
   - label: ":typescript: typecheck"
@@ -48,8 +41,8 @@ steps:
             - label: ":bun: test"
               artifact_path: junit-test.xml
               type: junit
-            - label: ":oxc: lint"
-              artifact_path: junit-lint.xml
+            - label: ":oxc: check"
+              artifact_path: junit-check.xml
               type: junit
           formatter:
             type: summary

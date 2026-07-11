@@ -31,7 +31,12 @@ export interface AnchorContext {
  */
 export type DriftPlan =
   | { kind: "resolved"; state: DriftState }
-  | { bornSha: string; currentSha: string; kind: "reanchor"; range: [number, number] };
+  | {
+      bornSha: string;
+      currentSha: string;
+      kind: "reanchor";
+      range: [number, number];
+    };
 
 /** A drift badge — an informational note, a re-check signal, or a settled marker. */
 export interface DriftBadge {

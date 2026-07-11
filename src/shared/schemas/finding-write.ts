@@ -11,6 +11,7 @@
  */
 
 import { Schema } from "effect";
+
 import { Anchor, Disposition } from "./finding";
 
 /** Open a new Finding: the root record carries the content-addressed anchor. */
@@ -42,7 +43,12 @@ const ReopenWrite = Schema.Struct({
 });
 
 /** The `POST /api/findings` request body — one append-only record to drop. */
-export const FindingWrite = Schema.Union([OpenWrite, ReplyWrite, ResolveWrite, ReopenWrite]);
+export const FindingWrite = Schema.Union([
+  OpenWrite,
+  ReplyWrite,
+  ResolveWrite,
+  ReopenWrite,
+]);
 export type FindingWrite = typeof FindingWrite.Type;
 
 /**

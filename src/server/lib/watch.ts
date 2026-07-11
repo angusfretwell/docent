@@ -19,11 +19,13 @@
  */
 
 import { watch } from "node:fs";
+
 import { Context, Effect, Layer, Option, PubSub } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
-import { ensureGitignore } from "../services/review";
+
 import { resolveGitDir, resolveRepo } from "../services/git";
+import { ensureGitignore } from "../services/review";
 import { makeMatcher, parseGitignore } from "./gitignore";
 import type { IgnoreMatcher } from "./gitignore";
 
@@ -37,7 +39,9 @@ export class DocentWatch extends Context.Service<
 >()("docent/DocentWatch") {}
 
 /** Read a gitignore-style file's text, or "" when it does not exist. */
-const readIgnoreText = Effect.fn("readIgnoreText")(function* readIgnoreText(file: string) {
+const readIgnoreText = Effect.fn("readIgnoreText")(function* readIgnoreText(
+  file: string
+) {
   const fs = yield* FileSystem;
   return yield* fs.readFileString(file).pipe(Effect.orElseSucceed(() => ""));
 });
@@ -45,12 +49,14 @@ const readIgnoreText = Effect.fn("readIgnoreText")(function* readIgnoreText(file
 /** Build the ignore matcher from the repo's `.gitignore` and `.git/info/exclude`. */
 const buildMatcher = Effect.fn("buildMatcher")(function* buildMatcher(
   root: string,
-  gitDir?: string,
+  gitDir?: string
 ) {
   const path = yield* Path;
   const rootIgnore = yield* readIgnoreText(path.join(root, ".gitignore"));
   const exclude =
-    gitDir === undefined ? "" : yield* readIgnoreText(path.join(gitDir, "info", "exclude"));
+    gitDir === undefined
+      ? ""
+      : yield* readIgnoreText(path.join(gitDir, "info", "exclude"));
   return makeMatcher(parseGitignore(`${rootIgnore}\n${exclude}`));
 });
 
@@ -63,7 +69,7 @@ const buildMatcher = Effect.fn("buildMatcher")(function* buildMatcher(
 const watchDir = Effect.fn("watchDir")(function* watchDir(
   dir: string,
   options: { recursive: boolean; accept?: (relPath: string) => boolean },
-  onChange: () => void,
+  onChange: () => void
 ) {
   const fs = yield* FileSystem;
   const exists = yield* fs.exists(dir).pipe(Effect.orElseSucceed(() => false));
@@ -75,12 +81,16 @@ const watchDir = Effect.fn("watchDir")(function* watchDir(
       watch(dir, { recursive: options.recursive }, (_event, filename) => {
         // A `null` filename (some platforms) is a change we can't classify —
         // accept it rather than miss it.
-        if (options.accept === undefined || filename === null || options.accept(filename)) {
+        if (
+          options.accept === undefined ||
+          filename === null ||
+          options.accept(filename)
+        ) {
           onChange();
         }
-      }),
+      })
     ),
-    (watcher) => Effect.sync(() => watcher.close()),
+    (watcher) => Effect.sync(() => watcher.close())
   );
 });
 
@@ -92,9 +102,11 @@ const makeWatch = Effect.fn("makeWatch")(function* makeWatch(cwd: string) {
   // (its /api routes surface the git error per request instead).
   const root = yield* resolveRepo(cwd).pipe(
     Effect.map((repo) => repo.root),
-    Effect.orElseSucceed(() => cwd),
+    Effect.orElseSucceed(() => cwd)
   );
-  const gitDir = Option.getOrUndefined(yield* resolveGitDir(cwd).pipe(Effect.option));
+  const gitDir = Option.getOrUndefined(
+    yield* resolveGitDir(cwd).pipe(Effect.option)
+  );
   const stateRoot = path.join(root, ".docent");
 
   // The watch target must exist, and `.docent/` must stay out of git history.
@@ -129,7 +141,11 @@ const makeWatch = Effect.fn("makeWatch")(function* makeWatch(cwd: string) {
   yield* watchDir(stateRoot, { recursive: true }, schedule);
   // Surface 2: repo root — working-tree edits, minus gitignored/`.git`/`.docent`
   // churn, so the Pending diff recomputes live as an agent edits.
-  yield* watchDir(root, { accept: (rel) => !matcher.ignores(rel), recursive: true }, schedule);
+  yield* watchDir(
+    root,
+    { accept: (rel) => !matcher.ignores(rel), recursive: true },
+    schedule
+  );
   // Surface 3: the git dir — HEAD/index moves (commit, checkout) so the
   // incremental Pending diff empties and the entry auto-hides.
   if (gitDir !== undefined) {

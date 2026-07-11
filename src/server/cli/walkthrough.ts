@@ -13,10 +13,21 @@
  * parsers are pure (unit-tested directly); the effectful layer resolves git + fs.
  */
 
+import {
+  WalkthroughAnnotation,
+  WalkthroughRange,
+} from "@shared/schemas/walkthrough";
 import { Effect, Schema } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
-import { WalkthroughAnnotation, WalkthroughRange } from "@shared/schemas/walkthrough";
+
+import type { ChangeRefs } from "../services/findings-write";
+import { resolveBlobShaAt } from "../services/git";
+import {
+  addWalkthroughCapture,
+  addWalkthroughSection,
+  writeWalkthrough,
+} from "../services/walkthrough-write";
 import {
   attempt,
   CliUsageError,
@@ -30,13 +41,6 @@ import {
   writeContext,
 } from "./index";
 import type { ParsedArgs } from "./index";
-import type { ChangeRefs } from "../services/findings-write";
-import { resolveBlobShaAt } from "../services/git";
-import {
-  addWalkthroughCapture,
-  addWalkthroughSection,
-  writeWalkthrough,
-} from "../services/walkthrough-write";
 
 const WALKTHROUGH_KINDS = ["code", "product"] as const;
 const CAPTURE_KINDS = ["screenshot", "recording"] as const;
@@ -69,12 +73,16 @@ export function parseRangeSpec(spec: string): RangeSpec {
   }
   const colon = rest.lastIndexOf(":");
   if (colon === -1) {
-    throw new CliUsageError({ reason: `bad --range: ${spec} (file:start[-end][@side])` });
+    throw new CliUsageError({
+      reason: `bad --range: ${spec} (file:start[-end][@side])`,
+    });
   }
   const file = rest.slice(0, colon);
   const match = RANGE_LINES.exec(rest.slice(colon + 1));
   if (file === "" || match?.groups === undefined) {
-    throw new CliUsageError({ reason: `bad --range: ${spec} (file:start[-end][@side])` });
+    throw new CliUsageError({
+      reason: `bad --range: ${spec} (file:start[-end][@side])`,
+    });
   }
   const start = Number(match.groups.start);
   const end = match.groups.end === undefined ? start : Number(match.groups.end);
@@ -88,7 +96,9 @@ const DIMENSIONS = /^(?<width>\d+)x(?<height>\d+)$/;
 export function parseDimensions(flag: string, value: string): [number, number] {
   const match = DIMENSIONS.exec(value.trim());
   if (match?.groups === undefined) {
-    throw new CliUsageError({ reason: `bad --${flag}: ${value} (WxH, e.g. 1280x800)` });
+    throw new CliUsageError({
+      reason: `bad --${flag}: ${value} (WxH, e.g. 1280x800)`,
+    });
   }
   return [Number(match.groups.width), Number(match.groups.height)];
 }
@@ -97,7 +107,9 @@ export function parseDimensions(flag: string, value: string): [number, number] {
 export function parseDurationMs(value: string): number {
   const millis = Number(value.trim());
   if (!Number.isInteger(millis) || millis < 0) {
-    throw new CliUsageError({ reason: `bad --duration-ms: ${value} (a non-negative integer)` });
+    throw new CliUsageError({
+      reason: `bad --duration-ms: ${value} (a non-negative integer)`,
+    });
   }
   return millis;
 }
@@ -106,7 +118,7 @@ export function parseDurationMs(value: string): number {
 const buildRanges = Effect.fn("buildRanges")(function* buildRanges(
   root: string,
   refs: Pick<ChangeRefs, "baseSha" | "headSha">,
-  specs: readonly RangeSpec[],
+  specs: readonly RangeSpec[]
 ) {
   return yield* Effect.forEach(
     specs,
@@ -121,40 +133,49 @@ const buildRanges = Effect.fn("buildRanges")(function* buildRanges(
           side: spec.side,
         });
       }),
-    { concurrency: "unbounded" },
+    { concurrency: "unbounded" }
   );
 });
 
 /** Decode each `--annotation <json>` against the schema, or fail as a usage error. */
-const parseAnnotations = Effect.fn("parseAnnotations")(function* parseAnnotations(
-  raws: readonly string[],
-) {
-  return yield* Effect.forEach(
-    raws,
-    (raw) =>
-      Effect.gen(function* decode() {
-        const json = yield* Effect.try({
-          catch: () => new CliUsageError({ reason: `--annotation is not valid JSON: ${raw}` }),
-          try: () => JSON.parse(raw) as unknown,
-        });
-        return yield* Schema.decodeUnknownEffect(WalkthroughAnnotation)(json).pipe(
-          Effect.mapError(
-            (error) => new CliUsageError({ reason: `invalid --annotation: ${error}` }),
-          ),
-        );
-      }),
-    { concurrency: "unbounded" },
-  );
-});
+const parseAnnotations = Effect.fn("parseAnnotations")(
+  function* parseAnnotations(raws: readonly string[]) {
+    return yield* Effect.forEach(
+      raws,
+      (raw) =>
+        Effect.gen(function* decode() {
+          const json = yield* Effect.try({
+            catch: () =>
+              new CliUsageError({
+                reason: `--annotation is not valid JSON: ${raw}`,
+              }),
+            try: () => JSON.parse(raw) as unknown,
+          });
+          return yield* Schema.decodeUnknownEffect(WalkthroughAnnotation)(
+            json
+          ).pipe(
+            Effect.mapError(
+              (error) =>
+                new CliUsageError({ reason: `invalid --annotation: ${error}` })
+            )
+          );
+        }),
+      { concurrency: "unbounded" }
+    );
+  }
+);
 
 /**
  * `walkthrough create` — mint a walkthrough shell bound to the live head.
  * `--title` is optional: the capture flow mints a title-less product shell
  * (a title is editorial, filled in by `/author-product-walkthrough` later).
  */
-const runCreate = Effect.fn("runCreate")(function* runCreate(cwd: string, args: ParsedArgs) {
+const runCreate = Effect.fn("runCreate")(function* runCreate(
+  cwd: string,
+  args: ParsedArgs
+) {
   const kind = yield* attempt(() =>
-    parseEnum("kind", requireFlag(args, "kind"), WALKTHROUGH_KINDS),
+    parseEnum("kind", requireFlag(args, "kind"), WALKTHROUGH_KINDS)
   );
   const title = one(args, "title")?.trim() ?? "";
   const context = yield* writeContext(cwd);
@@ -171,7 +192,7 @@ const runCreate = Effect.fn("runCreate")(function* runCreate(cwd: string, args: 
 /** `walkthrough add-section` — validate + append a section (code or product arm). */
 const runAddSection = Effect.fn("runAddSection")(function* runAddSection(
   cwd: string,
-  args: ParsedArgs,
+  args: ParsedArgs
 ) {
   const walkthroughId = yield* attempt(() => requireFlag(args, "walkthrough"));
   const title = yield* attempt(() => requireFlag(args, "title"));
@@ -179,7 +200,9 @@ const runAddSection = Effect.fn("runAddSection")(function* runAddSection(
   const captureIds = many(args, "capture");
   // Annotations are JSON, which embeds commas — so take the raw repeated
   // `--annotation` values, never the comma-splitting `many`.
-  const annotations = yield* parseAnnotations(args.values.get("annotation") ?? []);
+  const annotations = yield* parseAnnotations(
+    args.values.get("annotation") ?? []
+  );
   const body = yield* resolveBody(args, false);
   const context = yield* writeContext(cwd);
   const ranges = yield* buildRanges(context.root, context.refs, specs);
@@ -200,39 +223,42 @@ const runAddSection = Effect.fn("runAddSection")(function* runAddSection(
  * Run one `docent walkthrough <op> …` invocation: parse, execute against git +
  * fs, and print the machine-readable JSON result an agent consumes directly.
  */
-export const runWalkthrough = Effect.fn("runWalkthrough")(function* runWalkthrough(
-  cwd: string,
-  argv: readonly string[],
-) {
-  const [op, ...rest] = argv;
-  if (op === "create") {
-    const args = yield* attempt(() => parseArgs(rest, new Set()));
-    return yield* printJson(yield* runCreate(cwd, args));
+export const runWalkthrough = Effect.fn("runWalkthrough")(
+  function* runWalkthrough(cwd: string, argv: readonly string[]) {
+    const [op, ...rest] = argv;
+    if (op === "create") {
+      const args = yield* attempt(() => parseArgs(rest, new Set()));
+      return yield* printJson(yield* runCreate(cwd, args));
+    }
+    if (op === "add-section") {
+      const args = yield* attempt(() => parseArgs(rest, new Set()));
+      return yield* printJson(yield* runAddSection(cwd, args));
+    }
+    return yield* Effect.fail(
+      new CliUsageError({
+        reason: `unknown walkthrough subcommand: ${op ?? "(none)"} (create | add-section)`,
+      })
+    );
   }
-  if (op === "add-section") {
-    const args = yield* attempt(() => parseArgs(rest, new Set()));
-    return yield* printJson(yield* runAddSection(cwd, args));
-  }
-  return yield* Effect.fail(
-    new CliUsageError({
-      reason: `unknown walkthrough subcommand: ${op ?? "(none)"} (create | add-section)`,
-    }),
-  );
-});
+);
 
 /** `capture add` — content-address a media file and register it on a product tour. */
 const runCaptureAdd = Effect.fn("runCaptureAdd")(function* runCaptureAdd(
   cwd: string,
-  args: ParsedArgs,
+  args: ParsedArgs
 ) {
   const fs = yield* FileSystem;
   const path = yield* Path;
 
   const walkthroughId = yield* attempt(() => requireFlag(args, "walkthrough"));
-  const kind = yield* attempt(() => parseEnum("kind", requireFlag(args, "kind"), CAPTURE_KINDS));
+  const kind = yield* attempt(() =>
+    parseEnum("kind", requireFlag(args, "kind"), CAPTURE_KINDS)
+  );
   const mediaPath = yield* attempt(() => requireFlag(args, "media"));
   const route = yield* attempt(() => requireFlag(args, "route"));
-  const viewport = yield* attempt(() => parseDimensions("viewport", requireFlag(args, "viewport")));
+  const viewport = yield* attempt(() =>
+    parseDimensions("viewport", requireFlag(args, "viewport"))
+  );
 
   // The metadata arms are kind-specific (walkthroughs.md §6): `dims` (full-page
   // pixels) rides a screenshot, `durationMs` a recording. Refuse the mismatch
@@ -241,23 +267,33 @@ const runCaptureAdd = Effect.fn("runCaptureAdd")(function* runCaptureAdd(
   const durationFlag = one(args, "duration-ms");
   if (kind === "recording" && dimsFlag !== undefined) {
     return yield* Effect.fail(
-      new CliUsageError({ reason: "--dims is for screenshots; a recording takes --duration-ms" }),
+      new CliUsageError({
+        reason: "--dims is for screenshots; a recording takes --duration-ms",
+      })
     );
   }
   if (kind === "screenshot" && durationFlag !== undefined) {
     return yield* Effect.fail(
-      new CliUsageError({ reason: "--duration-ms is for recordings; a screenshot takes --dims" }),
+      new CliUsageError({
+        reason: "--duration-ms is for recordings; a screenshot takes --dims",
+      })
     );
   }
   const dims =
-    dimsFlag === undefined ? undefined : yield* attempt(() => parseDimensions("dims", dimsFlag));
+    dimsFlag === undefined
+      ? undefined
+      : yield* attempt(() => parseDimensions("dims", dimsFlag));
   const durationMs =
-    durationFlag === undefined ? undefined : yield* attempt(() => parseDurationMs(durationFlag));
+    durationFlag === undefined
+      ? undefined
+      : yield* attempt(() => parseDurationMs(durationFlag));
 
   const media = yield* fs
     .readFile(path.resolve(cwd, mediaPath))
     .pipe(
-      Effect.mapError(() => new CliUsageError({ reason: `cannot read --media: ${mediaPath}` })),
+      Effect.mapError(
+        () => new CliUsageError({ reason: `cannot read --media: ${mediaPath}` })
+      )
     );
   const context = yield* writeContext(cwd);
   return yield* addWalkthroughCapture({
@@ -277,7 +313,7 @@ const runCaptureAdd = Effect.fn("runCaptureAdd")(function* runCaptureAdd(
 /** Run one `docent capture <op> …` invocation and print its JSON result. */
 export const runCapture = Effect.fn("runCapture")(function* runCapture(
   cwd: string,
-  argv: readonly string[],
+  argv: readonly string[]
 ) {
   const [op, ...rest] = argv;
   if (op === "add") {
@@ -285,6 +321,8 @@ export const runCapture = Effect.fn("runCapture")(function* runCapture(
     return yield* printJson(yield* runCaptureAdd(cwd, args));
   }
   return yield* Effect.fail(
-    new CliUsageError({ reason: `unknown capture subcommand: ${op ?? "(none)"} (add)` }),
+    new CliUsageError({
+      reason: `unknown capture subcommand: ${op ?? "(none)"} (add)`,
+    })
   );
 });

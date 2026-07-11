@@ -14,8 +14,8 @@
  * plain unit-tested function the Product tab renders over.
  */
 
-import type { Anchor } from "../schemas/finding";
 import type { DriftState } from "../schemas/drift";
+import type { Anchor } from "../schemas/finding";
 import type { Capture, WalkthroughRange } from "../schemas/walkthrough";
 
 /**
@@ -23,7 +23,9 @@ import type { Capture, WalkthroughRange } from "../schemas/walkthrough";
  * machinery (`planDrift`/`reanchorRange`) re-anchors a range with no second
  * algorithm (walkthroughs.md §8). A range is a `line` anchor minus its `kind`.
  */
-export function rangeAnchor(range: WalkthroughRange): Extract<Anchor, { kind: "line" }> {
+export function rangeAnchor(
+  range: WalkthroughRange
+): Extract<Anchor, { kind: "line" }> {
   return {
     blobSha: range.blobSha,
     file: range.file,
@@ -68,7 +70,7 @@ function interleave(
   body: string,
   count: number,
   marker: RegExp,
-  targetKind: "range" | "capture",
+  targetKind: "range" | "capture"
 ): Segment[] {
   const segments: Segment[] = [];
   const referenced = new Set<number>();
@@ -81,11 +83,19 @@ function interleave(
     }
   }
   function pushTarget(index: number) {
-    segments.push(targetKind === "range" ? { index, kind: "range" } : { index, kind: "capture" });
+    segments.push(
+      targetKind === "range"
+        ? { index, kind: "range" }
+        : { index, kind: "capture" }
+    );
   }
 
   marker.lastIndex = 0;
-  for (let match = marker.exec(body); match !== null; match = marker.exec(body)) {
+  for (
+    let match = marker.exec(body);
+    match !== null;
+    match = marker.exec(body)
+  ) {
     const index = Number(match.groups?.index);
     if (index >= count) {
       // Out of range: leave the marker text in place as literal prose.
@@ -116,18 +126,28 @@ function interleave(
 }
 
 /** Fold a code section body over its `{{range:i}}` markers (walkthroughs.md §5). */
-export function interleaveSegments(body: string, rangeCount: number): Segment[] {
+export function interleaveSegments(
+  body: string,
+  rangeCount: number
+): Segment[] {
   return interleave(body, rangeCount, RANGE_MARKER, "range");
 }
 
 /** Fold a product section body over its `{{capture:i}}` markers (walkthroughs.md §5). */
-export function interleaveCaptureSegments(body: string, captureCount: number): Segment[] {
+export function interleaveCaptureSegments(
+  body: string,
+  captureCount: number
+): Segment[] {
   return interleave(body, captureCount, CAPTURE_MARKER, "capture");
 }
 
 // Worst-of ordering for the section rollup: outdated dominates shifted dominates
 // live (walkthroughs.md §8).
-const DRIFT_RANK: Record<DriftState, number> = { live: 0, outdated: 2, shifted: 1 };
+const DRIFT_RANK: Record<DriftState, number> = {
+  live: 0,
+  outdated: 2,
+  shifted: 1,
+};
 
 /**
  * The section's drift badge is the **worst-of rollup** of its ranges
@@ -135,7 +155,9 @@ const DRIFT_RANK: Record<DriftState, number> = { live: 0, outdated: 2, shifted: 
  * the rollup only ever escalates as re-anchors resolve — it never flashes a
  * worse state than the evidence supports.
  */
-export function rollupDrift(states: readonly (DriftState | undefined)[]): DriftState {
+export function rollupDrift(
+  states: readonly (DriftState | undefined)[]
+): DriftState {
   let worst: DriftState = "live";
   for (const state of states) {
     if (state !== undefined && DRIFT_RANK[state] > DRIFT_RANK[worst]) {
@@ -160,13 +182,14 @@ export interface Staleness {
  */
 export function walkthroughStaleness(
   bornChangeId: string,
-  changes: readonly { id: string }[],
+  changes: readonly { id: string }[]
 ): Staleness {
   if (changes.length === 0) {
     return { behind: 0, stale: false };
   }
   const bornIndex = changes.findIndex((change) => change.id === bornChangeId);
-  const behind = bornIndex === -1 ? changes.length : changes.length - 1 - bornIndex;
+  const behind =
+    bornIndex === -1 ? changes.length : changes.length - 1 - bornIndex;
   return { behind, stale: behind > 0 };
 }
 
@@ -177,7 +200,7 @@ export function walkthroughStaleness(
  */
 function latestWalkthrough<T extends { id: string; kind: "code" | "product" }>(
   entries: readonly T[],
-  kind: "code" | "product",
+  kind: "code" | "product"
 ): T | undefined {
   let latest: T | undefined;
   for (const entry of entries) {
@@ -189,16 +212,16 @@ function latestWalkthrough<T extends { id: string; kind: "code" | "product" }>(
 }
 
 /** The newest **code** walkthrough — the one the Code walkthrough tab renders. */
-export function latestCodeWalkthrough<T extends { id: string; kind: "code" | "product" }>(
-  entries: readonly T[],
-): T | undefined {
+export function latestCodeWalkthrough<
+  T extends { id: string; kind: "code" | "product" },
+>(entries: readonly T[]): T | undefined {
   return latestWalkthrough(entries, "code");
 }
 
 /** The newest **product** walkthrough — the one the Product walkthrough tab renders. */
-export function latestProductWalkthrough<T extends { id: string; kind: "code" | "product" }>(
-  entries: readonly T[],
-): T | undefined {
+export function latestProductWalkthrough<
+  T extends { id: string; kind: "code" | "product" },
+>(entries: readonly T[]): T | undefined {
   return latestWalkthrough(entries, "product");
 }
 
@@ -217,7 +240,7 @@ export function identityDrift(present: boolean): DriftState {
 /** Look one capture up in a manifest's `captures[]` registry by id (walkthroughs.md §6). */
 export function captureById(
   manifest: { captures?: readonly Capture[] } | undefined,
-  captureId: string,
+  captureId: string
 ): Capture | undefined {
   return manifest?.captures?.find((capture) => capture.id === captureId);
 }

@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
+
 import type { FileDiffMetadata } from "@pierre/diffs";
 import type { FoldedFinding } from "@shared/lib/finding";
 import type { Anchor } from "@shared/schemas/finding";
+
 import { buildDiffItems } from "./diff-annotations";
 import type { DriftResult } from "./drift";
 import type { FileEntry } from "./nav";
@@ -37,7 +39,10 @@ function finding(id: string, anchor: Anchor): FoldedFinding {
 
 // The diff's blobs on each side gate whether a line anchor is still live.
 function fileDiffFor(): FileDiffMetadata {
-  return { newObjectId: HEAD_BLOB, prevObjectId: BASE_BLOB } as FileDiffMetadata;
+  return {
+    newObjectId: HEAD_BLOB,
+    prevObjectId: BASE_BLOB,
+  } as FileDiffMetadata;
 }
 
 function itemsFor(findings: readonly FoldedFinding[], entries = [entry()]) {
@@ -54,7 +59,7 @@ function itemsFor(findings: readonly FoldedFinding[], entries = [entry()]) {
 
 function itemsWithDrift(
   findings: readonly FoldedFinding[],
-  drift: ReadonlyMap<string, DriftResult>,
+  drift: ReadonlyMap<string, DriftResult>
 ) {
   return buildDiffItems({
     composing: null,
@@ -89,7 +94,9 @@ describe("buildDiffItems inline annotations", () => {
     ]);
 
     expect(items).toHaveLength(1);
-    expect(items[0]?.annotations).toMatchObject([{ lineNumber: 4, side: "additions" }]);
+    expect(items[0]?.annotations).toMatchObject([
+      { lineNumber: 4, side: "additions" },
+    ]);
   });
 
   test("drops a drifted head line anchor whose born blob no longer matches (never mis-pins)", () => {
@@ -117,7 +124,9 @@ describe("buildDiffItems inline annotations", () => {
       }),
     ]);
 
-    expect(items[0]?.annotations).toMatchObject([{ lineNumber: 2, side: "deletions" }]);
+    expect(items[0]?.annotations).toMatchObject([
+      { lineNumber: 2, side: "deletions" },
+    ]);
   });
 
   test("drops a drifted base-side line anchor (gates its own side, not just head)", () => {
@@ -145,38 +154,58 @@ describe("buildDiffItems inline annotations", () => {
       finding("fnd_change", { kind: "change" }),
     ]);
 
-    expect(items[0]?.annotations).toMatchObject([{ lineNumber: 0, side: "additions" }]);
+    expect(items[0]?.annotations).toMatchObject([
+      { lineNumber: 0, side: "additions" },
+    ]);
   });
 });
 
 describe("buildDiffItems with a drift read", () => {
   test("a live finding renders at its born line, un-badged", () => {
-    const drift = new Map([["fnd", { lines: [4, 6] as [number, number], state: "live" as const }]]);
+    const drift = new Map([
+      ["fnd", { lines: [4, 6] as [number, number], state: "live" as const }],
+    ]);
     const items = itemsWithDrift([lineFinding], drift);
 
-    expect(items[0]?.annotations).toMatchObject([{ lineNumber: 4, side: "additions" }]);
-    expect(items[0]?.annotations?.[0]?.metadata).toMatchObject({ drift: "live" });
+    expect(items[0]?.annotations).toMatchObject([
+      { lineNumber: 4, side: "additions" },
+    ]);
+    expect(items[0]?.annotations?.[0]?.metadata).toMatchObject({
+      drift: "live",
+    });
   });
 
   test("a shifted finding re-anchors to its moved line with a shifted badge", () => {
     const drift = new Map([
-      ["fnd", { lines: [9, 11] as [number, number], state: "shifted" as const }],
+      [
+        "fnd",
+        { lines: [9, 11] as [number, number], state: "shifted" as const },
+      ],
     ]);
     const items = itemsWithDrift([lineFinding], drift);
 
-    expect(items[0]?.annotations).toMatchObject([{ lineNumber: 9, side: "additions" }]);
-    expect(items[0]?.annotations?.[0]?.metadata).toMatchObject({ drift: "shifted" });
+    expect(items[0]?.annotations).toMatchObject([
+      { lineNumber: 9, side: "additions" },
+    ]);
+    expect(items[0]?.annotations?.[0]?.metadata).toMatchObject({
+      drift: "shifted",
+    });
   });
 
   test("an outdated finding detaches from the diff (panel only)", () => {
     const drift = new Map([
-      ["fnd", { lines: [4, 6] as [number, number], state: "outdated" as const }],
+      [
+        "fnd",
+        { lines: [4, 6] as [number, number], state: "outdated" as const },
+      ],
     ]);
 
     expect(itemsWithDrift([lineFinding], drift)[0]?.annotations).toEqual([]);
   });
 
   test("a finding whose re-anchor is still pending is held back (never mis-pinned)", () => {
-    expect(itemsWithDrift([lineFinding], new Map())[0]?.annotations).toEqual([]);
+    expect(itemsWithDrift([lineFinding], new Map())[0]?.annotations).toEqual(
+      []
+    );
   });
 });

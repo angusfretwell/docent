@@ -1,9 +1,12 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+
 import { BunServices } from "@effect/platform-bun";
-import { ManagedRuntime } from "effect";
 import { ViewedRequest } from "@shared/schemas/review";
+import { ManagedRuntime } from "effect";
+
+import { cleanupScratchDirs, scratchDir } from "../lib/test-fixtures";
 import {
   appendViewedEvent,
   branchSlug,
@@ -11,7 +14,6 @@ import {
   parseAnchor,
   readReviewSnapshot,
 } from "./review";
-import { cleanupScratchDirs, scratchDir } from "../lib/test-fixtures";
 
 const runtime = ManagedRuntime.make(BunServices.layer);
 
@@ -42,7 +44,13 @@ describe("readReviewSnapshot", () => {
     expect(snap.review.branch).toBe("feature");
     expect(snap.review.base).toBe("trunk");
     expect(snap.review.id).not.toBe("");
-    const file = path.join(root, ".docent", "reviews", "feature", "review.json");
+    const file = path.join(
+      root,
+      ".docent",
+      "reviews",
+      "feature",
+      "review.json"
+    );
     expect(existsSync(file)).toBe(true);
     const onDisk = JSON.parse(readFileSync(file, "utf-8"));
     expect(onDisk.branch).toBe("feature");
@@ -54,9 +62,11 @@ describe("readReviewSnapshot", () => {
     const snap = await snapshot(root, "feat/stream");
 
     expect(snap.review.branch).toBe("feat/stream");
-    expect(existsSync(path.join(root, ".docent", "reviews", "feat-stream", "review.json"))).toBe(
-      true,
-    );
+    expect(
+      existsSync(
+        path.join(root, ".docent", "reviews", "feat-stream", "review.json")
+      )
+    ).toBe(true);
   });
 
   test("keeps the id stable across reads (no regenerate)", async () => {
@@ -71,7 +81,13 @@ describe("readReviewSnapshot", () => {
   test("walks the changes/ log", async () => {
     const root = scratchDir("docent-review-");
     await snapshot(root, "feature");
-    const changesDir = path.join(root, ".docent", "reviews", "feature", "changes");
+    const changesDir = path.join(
+      root,
+      ".docent",
+      "reviews",
+      "feature",
+      "changes"
+    );
     mkdirSync(changesDir, { recursive: true });
     writeFileSync(
       path.join(changesDir, "chg_001.json"),
@@ -83,7 +99,7 @@ describe("readReviewSnapshot", () => {
         headSha: "bbb",
         id: "chg_001",
         schema: "docent/change@3",
-      }),
+      })
     );
 
     const snap = await snapshot(root, "feature");
@@ -94,7 +110,13 @@ describe("readReviewSnapshot", () => {
   test("degrades gracefully: a malformed record never breaks the snapshot", async () => {
     const root = scratchDir("docent-review-");
     await snapshot(root, "feature");
-    const changesDir = path.join(root, ".docent", "reviews", "feature", "changes");
+    const changesDir = path.join(
+      root,
+      ".docent",
+      "reviews",
+      "feature",
+      "changes"
+    );
     mkdirSync(changesDir, { recursive: true });
     writeFileSync(path.join(changesDir, "chg_001.json"), "{ not valid json");
     writeFileSync(
@@ -107,7 +129,7 @@ describe("readReviewSnapshot", () => {
         headSha: "bbb",
         id: "chg_002",
         schema: "docent/change@3",
-      }),
+      })
     );
 
     const snap = await snapshot(root, "feature");
@@ -118,7 +140,14 @@ describe("readReviewSnapshot", () => {
   test("parses findings records: envelope, anchor, body, and type", async () => {
     const root = scratchDir("docent-review-");
     await snapshot(root, "feature");
-    const fndDir = path.join(root, ".docent", "reviews", "feature", "findings", "fnd_01J9GQ4W7X");
+    const fndDir = path.join(
+      root,
+      ".docent",
+      "reviews",
+      "feature",
+      "findings",
+      "fnd_01J9GQ4W7X"
+    );
     mkdirSync(fndDir, { recursive: true });
     writeFileSync(
       path.join(fndDir, "001-open.md"),
@@ -133,7 +162,7 @@ describe("readReviewSnapshot", () => {
         "",
         "the flush races the mark",
         "",
-      ].join("\n"),
+      ].join("\n")
     );
     writeFileSync(
       path.join(fndDir, "002-reply.md"),
@@ -148,7 +177,7 @@ describe("readReviewSnapshot", () => {
         "",
         "fixed",
         "",
-      ].join("\n"),
+      ].join("\n")
     );
 
     const snap = await snapshot(root, "feature");
@@ -172,7 +201,14 @@ describe("readReviewSnapshot", () => {
   test("folds the root record's anchored file for the has-findings filter", async () => {
     const root = scratchDir("docent-review-");
     await snapshot(root, "feature");
-    const fndDir = path.join(root, ".docent", "reviews", "feature", "findings", "fnd_ANCHORED");
+    const fndDir = path.join(
+      root,
+      ".docent",
+      "reviews",
+      "feature",
+      "findings",
+      "fnd_ANCHORED"
+    );
     mkdirSync(fndDir, { recursive: true });
     writeFileSync(
       path.join(fndDir, "001-open.md"),
@@ -182,7 +218,7 @@ anchor: { kind: line, file: src/parser/stream.ts, side: head, blobSha: 9c2a1f0, 
 ---
 
 body
-`,
+`
     );
 
     const snap = await snapshot(root, "feature");
@@ -196,7 +232,14 @@ body
   test("degrades gracefully: a malformed record is skipped, its finding survives", async () => {
     const root = scratchDir("docent-review-");
     await snapshot(root, "feature");
-    const fndDir = path.join(root, ".docent", "reviews", "feature", "findings", "fnd_02");
+    const fndDir = path.join(
+      root,
+      ".docent",
+      "reviews",
+      "feature",
+      "findings",
+      "fnd_02"
+    );
     mkdirSync(fndDir, { recursive: true });
     writeFileSync(path.join(fndDir, "001-open.md"), "no frontmatter here\n");
     writeFileSync(
@@ -211,7 +254,7 @@ body
         "",
         "still here",
         "",
-      ].join("\n"),
+      ].join("\n")
     );
 
     const snap = await snapshot(root, "feature");
@@ -226,7 +269,14 @@ body
   test("degrades gracefully: a record with the wrong schema is skipped", async () => {
     const root = scratchDir("docent-review-");
     await snapshot(root, "feature");
-    const fndDir = path.join(root, ".docent", "reviews", "feature", "findings", "fnd_03");
+    const fndDir = path.join(
+      root,
+      ".docent",
+      "reviews",
+      "feature",
+      "findings",
+      "fnd_03"
+    );
     mkdirSync(fndDir, { recursive: true });
     writeFileSync(
       path.join(fndDir, "001-open.md"),
@@ -241,7 +291,7 @@ body
         "",
         "wrong envelope version",
         "",
-      ].join("\n"),
+      ].join("\n")
     );
     writeFileSync(
       path.join(fndDir, "002-reply.md"),
@@ -255,7 +305,7 @@ body
         "",
         "still here",
         "",
-      ].join("\n"),
+      ].join("\n")
     );
 
     const snap = await snapshot(root, "feature");
@@ -274,9 +324,17 @@ function writeWalkthrough(
   id: string,
   manifest: string,
   sections: Record<string, string>,
-  kind: "code" | "product" = "code",
+  kind: "code" | "product" = "code"
 ) {
-  const dir = path.join(root, ".docent", "reviews", branch, "walkthroughs", kind, id);
+  const dir = path.join(
+    root,
+    ".docent",
+    "reviews",
+    branch,
+    "walkthroughs",
+    kind,
+    id
+  );
   mkdirSync(dir, { recursive: true });
   writeFileSync(path.join(dir, "manifest.json"), manifest);
   for (const [name, body] of Object.entries(sections)) {
@@ -319,31 +377,38 @@ describe("readReviewSnapshot walkthroughs", () => {
           "sec_entry",
           "Entry",
           "ranges:\n  - { file: src/index.ts, side: head, blobSha: 9c2a, lines: [10, 24] }",
-          "The request enters here {{range:0}}.",
+          "The request enters here {{range:0}}."
         ),
         "s02-dispatch.md": sectionFile(
           "sec_dispatch",
           "Dispatch",
           "ranges:\n  - { file: src/dispatch.ts, side: head, blobSha: a1b2, lines: [1, 8] }",
-          "Then it dispatches.",
+          "Then it dispatches."
         ),
-      },
+      }
     );
 
     const snap = await snapshot(root, "feature");
 
-    const walkthrough = snap.walkthroughs.find((entry) => entry.id === "wlk_01ABC");
+    const walkthrough = snap.walkthroughs.find(
+      (entry) => entry.id === "wlk_01ABC"
+    );
     if (walkthrough === undefined) {
       throw new Error("expected the walkthrough");
     }
     expect(walkthrough.kind).toBe("code");
     expect(walkthrough.manifest?.bornChangeId).toBe("chg_002");
     // Manifest array order wins over filename order.
-    expect(walkthrough.sections.map((s) => s.id)).toEqual(["sec_dispatch", "sec_entry"]);
+    expect(walkthrough.sections.map((s) => s.id)).toEqual([
+      "sec_dispatch",
+      "sec_entry",
+    ]);
     expect(walkthrough.sections[0]?.ranges).toMatchObject([
       { blobSha: "a1b2", file: "src/dispatch.ts", lines: [1, 8], side: "head" },
     ]);
-    expect(walkthrough.sections[1]?.body).toBe("The request enters here {{range:0}}.");
+    expect(walkthrough.sections[1]?.body).toBe(
+      "The request enters here {{range:0}}."
+    );
   });
 
   test("degrades gracefully: a malformed section is dropped, the rest survive", async () => {
@@ -364,12 +429,14 @@ describe("readReviewSnapshot walkthroughs", () => {
       {
         "s01-broken.md": "no frontmatter here\n",
         "s02-ok.md": sectionFile("sec_ok", "OK", "ranges: []", "still here"),
-      },
+      }
     );
 
     const snap = await snapshot(root, "feature");
 
-    const walkthrough = snap.walkthroughs.find((entry) => entry.id === "wlk_01DEF");
+    const walkthrough = snap.walkthroughs.find(
+      (entry) => entry.id === "wlk_01DEF"
+    );
     expect(walkthrough?.sections.map((s) => s.id)).toEqual(["sec_ok"]);
   });
 
@@ -424,20 +491,21 @@ describe("readReviewSnapshot walkthroughs", () => {
           "",
         ].join("\n"),
       },
-      "product",
+      "product"
     );
 
     const snap = await snapshot(root, "feature");
 
-    const walkthrough = snap.walkthroughs.find((entry) => entry.id === "wlk_01PROD");
+    const walkthrough = snap.walkthroughs.find(
+      (entry) => entry.id === "wlk_01PROD"
+    );
     if (walkthrough === undefined) {
       throw new Error("expected the product walkthrough");
     }
     expect(walkthrough.kind).toBe("product");
-    expect(walkthrough.manifest?.captures?.map((capture) => capture.id)).toEqual([
-      "cap_a",
-      "cap_b",
-    ]);
+    expect(
+      walkthrough.manifest?.captures?.map((capture) => capture.id)
+    ).toEqual(["cap_a", "cap_b"]);
     expect(walkthrough.manifest?.captures?.[0]?.dims).toEqual([1280, 2400]);
     expect(walkthrough.manifest?.captures?.[1]?.durationMs).toBe(8200);
     const [section] = walkthrough.sections;
@@ -465,25 +533,32 @@ describe("readReviewSnapshot walkthroughs", () => {
       "feature",
       "walkthroughs",
       "code",
-      "wlk_bare",
+      "wlk_bare"
     );
     mkdirSync(dir, { recursive: true });
     writeFileSync(
       path.join(dir, "s01-entry.md"),
-      sectionFile("sec_x", "X", "ranges: []", "orphan"),
+      sectionFile("sec_x", "X", "ranges: []", "orphan")
     );
 
     const snap = await snapshot(root, "feature");
 
-    const walkthrough = snap.walkthroughs.find((entry) => entry.id === "wlk_bare");
-    expect(walkthrough).toMatchObject({ id: "wlk_bare", kind: "code", sections: [] });
+    const walkthrough = snap.walkthroughs.find(
+      (entry) => entry.id === "wlk_bare"
+    );
+    expect(walkthrough).toMatchObject({
+      id: "wlk_bare",
+      kind: "code",
+      sections: [],
+    });
     expect(walkthrough?.manifest).toBeUndefined();
   });
 });
 
 describe("parseAnchor", () => {
   test("lifts the file from a line-arm anchor", () => {
-    const md = "---\nanchor: { kind: line, file: src/app.ts, side: head, lines: [1, 2] }\n---\n";
+    const md =
+      "---\nanchor: { kind: line, file: src/app.ts, side: head, lines: [1, 2] }\n---\n";
 
     expect(parseAnchor(md)).toEqual({ anchorFile: "src/app.ts" });
   });
@@ -505,14 +580,19 @@ describe("parseAnchor", () => {
 });
 
 describe("appendViewedEvent", () => {
-  function mark(root: string, branch: string, filePath: string, blobSha: string) {
+  function mark(
+    root: string,
+    branch: string,
+    filePath: string,
+    blobSha: string
+  ) {
     return runtime.runPromise(
       appendViewedEvent({
         base: "main",
         branch,
         request: ViewedRequest.make({ blobSha, path: filePath }),
         root,
-      }),
+      })
     );
   }
 
@@ -525,7 +605,9 @@ describe("appendViewedEvent", () => {
     expect(event.blobSha).toBe("9c2a1f0");
     expect(event.ts).not.toBe("");
     const snap = await snapshot(root, "feature");
-    expect(snap.viewed).toEqual([{ blobSha: "9c2a1f0", path: "src/app.ts", ts: event.ts }]);
+    expect(snap.viewed).toEqual([
+      { blobSha: "9c2a1f0", path: "src/app.ts", ts: event.ts },
+    ]);
   });
 
   test("is append-only: a re-mark adds a second event (parity toggle)", async () => {
@@ -544,7 +626,9 @@ describe("appendViewedEvent", () => {
 
     await mark(root, "fresh", "a.ts", "aaa");
 
-    expect(existsSync(path.join(root, ".docent", "reviews", "fresh", "review.json"))).toBe(true);
+    expect(
+      existsSync(path.join(root, ".docent", "reviews", "fresh", "review.json"))
+    ).toBe(true);
   });
 });
 
@@ -554,7 +638,9 @@ describe("ensureGitignore", () => {
 
     await runtime.runPromise(ensureGitignore(root));
 
-    expect(readFileSync(path.join(root, ".gitignore"), "utf-8")).toContain(".docent/");
+    expect(readFileSync(path.join(root, ".gitignore"), "utf-8")).toContain(
+      ".docent/"
+    );
   });
 
   test("is idempotent when .docent/ is already ignored", async () => {

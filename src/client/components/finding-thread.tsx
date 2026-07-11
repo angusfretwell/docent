@@ -7,12 +7,13 @@
  * every action is an append-only write the caller routes to `/api/findings`.
  */
 
-import { useState } from "react";
-import type { DriftState } from "@shared/schemas/drift";
-import type { FindingWrite } from "@shared/schemas/finding-write";
 import type { FoldedFinding } from "@shared/lib/finding";
 import { WHATS_NEXT_LABEL } from "@shared/lib/finding";
+import type { DriftState } from "@shared/schemas/drift";
 import type { Author, Disposition } from "@shared/schemas/finding";
+import type { FindingWrite } from "@shared/schemas/finding-write";
+import { useState } from "react";
+
 import { Composer } from "./composer";
 import { DriftPill } from "./drift-badge";
 
@@ -46,7 +47,10 @@ const authorStyle: React.CSSProperties = {
   opacity: 0.7,
 };
 
-const bodyStyle: React.CSSProperties = { whiteSpace: "pre-wrap", wordBreak: "break-word" };
+const bodyStyle: React.CSSProperties = {
+  whiteSpace: "pre-wrap",
+  wordBreak: "break-word",
+};
 
 const actionBarStyle: React.CSSProperties = {
   display: "flex",
@@ -54,7 +58,15 @@ const actionBarStyle: React.CSSProperties = {
   padding: "0.4rem 0.5rem",
 };
 
-function Record({ author, body, tag }: { author: Author; body: string; tag?: string }) {
+function Record({
+  author,
+  body,
+  tag,
+}: {
+  author: Author;
+  body: string;
+  tag?: string;
+}) {
   return (
     <div style={recordStyle}>
       <div style={authorStyle}>
@@ -92,12 +104,24 @@ export function FindingThread({
 
   return (
     <div>
-      <div style={{ ...actionBarStyle, justifyContent: "space-between", opacity: 0.85 }}>
+      <div
+        style={{
+          ...actionBarStyle,
+          justifyContent: "space-between",
+          opacity: 0.85,
+        }}
+      >
         <span style={{ alignItems: "center", display: "flex", gap: "0.4rem" }}>
-          <span style={badgeStyle}>{finding.resolved ? "Resolved" : "Open"}</span>
-          {drift ? <DriftPill resolved={finding.resolved} state={drift} /> : null}
+          <span style={badgeStyle}>
+            {finding.resolved ? "Resolved" : "Open"}
+          </span>
+          {drift ? (
+            <DriftPill resolved={finding.resolved} state={drift} />
+          ) : null}
         </span>
-        <span style={{ fontSize: "0.75rem" }}>{WHATS_NEXT_LABEL[finding.whatsNext]}</span>
+        <span style={{ fontSize: "0.75rem" }}>
+          {WHATS_NEXT_LABEL[finding.whatsNext]}
+        </span>
       </div>
 
       {root ? <Record author={root} body={finding.body} /> : null}
@@ -106,7 +130,9 @@ export function FindingThread({
           author={reply.author}
           body={reply.body}
           key={`${reply.createdAt}:${reply.author.id}`}
-          tag={reply.disposition ? DISPOSITION_LABEL[reply.disposition] : undefined}
+          tag={
+            reply.disposition ? DISPOSITION_LABEL[reply.disposition] : undefined
+          }
         />
       ))}
 
@@ -128,7 +154,9 @@ export function FindingThread({
           autoFocus
           busy={busy}
           onCancel={() => setMode("idle")}
-          onSubmit={(body) => void run({ body, findingId: finding.id, op: "resolve" })}
+          onSubmit={(body) =>
+            void run({ body, findingId: finding.id, op: "resolve" })
+          }
           placeholder="Resolve reason (optional)…"
           requireBody={false}
           submitLabel="Resolve"
@@ -137,7 +165,11 @@ export function FindingThread({
 
       {mode === "idle" ? (
         <div style={actionBarStyle}>
-          <button className="expand-context" onClick={() => setMode("reply")} type="button">
+          <button
+            className="expand-context"
+            onClick={() => setMode("reply")}
+            type="button"
+          >
             Reply
           </button>
           {finding.resolved ? (
@@ -150,7 +182,11 @@ export function FindingThread({
               Reopen
             </button>
           ) : (
-            <button className="expand-context" onClick={() => setMode("resolve")} type="button">
+            <button
+              className="expand-context"
+              onClick={() => setMode("resolve")}
+              type="button"
+            >
               Resolve
             </button>
           )}

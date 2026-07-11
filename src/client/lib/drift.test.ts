@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
+
 import type { Anchor } from "@shared/schemas/finding";
+
 import type { DiffFile } from "./drift";
 import { anchorContext, indexDiffFiles } from "./drift";
 
@@ -29,7 +31,9 @@ function file(overrides: Partial<DiffFile> = {}): DiffFile {
   };
 }
 
-function lineAnchor(overrides: Partial<Extract<Anchor, { kind: "line" }>> = {}): Anchor {
+function lineAnchor(
+  overrides: Partial<Extract<Anchor, { kind: "line" }>> = {}
+): Anchor {
   return {
     blobSha: HEAD,
     file: "src/a.ts",
@@ -81,21 +85,31 @@ describe("anchorContext", () => {
   });
 
   test("a deleted file's anchor is flagged deleted", () => {
-    const files = new Map([["src/a.ts", file({ deleted: true, newObjectId: "0".repeat(40) })]]);
+    const files = new Map([
+      ["src/a.ts", file({ deleted: true, newObjectId: "0".repeat(40) })],
+    ]);
 
     expect(anchorContext(lineAnchor(), files).deleted).toBe(true);
   });
 
   test("a rename flags renamed only for an anchor born on the old path", () => {
-    const renamed = file({ name: "src/b.ts", prevName: "src/a.ts", renamed: true });
+    const renamed = file({
+      name: "src/b.ts",
+      prevName: "src/a.ts",
+      renamed: true,
+    });
     const files = new Map([
       ["src/b.ts", renamed],
       ["src/a.ts", renamed],
     ]);
 
     // Born on the old path (src/a.ts) → renamed away.
-    expect(anchorContext(lineAnchor({ file: "src/a.ts" }), files).renamed).toBe(true);
+    expect(anchorContext(lineAnchor({ file: "src/a.ts" }), files).renamed).toBe(
+      true
+    );
     // Born on the new path (src/b.ts) → not renamed away.
-    expect(anchorContext(lineAnchor({ file: "src/b.ts" }), files).renamed).toBe(false);
+    expect(anchorContext(lineAnchor({ file: "src/b.ts" }), files).renamed).toBe(
+      false
+    );
   });
 });

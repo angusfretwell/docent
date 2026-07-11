@@ -1,18 +1,25 @@
-import { Schema } from "effect";
-import { useEffect, useRef, useState } from "react";
+import {
+  latestCodeWalkthrough,
+  latestProductWalkthrough,
+} from "@shared/lib/walkthrough";
 import { Change, DiffError } from "@shared/schemas/change";
-import { ReviewSnapshot } from "@shared/schemas/review";
-import type { FindingEntry, ViewedEvent } from "@shared/schemas/review";
 import type { FindingWrite } from "@shared/schemas/finding-write";
 import type { PendingRange } from "@shared/schemas/pending";
 import { Pending } from "@shared/schemas/pending";
-import { latestCodeWalkthrough, latestProductWalkthrough } from "@shared/lib/walkthrough";
-import { fetchPendingExpandedFileDiff, isPendingExpandable } from "../lib/blobs";
+import { ReviewSnapshot } from "@shared/schemas/review";
+import type { FindingEntry, ViewedEvent } from "@shared/schemas/review";
+import { Schema } from "effect";
+import { useEffect, useRef, useState } from "react";
+
+import {
+  fetchPendingExpandedFileDiff,
+  isPendingExpandable,
+} from "../lib/blobs";
 import type { DriftResult } from "../lib/drift";
 import { useDrift } from "../lib/drift";
+import { writeFinding } from "../lib/findings-client";
 import type { DiffViewHandle } from "./diff-view";
 import { DiffView } from "./diff-view";
-import { writeFinding } from "../lib/findings-client";
 import { FindingsPanel } from "./findings-panel";
 import { ProductWalkthroughView } from "./product-walkthrough-view";
 import { WalkthroughView } from "./walkthrough-view";
@@ -77,7 +84,8 @@ function ReviewStatus({ review }: { review: ReviewSnapshot }) {
   return (
     <div style={statusStyle}>
       <code>{review.review.branch}</code> · {review.changes.length} changes ·{" "}
-      {review.findings.length} findings · {review.walkthroughs.length} walkthroughs
+      {review.findings.length} findings · {review.walkthroughs.length}{" "}
+      walkthroughs
     </div>
   );
 }
@@ -193,7 +201,10 @@ function ChangeSelector({
           type="button"
         >
           Pending
-          <span aria-hidden="true" style={{ color: "#d29922", marginLeft: "0.4rem" }}>
+          <span
+            aria-hidden="true"
+            style={{ color: "#d29922", marginLeft: "0.4rem" }}
+          >
             ●
           </span>
         </button>
@@ -225,7 +236,9 @@ function ChangeSelector({
           >
             Cumulative
           </button>
-          <span style={{ marginLeft: "0.4rem", opacity: 0.6 }}>Read-only preview</span>
+          <span style={{ marginLeft: "0.4rem", opacity: 0.6 }}>
+            Read-only preview
+          </span>
         </>
       )}
     </div>
@@ -258,7 +271,8 @@ function ChangeBody({
   if (change.patch === "") {
     return (
       <Notice>
-        <code>{change.branch}</code> has no changes against <code>{change.defaultBranch}</code>.
+        <code>{change.branch}</code> has no changes against{" "}
+        <code>{change.defaultBranch}</code>.
       </Notice>
     );
   }
@@ -325,8 +339,10 @@ function DiffTab({
   onRange: (range: PendingRange) => void;
 }) {
   const dirty = pending?.dirty ?? false;
-  const effective: Selection = selected === "pending" && dirty ? "pending" : "change";
-  const branch = pending?.branch ?? (change.kind === "loaded" ? change.change.branch : "…");
+  const effective: Selection =
+    selected === "pending" && dirty ? "pending" : "change";
+  const branch =
+    pending?.branch ?? (change.kind === "loaded" ? change.change.branch : "…");
 
   return (
     <>
@@ -343,7 +359,12 @@ function DiffTab({
           {effective === "pending" && pending ? (
             <PendingBody diffRef={diffRef} pending={pending} />
           ) : (
-            <ChangeBody diffRef={diffRef} review={review} drift={drift} state={change} />
+            <ChangeBody
+              diffRef={diffRef}
+              review={review}
+              drift={drift}
+              state={change}
+            />
           )}
         </div>
         {review ? (
@@ -388,7 +409,9 @@ function WalkthroughTab({
 function ProductWalkthroughTab({ review }: { review: ReviewSnapshot | null }) {
   const walkthrough = latestProductWalkthrough(review?.walkthroughs ?? []);
   if (!(walkthrough && review)) {
-    return <Notice>No product walkthrough yet. Run /docent to author one.</Notice>;
+    return (
+      <Notice>No product walkthrough yet. Run /docent to author one.</Notice>
+    );
   }
   return (
     <ProductWalkthroughView
@@ -450,7 +473,7 @@ export function App() {
     async function loadBestEffort<T>(
       url: string,
       decode: (value: unknown) => T,
-      apply: (value: T) => void,
+      apply: (value: T) => void
     ) {
       try {
         const res = await fetch(url);
@@ -463,7 +486,11 @@ export function App() {
     }
     function loadPending() {
       // oxlint-disable-next-line react-compiler
-      return loadBestEffort(`/api/pending?range=${range}`, decodePending, setPending);
+      return loadBestEffort(
+        `/api/pending?range=${range}`,
+        decodePending,
+        setPending
+      );
     }
     function loadReview() {
       // oxlint-disable-next-line react-compiler
@@ -506,7 +533,11 @@ export function App() {
       return;
     }
     const frame = requestAnimationFrame(() => {
-      diffRef.current?.scrollToLine(pendingJump.file, pendingJump.line, pendingJump.side);
+      diffRef.current?.scrollToLine(
+        pendingJump.file,
+        pendingJump.line,
+        pendingJump.side
+      );
       setPendingJump(null);
     });
     return () => cancelAnimationFrame(frame);
@@ -516,7 +547,9 @@ export function App() {
 
   let body: React.ReactNode;
   if (tab === "walkthrough") {
-    body = <WalkthroughTab review={review} onOpenInDiff={openInDiff} patch={patch} />;
+    body = (
+      <WalkthroughTab review={review} onOpenInDiff={openInDiff} patch={patch} />
+    );
   } else if (tab === "product") {
     body = <ProductWalkthroughTab review={review} />;
   } else {

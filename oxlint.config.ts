@@ -8,7 +8,7 @@ export default defineConfig({
     builtin: true,
   },
   extends: [core, react, tanstack],
-  ignorePatterns: ["prototypes", ".agents"],
+  ignorePatterns: [".agents/skills"],
   options: {
     typeAware: true,
   },

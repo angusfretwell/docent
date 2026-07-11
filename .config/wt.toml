@@ -1,0 +1,8 @@
+[[pre-start]]
+trust = "mise trust -q"
+
+[[pre-start]]
+install = "mise install"
+
+[[pre-start]]
+deps = "mise run install"

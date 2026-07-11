@@ -12,9 +12,9 @@ The `docent` binary has **two faces** (agent-integration.md §3.3):
 
 The finding subcommands are the CLI half of the review loop's **two I/O primitives** (agent-integration.md §2.2):
 
-| Primitive          | Subcommand                             | Does                                          |
-| ------------------ | -------------------------------------- | --------------------------------------------- |
-| **fetch-findings** | `docent finding list --filter …`       | Read the queue (any author), filtered         |
+| Primitive | Subcommand | Does |
+| --- | --- | --- |
+| **fetch-findings** | `docent finding list --filter …` | Read the queue (any author), filtered |
 | **write-findings** | `docent finding add / reply / resolve` | Append a finding / a reply / a resolve record |
 
 ## Non-gating — the CLI is convenience, never a lock
@@ -45,13 +45,13 @@ docent finding list --author claude-code         # this author participated
 
 Filters (all optional, all AND-combined):
 
-| Flag            | Keeps                                                                             |
-| --------------- | --------------------------------------------------------------------------------- |
-| `--open`        | Unresolved findings. `--open` and `--resolved` together (or neither) keep all.    |
-| `--resolved`    | Resolved findings.                                                                |
-| `--whats-next`  | Only these what's-next states — any-of; repeat the flag or comma-join the values. |
-| `--anchor-file` | Only findings whose `line`/`file` code anchor is this path.                       |
-| `--author`      | Only findings this author id participated in.                                     |
+| Flag | Keeps |
+| --- | --- |
+| `--open` | Unresolved findings. `--open` and `--resolved` together (or neither) keep all. |
+| `--resolved` | Resolved findings. |
+| `--whats-next` | Only these what's-next states — any-of; repeat the flag or comma-join the values. |
+| `--anchor-file` | Only findings whose `line`/`file` code anchor is this path. |
+| `--author` | Only findings this author id participated in. |
 
 **what's-next values** — `needs-action`, `needs-verify`, `needs-answer`, `needs-decision`, `closed`. Derived actor-blind from each Finding's latest record (agent-integration.md §2.3):
 
@@ -90,12 +90,12 @@ EOF
 
 **Anchor** (exactly one required):
 
-| Form                               | Anchor                                                                                                                                               |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--change`                         | The whole Change.                                                                                                                                    |
-| `--file <path>`                    | The whole file. `--side base\|head` (default `head`).                                                                                                |
-| `--file <path> --line <N[:M\|-M]>` | A line range (1-based, inclusive). `N`, `N:M`, or `N-M`. `--side`.                                                                                   |
-| `--anchor '<json>'`                | Escape hatch — a raw anchor arm, validated against the schema. Use for the capture / walkthrough / text-span arms the convenience flags don't cover. |
+| Form | Anchor |
+| --- | --- |
+| `--change` | The whole Change. |
+| `--file <path>` | The whole file. `--side base\|head` (default `head`). |
+| `--file <path> --line <N[:M\|-M]>` | A line range (1-based, inclusive). `N`, `N:M`, or `N-M`. `--side`. |
+| `--anchor '<json>'` | Escape hatch — a raw anchor arm, validated against the schema. Use for the capture / walkthrough / text-span arms the convenience flags don't cover. |
 
 The CLI resolves the code arm's content-addressed `blobSha` from git at write time, freezing the exact bytes the anchor points at.
 
@@ -151,11 +151,11 @@ docent walkthrough add-section --walkthrough wlk_… --title "…" [targets] [--
 
 **`add-section`** carries the arm for the walkthrough's `kind` — the **code** arm is `--range`, the **product** arm is `--capture` / `--annotation`. The crossed arm (a `--range` on a product tour, or `--capture`/`--annotation` on a code tour) is refused.
 
-| Flag           | Arm     | Value                                                                                                                      |
-| -------------- | ------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `--range`      | code    | `file:start[-end][@side]` — e.g. `src/index.ts:10-24@head`, `src/a.ts:40` (single line, side defaults `head`). Repeatable. |
-| `--capture`    | product | A `cap_` id from the manifest's `captures[]`. Repeatable (or comma-joined).                                                |
-| `--annotation` | product | One JSON callout (see below). Repeat the flag per annotation — never comma-join (the JSON embeds commas).                  |
+| Flag | Arm | Value |
+| --- | --- | --- |
+| `--range` | code | `file:start[-end][@side]` — e.g. `src/index.ts:10-24@head`, `src/a.ts:40` (single line, side defaults `head`). Repeatable. |
+| `--capture` | product | A `cap_` id from the manifest's `captures[]`. Repeatable (or comma-joined). |
+| `--annotation` | product | One JSON callout (see below). Repeat the flag per annotation — never comma-join (the JSON embeds commas). |
 
 - Each `--range` resolves its content-addressed **`blobSha` from git** at write time, landing the range in the same `line`-anchor coordinate a Finding uses (walkthroughs.md §5), frozen to the exact bytes on its `side`.
 - **Body** — `--body <text>`, or omit it and pipe the body on **stdin** (heredoc / pipe) for multi-line prose.

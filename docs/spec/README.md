@@ -12,26 +12,26 @@ This directory is the build-ready spec: every cross-cutting decision is resolved
 
 ## Documents
 
-| Document                                     | Owns                                                                                                                                                                                                                                                        |
-| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [data-model.md](data-model.md)               | The core entities — Review, Change, Finding — and their schemas; the canonical `.docent/` layout; the anchor union; drift; the what's-next state machine. The schema appendix of record for the core model.                                                 |
-| [architecture.md](architecture.md)           | The app shell: Bun-native local server, the `server/client/skills/shared` layout, the React+Vite client stack (TanStack Query, nuqs, Tailwind + Base UI + coss/ui, react-markdown), HTTP file API + SSE live-reload, packaging and delivery (`npx docent`). |
-| [diff-review.md](diff-review.md)             | The Diff tab: @pierre/diffs rendering, virtualized review surface, nav tree, mark-as-viewed, context expansion, the Pending entry, the Findings panel.                                                                                                      |
-| [walkthroughs.md](walkthroughs.md)           | The Code and Product walkthrough pillars: the unified walkthrough schema, sections and ranges, captures and annotations, the capture pipeline (agent-browser + rrweb), staleness and regeneration. The schema appendix of record for walkthroughs.          |
-| [agent-integration.md](agent-integration.md) | The human↔agent review loop: the findings queue, roles-not-actors, the skills catalogue (`/review`, `/address`, `/docent` + reference skills), the docent CLI, serving the app under review.                                                                |
-| [testing.md](testing.md)                     | The test strategy: testable-by-inertness, the skill-over-tested-engine seam, `docent validate` as oracle, engine-generated fixtures, the four deterministic tiers (unit / contract / skill↔CLI lint / Playwright E2E), and why CI runs no live agent.       |
+| Document | Owns |
+| --- | --- |
+| [data-model.md](data-model.md) | The core entities — Review, Change, Finding — and their schemas; the canonical `.docent/` layout; the anchor union; drift; the what's-next state machine. The schema appendix of record for the core model. |
+| [architecture.md](architecture.md) | The app shell: Bun-native local server, the `server/client/skills/shared` layout, the React+Vite client stack (TanStack Query, nuqs, Tailwind + Base UI + coss/ui, react-markdown), HTTP file API + SSE live-reload, packaging and delivery (`npx docent`). |
+| [diff-review.md](diff-review.md) | The Diff tab: @pierre/diffs rendering, virtualized review surface, nav tree, mark-as-viewed, context expansion, the Pending entry, the Findings panel. |
+| [walkthroughs.md](walkthroughs.md) | The Code and Product walkthrough pillars: the unified walkthrough schema, sections and ranges, captures and annotations, the capture pipeline (agent-browser + rrweb), staleness and regeneration. The schema appendix of record for walkthroughs. |
+| [agent-integration.md](agent-integration.md) | The human↔agent review loop: the findings queue, roles-not-actors, the skills catalogue (`/review`, `/address`, `/docent` + reference skills), the docent CLI, serving the app under review. |
+| [testing.md](testing.md) | The test strategy: testable-by-inertness, the skill-over-tested-engine seam, `docent validate` as oracle, engine-generated fixtures, the four deterministic tiers (unit / contract / skill↔CLI lint / Playwright E2E), and why CI runs no live agent. |
 
 ## Schema index
 
 Every on-disk schema, stated once in its owning document:
 
-| Schema                         | Shape                                                                                | Owned by                           |
-| ------------------------------ | ------------------------------------------------------------------------------------ | ---------------------------------- |
-| `docent/review@4`              | `review.json` — per-branch file of record                                            | [data-model.md](data-model.md)     |
-| `docent/change@3`              | `changes/chg_NNN.json` — immutable diff snapshot                                     | [data-model.md](data-model.md)     |
-| `docent/finding@3`             | `findings/fnd_*/NNN-*.md` — Finding records (anchors, dispositions, drift inputs)    | [data-model.md](data-model.md)     |
-| `docent/walkthrough@2`         | `walkthroughs/{code,product}/wlk_*/manifest.json` — unified, `kind: code \| product` | [walkthroughs.md](walkthroughs.md) |
-| `docent/walkthrough-section@2` | section files — prose interleaved with ranges (code) or captures (product)           | [walkthroughs.md](walkthroughs.md) |
+| Schema | Shape | Owned by |
+| --- | --- | --- |
+| `docent/review@4` | `review.json` — per-branch file of record | [data-model.md](data-model.md) |
+| `docent/change@3` | `changes/chg_NNN.json` — immutable diff snapshot | [data-model.md](data-model.md) |
+| `docent/finding@3` | `findings/fnd_*/NNN-*.md` — Finding records (anchors, dispositions, drift inputs) | [data-model.md](data-model.md) |
+| `docent/walkthrough@2` | `walkthroughs/{code,product}/wlk_*/manifest.json` — unified, `kind: code \| product` | [walkthroughs.md](walkthroughs.md) |
+| `docent/walkthrough-section@2` | section files — prose interleaved with ranges (code) or captures (product) | [walkthroughs.md](walkthroughs.md) |
 
 ## Out of scope for v1
 

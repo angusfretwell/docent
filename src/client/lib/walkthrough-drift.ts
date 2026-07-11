@@ -11,6 +11,7 @@
 import { planDrift } from "@shared/lib/drift";
 import { rangeAnchor } from "@shared/lib/walkthrough";
 import type { WalkthroughRange } from "@shared/schemas/walkthrough";
+
 import { isRealObjectId } from "./blobs";
 import { anchorContext, indexDiffFiles, useReanchor } from "./drift";
 import type { DiffFile, DriftResult, ExcerptJob, ReanchorJob } from "./drift";
@@ -30,7 +31,13 @@ export interface KeyedRange {
  */
 export type RangePlan =
   | { key: string; kind: "resolved"; result: DriftResult }
-  | { bornSha: string; currentSha: string; key: string; kind: "reanchor"; range: [number, number] }
+  | {
+      bornSha: string;
+      currentSha: string;
+      key: string;
+      kind: "reanchor";
+      range: [number, number];
+    }
   | { bornSha: string; key: string; kind: "excerpt"; range: [number, number] };
 
 /**
@@ -39,12 +46,19 @@ export type RangePlan =
  * side blob; a deleted current side settles outdated and asks only for the born
  * text to detach against (data-model.md §6.1).
  */
-export function planRange(keyed: KeyedRange, files: ReadonlyMap<string, DiffFile>): RangePlan {
+export function planRange(
+  keyed: KeyedRange,
+  files: ReadonlyMap<string, DiffFile>
+): RangePlan {
   const anchor = rangeAnchor(keyed.range);
   const plan = planDrift(anchor, anchorContext(anchor, files));
   const range: [number, number] = [keyed.range.lines[0], keyed.range.lines[1]];
   if (plan.kind === "resolved") {
-    return { key: keyed.key, kind: "resolved", result: { lines: range, state: plan.state } };
+    return {
+      key: keyed.key,
+      kind: "resolved",
+      result: { lines: range, state: plan.state },
+    };
   }
   if (isRealObjectId(plan.currentSha)) {
     return {
@@ -58,7 +72,11 @@ export function planRange(keyed: KeyedRange, files: ReadonlyMap<string, DiffFile
   if (isRealObjectId(plan.bornSha)) {
     return { bornSha: plan.bornSha, key: keyed.key, kind: "excerpt", range };
   }
-  return { key: keyed.key, kind: "resolved", result: { lines: range, state: "outdated" } };
+  return {
+    key: keyed.key,
+    kind: "resolved",
+    result: { lines: range, state: "outdated" },
+  };
 }
 
 /**
@@ -70,7 +88,7 @@ export function planRange(keyed: KeyedRange, files: ReadonlyMap<string, DiffFile
  */
 export function useRangeDrift(
   ranges: readonly KeyedRange[],
-  patch: string,
+  patch: string
 ): ReadonlyMap<string, DriftResult> {
   const files = indexDiffFiles(patch);
   const plans = ranges.map((keyed) => planRange(keyed, files));

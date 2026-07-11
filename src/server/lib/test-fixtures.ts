@@ -27,7 +27,7 @@ export function git(cwd: string, ...args: string[]): string {
   const result = Bun.spawnSync(["git", ...args], { cwd });
   if (result.exitCode !== 0) {
     throw new Error(
-      `git ${args.join(" ")} failed: ${result.stderr.toString()}${result.stdout.toString()}`,
+      `git ${args.join(" ")} failed: ${result.stderr.toString()}${result.stdout.toString()}`
     );
   }
   return result.stdout.toString().trim();

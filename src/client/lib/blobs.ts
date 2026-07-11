@@ -30,7 +30,7 @@ export function worktreeUrl(path: string): string {
 export function captureUrl(
   walkthroughId: string,
   media: string,
-  kind: "screenshot" | "recording",
+  kind: "screenshot" | "recording"
 ): string {
   const ext = kind === "screenshot" ? "png" : "rrweb.json";
   return `/api/capture/${walkthroughId}/${media}.${ext}`;
@@ -84,7 +84,9 @@ export async function fetchBlobSize(sha: string | undefined): Promise<number> {
  */
 export function isExpandable(fileDiff: FileDiffMetadata): boolean {
   return (
-    fileDiff.isPartial && fileDiff.prevObjectId !== undefined && fileDiff.newObjectId !== undefined
+    fileDiff.isPartial &&
+    fileDiff.prevObjectId !== undefined &&
+    fileDiff.newObjectId !== undefined
   );
 }
 
@@ -114,12 +116,12 @@ export function isPendingExpandable(fileDiff: FileDiffMetadata): boolean {
 export function expandedFileDiff(
   fileDiff: FileDiffMetadata,
   baseText: string,
-  headText: string,
+  headText: string
 ): FileDiffMetadata {
   const prevName = fileDiff.prevName ?? fileDiff.name;
   return parseDiffFromFile(
     { cacheKey: fileDiff.prevObjectId, contents: baseText, name: prevName },
-    { cacheKey: fileDiff.newObjectId, contents: headText, name: fileDiff.name },
+    { cacheKey: fileDiff.newObjectId, contents: headText, name: fileDiff.name }
   );
 }
 
@@ -149,7 +151,9 @@ async function fetchWorktreeText(path: string): Promise<string> {
  * endpoint; the file's own `prevObjectId`/`newObjectId` from the patch's index
  * line make each blob addressable. Callers gate this behind `isExpandable`.
  */
-export async function fetchExpandedFileDiff(fileDiff: FileDiffMetadata): Promise<FileDiffMetadata> {
+export async function fetchExpandedFileDiff(
+  fileDiff: FileDiffMetadata
+): Promise<FileDiffMetadata> {
   const { prevObjectId, newObjectId } = fileDiff;
   if (prevObjectId === undefined || newObjectId === undefined) {
     throw new Error(`file ${fileDiff.name} has no base/head blob to expand`);
@@ -169,7 +173,7 @@ export async function fetchExpandedFileDiff(fileDiff: FileDiffMetadata): Promise
  * (diff-review.md §6). Callers gate this behind `isPendingExpandable`.
  */
 export async function fetchPendingExpandedFileDiff(
-  fileDiff: FileDiffMetadata,
+  fileDiff: FileDiffMetadata
 ): Promise<FileDiffMetadata> {
   const { prevObjectId } = fileDiff;
   if (prevObjectId === undefined) {
