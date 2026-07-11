@@ -26,6 +26,7 @@ import {
   changeAnchors,
   filterEntries,
   flattenFiles,
+  orderByFiles,
   parseFiles,
   sortEntries,
   stepChange,
@@ -370,6 +371,8 @@ export function DiffView({
   drift,
   expandFile = fetchExpandedFileDiff,
   isFileExpandable = isExpandable,
+  fileOrder,
+  onExitFileOrder,
 }: {
   patch: string;
   viewed: readonly ViewedEvent[];
@@ -383,6 +386,14 @@ export function DiffView({
   drift?: ReadonlyMap<string, DriftResult>;
   expandFile?: (fileDiff: FileDiffMetadata) => Promise<FileDiffMetadata>;
   isFileExpandable?: (fileDiff: FileDiffMetadata) => boolean;
+  /**
+   * An explicit walkthrough-order file list (diff-review.md §2). When set it
+   * wins over the path/size toggle, so "open Diff tab in walkthrough order"
+   * lands the scroll and tree in the tour's file sequence.
+   */
+  fileOrder?: readonly string[];
+  /** Drops the explicit order upstream when the reviewer picks a path/size sort. */
+  onExitFileOrder?: () => void;
 }) {
   const [filter, setFilter] = useState("");
   // Ids of oversized/minified files the reviewer clicked "Load diff" on, so the
@@ -426,9 +437,14 @@ export function DiffView({
 
   // The single ordered file model both surfaces read from. `allEntries` is every
   // file in the Change (the viewed read-model and progress span all of them);
-  // filtering narrows what the tree and scroll show. React Compiler memoizes
+  // filtering narrows what the tree and scroll show. An explicit walkthrough
+  // order, when present, wins over the path/size toggle. React Compiler memoizes
   // these derivations, so no manual useMemo is needed.
-  const allEntries = sortEntries(parseFiles(patch), order);
+  const explicitOrder = fileOrder !== undefined && fileOrder.length > 0;
+  const allEntries =
+    fileOrder && fileOrder.length > 0
+      ? orderByFiles(parseFiles(patch), fileOrder)
+      : sortEntries(parseFiles(patch), order);
   const entryById = new Map(allEntries.map((entry) => [entry.id, entry]));
   // Per-file edge-case classification (diff-review.md §5), keyed by item id.
   const classes = classifyFiles(patch, generated);
@@ -645,13 +661,17 @@ export function DiffView({
       <FileTree
         activeId={activeId}
         collapsed={collapsed}
+        explicitOrder={explicitOrder}
         filter={filter}
         findingsOnly={findingsOnly}
         nodes={tree}
         onFilterChange={setFilter}
         onFindingsOnlyChange={setFindingsOnly}
         onJump={jump}
-        onOrderChange={setOrder}
+        onOrderChange={(next) => {
+          onExitFileOrder?.();
+          setOrder(next);
+        }}
         onSelect={scrollToId}
         onSplitChange={(next) => setSplit(next ? "split" : "unified")}
         onToggleDir={toggleDir}

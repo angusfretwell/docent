@@ -32,6 +32,7 @@ import type {
   WalkthroughRange,
   WalkthroughSection,
 } from "@shared/schemas/walkthrough";
+import { unique } from "radashi";
 import { useEffect, useState } from "react";
 
 import { fetchBlobText } from "../lib/blobs";
@@ -486,7 +487,12 @@ export function WalkthroughView({
   changes: readonly ChangeRecord[];
   findings: readonly FindingEntry[];
   patch: string;
-  onOpenInDiff: (file: string, line: number, side: "base" | "head") => void;
+  onOpenInDiff: (
+    file: string,
+    line: number,
+    side: "base" | "head",
+    order?: readonly string[]
+  ) => void;
 }) {
   const { sections } = walkthrough;
 
@@ -514,6 +520,10 @@ export function WalkthroughView({
     changes
   );
   const firstRange = keyed[0]?.range;
+  // The tour's file sequence — sections in manifest order, each section's ranges
+  // in order, deduped to a file's first appearance: the "open Diff tab in
+  // walkthrough order" payload (walkthroughs.md §1).
+  const orderedFiles = unique(keyed.map((entry) => entry.range.file));
 
   return (
     <div style={{ height: "100%", overflow: "auto", padding: "0 1.5rem 3rem" }}>
@@ -541,7 +551,8 @@ export function WalkthroughView({
                   onOpenInDiff(
                     firstRange.file,
                     firstRange.lines[0],
-                    firstRange.side
+                    firstRange.side,
+                    orderedFiles
                   )
                 }
                 style={{ ...buttonStyle, marginLeft: "auto" }}
