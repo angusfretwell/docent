@@ -78,33 +78,35 @@ rrweb takes a full snapshot on `record()`, so inject-after-load is sufficient.
 Drive the flow the way you already work — `snapshot -i` to read the page live (accessibility tree, element refs, disabled states visible), act on what you see, re-snapshot after any DOM change. Refs go stale on navigation; re-snapshot.
 
 - **Screenshot** — `agent-browser screenshot --full <tmp>.png` (full scroll height). Note its full-page pixel `dims`.
-- **Recording** — after the flow, pull the **raw rrweb event stream**: `agent-browser eval "JSON.stringify(window.__evt)" --json` → write the events array verbatim. Note `durationMs` (last event ts − first).
+- **Recording** — after the flow, pull the **raw rrweb event stream**: `agent-browser eval "JSON.stringify(window.__evt)" --json` → write the events array verbatim to a `<tmp>.rrweb.json` file. Note `durationMs` (last event ts − first).
 
-## 6. Content-address the blobs
+## 6. Mint the walkthrough shell
 
-Content-addressing and the `captures[]` append are the `docent capture` subcommand's job — the single home for content sha minting and append semantics, per the CLI spec. It is **non-gating**: until that subcommand lands, do the writes directly, the plain shape below.
-
-Write each capture's bytes to a **content-addressed** blob — the filename **is** the hash of the bytes (sha-256 hex), which dedups byte-identical screens across rounds and freezes the exact bytes an anchor points at:
+Captures register onto a **product walkthrough**, so first establish which `wlk_` you are capturing into. Composed under `/docent`, the orchestrator supplies the id. Run standalone, mint a fresh shell:
 
 ```bash
-SHA=$(shasum -a 256 <tmp>.png | cut -d' ' -f1)
-mkdir -p <wlk>/captures && mv <tmp>.png <wlk>/captures/$SHA.png        # recordings: $SHA.rrweb.json
+docent walkthrough create --kind product
+#   → { "changeId": "chg_…", "walkthroughId": "wlk_…" }
 ```
 
-`<wlk>` is the product walkthrough dir you are capturing into — `.docent/dossiers/<branch-slug>/walkthroughs/product/wlk_<ulid>/`. Composed under `/docent`, the orchestrator supplies it. Run standalone, mint a fresh `wlk_<ulid>/` with a minimal product `manifest.json` so the registry has a home — `schema`, `id`, `kind: product`, `bornChangeId` (the Change under review), `sections: []`, and an **empty `title`**. Leave `title` and `sections` empty: they are editorial, which `/author-product-walkthrough` fills — you author nothing.
+Omit `--title`: the shell mints with an **empty `title`** and empty `sections` — both are editorial, which `/author-product-walkthrough` fills — you author nothing. The CLI binds `bornChangeId` to the live head's Change, minting the Change lazily if the head has none, so it always references a real Change.
 
 ## 7. Register the capture
 
-Append one entry to the walkthrough manifest's `captures[]` for each blob — the atomic, first-class capture record:
+Register each temp media file (step 5) with `docent capture add` — the single home for content sha minting and append semantics. It **content-addresses** the bytes into `captures/<sha>.png` / `captures/<sha>.rrweb.json` (the filename **is** the sha-256 of the bytes, which dedups byte-identical screens across rounds and freezes the exact bytes an anchor points at), mints the `cap_` id, and appends the validated `captures[]` registry entry to the manifest:
 
-```jsonc
-// screenshot
-{ "id": "cap_<ulid>", "kind": "screenshot", "media": "<sha>", "route": "/signup", "viewport": [1280, 800], "dims": [1280, 2400] }
-// recording
-{ "id": "cap_<ulid>", "kind": "recording", "media": "<sha>", "route": "/signup", "viewport": [1280, 800], "durationMs": 8200 }
+```bash
+# screenshot: full-page pixel size rides --dims
+docent capture add --walkthrough wlk_… --kind screenshot --media <tmp>.png \
+  --route /signup --viewport 1280x800 --dims 1280x2400
+
+# recording: --duration-ms rides instead of --dims
+docent capture add --walkthrough wlk_… --kind recording --media <tmp>.rrweb.json \
+  --route /signup --viewport 1280x800 --duration-ms 8200
+#   → { "captureId": "cap_…", "media": "<sha>", "registry": { … }, "walkthroughId": "wlk_…" }
 ```
 
-`media` is the content sha (step 6). All captures are born against the walkthrough's `bornChangeId` — no per-capture `capturedAgainst`.
+`--route` and `--viewport` record the step-3 staging on the capture entity. All captures are born against the walkthrough's `bornChangeId` — no per-capture `capturedAgainst`. The CLI is **non-gating** (the files stay plain and hand-writable, per `/docent-cli`), but prefer it: it validates against the same schemas the server renders.
 
 ## 8. First-run: author the runbook
 

@@ -112,6 +112,17 @@ describe("runWalkthrough — end to end through git + fs", () => {
     expect(entry?.manifest?.title).toBe("Code tour");
   });
 
+  test("create without --title mints a shell with an empty title", async () => {
+    const repo = featureRepo();
+
+    await run(runWalkthrough(repo, ["create", "--kind", "product"]));
+
+    const entry = await onlyWalkthrough(repo);
+    expect(entry?.kind).toBe("product");
+    expect(entry?.manifest?.bornChangeId).toBe("chg_001");
+    expect(entry?.manifest?.title).toBe("");
+  });
+
   test("add-section resolves each --range's blobSha from git and appends the section", async () => {
     const repo = featureRepo();
     await run(runWalkthrough(repo, ["create", "--kind", "code", "--title", "Tour"]));

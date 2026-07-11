@@ -139,6 +139,7 @@ Mints and grows a walkthrough (walkthroughs.md §4, §5). A manifest is assemble
 ```bash
 # create — mint a wlk_ shell, bind bornChangeId to the live head (minting the Change if the head has none)
 docent walkthrough create --kind code --title "…"        # or --kind product
+docent walkthrough create --kind product                 # no --title → an empty-title shell (the capture flow)
 #   → { "changeId": "chg_…", "walkthroughId": "wlk_…" }
 
 # add-section — validate + append one section, in tour order (the manifest array IS the order)
@@ -146,7 +147,7 @@ docent walkthrough add-section --walkthrough wlk_… --title "…" [targets] [--
 #   → { "section": "sNN-<slug>.md", "sectionId": "sec_…", "walkthroughId": "wlk_…" }
 ```
 
-**`create`** requires `--kind code|product` and a non-empty `--title` (the walkthrough's title). `add-section` also requires a `--title`, but that one names the **section**. There is **no subcommand to rename the walkthrough shell** after `create` — to set a shell's title later (e.g. a product shell `/capture-product-walkthrough` minted with an empty title), edit `manifest.json`'s `title` field directly. That is safe and non-gating: the file is plain and `docent serve` re-renders the edit.
+**`create`** requires `--kind code|product`; `--title` (the walkthrough's title) is **optional** — omit it to mint an empty-title shell, which is how `/capture-product-walkthrough` mints the product shell (a title is editorial, so the author skill fills it later). `add-section` **does** require a `--title`, but that one names the **section**. There is **no subcommand to rename the walkthrough shell** after `create` — to set a shell's title later, edit `manifest.json`'s `title` field directly. That is safe and non-gating: the file is plain and `docent serve` re-renders the edit.
 
 **`add-section`** carries the arm for the walkthrough's `kind` — the **code** arm is `--range`, the **product** arm is `--capture` / `--annotation`. The crossed arm (a `--range` on a product tour, or `--capture`/`--annotation` on a code tour) is refused.
 

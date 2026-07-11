@@ -147,12 +147,16 @@ const parseAnnotations = Effect.fn("parseAnnotations")(function* parseAnnotation
   );
 });
 
-/** `walkthrough create` — mint a walkthrough shell bound to the live head. */
+/**
+ * `walkthrough create` — mint a walkthrough shell bound to the live head.
+ * `--title` is optional: the capture flow mints a title-less product shell
+ * (a title is editorial, filled in by `/author-product-walkthrough` later).
+ */
 const runCreate = Effect.fn("runCreate")(function* runCreate(cwd: string, args: ParsedArgs) {
   const kind = yield* attempt(() =>
     parseEnum("kind", requireFlag(args, "kind"), WALKTHROUGH_KINDS),
   );
-  const title = yield* attempt(() => requireFlag(args, "title"));
+  const title = one(args, "title")?.trim() ?? "";
   const context = yield* writeContext(cwd);
   return yield* writeWalkthrough({
     base: context.base,
