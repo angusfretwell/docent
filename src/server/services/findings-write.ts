@@ -121,6 +121,7 @@ function frontmatter(fields: {
   createdAt: string;
   anchor?: Anchor;
   disposition?: Disposition;
+  edits?: string;
 }): string {
   const author: AuthorInput = {
     display: fields.author.display,
@@ -137,16 +138,18 @@ function frontmatter(fields: {
     ["createdAt", fields.createdAt],
     ["anchor", fields.anchor],
     ["disposition", fields.disposition],
+    ["edits", fields.edits],
   ];
   return serializeFrontmatter(ordered);
 }
 
 /**
- * Append one Finding record — the four UI-authorable ops: `open` (mints a new
+ * Append one Finding record — the five append-only ops: `open` (mints a new
  * `fnd_*` dir with the anchored root record), `reply` (optionally dispositioned),
- * `resolve` (optional reason body), and `reopen`. Every record mints-or-reuses
- * the live head's Change and stamps its `changeId`; the root record's is the
- * Finding's born Change (data-model.md §5.2, §7).
+ * `resolve` (optional reason body), `reopen`, and `edit` (supersedes a named
+ * record's body). Every record mints-or-reuses the live head's Change and stamps
+ * its `changeId`; the root record's is the Finding's born Change (data-model.md
+ * §5.1–5.2, §7).
  */
 export const writeFindingRecord = Effect.fn("writeFindingRecord")(
   function* writeFindingRecord(params: {
@@ -173,7 +176,8 @@ export const writeFindingRecord = Effect.fn("writeFindingRecord")(
     const { write } = params;
 
     // Resolve the target finding dir, record type, next filename, body, and the
-    // op-specific frontmatter (anchor on open, disposition on reply).
+    // op-specific frontmatter (anchor on open, disposition on reply, the edited
+    // record's name on edit).
     const findingId =
       write.op === "open" ? yield* makeId("fnd") : write.findingId;
     const findingDir = path.join(findingsDir, findingId);
@@ -195,6 +199,7 @@ export const writeFindingRecord = Effect.fn("writeFindingRecord")(
       ...(write.op === "reply" && write.disposition !== undefined
         ? { disposition: write.disposition }
         : {}),
+      ...(write.op === "edit" ? { edits: write.edits } : {}),
     };
     // reopen carries no body; resolve's body is its optional reason.
     const body = write.op === "reopen" ? "" : (write.body ?? "");

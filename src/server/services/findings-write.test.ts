@@ -220,6 +220,56 @@ describe("writeFindingRecord", () => {
     expect(folded.whatsNext).toBe("needs-action");
   });
 
+  test("edit supersedes a named record's body at fold time", async () => {
+    const root = scratchDir("docent-write-");
+    const { findingId, record } = await write(root, {
+      anchor: lineAnchor,
+      body: "the flush races",
+      op: "open",
+    });
+
+    const edit = await write(root, {
+      body: "the flush races the drain",
+      edits: record,
+      findingId,
+      op: "edit",
+    });
+
+    expect(edit.record).toBe("002-edit.md");
+    const snap = await snapshot(root);
+    const entry = snap.findings.find((finding) => finding.id === findingId);
+    const folded = foldFinding(findingId, entry?.records ?? []);
+    expect(folded.body).toBe("the flush races the drain");
+  });
+
+  test("edit rewrites a reply body without changing what's-next", async () => {
+    const root = scratchDir("docent-write-");
+    const { findingId } = await write(root, {
+      anchor: lineAnchor,
+      body: "flagged",
+      op: "open",
+    });
+    const reply = await write(root, {
+      body: "typo: fixed",
+      disposition: "actioned",
+      findingId,
+      op: "reply",
+    });
+
+    await write(root, {
+      body: "Fixed the drain race.",
+      edits: reply.record,
+      findingId,
+      op: "edit",
+    });
+
+    const snap = await snapshot(root);
+    const entry = snap.findings.find((finding) => finding.id === findingId);
+    const folded = foldFinding(findingId, entry?.records ?? []);
+    expect(folded.replies.at(0)?.body).toBe("Fixed the drain race.");
+    expect(folded.whatsNext).toBe("needs-verify");
+  });
+
   test("every record stamps the changeId current at write", async () => {
     const root = scratchDir("docent-write-");
     const { findingId } = await write(root, {
