@@ -337,7 +337,7 @@ describe("serve routes", () => {
     expect(res.status).toBe(404);
   });
 
-  test("GET /api/health returns the repo root and branch for liveness detection", async () => {
+  test("GET /api/health returns the repo root for liveness detection", async () => {
     const repo = featureRepo();
     const client = serve(repo);
 
@@ -345,7 +345,6 @@ describe("serve routes", () => {
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
-      branch: "feature",
       root: git(repo, "rev-parse", "--show-toplevel"),
     });
   });

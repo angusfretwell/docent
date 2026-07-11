@@ -303,19 +303,18 @@ function worktreeRoute(cwd: string) {
 }
 
 /**
- * `GET /api/health` — the repo this server serves, as `{ root, branch }`. A cheap
+ * `GET /api/health` — the repo root this server serves, as `{ root }`. A cheap
  * liveness-and-identity probe (no diff, no `.docent/` walk) that `docent status`
  * uses to confirm a recorded `serve.json` address is a live docent server for
- * *this* repo before `/docent` reuses it (serve-address.ts). A git failure 500s.
+ * *this* repo before `/docent` reuses it: identity is the root alone, which is
+ * all `resolveServeStatus` matches on (serve-address.ts). A git failure 500s.
  */
 function healthRoute(cwd: string) {
   return HttpRouter.add(
     "GET",
     "/api/health",
     resolveRepo(cwd).pipe(
-      Effect.flatMap((repo) =>
-        HttpServerResponse.json({ branch: repo.branch, root: repo.root })
-      ),
+      Effect.flatMap((repo) => HttpServerResponse.json({ root: repo.root })),
       Effect.catch((error) =>
         Effect.succeed(
           HttpServerResponse.jsonUnsafe(

@@ -28,7 +28,6 @@ const PROBE_TIMEOUT_MS = 1500;
 
 /** The recorded address of a live `docent serve` process for a repo. */
 export const ServeAddress = Schema.Struct({
-  pid: Schema.Number,
   schema: Schema.Literal("docent/serve-address@1"),
   url: Schema.String,
 });
@@ -54,7 +53,6 @@ export const writeServeAddress = Effect.fn("writeServeAddress")(
     const fs = yield* FileSystem;
     const path = yield* Path;
     const address: ServeAddress = {
-      pid: process.pid,
       schema: "docent/serve-address@1",
       url,
     };
