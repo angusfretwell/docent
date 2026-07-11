@@ -20,8 +20,9 @@ import type { eventWithTime } from "rrweb";
 import { useEffect, useRef, useState } from "react";
 import "rrweb/dist/style.css";
 import type { ChangeRecord, FindingEntry, WalkthroughEntry } from "../shared/dossier.ts";
+import type { DriftState } from "../shared/drift.ts";
 import { foldFinding } from "../shared/finding.ts";
-import type { FoldedFinding } from "../shared/finding.ts";
+import type { Anchor, FoldedFinding } from "../shared/finding.ts";
 import {
   captureById,
   identityDrift,
@@ -91,9 +92,17 @@ interface Tone {
 const ANNOTATION_TONE: Tone = { border: "#4c8dff", chip: "rgba(56,132,255,0.9)" };
 const FINDING_TONE: Tone = { border: "#e0863c", chip: "rgba(224,108,32,0.9)" };
 
-// The two capture anchor arms, named once so narrowing and filters read one token.
+// The capture anchor arms, named once so narrowing and filters read one token.
 const SCREENSHOT_REGION = "screenshot-region";
 const RECORDING_TIMESTAMP = "recording-timestamp";
+const TEXT_SPAN = "text-span";
+
+// A highlighted text-span quote sitting inline in the section prose (§7).
+const markStyle: React.CSSProperties = {
+  background: "rgba(224,108,32,0.22)",
+  borderRadius: "0.2rem",
+  padding: "0 0.1rem",
+};
 
 /** A screenshot-region rect an overlay can position, plus its callout body and tone. */
 interface RegionPin {
@@ -119,7 +128,82 @@ interface WholePin {
   tone: Tone;
 }
 
-/** The overlay pins for one screenshot: region rects (with a coordinate) get placed. */
+// The two capture anchor arms are structurally identical across annotations and
+// Findings — same `kind`/`capture` plus an optional coordinate — so one raw
+// collector feeds both the screenshot and recording placement (§7). The shape is
+// the Finding union's two capture arms (an annotation anchor is assignable to it),
+// derived so it can't drift from the schema. A pin sourced from an annotation is
+// toned blue and labelled `A`; from a Finding, orange `F`.
+type CaptureAnchor = Extract<Anchor, { kind: "screenshot-region" | "recording-timestamp" }>;
+
+interface RawPin {
+  anchor: CaptureAnchor;
+  body: string;
+  label: string;
+  tone: Tone;
+}
+
+/** The capture id an anchor targets, or `undefined` for a non-capture anchor. */
+function captureAnchorId(anchor: FoldedFinding["anchor"]): string | undefined {
+  if (anchor?.kind === SCREENSHOT_REGION || anchor?.kind === RECORDING_TIMESTAMP) {
+    return anchor.capture;
+  }
+  return undefined;
+}
+
+/**
+ * The identity drift of a capture-arm Finding (walkthroughs.md §8): `live` while
+ * the capture it points at is still placed in a section here, `outdated` once
+ * gone — the single live/outdated decision both the inline pins and the detached
+ * section route off. `undefined` for a non-capture anchor. Placement, not mere
+ * registry membership, is the test: a capture no section renders has nowhere to
+ * pin a live Finding, so such Findings detach and surface rather than vanish.
+ */
+function captureFindingDrift(
+  anchor: FoldedFinding["anchor"],
+  placedCaptureIds: ReadonlySet<string>,
+): DriftState | undefined {
+  const id = captureAnchorId(anchor);
+  return id === undefined ? undefined : identityDrift(placedCaptureIds.has(id));
+}
+
+/**
+ * The raw pins for one capture of one arm `kind`: annotations targeting it
+ * (numbered `A1…`) then Findings anchored to it (numbered `F1…`). Whether each
+ * pin is placed (has a coordinate) or whole-capture is decided by the caller,
+ * which reads the coordinate off the anchor.
+ */
+function rawPins(
+  annotations: readonly WalkthroughAnnotation[],
+  findings: readonly FoldedFinding[],
+  captureId: string,
+  kind: "screenshot-region" | "recording-timestamp",
+): RawPin[] {
+  const pins: RawPin[] = [];
+  let annotationCount = 0;
+  for (const annotation of annotations) {
+    if (annotation.anchor.kind === kind) {
+      annotationCount += 1;
+      pins.push({
+        anchor: annotation.anchor,
+        body: annotation.body,
+        label: `A${annotationCount}`,
+        tone: ANNOTATION_TONE,
+      });
+    }
+  }
+  let findingCount = 0;
+  for (const finding of findings) {
+    const { anchor } = finding;
+    if (anchor?.kind === kind && anchor.capture === captureId) {
+      findingCount += 1;
+      pins.push({ anchor, body: finding.body, label: `F${findingCount}`, tone: FINDING_TONE });
+    }
+  }
+  return pins;
+}
+
+/** Split a capture's screenshot pins into placed region rects and whole-capture callouts. */
 function screenshotPins(
   annotations: readonly WalkthroughAnnotation[],
   findings: readonly FoldedFinding[],
@@ -127,38 +211,18 @@ function screenshotPins(
 ): { regions: RegionPin[]; whole: WholePin[] } {
   const regions: RegionPin[] = [];
   const whole: WholePin[] = [];
-  let n = 0;
-  for (const annotation of annotations) {
-    const { anchor } = annotation;
-    if (anchor.kind !== SCREENSHOT_REGION) {
-      continue;
-    }
-    n += 1;
-    const label = `A${n}`;
-    if (anchor.rect) {
-      regions.push({ body: annotation.body, label, rect: anchor.rect, tone: ANNOTATION_TONE });
+  for (const pin of rawPins(annotations, findings, capture.id, SCREENSHOT_REGION)) {
+    const rect = pin.anchor.kind === SCREENSHOT_REGION ? pin.anchor.rect : undefined;
+    if (rect) {
+      regions.push({ body: pin.body, label: pin.label, rect, tone: pin.tone });
     } else {
-      whole.push({ body: annotation.body, label, tone: ANNOTATION_TONE });
-    }
-  }
-  let f = 0;
-  for (const finding of findings) {
-    const { anchor } = finding;
-    if (!(anchor?.kind === SCREENSHOT_REGION && anchor.capture === capture.id)) {
-      continue;
-    }
-    f += 1;
-    const label = `F${f}`;
-    if (anchor.rect) {
-      regions.push({ body: finding.body, label, rect: anchor.rect, tone: FINDING_TONE });
-    } else {
-      whole.push({ body: finding.body, label, tone: FINDING_TONE });
+      whole.push({ body: pin.body, label: pin.label, tone: pin.tone });
     }
   }
   return { regions, whole };
 }
 
-/** The timeline pins for one recording: timestamp markers (with a coordinate) get placed. */
+/** Split a capture's recording pins into placed timeline markers and whole-capture callouts. */
 function recordingPins(
   annotations: readonly WalkthroughAnnotation[],
   findings: readonly FoldedFinding[],
@@ -166,44 +230,13 @@ function recordingPins(
 ): { times: TimePin[]; whole: WholePin[] } {
   const times: TimePin[] = [];
   const whole: WholePin[] = [];
-  let n = 0;
-  for (const annotation of annotations) {
-    const { anchor } = annotation;
-    if (anchor.kind !== RECORDING_TIMESTAMP) {
-      continue;
-    }
-    n += 1;
-    const label = `A${n}`;
-    if (anchor.fromMs === undefined) {
-      whole.push({ body: annotation.body, label, tone: ANNOTATION_TONE });
+  for (const pin of rawPins(annotations, findings, capture.id, RECORDING_TIMESTAMP)) {
+    const from = pin.anchor.kind === RECORDING_TIMESTAMP ? pin.anchor.fromMs : undefined;
+    const to = pin.anchor.kind === RECORDING_TIMESTAMP ? pin.anchor.toMs : undefined;
+    if (from === undefined) {
+      whole.push({ body: pin.body, label: pin.label, tone: pin.tone });
     } else {
-      times.push({
-        atMs: anchor.fromMs,
-        body: annotation.body,
-        label,
-        toMs: anchor.toMs,
-        tone: ANNOTATION_TONE,
-      });
-    }
-  }
-  let f = 0;
-  for (const finding of findings) {
-    const { anchor } = finding;
-    if (!(anchor?.kind === RECORDING_TIMESTAMP && anchor.capture === capture.id)) {
-      continue;
-    }
-    f += 1;
-    const label = `F${f}`;
-    if (anchor.fromMs === undefined) {
-      whole.push({ body: finding.body, label, tone: FINDING_TONE });
-    } else {
-      times.push({
-        atMs: anchor.fromMs,
-        body: finding.body,
-        label,
-        toMs: anchor.toMs,
-        tone: FINDING_TONE,
-      });
+      times.push({ atMs: from, body: pin.body, label: pin.label, toMs: to, tone: pin.tone });
     }
   }
   return { times, whole };
@@ -413,7 +446,8 @@ function RecordingCapture({
               style={{ ...buttonStyle, borderColor: pin.tone.border }}
               type="button"
             >
-              <Chip label={pin.label} tone={pin.tone} /> {(pin.atMs / 1000).toFixed(1)}s
+              <Chip label={pin.label} tone={pin.tone} /> {(pin.atMs / 1000).toFixed(1)}
+              {pin.toMs === undefined ? "" : `–${(pin.toMs / 1000).toFixed(1)}`}s
             </button>
           ))}
         </div>
@@ -471,6 +505,47 @@ function annotationsFor(section: WalkthroughSection, captureId: string): Walkthr
 }
 
 /**
+ * A prose run with any text-span Finding quotes highlighted in place — the
+ * quote-based anchor rendered **into the section prose** (walkthroughs.md §7),
+ * not just listed beside it. Each quote's first occurrence in the run is wrapped;
+ * quotes that don't appear here fall through untouched (they still list as a note
+ * above the body).
+ */
+function Prose({ text, quotes }: { text: string; quotes: readonly string[] }) {
+  const active = quotes.filter((quote) => quote.length > 0 && text.includes(quote));
+  if (active.length === 0) {
+    return <p style={proseStyle}>{text}</p>;
+  }
+  const nodes: React.ReactNode[] = [];
+  let rest = text;
+  while (rest.length > 0) {
+    let at = -1;
+    let quote = "";
+    for (const candidate of active) {
+      const index = rest.indexOf(candidate);
+      if (index !== -1 && (at === -1 || index < at)) {
+        at = index;
+        quote = candidate;
+      }
+    }
+    if (at === -1) {
+      nodes.push(rest);
+      break;
+    }
+    if (at > 0) {
+      nodes.push(rest.slice(0, at));
+    }
+    nodes.push(
+      <mark key={`mark:${quote}:${nodes.length}`} style={markStyle}>
+        {quote}
+      </mark>,
+    );
+    rest = rest.slice(at + quote.length);
+  }
+  return <p style={proseStyle}>{nodes}</p>;
+}
+
+/**
  * One section: title, narrative Findings, then the interleaved body. Each
  * `{{capture:i}}` resolves the section's i-th capture id against the manifest
  * registry and renders its embed/replay with the section's annotation pins and
@@ -492,6 +567,9 @@ function Section({
   const captureIds = section.captures ?? [];
   const walkthroughId = manifest?.id ?? "";
   const segments = interleaveCaptureSegments(section.body, captureIds.length);
+  const quotes = textSpans.map((finding) =>
+    finding.anchor?.kind === TEXT_SPAN ? finding.anchor.quote : "",
+  );
 
   return (
     <section style={{ borderTop: "1px solid rgba(128,128,128,0.2)", padding: "1rem 0" }}>
@@ -505,7 +583,7 @@ function Section({
       {textSpans.map((finding) => (
         <div key={finding.id} style={findingStyle}>
           <span style={{ opacity: 0.6 }}>
-            on “{finding.anchor?.kind === "text-span" ? finding.anchor.quote : ""}”:{" "}
+            on “{finding.anchor?.kind === TEXT_SPAN ? finding.anchor.quote : ""}”:{" "}
           </span>
           {finding.body}
         </div>
@@ -513,9 +591,7 @@ function Section({
       {segments.map((segment) => {
         if (segment.kind === "prose") {
           return (
-            <p key={`prose:${segment.text.slice(0, 24)}`} style={proseStyle}>
-              {segment.text}
-            </p>
+            <Prose key={`prose:${segment.text.slice(0, 24)}`} quotes={quotes} text={segment.text} />
           );
         }
         const captureId = captureIds[segment.index] ?? "";
@@ -563,7 +639,7 @@ function textSpansBySectionId(folded: readonly FoldedFinding[]): Map<string, Fol
   const bySection = new Map<string, FoldedFinding[]>();
   for (const finding of folded) {
     const { anchor } = finding;
-    if (anchor?.kind === "text-span") {
+    if (anchor?.kind === TEXT_SPAN) {
       const list = bySection.get(anchor.section) ?? [];
       list.push(finding);
       bySection.set(anchor.section, list);
@@ -595,17 +671,14 @@ function findBornCapture(
 function DetachedFindings({
   findings,
   walkthroughs,
-  shownCaptureIds,
+  placedCaptureIds,
 }: {
   findings: readonly FoldedFinding[];
   walkthroughs: readonly WalkthroughEntry[];
-  shownCaptureIds: ReadonlySet<string>;
+  placedCaptureIds: ReadonlySet<string>;
 }) {
   const detached = findings.filter(
-    (finding) =>
-      (finding.anchor?.kind === SCREENSHOT_REGION ||
-        finding.anchor?.kind === RECORDING_TIMESTAMP) &&
-      !shownCaptureIds.has(finding.anchor.capture),
+    (finding) => captureFindingDrift(finding.anchor, placedCaptureIds) === "outdated",
   );
   if (detached.length === 0) {
     return null;
@@ -617,14 +690,11 @@ function DetachedFindings({
         <span style={outdatedStyle}>Outdated</span>
       </div>
       <p style={{ fontSize: "0.8rem", opacity: 0.6 }}>
-        These Findings point at captures superseded by a later walkthrough; they render against
+        These Findings point at captures no longer placed in this walkthrough; they render against
         their born capture.
       </p>
       {detached.map((finding) => {
-        const captureId =
-          finding.anchor?.kind === SCREENSHOT_REGION || finding.anchor?.kind === RECORDING_TIMESTAMP
-            ? finding.anchor.capture
-            : "";
+        const captureId = captureAnchorId(finding.anchor) ?? "";
         const born = findBornCapture(walkthroughs, captureId);
         return (
           <div key={finding.id} style={{ margin: "0.6rem 0" }}>
@@ -674,14 +744,13 @@ export function ProductWalkthroughView({
       finding.anchor?.kind === SCREENSHOT_REGION || finding.anchor?.kind === RECORDING_TIMESTAMP,
   );
 
-  const shownCaptureIds = new Set((manifest?.captures ?? []).map((capture) => capture.id));
-  // Live-by-identity: a capture Finding whose capture still exists here
-  // (identityDrift → live). Outdated ones fall through to DetachedFindings.
+  // Placement, not registry membership, decides identity drift: a capture is
+  // rendered only where a section places it, so a Finding is live only if its
+  // capture is placed. Registry-but-unplaced captures fall through to
+  // DetachedFindings, so their Findings surface rather than vanish (§8).
+  const placedCaptureIds = new Set(sections.flatMap((section) => section.captures ?? []));
   const liveCaptureFindings = captureFindings.filter(
-    (finding) =>
-      finding.anchor !== undefined &&
-      (finding.anchor.kind === SCREENSHOT_REGION || finding.anchor.kind === RECORDING_TIMESTAMP) &&
-      identityDrift(shownCaptureIds.has(finding.anchor.capture)) === "live",
+    (finding) => captureFindingDrift(finding.anchor, placedCaptureIds) === "live",
   );
 
   const staleness = walkthroughStaleness(manifest?.bornChangeId ?? "", changes);
@@ -716,7 +785,7 @@ export function ProductWalkthroughView({
       )}
       <DetachedFindings
         findings={captureFindings}
-        shownCaptureIds={shownCaptureIds}
+        placedCaptureIds={placedCaptureIds}
         walkthroughs={walkthroughs}
       />
     </div>
