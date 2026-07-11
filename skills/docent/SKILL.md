@@ -124,11 +124,18 @@ docent status          # → { "serving": true, "url": "http://127.0.0.1:…/" }
 ```
 
 - **Already serving** (`serving: true`) → reuse it; open its `url`. Never start a second server.
-- **Not serving** (`serving: false`) → start one **in the background** (it runs until the human stops it), wait for it to answer, then open the browser:
+- **Not serving** (`serving: false`) → start one **in the background** (it runs until the human stops it), poll until it answers, then open the browser. **Bound the poll** — never hang `/docent` on a serve that won't boot; on timeout **hard stop** with an actionable message (the same "early, actionable" principle as the preflight, §1):
 
   ```bash
-  docent serve >/dev/null 2>&1 &                                      # backgrounded; leave it running
-  until docent status | grep -q '"serving": true'; do sleep 0.2; done # `docent serve` records its address on boot; poll it
+  docent serve >/dev/null 2>&1 &   # backgrounded; leave it running
+  for _ in $(seq 50); do           # `docent serve` records its address on boot; poll it, bounded (~10s)
+    docent status | grep -q '"serving": true' && break
+    sleep 0.2
+  done
+  docent status | grep -q '"serving": true' || {
+    echo "docent serve did not come up within ~10s — run 'docent serve' in this repo to see the boot error, then re-run /docent" >&2
+    exit 1
+  }
   ```
 
 Open the browser at the served `url`; the reconciled pillar's tour is on its walkthrough tab. Starting `docent serve` is **docent's own process** — distinct from the app under review, which docent never spawns (agent-integration.md §3.4, §4); the no-spawn rule is about the app being reviewed, not about docent itself.
@@ -147,3 +154,4 @@ Open the browser at the served `url`; the reconciled pillar's tour is on its wal
 
 - **App not reachable at preflight (§1).** Hard stop **early**, before any authoring, with an actionable message (`app not reachable at <url> — is your dev server up?`). Nothing is reconciled and no walkthrough is authored (agent-integration.md §4.4). Re-run once the human has the dev server up.
 - **The app drops mid-capture.** `/capture-product-walkthrough` hard-stops when the served app can't be reached (agent-integration.md §4.4) — never a silent broken capture. Report which pillar could not reconcile and why; a reconciled code pillar (if any) still stands.
+- **`docent serve` never comes up (§6).** The serve-boot poll is bounded; on timeout, hard stop with an actionable message (`run 'docent serve' to see the boot error`) rather than spinning forever. The pillars are already reconciled and on disk — re-run `/docent` once the server starts, or open the tour manually.
