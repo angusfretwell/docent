@@ -7,6 +7,12 @@
       "skillPath": "skills/address-review/SKILL.md",
       "computedHash": "0fd41f826806e9cae6ba799050f8c18d279a37a4e0b002723984b5598977aada"
     },
+    "afk-loop": {
+      "source": "angusfretwell/skills",
+      "sourceType": "github",
+      "skillPath": "skills/afk-loop/SKILL.md",
+      "computedHash": "4c6392ff344c7502c5e64bced00132ceb51dd827f65ce36e07db258ff94e3a49"
+    },
     "agent-browser": {
       "source": "vercel-labs/agent-browser",
       "sourceType": "github",
