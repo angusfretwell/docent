@@ -9,20 +9,30 @@ x-plugins: &plugins
 steps:
   - label: ":oxc: check"
     key: check
-    command: mise ci && mise check
+    command: |
+      mise ci
+      mise check
     plugins: *plugins
 
   - label: ":oxc: lint"
     key: lint
-    command: mise ci && mise lint
-    plugins: *plugins
-
-  - label: ":typescript: typecheck"
-    key: typecheck
-    command: mise ci && mise typecheck
+    command: |
+      mise ci
+      mise lint --format=junit > junit-lint.xml
+    artifact_paths: junit-lint.xml
     plugins: *plugins
 
   - label: ":bun: test"
     key: test
-    command: mise ci && mise test
+    command: |
+      mise ci
+      mise test --reporter=junit --reporter-outfile=junit-test.xml
+    artifact_paths: junit-test.xml
     plugins: *plugins
+
+  - wait: ~
+    continue_on_failure: true
+
+  - plugins:
+      - junit-annotate#v2.7.0:
+          artifacts: junit-*.xml

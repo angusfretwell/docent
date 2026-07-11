@@ -10,6 +10,10 @@ export default defineConfig({
   },
   extends: [core, react, tanstack, jsPlugins],
   ignorePatterns: ["prototypes", ".agents"],
+  options: {
+    typeAware: true,
+    typeCheck: true,
+  },
   plugins: [
     "eslint",
     "import",
@@ -26,8 +30,6 @@ export default defineConfig({
   rules: {
     "class-methods-use-this": "off",
     "func-style": ["error", "declaration"],
-    // `Effect.forEach` is Effect's structured iteration, not `Array.prototype.forEach`;
-    // this rule misfires on it across the Effect-heavy server code.
     "github/array-foreach": "off",
     "github/no-then": "off",
     "max-classes-per-file": "off",
@@ -36,5 +38,28 @@ export default defineConfig({
     "promise/prefer-await-to-callbacks": "off",
     "promise/prefer-await-to-then": "off",
     "require-unicode-regexp": "off",
+    // most of these should be turned back on
+    "typescript/await-thenable": "off",
+    "typescript/consistent-return": "off",
+    "typescript/no-confusing-void-expression": "off",
+    "typescript/no-floating-promises": "off",
+    "typescript/no-misused-spread": "off",
+    "typescript/no-unnecessary-boolean-literal-compare": "off",
+    "typescript/no-unnecessary-type-assertion": "off",
+    "typescript/no-unsafe-argument": "off",
+    "typescript/no-unsafe-assignment": "off",
+    "typescript/no-unsafe-call": "off",
+    "typescript/no-unsafe-member-access": "off",
+    "typescript/no-unsafe-return": "off",
+    "typescript/no-unsafe-type-assertion": "off",
+    "typescript/non-nullable-type-assertion-style": "off",
+    "typescript/prefer-nullish-coalescing": "off",
+    "typescript/promise-function-async": "off",
+    "typescript/require-array-sort-compare": "off",
+    "typescript/restrict-template-expressions": "off",
+    "typescript/return-await": "off",
+    "typescript/strict-boolean-expressions": "off",
+    "typescript/switch-exhaustiveness-check": "off",
+    "typescript/use-unknown-in-catch-callback-variable": "off",
   },
 });

@@ -30,13 +30,13 @@
     "plugins": [{ "name": "@effect/language-service" }]
   },
 
-  // Prototypes are throwaway code (see .agents/skills/prototype/SKILL.md) and
-  // are excluded from the repo typecheck. DOM libs are global for now — the
-  // client has no separate tsconfig, so server code typechecks with DOM types.
-  //
-  // `dist` is build output, including the generated `embedded/manifest.ts`
-  // (hundreds of `with { type: "file" }` imports of the Vite build).
-  // `bin.ts` is thin, untyped glue that imports that manifest; all real logic
-  // lives in the typechecked `src/server/main.ts`.
-  "exclude": ["prototypes", "dist", "bin.ts"]
+  "exclude": [
+    // Prototypes are throwaway code (see .agents/skills/prototype/SKILL.md) and
+    // are excluded from the repo typecheck. DOM libs are global for now — the
+    // client has no separate tsconfig, so server code typechecks with DOM types.
+    "prototypes",
+    // `dist` is build output, including the generated `embedded/manifest.ts`
+    // (hundreds of `with { type: "file" }` imports of the Vite build).
+    "dist"
+  ]
 }

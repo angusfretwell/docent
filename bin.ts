@@ -8,12 +8,11 @@
  * owns subcommand dispatch and the server boot.
  *
  * The manifest is generated from the Vite build by `scripts/embed-assets.ts`
- * (run via `bun run build`); it is not typechecked, so all real logic lives in
- * the typechecked `src/server/main.ts`.
+ * (run via `bun run build`).
  */
 
 import { manifest } from "./dist/embedded/manifest.ts";
-import { assetsFromManifest } from "./src/client/assets.ts";
+import { assetsFromManifest } from "./src/shared/lib/assets.ts";
 import { runMain } from "./src/server/main.ts";
 
 runMain(assetsFromManifest(manifest));
