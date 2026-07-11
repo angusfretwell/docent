@@ -6,14 +6,15 @@
  * head) and per-range drift (the Finding re-anchor, worst-of section rollup)
  * surface as badges, never hidden (walkthroughs.md §8). Findings anchored to a
  * section by identity surface as narrative callouts; Findings on code inside a
- * section fall through to the `line` arm and surface here too, beside their
- * range — the same record that shows in the Diff tab (walkthroughs.md §7).
+ * section fall through to the `line`/`file` arms and surface here too — a `line`
+ * beside its range, a whole-`file` once at the section level — the same records
+ * that show in the Diff tab (walkthroughs.md §7).
  */
 
 import type { CodeViewFileItem } from "@pierre/diffs";
 import { CodeView, WorkerPoolContextProvider } from "@pierre/diffs/react";
 import { splitLines } from "@shared/lib/drift";
-import { foldFinding } from "@shared/lib/finding";
+import { findingLocation, foldFinding } from "@shared/lib/finding";
 import type { FoldedFinding } from "@shared/lib/finding";
 import {
   identityAnchorDrift,
@@ -314,6 +315,16 @@ function Section({
   );
   const segments = interleaveSegments(section.body, ranges.length);
 
+  // A whole-file Finding has no line to sit beside, so it surfaces once at the
+  // section level for each section whose ranges touch that file — the `file`
+  // arm §7 promises the walkthrough renders, not only the `line` arm. Line
+  // Findings still render inside their range via RangeCode.
+  const sectionFiles = new Set(ranges.map((range) => range.file));
+  const fileFindings = code.filter(
+    (finding) =>
+      finding.anchor?.kind === "file" && sectionFiles.has(finding.anchor.file)
+  );
+
   return (
     <section
       style={{
@@ -328,6 +339,14 @@ function Section({
       {narrative.map((finding) => (
         <div key={finding.id} style={findingStyle}>
           <span style={{ opacity: 0.6 }}>note: </span>
+          {finding.body}
+        </div>
+      ))}
+      {fileFindings.map((finding) => (
+        <div key={finding.id} style={findingStyle}>
+          <span style={{ opacity: 0.6 }}>
+            {findingLocation(finding.anchor)}:{" "}
+          </span>
           {finding.body}
         </div>
       ))}
@@ -505,7 +524,8 @@ export function WalkthroughView({
   );
   const narrative = narrativeBySectionId(folded, walkthrough.id);
   const codeFindings = folded.filter(
-    (finding) => finding.anchor?.kind === "line"
+    (finding) =>
+      finding.anchor?.kind === "line" || finding.anchor?.kind === "file"
   );
   const detached = detachedNarrative(folded, walkthroughs);
 
