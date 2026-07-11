@@ -7,7 +7,11 @@ import type { FindingWrite } from "@shared/schemas/finding-write";
 import type { PendingRange } from "@shared/schemas/pending";
 import { Pending } from "@shared/schemas/pending";
 import { ReviewSnapshot } from "@shared/schemas/review";
-import type { FindingEntry, ViewedEvent } from "@shared/schemas/review";
+import type {
+  FindingEntry,
+  ViewedEvent,
+  WalkthroughEntry,
+} from "@shared/schemas/review";
 import { Schema } from "effect";
 import { useEffect, useRef, useState } from "react";
 
@@ -34,6 +38,7 @@ async function handleWrite(write: FindingWrite): Promise<void> {
 // Stable empties so the pre-snapshot render doesn't churn DiffView's effects.
 const NO_VIEWED: readonly ViewedEvent[] = [];
 const NO_FINDINGS: readonly FindingEntry[] = [];
+const NO_WALKTHROUGHS: readonly WalkthroughEntry[] = [];
 
 // Sync decode boundary: the fetch handlers below own the try/catch.
 const decodeChange = Schema.decodeUnknownSync(Change);
@@ -518,6 +523,7 @@ export function App() {
   const drift = useDrift({
     findings: review?.findings ?? NO_FINDINGS,
     patch: change.kind === "loaded" ? change.change.patch : "",
+    walkthroughs: review?.walkthroughs ?? NO_WALKTHROUGHS,
   });
 
   // The deep-link loop: a range in the walkthrough tab opens the Diff tab at its
