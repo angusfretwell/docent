@@ -7,7 +7,7 @@ description: Reconcile a branch's walkthroughs against its head Change — per p
 
 The **walkthrough reconciler** — a docent gives the guided tour. This is the answer to "how and when is a walkthrough regenerated" (agent-integration.md §3.1, walkthroughs.md §8): **the human runs `/docent`**. The tool only ever _surfaces_ staleness (the `bornChangeId`-vs-head badge); it never auto-regenerates. You are that trigger, invoked in the human's own session — docent-the-tool never invokes you.
 
-Per pillar (**code**, **product**) you read the head Change and the pillar's latest walkthrough's `bornChangeId`, and decide from **existence + drift** what to do. You regenerate **only the pillars the diff actually affects** — a fresh pillar is left untouched — and each regenerated pillar mints a **fresh immutable `wlk_`**; you never edit a prior walkthrough in place (walkthroughs.md §2). You **compose the reference skills**; you reimplement none of them:
+Per pillar (**code**, **product**) you read the head Change and the pillar's latest walkthrough's `bornChangeId`, and decide from **existence + drift** what to do. You regenerate **only the stale or missing pillars** — a live pillar is left untouched (**selective on pillars**, agent-integration.md §3.1) — and each regenerated pillar mints a **fresh immutable `wlk_`**; you never edit a prior walkthrough in place (walkthroughs.md §2). You **compose the reference skills**; you reimplement none of them:
 
 | Pillar      | Regeneration composes                                                                           |
 | ----------- | ----------------------------------------------------------------------------------------------- |
@@ -58,58 +58,50 @@ The Dossier for the current branch holds each pillar's walkthroughs under its ca
    ```
 
 3. **Compare to head.** Walkthrough staleness is `bornChangeId`'s `headSha` vs the current head (walkthroughs.md §8):
-   - **`headSha` == current head** → the pillar is **live** (its Change _is_ the head). Leave it untouched.
-   - **`headSha` != current head** → the pillar is **stale**. Read the drift diff and judge whether it touches this pillar's surface (below).
+   - **`headSha` == current head** → the pillar is **live** (its Change _is_ the head).
+   - **`headSha` != current head** → the pillar is **stale** (its tour depicts the product as of an earlier Change).
 
-The per-pillar decision:
+The per-pillar decision — **existence + drift**, nothing else (walkthroughs.md §8, agent-integration.md §3.1):
 
-| State                                 | Do                                                                                               |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| **Missing** (no walkthrough)          | **Regenerate** — the pillar has no tour.                                                         |
-| **Live** (`bornChangeId` is the head) | **Leave untouched** — a fresh tour is not re-minted.                                             |
-| **Stale + drift affects this pillar** | **Regenerate** — mint a fresh `wlk_` bound to the head.                                          |
-| **Stale + drift does not affect it**  | **Leave untouched** — the tour still depicts head faithfully (staleness is surfaced, not fixed). |
+| State                                  | Do                                                      |
+| -------------------------------------- | ------------------------------------------------------- |
+| **Missing** (no walkthrough)           | **Regenerate** — the pillar has no tour.                |
+| **Stale** (`bornChangeId` behind head) | **Regenerate** — mint a fresh `wlk_` bound to the head. |
+| **Live** (`bornChangeId` is the head)  | **Leave untouched** — a live tour is never re-minted.   |
 
-**"The diff actually affects" — the selective-on-pillars judgment.** Read what changed since the born head and decide per pillar whether the tour would now mislead:
+**Selective on pillars** means exactly this per-pillar independence (agent-integration.md §3.1): each pillar is judged on its **own** walkthrough's `bornChangeId`, so a stale pillar is regenerated while its **live** sibling is left untouched — you never re-mint a live pillar just because the other drifted, and you never skip a stale one. "The diff actually affects the pillar" **is** its staleness: a stale pillar's `bornChangeId` sits behind head, so the diff since it was born is what makes it stale. There is no second within-pillar filter — v1 regenerates **every** stale or missing pillar (walkthroughs.md §8: "mints a fresh immutable `wlk_` for stale or missing pillars only"); a finer "does this specific drift touch the tour" test is a deferred optimization, not a v1 gate.
 
-```bash
-git diff <bornHeadSha>..HEAD --stat     # what drifted since this pillar's tour was written
-```
-
-- **Code pillar** — affected when the drift touches source the tour walks (a section's ranges, or code near them). A drift that is pure docs / captures / config with no source change leaves the code tour faithful.
-- **Product pillar** — affected when the drift touches the **user-facing surface** the captures depict: routes, components, templates, styles — anything that changes what the app renders. A backend-only or comment-only drift leaves the product tour's screens faithful, so it need not re-capture.
-
-When genuinely unsure whether a stale pillar is affected, **regenerate** — it is the safe default: a fresh `wlk_` is minted, the prior tour persists immutable and greppable (walkthroughs.md §2), and nothing is lost. Never edit a prior walkthrough in place to "patch" drift.
+A regenerated pillar always mints a **fresh** `wlk_`; the prior tour persists immutable and greppable (walkthroughs.md §2). Never edit a prior walkthrough in place to "patch" drift.
 
 ## 3. Regenerate the code pillar — compose `/author-code-walkthrough`
 
-If the code pillar needs regeneration (missing, or stale-and-affected), hand off to **`/author-code-walkthrough`** with any focus the human gave. It reads the Change via git, selects and orders high-signal ranges, and mints a **fresh** `walkthroughs/code/wlk_*/` bound to the live head via `docent walkthrough create --kind code` — a new tour, never an edit of the prior one. Code has no capture phase, so this single skill is the whole code pillar.
+If the code pillar is **missing or stale** (step 2), hand off to **`/author-code-walkthrough`** with any focus the human gave. It reads the Change via git, selects and orders high-signal ranges, and mints a **fresh** `walkthroughs/code/wlk_*/` bound to the live head via `docent walkthrough create --kind code` — a new tour, never an edit of the prior one. Code has no capture phase, so this single skill is the whole code pillar.
 
-If the code pillar is live, or stale-but-unaffected, **skip it** — do not re-mint.
+If the code pillar is **live**, **skip it** — do not re-mint.
 
 ## 4. Regenerate the product pillar — capture wholesale, then author
 
-If the product pillar needs regeneration, run the two product reference skills **in order** — capture first (it mints the shell), then author into it:
+If the product pillar is **missing or stale** (step 2), run the two product reference skills **in order** — capture first (it mints the shell), then author into it:
 
 1. **`/capture-product-walkthrough`** — **re-drive capture wholesale** (walkthroughs.md §11, agent-integration.md §3.1). v1 does **not** reuse individual prior captures; capture drives the served app fresh and mints a new product `wlk_*/` shell with its `captures[]` populated and `sections` empty. **Content-addressing dedups byte-identical screens for free** — a screen unchanged since the last tour hashes to the same `<sha>` blob, so re-capturing costs nothing on disk (the per-capture `route` seam preserves selective reuse as a future optimization, walkthroughs.md §11). Serving the app is the human's job; capture consumes it and sources setup in its own precedence order (agent-integration.md §4).
-2. **`/author-product-walkthrough`** — the editorial half. It reads the captures-only shell capture just minted and drops the sections (prose, `{{capture:i}}` interleave, pinned annotations), then sets the shell's title. It touches no browser.
+2. **`/author-product-walkthrough`** — the editorial half. It reads the captures-only shell just minted and drops the sections (prose, `{{capture:i}}` interleave, pinned annotations), then sets the shell's title. It touches no browser.
 
-The result is one fresh immutable product `wlk_` for the head. If the product pillar is live, or stale-but-unaffected, **skip both** — do not re-capture (capture is expensive and deliberately separable, which is the whole point of the split).
+The result is one fresh immutable product `wlk_` for the head. If the product pillar is **live**, **skip both** — do not re-capture (capture is expensive and deliberately separable, which is the whole point of the split).
 
 ## 5. Confirm — report what reconciled and what was left
 
 The run is done when every in-scope pillar has been reconciled. Report the decision so the human sees why:
 
-- Which pillars **regenerated** (missing or stale-and-affected) — and the fresh `wlk_` each minted.
-- Which pillars were **left untouched** (live, or stale-but-unaffected) — and why.
+- Which pillars **regenerated** (missing or stale) — and the fresh `wlk_` each minted.
+- Which pillars were **left untouched** (live) — and why.
 
-If `docent serve` is running, each regenerated tour appears live in its walkthrough tab as the composed skills write it (agent-integration.md §1); a left-untouched stale pillar keeps its existing `bornChangeId`-vs-head staleness badge, now a deliberate, reported outcome rather than a missed one.
+If `docent serve` is running, each regenerated tour appears live in its walkthrough tab as the composed skills write it (agent-integration.md §1); a live pillar keeps its existing tour unchanged.
 
 ## Boundaries
 
 - **You reconcile and dispatch; you do not author.** The three reference skills own the file writes and the editorial judgment; the `docent walkthrough` / `docent capture` write path owns id minting and content-addressing (`/docent-cli`). Your only writes are the composed skills' — you never hand-author a walkthrough file to shortcut them.
 - **A fresh `wlk_` per regenerated pillar — never edit in place.** Regeneration mints a new immutable walkthrough bound to the head; the prior one persists (walkthroughs.md §2). Patching an existing tour's files to "update" it is never correct.
-- **Selective on pillars, selective on staleness.** A live pillar is left untouched; a stale-but-unaffected pillar is left untouched and its staleness reported. Never blindly regenerate both pillars, and never re-capture a product tour whose screens the drift didn't touch.
+- **Selective on pillars.** Each pillar is judged on its own `bornChangeId`: a stale or missing pillar is regenerated, a **live** pillar is left untouched. Never re-mint a live pillar because its sibling drifted, and never skip a stale one — v1 regenerates every stale or missing pillar (walkthroughs.md §8).
 - **Walkthroughs only, never Findings.** Reconciliation produces tours; the review → Findings loop is `/review` and `/address`, separate flows (agent-integration.md §3.1).
 - **Human-invoked only.** docent-the-tool never triggers you — it can only surface staleness. Regeneration happens exactly when the human runs `/docent` (walkthroughs.md §8, agent-integration.md §3.1).
 - **Commit / push and serving the app are the human's workflow** — out of scope (agent-integration.md §3.4, §4).
