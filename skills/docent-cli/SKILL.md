@@ -7,7 +7,7 @@ description: Reference for the `docent` binary's non-`serve` subcommands — the
 
 The `docent` binary has **two faces** (agent-integration.md §3.3):
 
-- **`docent serve`** — the server + UI. Watches `.docent/`, renders the Dossier, streams updates over SSE. Not covered here.
+- **`docent serve`** — the server + UI. Watches `.docent/`, renders the Review, streams updates over SSE. Not covered here.
 - **Non-`serve` subcommands** — `docent finding list / add / reply / resolve`, plus the `docent walkthrough` / `docent capture` write path. This skill documents them.
 
 The finding subcommands are the CLI half of the review loop's **two I/O primitives** (agent-integration.md §2.2):
@@ -25,13 +25,13 @@ Prefer the CLI: it validates the record against the same schema the server uses 
 
 ## Where it runs
 
-Run it from **inside the repo under review** (any subdirectory). It resolves the repo, the current branch's Dossier, and the Change refs — base at the merge-base, head at the branch tip — from git. It reads and writes under `.docent/dossiers/<branch-slug>/`. The Dossier auto-creates on first use; a Change mints lazily on first reference. No server needs to be running.
+Run it from **inside the repo under review** (any subdirectory). It resolves the repo, the current branch's Review, and the Change refs — base at the merge-base, head at the branch tip — from git. It reads and writes under `.docent/reviews/<branch-slug>/`. The Review auto-creates on first use; a Change mints lazily on first reference. No server needs to be running.
 
 Every subcommand prints **machine-readable JSON** on stdout, so a skill can consume the result directly.
 
 ## `docent finding list` — fetch-findings
 
-Walks the active Dossier, folds every Finding, applies the filter, and prints `{ "findings": [ … ] }` in reading order (code findings first, by file then line; then whole-change, walkthrough, capture, text, detached).
+Walks the active Review, folds every Finding, applies the filter, and prints `{ "findings": [ … ] }` in reading order (code findings first, by file then line; then whole-change, walkthrough, capture, text, detached).
 
 ```bash
 docent finding list                              # the whole queue

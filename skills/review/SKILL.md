@@ -1,6 +1,6 @@
 ---
 name: review
-description: Review the head Change of a local branch against the open findings queue — write fresh Findings and verify/resolve the fixes that now hold. Use when the human asks to review a change, do a review pass, or verify addressed findings in a docent Dossier.
+description: Review the head Change of a local branch against the open findings queue — write fresh Findings and verify/resolve the fixes that now hold. Use when the human asks to review a change, do a review pass, or verify addressed findings in a docent Review.
 ---
 
 # review
@@ -21,10 +21,10 @@ git log --oneline origin/HEAD..HEAD    # what this branch adds
 git diff origin/HEAD...HEAD             # the Change — three-dot diffs head against the merge-base
 ```
 
-(`origin/HEAD` is the base branch the Dossier recorded; substitute it if your base differs. Three-dot `...` already compares against the merge-base, which is where a Change's base sits.)
+(`origin/HEAD` is the base branch the Review recorded; substitute it if your base differs. Three-dot `...` already compares against the merge-base, which is where a Change's base sits.)
 
 - **Optional focus.** If the human scoped the pass (a path, a concern), review only that — but still read enough context to anchor accurately.
-- **Targeting a prior Change is fine.** You may review any prior Change in the Dossier's history, not only head. A Finding born on an older Change is simply born **drifted** against head — that is what Drift is for (agent-integration.md §2.5); write it anyway.
+- **Targeting a prior Change is fine.** You may review any prior Change in the Review's history, not only head. A Finding born on an older Change is simply born **drifted** against head — that is what Drift is for (agent-integration.md §2.5); write it anyway.
 
 ## 2. Read the open queue — what already exists
 

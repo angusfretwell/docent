@@ -30,10 +30,10 @@ git log --oneline origin/HEAD..HEAD    # what this branch adds
 
 ## 2. Decide per pillar — existence + drift
 
-The Dossier for the current branch holds each pillar's walkthroughs under its canonical tree (data-model.md §2, walkthroughs.md §3):
+The Review for the current branch holds each pillar's walkthroughs under its canonical tree (data-model.md §2, walkthroughs.md §3):
 
 ```
-.docent/dossiers/<branch-slug>/
+.docent/reviews/<branch-slug>/
   changes/                       # the append-only Change log — chg_NNN.json, each with a frozen headSha
   walkthroughs/
     code/    wlk_<ulid>/manifest.json
@@ -45,7 +45,7 @@ The Dossier for the current branch holds each pillar's walkthroughs under its ca
 1. **Find the latest walkthrough.** The pillar's newest tour is the greatest `wlk_` ULID (ULIDs sort lexicographically by mint time):
 
    ```bash
-   ls -d .docent/dossiers/<branch-slug>/walkthroughs/code/wlk_*/ 2>/dev/null | sort | tail -1
+   ls -d .docent/reviews/<branch-slug>/walkthroughs/code/wlk_*/ 2>/dev/null | sort | tail -1
    ```
 
    **No directory / no `wlk_`** → the pillar is **missing**.
@@ -53,8 +53,8 @@ The Dossier for the current branch holds each pillar's walkthroughs under its ca
 2. **Read its `bornChangeId`.** From that walkthrough's `manifest.json` (walkthroughs.md §4). Resolve the Change it names to a head SHA:
 
    ```bash
-   cat .docent/dossiers/<branch-slug>/walkthroughs/code/wlk_<ulid>/manifest.json   # → bornChangeId
-   cat .docent/dossiers/<branch-slug>/changes/<bornChangeId>.json                  # → headSha
+   cat .docent/reviews/<branch-slug>/walkthroughs/code/wlk_<ulid>/manifest.json   # → bornChangeId
+   cat .docent/reviews/<branch-slug>/changes/<bornChangeId>.json                  # → headSha
    ```
 
 3. **Compare to head.** Walkthrough staleness is `bornChangeId`'s `headSha` vs the current head (walkthroughs.md §8):

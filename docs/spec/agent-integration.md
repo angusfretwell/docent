@@ -11,7 +11,7 @@ docent never runs an agent. The human drives their agent in their **own session*
 - **docent renders live.** `docent serve` runs the server + UI, fs-watches every write under `.docent/`, and re-renders over SSE — no bespoke write path, no gate ([#21](https://github.com/angusfretwell/docent/issues/21); pipeline in [architecture.md](architecture.md)).
 - **The human writes Findings in the UI; the agent reads them from disk** — and vice versa. The round-trip between review and agent is expressed entirely as files ([#18](https://github.com/angusfretwell/docent/issues/18)).
 
-v1's input is a local git branch checked out in the repo; there is no GitHub integration anywhere in this loop ([#24](https://github.com/angusfretwell/docent/issues/24)). The Dossier auto-creates on first use and Changes mint on first reference — tool behavior, not skill behavior (§3.4).
+v1's input is a local git branch checked out in the repo; there is no GitHub integration anywhere in this loop ([#24](https://github.com/angusfretwell/docent/issues/24)). The Review auto-creates on first use and Changes mint on first reference — tool behavior, not skill behavior (§3.4).
 
 Chosen over a tool-owned store because the product is agent-first (agents author files natively; a mandated CLI is pure friction), local-first and solo (nothing needs a server-mediated store), and it mirrors how Claude Code skills already work. The store's real wins — validation, integrity, concurrency — are recovered inside this model: append-only files sidestep concurrency, and the CLI (§3.3) validates without gatekeeping ([#2](https://github.com/angusfretwell/docent/issues/2)).
 
@@ -21,7 +21,7 @@ The round-trip collapses to a **single actor-agnostic findings queue** over `.do
 
 ### 2.1 Roles, not actors
 
-- The Dossier holds a queue of **Findings**; the Finding is the unit — an anchored, append-only review conversation ([#18](https://github.com/angusfretwell/docent/issues/18), [#24](https://github.com/angusfretwell/docent/issues/24); records at `findings/fnd_*/NNN-*.md`, schema `docent/finding@3`, owned by [data-model.md](data-model.md)).
+- The Review holds a queue of **Findings**; the Finding is the unit — an anchored, append-only review conversation ([#18](https://github.com/angusfretwell/docent/issues/18), [#24](https://github.com/angusfretwell/docent/issues/24); records at `findings/fnd_*/NNN-*.md`, schema `docent/finding@3`, owned by [data-model.md](data-model.md)).
 - **Review, fix, and resolve are roles, not actors.** A human (via the docent UI) or an agent (via a skill) can occupy any role. An agent may resolve another agent's Finding ([#18](https://github.com/angusfretwell/docent/issues/18)).
 - **Attribution is metadata only** — it records _who did it_, never gates _who may_ ([#18](https://github.com/angusfretwell/docent/issues/18)).
 
@@ -65,7 +65,7 @@ review → write  →[needs action]→  fetch → fix → reply  →[needs verif
 
 ### 2.5 Review input
 
-A reviewer defaults to the **live head** of the branch, minting a Change on reference; it may target **any prior Change** in the Dossier's history ([#18](https://github.com/angusfretwell/docent/issues/18) as amended by [#24](https://github.com/angusfretwell/docent/issues/24)). Anchoring spans Changes for free — a Finding born on an older Change is simply born drifted against head, which is what Drift is for ([#18](https://github.com/angusfretwell/docent/issues/18)). An optional focus scopes the pass.
+A reviewer defaults to the **live head** of the branch, minting a Change on reference; it may target **any prior Change** in the Review's history ([#18](https://github.com/angusfretwell/docent/issues/18) as amended by [#24](https://github.com/angusfretwell/docent/issues/24)). Anchoring spans Changes for free — a Finding born on an older Change is simply born drifted against head, which is what Drift is for ([#18](https://github.com/angusfretwell/docent/issues/18)). An optional focus scopes the pass.
 
 ### 2.6 Resolution is unconstrained
 
@@ -121,7 +121,7 @@ The `docent` binary has two faces ([#21](https://github.com/angusfretwell/docent
 
 Tool / UI / human concerns, kept out of the catalogue so the invocation model stays crisp ([#21](https://github.com/angusfretwell/docent/issues/21), as amended by [#24](https://github.com/angusfretwell/docent/issues/24)):
 
-- **Dossier creation and Change minting** → the **tool**. The Dossier auto-creates on first use; a Change mints lazily on first reference (a Finding, a Walkthrough, a `/review` pass referencing the head). [#21](https://github.com/angusfretwell/docent/issues/21)'s original "materialize a Review from a PR / mint a new Round" items are superseded by this local-branch model ([#24](https://github.com/angusfretwell/docent/issues/24)).
+- **Review creation and Change minting** → the **tool**. The Review auto-creates on first use; a Change mints lazily on first reference (a Finding, a Walkthrough, a `/review` pass referencing the head). [#21](https://github.com/angusfretwell/docent/issues/21)'s original "materialize a Review from a PR / mint a new Round" items are superseded by this local-branch model ([#24](https://github.com/angusfretwell/docent/issues/24)).
 - **Mark-as-viewed** → a **human UI** action ([diff-review.md](diff-review.md)); agents never mark files viewed.
 - **Serving the app** → the **human's** dev workflow (§4); capture only consumes a served app.
 - **Commit / push** → the **human's** git workflow, unspecified by this spec ([#18](https://github.com/angusfretwell/docent/issues/18)).

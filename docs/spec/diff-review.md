@@ -1,6 +1,6 @@
 # Diff review
 
-The Diff tab is the first of docent's three tabbed pillars (Diff / Code walkthrough / Product walkthrough — see [README.md](README.md)). It renders the current Change of the checked-out branch's Dossier as one continuous, virtualized diff, alongside a navigation tree, per-file viewed tracking, a read-only Pending entry for the dirty working tree, and the Dossier-global Findings panel.
+The Diff tab is the first of docent's three tabbed pillars (Diff / Code walkthrough / Product walkthrough — see [README.md](README.md)). It renders the current Change of the checked-out branch's Review as one continuous, virtualized diff, alongside a navigation tree, per-file viewed tracking, a read-only Pending entry for the dirty working tree, and the Review-global Findings panel.
 
 Terminology follows [CONTEXT.md](../../CONTEXT.md). Entity schemas, Finding anchors, and drift mechanics live in [data-model.md](data-model.md); server endpoints and the SSE channel in [architecture.md](architecture.md); the walkthrough tabs in [walkthroughs.md](walkthroughs.md).
 
@@ -113,7 +113,7 @@ A **read-only preview of the working tree**, letting the reviewer eyeball an `ac
 - **Not a Change**: no identity, no persistence. It is a Change-shaped view whose head side is the dirty working tree.
 - **Auto-surfaces** (with a dirty badge) when the working tree is dirty; **auto-hides** when clean.
 - **Diff-tab only** — walkthroughs are durable and immutable, untouched by live edits.
-- The binding is **definitional**: the Dossier _is_ the checked-out branch ([#24](https://github.com/angusfretwell/docent/issues/24)), so the dirty working tree is by definition this Dossier's pending state.
+- The binding is **definitional**: the Review _is_ the checked-out branch ([#24](https://github.com/angusfretwell/docent/issues/24)), so the dirty working tree is by definition this Review's pending state.
 
 ### Range & rendering
 
@@ -150,11 +150,11 @@ git cannot distinguish an agent's edit from a human's — the working tree is ju
 
 ([#20](https://github.com/angusfretwell/docent/issues/20), as amended by [#24](https://github.com/angusfretwell/docent/issues/24))
 
-The aggregate surface for Findings as a Dossier ages across Changes — the surface that per-Finding drift badges and inline-in-diff rendering do not cover.
+The aggregate surface for Findings as a Review ages across Changes — the surface that per-Finding drift badges and inline-in-diff rendering do not cover.
 
-**Forcing function:** once a Dossier spans several Changes, some Findings go **outdated** — their anchored code was edited or deleted, so there is no line in the current diff to pin them to. Detached Findings render against their born text, but inline-in-diff has no home for a Finding whose code is gone. That alone forces an off-diff surface.
+**Forcing function:** once a Review spans several Changes, some Findings go **outdated** — their anchored code was edited or deleted, so there is no line in the current diff to pin them to. Detached Findings render against their born text, but inline-in-diff has no home for a Finding whose code is gone. That alone forces an off-diff surface.
 
-- A **Dossier-global side panel**, available from **all three tabs** (Diff / Code walkthrough / Product walkthrough) — **not a fourth tab** (a fourth content tab would compete with the three and pull the reviewer out of context). It lists **every** Finding regardless of anchor pillar and is the home for triage **and** for detached Findings (which may have no live pillar at all).
+- A **Review-global side panel**, available from **all three tabs** (Diff / Code walkthrough / Product walkthrough) — **not a fourth tab** (a fourth content tab would compete with the three and pull the reviewer out of context). It lists **every** Finding regardless of anchor pillar and is the home for triage **and** for detached Findings (which may have no live pillar at all).
 - **Inline-in-diff rendering is unchanged** for anchored live/shifted Findings — a Finding shows in both surfaces when anchored, panel-only when detached.
 - **v1 layout is deliberately minimal:**
   - a single **flat list sorted by location** (natural reading order across pillars);
