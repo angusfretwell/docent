@@ -13,9 +13,9 @@ import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 import {
   ChangeRecord,
+  FindingEntry,
   Review,
   ReviewSnapshot,
-  FindingEntry,
   ViewedEvent,
   WalkthroughEntry,
 } from "@shared/schemas/review";

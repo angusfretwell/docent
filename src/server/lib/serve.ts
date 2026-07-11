@@ -26,7 +26,7 @@ import type { ClientAssets } from "@shared/lib/assets";
 import { ViewedRequest } from "@shared/schemas/review";
 import { FindingWrite } from "@shared/schemas/finding-write";
 import type { PendingRange } from "@shared/schemas/pending";
-import { appendViewedEvent, reviewDirPath, readReviewSnapshot } from "../services/review";
+import { appendViewedEvent, readReviewSnapshot, reviewDirPath } from "../services/review";
 import { writeFindingRecord } from "../services/findings-write";
 import {
   resolveAuthor,

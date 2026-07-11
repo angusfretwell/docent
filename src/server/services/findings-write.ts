@@ -16,7 +16,7 @@ import { Path } from "effect/Path";
 import { ChangeRecord } from "@shared/schemas/review";
 import type { Anchor, Disposition } from "@shared/schemas/finding";
 import type { FindingWrite } from "@shared/schemas/finding-write";
-import { reviewDirPath, ensureReview, listDir, makeId, readRecord } from "./review";
+import { ensureReview, listDir, makeId, readRecord, reviewDirPath } from "./review";
 import { recordFile, serializeFrontmatter } from "../lib/records";
 
 /** The plain human/agent attribution a write stamps onto its record. */

@@ -23,7 +23,7 @@ import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 import type { WalkthroughAnnotation, WalkthroughRange } from "@shared/schemas/walkthrough";
 import { Capture, Walkthrough, WalkthroughSection } from "@shared/schemas/walkthrough";
-import { reviewDirPath, ensureReview, makeId, readRecord } from "./review";
+import { ensureReview, makeId, readRecord, reviewDirPath } from "./review";
 import type { ChangeRefs } from "./findings-write";
 import { mintChange } from "./findings-write";
 import { recordFile, serializeFrontmatter } from "../lib/records";
