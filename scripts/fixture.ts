@@ -30,7 +30,6 @@ const repoRoot = path.join(import.meta.dir, "..");
 const sourceRoot = path.join(repoRoot, "fixtures");
 const treesRoot = path.join(sourceRoot, "repo");
 const docentSource = path.join(sourceRoot, "docent");
-const target = path.join(repoRoot, ".dev", "fixture");
 
 const BRANCH = "feat/panel";
 
@@ -120,7 +119,7 @@ function clearWorktree(dir: string): void {
 }
 
 /** Commit one snapshot tree (opening its branch first), returning the new SHA. */
-function commitSnapshot(snapshot: Snapshot): string {
+function commitSnapshot(target: string, snapshot: Snapshot): string {
   if (snapshot.branch !== undefined) {
     git(target, ["checkout", "-b", snapshot.branch]);
   }
@@ -135,6 +134,7 @@ const TOKEN = /\{\{\s*(?<kind>sha|blob)\s+(?<rest>[^}]+?)\s*\}\}/g;
 
 /** Resolve every `{{sha ref}}` / `{{blob ref path}}` token against the commits. */
 function resolveTemplate(
+  target: string,
   text: string,
   refs: ReadonlyMap<string, string>
 ): string {
@@ -163,7 +163,10 @@ function isCaptureBlob(relativePath: string): boolean {
 }
 
 /** Copy `fixtures/docent/` into the repo's `.docent/`, resolving tokens en route. */
-function materializeDocent(refs: ReadonlyMap<string, string>): void {
+function materializeDocent(
+  target: string,
+  refs: ReadonlyMap<string, string>
+): void {
   const entries = readdirSync(docentSource, {
     recursive: true,
     withFileTypes: true,
@@ -182,32 +185,51 @@ function materializeDocent(refs: ReadonlyMap<string, string>): void {
     }
     writeFileSync(
       destination,
-      resolveTemplate(readFileSync(absolute, "utf-8"), refs)
+      resolveTemplate(target, readFileSync(absolute, "utf-8"), refs)
     );
   }
 }
 
 /** Append an uncommitted edit so the working tree is dirty and Pending renders. */
-function leavePendingEdit(): void {
+function leavePendingEdit(target: string): void {
   const stylesPath = path.join(target, "styles.css");
   const rule = "\nbutton {\n  margin-top: 1rem;\n}\n";
   writeFileSync(stylesPath, `${readFileSync(stylesPath, "utf-8")}${rule}`);
 }
 
-rmSync(target, { force: true, recursive: true });
-mkdirSync(target, { recursive: true });
-git(target, ["init", "-b", "main"]);
-git(target, ["config", "user.email", IDENTITY.email]);
-git(target, ["config", "user.name", IDENTITY.name]);
+/**
+ * Delete and deterministically rebuild the fixture repo at `target`, returning
+ * the feature branch it opens and the resolved `ref → SHA` map. The caller owns
+ * `target`: the CLI points it at `.dev/fixture`; the CI validation test points
+ * it at a throwaway scratch dir so the fixture is parsed against the shared
+ * schemas without touching `.dev/`.
+ */
+export function materializeFixture(target: string): {
+  branch: string;
+  refs: ReadonlyMap<string, string>;
+} {
+  rmSync(target, { force: true, recursive: true });
+  mkdirSync(target, { recursive: true });
+  git(target, ["init", "-b", "main"]);
+  git(target, ["config", "user.email", IDENTITY.email]);
+  git(target, ["config", "user.name", IDENTITY.name]);
 
-const refs = new Map<string, string>();
-for (const snapshot of SNAPSHOTS) {
-  refs.set(snapshot.ref, commitSnapshot(snapshot));
+  const refs = new Map<string, string>();
+  for (const snapshot of SNAPSHOTS) {
+    refs.set(snapshot.ref, commitSnapshot(target, snapshot));
+  }
+
+  materializeDocent(target, refs);
+  leavePendingEdit(target);
+
+  return { branch: BRANCH, refs };
 }
 
-materializeDocent(refs);
-leavePendingEdit();
+if (import.meta.main) {
+  const target = path.join(repoRoot, ".dev", "fixture");
+  const { branch, refs } = materializeFixture(target);
 
-console.log(
-  `materialized fixture → ${path.relative(repoRoot, target)} (${BRANCH} @ ${refs.get("change2")?.slice(0, 7)}, base @ ${refs.get("base")?.slice(0, 7)})`
-);
+  console.log(
+    `materialized fixture → ${path.relative(repoRoot, target)} (${branch} @ ${refs.get("change2")?.slice(0, 7)}, base @ ${refs.get("base")?.slice(0, 7)})`
+  );
+}
