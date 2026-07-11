@@ -1,12 +1,10 @@
 ---
 name: afk-loop
-description: Autonomous issue-clearing loop — supervise implementation and review sub-agents across the frontier of unblocked issues, then merge clean PRs. Run as `/loop /afk-loop`.
+description: Autonomous issue-clearing loop — supervise implementer, reviewer, and fixer sub-agents across the frontier of unblocked issues, then merge clean PRs. Run as `/loop /afk-loop`.
 disable-model-invocation: true
 ---
 
-You are the **supervisor**. You plan, dispatch sub-agents, and merge — sub-agents write the code and review it. Each invocation is one **pass**: PLAN → IMPLEMENT+REVIEW → MERGE. Run under `/loop` (`/loop /afk-loop`); the loop ends when the frontier is empty.
-
-An issue's life: PLAN → IMPLEMENT ⇄ REVIEW → MERGE.
+You are the **supervisor**. You plan, dispatch sub-agents, and merge — implementers, reviewers, and fixers (each with a playbook in this folder) do the code work. Every dispatch is a fresh sub-agent; the prompt carries everything it needs. Each invocation is one **pass**; within it each issue flows PLAN → IMPLEMENT ⇄ REVIEW → MERGE. Run under `/loop` (`/loop /afk-loop`); the loop ends when the frontier is empty.
 
 ## 1. Plan
 
@@ -22,21 +20,25 @@ The **frontier** is the set of issues with zero blockers among open issues. An i
 
 Done when: every open `ready-for-agent` issue is classified as frontier, blocked (by which issue), or PRD.
 
-## 2. Dispatch implementation
+## 2. Dispatch implementers
 
-Launch one implementation sub-agent per frontier issue — all Agent calls in a single message so they run in parallel. Prompt each with:
+Launch one implementer per frontier issue — at most 5 per pass; the rest stay on the next pass's frontier — all Agent calls in a single message so they run in parallel. Prompt each with:
 
-> Read `.agents/skills/afk-loop/implementation.md` and follow it for issue #\<n\>.
+> Read `.agents/skills/afk-loop/implementer.md` and follow it for issue #\<issue\>.
 
-Done when: every frontier issue has exactly one implementation agent, and you have recorded each agent's ID (you will message it during review rounds).
+Done when: every frontier issue has exactly one implementer or is held for the next pass.
 
 ## 3. Review rounds
 
-When an implementation agent returns a PR, launch a review sub-agent:
+When an implementer returns a PR, launch a reviewer:
 
-> Read `.agents/skills/afk-loop/review.md` and follow it for issue #\<m\>.
+> Read `.agents/skills/afk-loop/reviewer.md` and follow it for issue #\<issue\>.
 
-- **Findings** → SendMessage them to the _same_ implementation agent (its context is intact), then re-review the pushed fixes. Each findings→fix→re-review cycle is one **round**.
+- **Findings** → launch a fixer:
+
+  > Read `.agents/skills/afk-loop/fixer.md` and follow it for issue #\<issue\>. Address: \<the findings, verbatim\>
+
+  then re-review with a fresh reviewer, appending `Prior findings to verify: <findings>` to its prompt. Each findings→fix→re-review cycle is one **round**.
 - **Clean** → the issue is ready to merge.
 - **Still failing after round 3** → stop the issue (below).
 
@@ -44,10 +46,11 @@ Done when: every dispatched issue is ready to merge, or stopped.
 
 ## 4. Merge
 
-For each issue whose review came back clean, wait for CI: `gh pr checks <n> --watch`.
+For each issue whose review came back clean, wait for CI: `gh pr checks <pr> --watch`.
 
-- **Green** → merge: `gh pr merge <n> --squash --delete-branch`. The PR body's `Closes #<n>` closes the issue.
-- **Red** → SendMessage the failing check's output to the issue's implementation agent to fix and push, then re-check.
+- **Green** → merge: `gh pr merge <pr> --squash --delete-branch`. The PR body's `Closes #<issue>` closes the issue.
+- **Red** → launch a fixer with the failing check's output, then re-check. Still red after two red→fix cycles → stop the issue.
+- **Merge conflict** (the merge command fails after a sibling PR lands) → launch a fixer to rebase onto main, wait for green again, then retry the merge.
 
 Done when: every clean PR is green and merged.
 
@@ -55,12 +58,12 @@ Done when: every clean PR is green and merged.
 
 A stopped issue gets a comment explaining exactly what blocked it, loses its `ready-for-agent` label so no pass picks it up again, and the other issues keep going.
 
-- **One-way door** — reported by an implementation agent, which writes the comment itself (see its playbook). Record it as stopped and move on.
-- **Review still failing when the round cap is hit** — you write the comment: list the remaining blocking findings so a human can take over. `gh issue edit <n> --remove-label ready-for-agent`.
+- **One-way door** — reported by an implementer or fixer, which writes the comment itself (see the implementer playbook). Record it as stopped and move on.
+- **Cap hit** — review still failing at round 3, or CI still red after two fix cycles: you write the comment — list the remaining blocking findings or failing check output so a human can take over. `gh issue edit <issue> --remove-label ready-for-agent`.
 
 ## End of pass
 
-Merges can unblock issues, so a completed wave is not the end of the work. End every pass with a status line — issues merged, stopped (and why), still blocked — then:
+Merges can unblock issues, so a completed pass is not the end of the work. End every pass with a status line — issues merged, stopped (and why), still blocked — then:
 
-- Any open `ready-for-agent` issue remains → schedule the next wakeup with the same `/afk-loop` prompt; the next pass replans from step 1.
+- Any open `ready-for-agent` issue remains → schedule the next wakeup at the minimum delay (merges and the dispatch cap mean work is already unblocked) with the same `/afk-loop` prompt; the next pass replans from step 1.
 - Frontier empty and every remaining issue is blocked or stopped → stop the loop, with the final status as your summary.
