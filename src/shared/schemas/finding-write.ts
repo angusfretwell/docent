@@ -4,10 +4,11 @@
  * DOM globals here.
  *
  * A write is one append-only record drop — a new Finding (`open`), a `reply`
- * (with optional disposition), a `resolve`, or a `reopen` — the identical
- * shape an agent writes directly into `.docent/` (data-model.md §5, §7;
- * architecture.md §2). The request never carries attribution: the UI is
- * definitionally the human, so the server stamps the author from git config.
+ * (with optional disposition), a `resolve`, a `reopen`, or an `edit` (which
+ * supersedes an earlier record's body) — the identical shape an agent writes
+ * directly into `.docent/` (data-model.md §5, §7; architecture.md §2). The
+ * request never carries attribution: the UI is definitionally the human, so the
+ * server stamps the author from git config.
  */
 
 import { Schema } from "effect";
@@ -42,12 +43,26 @@ const ReopenWrite = Schema.Struct({
   op: Schema.Literal("reopen"),
 });
 
+/**
+ * Edit an earlier record's body: `edits` names the target record's filename
+ * (e.g. `002-reply.md`), and `body` is the superseding text the fold applies at
+ * read time (data-model.md §5.1). Append-only — the original record is never
+ * rewritten.
+ */
+const EditWrite = Schema.Struct({
+  body: Schema.String,
+  edits: Schema.String,
+  findingId: Schema.String,
+  op: Schema.Literal("edit"),
+});
+
 /** The `POST /api/findings` request body — one append-only record to drop. */
 export const FindingWrite = Schema.Union([
   OpenWrite,
   ReplyWrite,
   ResolveWrite,
   ReopenWrite,
+  EditWrite,
 ]);
 export type FindingWrite = typeof FindingWrite.Type;
 

@@ -6,11 +6,11 @@
  * - **fetch-findings** → `docent finding list --filter …`: walks the active
  *   Review, folds each Finding, and filters the queue on open/resolved +
  *   what's-next (+ anchor / author scope), emitting machine-readable JSON.
- * - **write-findings** → `docent finding add / reply / resolve`: appends the
- *   same validated `docent/finding@3` records as `POST /api/findings`, through
- *   the *same* `writeFindingRecord` implementation — no divergence. Anchor
- *   construction (resolving a code arm's content-addressed `blobSha` from git)
- *   lives here so the CLI is the single home for it.
+ * - **write-findings** → `docent finding add / reply / resolve / reopen / edit`:
+ *   appends the same validated `docent/finding@3` records as `POST
+ *   /api/findings`, through the *same* `writeFindingRecord` implementation — no
+ *   divergence. Anchor construction (resolving a code arm's content-addressed
+ *   `blobSha` from git) lives here so the CLI is the single home for it.
  *
  * The CLI is non-gating (architecture.md §3): it writes the identical file an
  * agent could hand-author, and a running `docent serve` turns that file drop
@@ -274,7 +274,7 @@ export const listFindings = Effect.fn("listFindings")(function* listFindings(
   return sortFoldedFindings(applyFindingFilter(folded, filter));
 });
 
-// ── add / reply / resolve — write-findings ───────────────────────────────────
+// ── add / reply / resolve / reopen / edit — write-findings ───────────────────
 
 /** How `finding add` names the anchor before git resolves any `blobSha`. */
 export type AnchorSpec =
@@ -538,6 +538,34 @@ export const resolveFinding = Effect.fn("resolveFinding")(
   }
 );
 
+/** write-findings `reopen`: return a resolved Finding to open. */
+export const reopenFinding = Effect.fn("reopenFinding")(function* reopenFinding(
+  cwd: string,
+  params: { author: AuthorOpts; findingId: string }
+) {
+  const context = yield* writeContext(cwd);
+  const author = yield* buildAuthor(context.root, params.author);
+  return yield* commitWrite(context, author, {
+    findingId: params.findingId,
+    op: "reopen",
+  });
+});
+
+/** write-findings `edit`: supersede the body of a named earlier record. */
+export const editFinding = Effect.fn("editFinding")(function* editFinding(
+  cwd: string,
+  params: { author: AuthorOpts; body: string; edits: string; findingId: string }
+) {
+  const context = yield* writeContext(cwd);
+  const author = yield* buildAuthor(context.root, params.author);
+  return yield* commitWrite(context, author, {
+    body: params.body,
+    edits: params.edits,
+    findingId: params.findingId,
+    op: "edit",
+  });
+});
+
 // ── argv dispatch ────────────────────────────────────────────────────────────
 
 /** The last value of a required flag, or a usage error naming it. */
@@ -641,10 +669,31 @@ export const runFinding = Effect.fn("runFinding")(function* runFinding(
       })
     );
   }
+  if (op === "reopen") {
+    const args = yield* attempt(() => parseArgs(rest, new Set()));
+    const findingId = yield* attempt(() => requireFlag(args, "finding"));
+    return yield* printJson(
+      yield* reopenFinding(cwd, { author: parseAuthorOpts(args), findingId })
+    );
+  }
+  if (op === "edit") {
+    const args = yield* attempt(() => parseArgs(rest, new Set()));
+    const findingId = yield* attempt(() => requireFlag(args, "finding"));
+    const edits = yield* attempt(() => requireFlag(args, "record"));
+    const body = yield* resolveBody(args, true);
+    return yield* printJson(
+      yield* editFinding(cwd, {
+        author: parseAuthorOpts(args),
+        body,
+        edits,
+        findingId,
+      })
+    );
+  }
 
   return yield* Effect.fail(
     new CliUsageError({
-      reason: `unknown finding subcommand: ${op ?? "(none)"} (list | add | reply | resolve)`,
+      reason: `unknown finding subcommand: ${op ?? "(none)"} (list | add | reply | resolve | reopen | edit)`,
     })
   );
 });
