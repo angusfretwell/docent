@@ -11,7 +11,6 @@ export default defineConfig({
   ignorePatterns: ["prototypes", ".agents"],
   options: {
     typeAware: true,
-    typeCheck: process.env.CI !== "true",
   },
   plugins: [
     "eslint",
