@@ -136,11 +136,11 @@ An **event-driven fs-watch of the repo** — **gitignore-aware** (so `node_modul
 
 Pending **owns no lifecycle logic**. On commit, `HEAD` moves → `git diff HEAD` empties → the entry auto-hides. Everything committed is covered by lazy minting: the diff always renders the live head, and a Change crystallizes on first durable reference ([#24](https://github.com/angusfretwell/docent/issues/24)). The committed-but-unpushed gap [#23](https://github.com/angusfretwell/docent/issues/23) had accepted is thereby **closed** — Pending covers uncommitted work, first-reference covers everything committed; there is nothing to caveat. Commit stays the human's git workflow, out of scope.
 
-### Strictly verify-only
+### Verify-only for Findings
 
 - **No Finding authoring on Pending.** An anchor bound to a mutable working-tree blob would be transient and strand on commit, so all Finding anchors stay on committed Changes.
 - **Existing Findings are not rendered inline** on Pending (v1) — it is a pure code preview. Verifying an `actioned` Finding: read it in the Findings panel (or on the committed head Change), eyeball the edit on Pending, then write the resolve on the existing Finding — its born anchor untouched. _(Noted for later: because Pending's base side literally is the head Change's blobs, rendering existing Findings read-only on Pending is coherent and could be added without redrawing anything.)_
-- **Mark-as-viewed does not apply.** Viewed is keyed on immutable head-blob SHAs and tracks durable cross-Change progress; Pending's head side is mutable, un-SHA'd, and transient — nothing stable to key on. Once the edit commits into a Change, mark-as-viewed applies normally, and head-blob keying correctly shows the changed file as unviewed.
+- **Mark-as-viewed applies**, keyed on full content SHAs. The "un-SHA'd" premise is false: a working file's bytes are content-addressed at assertion time — `git hash-object` yields the same blob SHA the file will carry once committed. So the Review's viewed events fold into Pending exactly as into a Change: editing a file auto-clears its mark (changed-since-viewed on the new head blob), and committing unchanged bytes carries the mark into the minted Change (identical content SHA) — a genuine progress win, with the append-only event log and progress bar unchanged. This requires `git diff --full-index` on the Pending diff (`resolvePending`), matching the Change diff; git hashes worktree files even under `--no-index`, so untracked adds key too.
 
 ### Scope
 

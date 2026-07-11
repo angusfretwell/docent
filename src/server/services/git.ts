@@ -467,12 +467,18 @@ export const resolvePending = Effect.fn("resolvePending")(
     const dirty = status.length > 0;
 
     // A clean tree diffs to nothing — skip the work and return the empty preview.
+    // `--full-index` on both invocations emits full head-blob SHAs, so viewed
+    // marks key on the working file's content SHA (diff-review.md §6): editing a
+    // file auto-clears its mark, and committing unchanged bytes carries the mark
+    // into the minted Change (same content-addressed SHA). git hashes worktree
+    // files even under `--no-index`, so the untracked-add path keys too.
     const patch = dirty
       ? yield* Effect.gen(function* buildPatch() {
           const diffBase = range === "incremental" ? "HEAD" : baseSha;
           const tracked = yield* git(root, [
             DIFF,
             NO_COLOR,
+            FULL_INDEX,
             FIND_RENAMES,
             diffBase,
           ]);
@@ -483,6 +489,7 @@ export const resolvePending = Effect.fn("resolvePending")(
               gitDiffNoIndex(root, [
                 DIFF,
                 NO_COLOR,
+                FULL_INDEX,
                 "--no-index",
                 "--",
                 "/dev/null",
