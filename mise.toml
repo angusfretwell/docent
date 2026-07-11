@@ -13,3 +13,6 @@ typecheck = "bun run typecheck"
 test = "bun test"
 check = "bun run check"
 fix = "bun run fix"
+
+[tasks.preflight]
+depends = ["check", "typecheck", "test", "compile"]

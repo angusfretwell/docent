@@ -13,6 +13,7 @@ mise serve      # compile and run the project
 mise fix        # format and auto-fix linter errors
 mise typecheck  # run type checks
 mise test       # run tests
+mise preflight  # check, typecheck, test, and compile
 ```
 
 ## Local Effect Source
