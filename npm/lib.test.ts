@@ -1,10 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { assetNameFor, downloadUrl } from "./lib.mjs";
 
-test("dummy test", () => {
-  expect(true).toBe(false);
-});
-
 describe("assetNameFor", () => {
   test("maps supported platform/arch pairs to release asset names", () => {
     expect(assetNameFor("linux", "x64")).toBe("docent-linux-x64");
