@@ -26,7 +26,7 @@
  *   (content-addressed), so the marks are kept — no special case needed.
  */
 
-import type { ViewedEvent } from "../../shared/schemas/dossier.ts";
+import type { ViewedEvent } from "@shared/schemas/dossier.ts";
 import type { FileEntry } from "./nav.ts";
 
 export interface ViewedState {

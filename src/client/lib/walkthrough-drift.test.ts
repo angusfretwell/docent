@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { WalkthroughRange } from "../../shared/schemas/walkthrough.ts";
+import type { WalkthroughRange } from "@shared/schemas/walkthrough.ts";
 import { indexDiffFiles } from "./drift.ts";
 import { planRange } from "./walkthrough-drift.ts";
 

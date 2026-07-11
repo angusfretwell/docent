@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { BunServices } from "@effect/platform-bun";
 import { ManagedRuntime } from "effect";
-import { ViewedRequest } from "../../shared/schemas/dossier.ts";
+import { ViewedRequest } from "@shared/schemas/dossier.ts";
 import {
   appendViewedEvent,
   branchSlug,

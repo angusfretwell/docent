@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { Anchor } from "../../shared/schemas/finding.ts";
+import type { Anchor } from "@shared/schemas/finding.ts";
 import type { DiffFile } from "./drift.ts";
 import { anchorContext, indexDiffFiles } from "./drift.ts";
 

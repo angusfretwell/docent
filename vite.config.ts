@@ -6,8 +6,14 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   build: {
+    chunkSizeWarningLimit: Infinity,
     emptyOutDir: true,
     outDir: path.resolve(import.meta.dirname, "dist/client"),
+    rollupOptions: {
+      output: {
+        codeSplitting: false,
+      },
+    },
   },
   plugins: [
     react(),
@@ -15,6 +21,5 @@ export default defineConfig({
       presets: [reactCompilerPreset()],
     }),
   ],
-
   root: path.resolve(import.meta.dirname, "src/client"),
 });

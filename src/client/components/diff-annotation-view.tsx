@@ -4,7 +4,7 @@
  * renders as a thread; the composer marker renders the authoring form.
  */
 
-import type { FindingWrite } from "../../shared/schemas/finding-write.ts";
+import type { FindingWrite } from "@shared/schemas/finding-write.ts";
 import { Composer } from "./composer.tsx";
 import type { Annotation } from "../lib/diff-annotations.ts";
 import { FindingThread } from "./finding-thread.tsx";

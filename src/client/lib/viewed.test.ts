@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { ViewedEvent } from "../../shared/schemas/dossier.ts";
+import type { ViewedEvent } from "@shared/schemas/dossier.ts";
 import type { FileEntry } from "./nav.ts";
 import { computeViewed, viewedStateFor } from "./viewed.ts";
 

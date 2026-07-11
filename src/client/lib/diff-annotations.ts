@@ -11,9 +11,9 @@ import type {
   DiffLineAnnotation,
   FileDiffMetadata,
 } from "@pierre/diffs";
-import type { DriftState } from "../../shared/schemas/drift.ts";
-import type { FoldedFinding } from "../../shared/lib/finding.ts";
-import type { Anchor } from "../../shared/schemas/finding.ts";
+import type { DriftState } from "@shared/schemas/drift.ts";
+import type { FoldedFinding } from "@shared/lib/finding.ts";
+import type { Anchor } from "@shared/schemas/finding.ts";
 import type { DriftResult } from "./drift.ts";
 import type { FileEntry } from "./nav.ts";
 

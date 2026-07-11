@@ -3,7 +3,7 @@ import { writeFileSync } from "node:fs";
 import path from "node:path";
 import { BunServices } from "@effect/platform-bun";
 import { Effect, ManagedRuntime } from "effect";
-import type { FoldedFinding } from "../../shared/lib/finding.ts";
+import type { FoldedFinding } from "@shared/lib/finding.ts";
 import {
   addFinding,
   applyFindingFilter,

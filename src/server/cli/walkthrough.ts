@@ -16,7 +16,7 @@
 import { Effect, Schema } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
-import { WalkthroughAnnotation, WalkthroughRange } from "../../shared/schemas/walkthrough.ts";
+import { WalkthroughAnnotation, WalkthroughRange } from "@shared/schemas/walkthrough.ts";
 import {
   attempt,
   CliUsageError,

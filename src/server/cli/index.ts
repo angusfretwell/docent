@@ -19,11 +19,11 @@
  */
 
 import { Console, Effect, Schema } from "effect";
-import { foldFinding, sortFoldedFindings } from "../../shared/lib/finding.ts";
-import type { FoldedFinding, WhatsNext } from "../../shared/lib/finding.ts";
-import { Anchor } from "../../shared/schemas/finding.ts";
-import type { Disposition } from "../../shared/schemas/finding.ts";
-import { FindingWrite } from "../../shared/schemas/finding-write.ts";
+import { foldFinding, sortFoldedFindings } from "@shared/lib/finding.ts";
+import type { FoldedFinding, WhatsNext } from "@shared/lib/finding.ts";
+import { Anchor } from "@shared/schemas/finding.ts";
+import type { Disposition } from "@shared/schemas/finding.ts";
+import { FindingWrite } from "@shared/schemas/finding-write.ts";
 import { readDossierSnapshot } from "../services/dossier.ts";
 import type { AuthorInput } from "../services/findings-write.ts";
 import { writeFindingRecord } from "../services/findings-write.ts";

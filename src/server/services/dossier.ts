@@ -18,10 +18,10 @@ import {
   FindingEntry,
   ViewedEvent,
   WalkthroughEntry,
-} from "../../shared/schemas/dossier.ts";
-import type { ViewedRequest } from "../../shared/schemas/dossier.ts";
-import { FindingRecord, RECORD_TYPES } from "../../shared/schemas/finding.ts";
-import { Walkthrough, WalkthroughSection } from "../../shared/schemas/walkthrough.ts";
+} from "@shared/schemas/dossier.ts";
+import type { ViewedRequest } from "@shared/schemas/dossier.ts";
+import { FindingRecord, RECORD_TYPES } from "@shared/schemas/finding.ts";
+import { Walkthrough, WalkthroughSection } from "@shared/schemas/walkthrough.ts";
 
 const STATE_ROOT = ".docent";
 const GITIGNORE_ENTRY = `${STATE_ROOT}/`;

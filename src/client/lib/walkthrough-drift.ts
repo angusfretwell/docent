@@ -8,9 +8,9 @@
  * re-anchors lazily and folds them in as they land.
  */
 
-import { planDrift } from "../../shared/lib/drift.ts";
-import { rangeAnchor } from "../../shared/lib/walkthrough.ts";
-import type { WalkthroughRange } from "../../shared/schemas/walkthrough.ts";
+import { planDrift } from "@shared/lib/drift.ts";
+import { rangeAnchor } from "@shared/lib/walkthrough.ts";
+import type { WalkthroughRange } from "@shared/schemas/walkthrough.ts";
 import { isRealObjectId } from "./blobs.ts";
 import { anchorContext, indexDiffFiles, useReanchor } from "./drift.ts";
 import type { DiffFile, DriftResult, ExcerptJob, ReanchorJob } from "./drift.ts";

@@ -13,9 +13,9 @@
 import { Clock, Effect, Option } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
-import { ChangeRecord } from "../../shared/schemas/dossier.ts";
-import type { Anchor, Disposition } from "../../shared/schemas/finding.ts";
-import type { FindingWrite } from "../../shared/schemas/finding-write.ts";
+import { ChangeRecord } from "@shared/schemas/dossier.ts";
+import type { Anchor, Disposition } from "@shared/schemas/finding.ts";
+import type { FindingWrite } from "@shared/schemas/finding-write.ts";
 import { dossierDirPath, ensureDossier, listDir, makeId, readRecord } from "./dossier.ts";
 import { recordFile, serializeFrontmatter } from "../lib/records.ts";
 

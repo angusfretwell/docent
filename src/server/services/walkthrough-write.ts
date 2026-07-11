@@ -21,8 +21,8 @@
 import { Effect, Option, Schema } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
-import type { WalkthroughAnnotation, WalkthroughRange } from "../../shared/schemas/walkthrough.ts";
-import { Capture, Walkthrough, WalkthroughSection } from "../../shared/schemas/walkthrough.ts";
+import type { WalkthroughAnnotation, WalkthroughRange } from "@shared/schemas/walkthrough.ts";
+import { Capture, Walkthrough, WalkthroughSection } from "@shared/schemas/walkthrough.ts";
 import { dossierDirPath, ensureDossier, makeId, readRecord } from "./dossier.ts";
 import type { ChangeRefs } from "./findings-write.ts";
 import { mintChange } from "./findings-write.ts";

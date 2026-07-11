@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { FileDiffMetadata } from "@pierre/diffs";
-import type { FoldedFinding } from "../../shared/lib/finding.ts";
-import type { Anchor } from "../../shared/schemas/finding.ts";
+import type { FoldedFinding } from "@shared/lib/finding.ts";
+import type { Anchor } from "@shared/schemas/finding.ts";
 import { buildDiffItems } from "./diff-annotations.ts";
 import type { DriftResult } from "./drift.ts";
 import type { FileEntry } from "./nav.ts";

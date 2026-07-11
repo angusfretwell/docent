@@ -7,7 +7,7 @@
  * landed.
  */
 
-import type { FindingWrite, FindingWriteResult } from "../../shared/schemas/finding-write.ts";
+import type { FindingWrite, FindingWriteResult } from "@shared/schemas/finding-write.ts";
 
 export async function writeFinding(write: FindingWrite): Promise<FindingWriteResult> {
   const res = await fetch("/api/findings", {

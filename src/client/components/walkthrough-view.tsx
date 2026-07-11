@@ -13,18 +13,14 @@
 import type { CodeViewFileItem } from "@pierre/diffs";
 import { CodeView, WorkerPoolContextProvider } from "@pierre/diffs/react";
 import { useEffect, useState } from "react";
-import type { ChangeRecord, FindingEntry, WalkthroughEntry } from "../../shared/schemas/dossier.ts";
-import { splitLines } from "../../shared/lib/drift.ts";
-import type { DriftState } from "../../shared/schemas/drift.ts";
-import { foldFinding } from "../../shared/lib/finding.ts";
-import type { FoldedFinding } from "../../shared/lib/finding.ts";
-import type { Anchor } from "../../shared/schemas/finding.ts";
-import {
-  interleaveSegments,
-  rollupDrift,
-  walkthroughStaleness,
-} from "../../shared/lib/walkthrough.ts";
-import type { WalkthroughRange, WalkthroughSection } from "../../shared/schemas/walkthrough.ts";
+import type { ChangeRecord, FindingEntry, WalkthroughEntry } from "@shared/schemas/dossier.ts";
+import { splitLines } from "@shared/lib/drift.ts";
+import type { DriftState } from "@shared/schemas/drift.ts";
+import { foldFinding } from "@shared/lib/finding.ts";
+import type { FoldedFinding } from "@shared/lib/finding.ts";
+import type { Anchor } from "@shared/schemas/finding.ts";
+import { interleaveSegments, rollupDrift, walkthroughStaleness } from "@shared/lib/walkthrough.ts";
+import type { WalkthroughRange, WalkthroughSection } from "@shared/schemas/walkthrough.ts";
 import { fetchBlobText } from "../lib/blobs.ts";
 import { themes, workerFactory } from "../lib/code-view.ts";
 import type { DriftResult } from "../lib/drift.ts";

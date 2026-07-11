@@ -21,11 +21,11 @@ import {
   HttpServerRequest,
   HttpServerResponse,
 } from "effect/unstable/http";
-import { lookupAsset } from "../../shared/lib/assets.ts";
-import type { ClientAssets } from "../../shared/lib/assets.ts";
-import { ViewedRequest } from "../../shared/schemas/dossier.ts";
-import { FindingWrite } from "../../shared/schemas/finding-write.ts";
-import type { PendingRange } from "../../shared/schemas/pending.ts";
+import { lookupAsset } from "@shared/lib/assets.ts";
+import type { ClientAssets } from "@shared/lib/assets.ts";
+import { ViewedRequest } from "@shared/schemas/dossier.ts";
+import { FindingWrite } from "@shared/schemas/finding-write.ts";
+import type { PendingRange } from "@shared/schemas/pending.ts";
 import { appendViewedEvent, dossierDirPath, readDossierSnapshot } from "../services/dossier.ts";
 import { writeFindingRecord } from "../services/findings-write.ts";
 import {

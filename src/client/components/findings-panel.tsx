@@ -1,16 +1,16 @@
 import { useState } from "react";
-import type { FindingEntry } from "../../shared/schemas/dossier.ts";
-import type { DriftState } from "../../shared/schemas/drift.ts";
-import { changeHistoryLabel } from "../../shared/lib/drift.ts";
-import type { FindingWrite } from "../../shared/schemas/finding-write.ts";
-import type { FoldedFinding } from "../../shared/lib/finding.ts";
+import type { FindingEntry } from "@shared/schemas/dossier.ts";
+import type { DriftState } from "@shared/schemas/drift.ts";
+import { changeHistoryLabel } from "@shared/lib/drift.ts";
+import type { FindingWrite } from "@shared/schemas/finding-write.ts";
+import type { FoldedFinding } from "@shared/lib/finding.ts";
 import {
   findingJumpTarget,
   findingLocation,
   foldFinding,
   sortFoldedFindings,
   WHATS_NEXT_LABEL,
-} from "../../shared/lib/finding.ts";
+} from "@shared/lib/finding.ts";
 import { Composer } from "./composer.tsx";
 import { DRIFT_SIGNAL, DriftPill } from "./drift-badge.tsx";
 import type { DriftResult } from "../lib/drift.ts";

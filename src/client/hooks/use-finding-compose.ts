@@ -8,7 +8,7 @@
 import type { CodeViewLineSelection, FileDiffMetadata } from "@pierre/diffs";
 import type { CodeViewHandle } from "@pierre/diffs/react";
 import { useState } from "react";
-import type { FindingWrite } from "../../shared/schemas/finding-write.ts";
+import type { FindingWrite } from "@shared/schemas/finding-write.ts";
 import type { Annotation, Composing } from "../lib/diff-annotations.ts";
 import { annotationSide } from "../lib/diff-annotations.ts";
 
