@@ -1,21 +1,21 @@
 import { Schema } from "effect";
 import { useEffect, useRef, useState } from "react";
-import { Change, DiffError } from "@shared/schemas/change.ts";
-import { DossierSnapshot } from "@shared/schemas/dossier.ts";
-import type { FindingEntry, ViewedEvent } from "@shared/schemas/dossier.ts";
-import type { FindingWrite } from "@shared/schemas/finding-write.ts";
-import type { PendingRange } from "@shared/schemas/pending.ts";
-import { Pending } from "@shared/schemas/pending.ts";
-import { latestCodeWalkthrough, latestProductWalkthrough } from "@shared/lib/walkthrough.ts";
-import { fetchPendingExpandedFileDiff, isPendingExpandable } from "../lib/blobs.ts";
-import type { DriftResult } from "../lib/drift.ts";
-import { useDrift } from "../lib/drift.ts";
-import type { DiffViewHandle } from "./diff-view.tsx";
-import { DiffView } from "./diff-view.tsx";
-import { writeFinding } from "../lib/findings-client.ts";
-import { FindingsPanel } from "./findings-panel.tsx";
-import { ProductWalkthroughView } from "./product-walkthrough-view.tsx";
-import { WalkthroughView } from "./walkthrough-view.tsx";
+import { Change, DiffError } from "@shared/schemas/change";
+import { DossierSnapshot } from "@shared/schemas/dossier";
+import type { FindingEntry, ViewedEvent } from "@shared/schemas/dossier";
+import type { FindingWrite } from "@shared/schemas/finding-write";
+import type { PendingRange } from "@shared/schemas/pending";
+import { Pending } from "@shared/schemas/pending";
+import { latestCodeWalkthrough, latestProductWalkthrough } from "@shared/lib/walkthrough";
+import { fetchPendingExpandedFileDiff, isPendingExpandable } from "../lib/blobs";
+import type { DriftResult } from "../lib/drift";
+import { useDrift } from "../lib/drift";
+import type { DiffViewHandle } from "./diff-view";
+import { DiffView } from "./diff-view";
+import { writeFinding } from "../lib/findings-client";
+import { FindingsPanel } from "./findings-panel";
+import { ProductWalkthroughView } from "./product-walkthrough-view";
+import { WalkthroughView } from "./walkthrough-view";
 
 // Append a Finding record. The write lands a file in `.docent/`, which trips the
 // server's watch → SSE push → snapshot re-fetch, so the new record renders

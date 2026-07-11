@@ -8,7 +8,7 @@ import {
   sortEntries,
   stepChange,
   stepFile,
-} from "./nav.ts";
+} from "./nav";
 
 /** A patch touching one file, with the given hunk of +adds/-dels. */
 function filePatch(header: string, body: string, index = "index 0000000..1111111 100644"): string {

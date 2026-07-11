@@ -6,7 +6,7 @@ import {
   formatBytes,
   isGeneratedPath,
   parsePatchBlocks,
-} from "./edge-cases.ts";
+} from "./edge-cases";
 
 const BINARY = `diff --git a/data.bin b/data.bin
 index 8553878..4d72901 100644

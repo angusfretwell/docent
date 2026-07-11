@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { makeMatcher, parseGitignore } from "./gitignore.ts";
+import { makeMatcher, parseGitignore } from "./gitignore";
 
 describe("parseGitignore", () => {
   test("drops blanks, comments, and (unsupported) negations", () => {

@@ -3,15 +3,15 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { BunServices } from "@effect/platform-bun";
 import { ManagedRuntime } from "effect";
-import { ViewedRequest } from "@shared/schemas/dossier.ts";
+import { ViewedRequest } from "@shared/schemas/dossier";
 import {
   appendViewedEvent,
   branchSlug,
   ensureGitignore,
   parseAnchor,
   readDossierSnapshot,
-} from "./dossier.ts";
-import { cleanupScratchDirs, scratchDir } from "../lib/test-fixtures.ts";
+} from "./dossier";
+import { cleanupScratchDirs, scratchDir } from "../lib/test-fixtures";
 
 const runtime = ManagedRuntime.make(BunServices.layer);
 

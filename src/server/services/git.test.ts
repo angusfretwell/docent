@@ -11,8 +11,8 @@ import {
   resolveChangeRefs,
   resolvePending,
   resolveWorktreeFile,
-} from "./git.ts";
-import { cleanupScratchDirs, git, scratchDir, scratchRepo } from "../lib/test-fixtures.ts";
+} from "./git";
+import { cleanupScratchDirs, git, scratchDir, scratchRepo } from "../lib/test-fixtures";
 
 const runtime = ManagedRuntime.make(BunServices.layer);
 

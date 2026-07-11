@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { FindingRecord } from "../schemas/finding.ts";
+import type { FindingRecord } from "../schemas/finding";
 import {
   changeHistory,
   changeHistoryLabel,
@@ -8,7 +8,7 @@ import {
   planDrift,
   reanchorRange,
   splitLines,
-} from "./drift.ts";
+} from "./drift";
 
 describe("splitLines", () => {
   test("splits on newlines and drops a single trailing newline", () => {

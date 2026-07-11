@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import type { ViewedEvent } from "@shared/schemas/dossier.ts";
-import type { FileEntry } from "./nav.ts";
-import { computeViewed, viewedStateFor } from "./viewed.ts";
+import type { ViewedEvent } from "@shared/schemas/dossier";
+import type { FileEntry } from "./nav";
+import { computeViewed, viewedStateFor } from "./viewed";
 
 function entry(path: string, blobSha: string): FileEntry {
   return {

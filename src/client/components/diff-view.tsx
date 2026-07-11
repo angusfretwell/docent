@@ -11,17 +11,17 @@ import type { CodeViewHandle } from "@pierre/diffs/react";
 import { CodeView, WorkerPoolContextProvider } from "@pierre/diffs/react";
 import { sift } from "radashi";
 import { useEffect, useImperativeHandle, useRef, useState } from "react";
-import type { FindingEntry, ViewedEvent } from "@shared/schemas/dossier.ts";
-import type { FindingWrite } from "@shared/schemas/finding-write.ts";
-import { fetchExpandedFileDiff, isExpandable } from "../lib/blobs.ts";
-import { themes, workerFactory } from "../lib/code-view.ts";
-import type { Annotation } from "../lib/diff-annotations.ts";
-import type { DriftResult } from "../lib/drift.ts";
-import { EdgeChrome } from "./edge-chrome.tsx";
-import { autoViewed, bodyReplaced, classifyFiles } from "../lib/edge-cases.ts";
-import type { FileClass } from "../lib/edge-cases.ts";
-import { FileTree } from "./file-tree.tsx";
-import type { RowState } from "./file-tree.tsx";
+import type { FindingEntry, ViewedEvent } from "@shared/schemas/dossier";
+import type { FindingWrite } from "@shared/schemas/finding-write";
+import { fetchExpandedFileDiff, isExpandable } from "../lib/blobs";
+import { themes, workerFactory } from "../lib/code-view";
+import type { Annotation } from "../lib/diff-annotations";
+import type { DriftResult } from "../lib/drift";
+import { EdgeChrome } from "./edge-chrome";
+import { autoViewed, bodyReplaced, classifyFiles } from "../lib/edge-cases";
+import type { FileClass } from "../lib/edge-cases";
+import { FileTree } from "./file-tree";
+import type { RowState } from "./file-tree";
 import {
   buildTree,
   changeAnchors,
@@ -31,11 +31,11 @@ import {
   sortEntries,
   stepChange,
   stepFile,
-} from "../lib/nav.ts";
-import type { FileEntry, FileOrder } from "../lib/nav.ts";
-import { useDiffFindings } from "../hooks/use-diff-findings.tsx";
-import { computeViewed, viewedStateFor } from "../lib/viewed.ts";
-import type { ViewedModel } from "../lib/viewed.ts";
+} from "../lib/nav";
+import type { FileEntry, FileOrder } from "../lib/nav";
+import { useDiffFindings } from "../hooks/use-diff-findings";
+import { computeViewed, viewedStateFor } from "../lib/viewed";
+import type { ViewedModel } from "../lib/viewed";
 
 // Keyboard jumps — [ ] step files, , . step changes.
 const KEY_ACTIONS: Record<string, ["file" | "change", 1 | -1]> = {

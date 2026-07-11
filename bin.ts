@@ -11,8 +11,8 @@
  * (run via `bun run build`).
  */
 
-import { manifest } from "./dist/embedded/manifest.ts";
-import { assetsFromManifest } from "./src/shared/lib/assets.ts";
-import { runMain } from "./src/server/main.ts";
+import { manifest } from "./dist/embedded/manifest";
+import { assetsFromManifest } from "./src/shared/lib/assets";
+import { runMain } from "./src/server/main";
 
 runMain(assetsFromManifest(manifest));

@@ -8,15 +8,15 @@
 import type { DiffLineAnnotation, FileDiffMetadata, LineAnnotation } from "@pierre/diffs";
 import { processPatch } from "@pierre/diffs";
 import type { CodeViewHandle } from "@pierre/diffs/react";
-import type { FindingEntry } from "@shared/schemas/dossier.ts";
-import type { FindingWrite } from "@shared/schemas/finding-write.ts";
-import { foldFinding } from "@shared/lib/finding.ts";
-import { DiffAnnotationView } from "../components/diff-annotation-view.tsx";
-import type { DriftResult } from "../lib/drift.ts";
-import type { Annotation } from "../lib/diff-annotations.ts";
-import { buildDiffItems } from "../lib/diff-annotations.ts";
-import type { FileEntry } from "../lib/nav.ts";
-import { useFindingCompose } from "./use-finding-compose.ts";
+import type { FindingEntry } from "@shared/schemas/dossier";
+import type { FindingWrite } from "@shared/schemas/finding-write";
+import { foldFinding } from "@shared/lib/finding";
+import { DiffAnnotationView } from "../components/diff-annotation-view";
+import type { DriftResult } from "../lib/drift";
+import type { Annotation } from "../lib/diff-annotations";
+import { buildDiffItems } from "../lib/diff-annotations";
+import type { FileEntry } from "../lib/nav";
+import { useFindingCompose } from "./use-finding-compose";
 
 // Pending is a read-only preview (no authoring), so DiffView passes no writer;
 // this stands in so the compose hook always has a target. It never runs —

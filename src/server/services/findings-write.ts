@@ -13,11 +13,11 @@
 import { Clock, Effect, Option } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
-import { ChangeRecord } from "@shared/schemas/dossier.ts";
-import type { Anchor, Disposition } from "@shared/schemas/finding.ts";
-import type { FindingWrite } from "@shared/schemas/finding-write.ts";
-import { dossierDirPath, ensureDossier, listDir, makeId, readRecord } from "./dossier.ts";
-import { recordFile, serializeFrontmatter } from "../lib/records.ts";
+import { ChangeRecord } from "@shared/schemas/dossier";
+import type { Anchor, Disposition } from "@shared/schemas/finding";
+import type { FindingWrite } from "@shared/schemas/finding-write";
+import { dossierDirPath, ensureDossier, listDir, makeId, readRecord } from "./dossier";
+import { recordFile, serializeFrontmatter } from "../lib/records";
 
 /** The plain human/agent attribution a write stamps onto its record. */
 export interface AuthorInput {

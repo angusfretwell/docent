@@ -4,11 +4,11 @@
  * renders as a thread; the composer marker renders the authoring form.
  */
 
-import type { FindingWrite } from "@shared/schemas/finding-write.ts";
-import { Composer } from "./composer.tsx";
-import type { Annotation } from "../lib/diff-annotations.ts";
-import { FindingThread } from "./finding-thread.tsx";
-import type { FindingCompose } from "../hooks/use-finding-compose.tsx";
+import type { FindingWrite } from "@shared/schemas/finding-write";
+import { Composer } from "./composer";
+import type { Annotation } from "../lib/diff-annotations";
+import { FindingThread } from "./finding-thread";
+import type { FindingCompose } from "../hooks/use-finding-compose";
 
 export function DiffAnnotationView({
   annotation,

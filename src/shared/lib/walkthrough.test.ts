@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { Schema } from "effect";
-import type { DriftState } from "../schemas/drift.ts";
+import type { DriftState } from "../schemas/drift";
 import {
   captureById,
   identityDrift,
@@ -11,9 +11,9 @@ import {
   rangeAnchor,
   rollupDrift,
   walkthroughStaleness,
-} from "./walkthrough.ts";
-import { Capture, Walkthrough, WalkthroughSection } from "../schemas/walkthrough.ts";
-import type { WalkthroughRange } from "../schemas/walkthrough.ts";
+} from "./walkthrough";
+import { Capture, Walkthrough, WalkthroughSection } from "../schemas/walkthrough";
+import type { WalkthroughRange } from "../schemas/walkthrough";
 
 const decodeManifest = Schema.decodeUnknownSync(Walkthrough);
 const decodeSection = Schema.decodeUnknownSync(WalkthroughSection);

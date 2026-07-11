@@ -14,7 +14,7 @@
  * timeline labels (diff-review.md §7).
  */
 
-import type { Anchor, FindingRecord } from "../schemas/finding.ts";
+import type { Anchor, FindingRecord } from "../schemas/finding";
 import type {
   AnchorContext,
   ChangeEvent,
@@ -23,7 +23,7 @@ import type {
   DriftPlan,
   DriftState,
   Reanchor,
-} from "../schemas/drift.ts";
+} from "../schemas/drift";
 
 /**
  * Split blob text into content lines, dropping the single trailing newline so a

@@ -8,13 +8,13 @@
  */
 
 import { useState } from "react";
-import type { DriftState } from "@shared/schemas/drift.ts";
-import type { FindingWrite } from "@shared/schemas/finding-write.ts";
-import type { FoldedFinding } from "@shared/lib/finding.ts";
-import { WHATS_NEXT_LABEL } from "@shared/lib/finding.ts";
-import type { Author, Disposition } from "@shared/schemas/finding.ts";
-import { Composer } from "./composer.tsx";
-import { DriftPill } from "./drift-badge.tsx";
+import type { DriftState } from "@shared/schemas/drift";
+import type { FindingWrite } from "@shared/schemas/finding-write";
+import type { FoldedFinding } from "@shared/lib/finding";
+import { WHATS_NEXT_LABEL } from "@shared/lib/finding";
+import type { Author, Disposition } from "@shared/schemas/finding";
+import { Composer } from "./composer";
+import { DriftPill } from "./drift-badge";
 
 const DISPOSITION_LABEL: Record<Disposition, string> = {
   actioned: "actioned",

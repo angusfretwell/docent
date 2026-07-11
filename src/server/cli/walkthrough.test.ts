@@ -3,16 +3,16 @@ import { existsSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { BunServices } from "@effect/platform-bun";
 import { ManagedRuntime } from "effect";
-import { CliUsageError } from "./index.ts";
+import { CliUsageError } from "./index";
 import {
   parseDimensions,
   parseDurationMs,
   parseRangeSpec,
   runCapture,
   runWalkthrough,
-} from "./walkthrough.ts";
-import { readDossierSnapshot } from "../services/dossier.ts";
-import { cleanupScratchDirs, git, scratchRepo } from "../lib/test-fixtures.ts";
+} from "./walkthrough";
+import { readDossierSnapshot } from "../services/dossier";
+import { cleanupScratchDirs, git, scratchRepo } from "../lib/test-fixtures";
 
 const runtime = ManagedRuntime.make(BunServices.layer);
 const run = runtime.runPromise;

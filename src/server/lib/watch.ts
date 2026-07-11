@@ -22,10 +22,10 @@ import { watch } from "node:fs";
 import { Context, Effect, Layer, Option, PubSub } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
-import { ensureGitignore } from "../services/dossier.ts";
-import { resolveGitDir, resolveRepo } from "../services/git.ts";
-import { makeMatcher, parseGitignore } from "./gitignore.ts";
-import type { IgnoreMatcher } from "./gitignore.ts";
+import { ensureGitignore } from "../services/dossier";
+import { resolveGitDir, resolveRepo } from "../services/git";
+import { makeMatcher, parseGitignore } from "./gitignore";
+import type { IgnoreMatcher } from "./gitignore";
 
 /** Collapse a burst of file writes (agents write in bursts) into one push. */
 const DEBOUNCE_MS = 40;

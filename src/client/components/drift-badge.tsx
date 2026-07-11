@@ -6,8 +6,8 @@
  * settled marker. `live` renders nothing.
  */
 
-import type { DriftState } from "@shared/schemas/drift.ts";
-import { driftBadge } from "@shared/lib/drift.ts";
+import type { DriftState } from "@shared/schemas/drift";
+import { driftBadge } from "@shared/lib/drift";
 
 /** The re-check accent — shared with the panel's detached born-text rail so one restyle moves both. */
 export const DRIFT_SIGNAL = "224,108,32";

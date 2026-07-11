@@ -26,8 +26,8 @@
  *   (content-addressed), so the marks are kept — no special case needed.
  */
 
-import type { ViewedEvent } from "@shared/schemas/dossier.ts";
-import type { FileEntry } from "./nav.ts";
+import type { ViewedEvent } from "@shared/schemas/dossier";
+import type { FileEntry } from "./nav";
 
 export interface ViewedState {
   /** The file's current head content has been asserted seen. */

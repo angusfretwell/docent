@@ -1,20 +1,20 @@
 import { useState } from "react";
-import type { FindingEntry } from "@shared/schemas/dossier.ts";
-import type { DriftState } from "@shared/schemas/drift.ts";
-import { changeHistoryLabel } from "@shared/lib/drift.ts";
-import type { FindingWrite } from "@shared/schemas/finding-write.ts";
-import type { FoldedFinding } from "@shared/lib/finding.ts";
+import type { FindingEntry } from "@shared/schemas/dossier";
+import type { DriftState } from "@shared/schemas/drift";
+import { changeHistoryLabel } from "@shared/lib/drift";
+import type { FindingWrite } from "@shared/schemas/finding-write";
+import type { FoldedFinding } from "@shared/lib/finding";
 import {
   findingJumpTarget,
   findingLocation,
   foldFinding,
   sortFoldedFindings,
   WHATS_NEXT_LABEL,
-} from "@shared/lib/finding.ts";
-import { Composer } from "./composer.tsx";
-import { DRIFT_SIGNAL, DriftPill } from "./drift-badge.tsx";
-import type { DriftResult } from "../lib/drift.ts";
-import { FindingThread } from "./finding-thread.tsx";
+} from "@shared/lib/finding";
+import { Composer } from "./composer";
+import { DRIFT_SIGNAL, DriftPill } from "./drift-badge";
+import type { DriftResult } from "../lib/drift";
+import { FindingThread } from "./finding-thread";
 
 // The Dossier-global Findings panel (diff-review.md §7): a flat list of every
 // Finding sorted by location, with a show-resolved toggle (off by default) and a

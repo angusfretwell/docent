@@ -3,11 +3,11 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { BunServices } from "@effect/platform-bun";
 import { ManagedRuntime } from "effect";
-import { foldFinding } from "@shared/lib/finding.ts";
-import type { FindingWrite } from "@shared/schemas/finding-write.ts";
-import { readDossierSnapshot } from "./dossier.ts";
-import { mintChange, writeFindingRecord } from "./findings-write.ts";
-import { cleanupScratchDirs, scratchDir } from "../lib/test-fixtures.ts";
+import { foldFinding } from "@shared/lib/finding";
+import type { FindingWrite } from "@shared/schemas/finding-write";
+import { readDossierSnapshot } from "./dossier";
+import { mintChange, writeFindingRecord } from "./findings-write";
+import { cleanupScratchDirs, scratchDir } from "../lib/test-fixtures";
 
 const runtime = ManagedRuntime.make(BunServices.layer);
 

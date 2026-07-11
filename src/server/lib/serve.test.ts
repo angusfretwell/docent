@@ -2,15 +2,15 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { ManagedRuntime, Schema } from "effect";
-import { assetsFromManifest } from "@shared/lib/assets.ts";
-import type { ClientAssets } from "@shared/lib/assets.ts";
-import { Change, DiffError } from "@shared/schemas/change.ts";
-import { DossierSnapshot } from "@shared/schemas/dossier.ts";
-import { FindingWriteResult } from "@shared/schemas/finding-write.ts";
-import { foldFinding } from "@shared/lib/finding.ts";
-import { Pending } from "@shared/schemas/pending.ts";
-import { layer, serverUrl } from "./serve.ts";
-import { cleanupScratchDirs, git, scratchDir, scratchRepo } from "./test-fixtures.ts";
+import { assetsFromManifest } from "@shared/lib/assets";
+import type { ClientAssets } from "@shared/lib/assets";
+import { Change, DiffError } from "@shared/schemas/change";
+import { DossierSnapshot } from "@shared/schemas/dossier";
+import { FindingWriteResult } from "@shared/schemas/finding-write";
+import { foldFinding } from "@shared/lib/finding";
+import { Pending } from "@shared/schemas/pending";
+import { layer, serverUrl } from "./serve";
+import { cleanupScratchDirs, git, scratchDir, scratchRepo } from "./test-fixtures";
 
 const disposers: (() => Promise<void>)[] = [];
 

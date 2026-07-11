@@ -11,11 +11,11 @@ import type {
   DiffLineAnnotation,
   FileDiffMetadata,
 } from "@pierre/diffs";
-import type { DriftState } from "@shared/schemas/drift.ts";
-import type { FoldedFinding } from "@shared/lib/finding.ts";
-import type { Anchor } from "@shared/schemas/finding.ts";
-import type { DriftResult } from "./drift.ts";
-import type { FileEntry } from "./nav.ts";
+import type { DriftState } from "@shared/schemas/drift";
+import type { FoldedFinding } from "@shared/lib/finding";
+import type { Anchor } from "@shared/schemas/finding";
+import type { DriftResult } from "./drift";
+import type { FileEntry } from "./nav";
 
 // A diff line-annotation carries either an existing Finding to render as a
 // thread, or the marker for the in-progress composer authoring a new one. Both

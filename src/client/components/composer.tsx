@@ -7,7 +7,7 @@
  */
 
 import { useState } from "react";
-import type { Disposition } from "@shared/schemas/finding.ts";
+import type { Disposition } from "@shared/schemas/finding";
 
 // The dispositions a reply may carry, plus a "plain comment" no-op default that
 // leaves the reply undispositioned (needs-action). Labels track data-model.md §7.

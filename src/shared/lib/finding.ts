@@ -11,8 +11,8 @@
  */
 
 import { unique } from "radashi";
-import { ANCHOR_KIND } from "../schemas/finding.ts";
-import type { Anchor, Author, Disposition, FindingRecord } from "../schemas/finding.ts";
+import { ANCHOR_KIND } from "../schemas/finding";
+import type { Anchor, Author, Disposition, FindingRecord } from "../schemas/finding";
 
 /** The actor-blind queue read derived from a Finding's records (data-model.md §7). */
 export type WhatsNext =

@@ -13,7 +13,7 @@
  */
 
 import { Schema } from "effect";
-import { Anchor } from "./finding.ts";
+import { Anchor } from "./finding";
 
 /** A code range: the same coordinate as the `line` anchor arm (walkthroughs.md §5). */
 export class WalkthroughRange extends Schema.Class<WalkthroughRange>("WalkthroughRange")({

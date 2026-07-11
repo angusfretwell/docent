@@ -19,20 +19,15 @@
  */
 
 import { Console, Effect, Schema } from "effect";
-import { foldFinding, sortFoldedFindings } from "@shared/lib/finding.ts";
-import type { FoldedFinding, WhatsNext } from "@shared/lib/finding.ts";
-import { Anchor } from "@shared/schemas/finding.ts";
-import type { Disposition } from "@shared/schemas/finding.ts";
-import { FindingWrite } from "@shared/schemas/finding-write.ts";
-import { readDossierSnapshot } from "../services/dossier.ts";
-import type { AuthorInput } from "../services/findings-write.ts";
-import { writeFindingRecord } from "../services/findings-write.ts";
-import {
-  resolveAuthor,
-  resolveBlobShaAt,
-  resolveChangeRefs,
-  resolveRepo,
-} from "../services/git.ts";
+import { foldFinding, sortFoldedFindings } from "@shared/lib/finding";
+import type { FoldedFinding, WhatsNext } from "@shared/lib/finding";
+import { Anchor } from "@shared/schemas/finding";
+import type { Disposition } from "@shared/schemas/finding";
+import { FindingWrite } from "@shared/schemas/finding-write";
+import { readDossierSnapshot } from "../services/dossier";
+import type { AuthorInput } from "../services/findings-write";
+import { writeFindingRecord } from "../services/findings-write";
+import { resolveAuthor, resolveBlobShaAt, resolveChangeRefs, resolveRepo } from "../services/git";
 
 /** A CLI usage error — a bad flag, missing anchor, or unknown subcommand. */
 export class CliUsageError extends Schema.TaggedErrorClass<CliUsageError>()("CliUsageError", {

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import type { Anchor } from "@shared/schemas/finding.ts";
-import type { DiffFile } from "./drift.ts";
-import { anchorContext, indexDiffFiles } from "./drift.ts";
+import type { Anchor } from "@shared/schemas/finding";
+import type { DiffFile } from "./drift";
+import { anchorContext, indexDiffFiles } from "./drift";
 
 const HEAD = "bbbb222";
 const BASE = "aaaa111";

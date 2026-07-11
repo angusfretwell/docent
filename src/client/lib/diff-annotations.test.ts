@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import type { FileDiffMetadata } from "@pierre/diffs";
-import type { FoldedFinding } from "@shared/lib/finding.ts";
-import type { Anchor } from "@shared/schemas/finding.ts";
-import { buildDiffItems } from "./diff-annotations.ts";
-import type { DriftResult } from "./drift.ts";
-import type { FileEntry } from "./nav.ts";
+import type { FoldedFinding } from "@shared/lib/finding";
+import type { Anchor } from "@shared/schemas/finding";
+import { buildDiffItems } from "./diff-annotations";
+import type { DriftResult } from "./drift";
+import type { FileEntry } from "./nav";
 
 const HEAD_BLOB = "9c2a1f0";
 const BASE_BLOB = "a1b2c3d";

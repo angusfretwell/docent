@@ -14,9 +14,9 @@
  * plain unit-tested function the Product tab renders over.
  */
 
-import type { Anchor } from "../schemas/finding.ts";
-import type { DriftState } from "../schemas/drift.ts";
-import type { Capture, WalkthroughRange } from "../schemas/walkthrough.ts";
+import type { Anchor } from "../schemas/finding";
+import type { DriftState } from "../schemas/drift";
+import type { Capture, WalkthroughRange } from "../schemas/walkthrough";
 
 /**
  * Lift a range into the `line` anchor arm — verbatim, so the Finding drift

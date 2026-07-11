@@ -10,9 +10,9 @@
 
 import type { ChangeTypes, FileDiffMetadata } from "@pierre/diffs";
 import { useEffect, useState } from "react";
-import { blobUrl, fetchBlobSize, isRealObjectId } from "../lib/blobs.ts";
-import { formatBytes } from "../lib/edge-cases.ts";
-import type { FileClass } from "../lib/edge-cases.ts";
+import { blobUrl, fetchBlobSize, isRealObjectId } from "../lib/blobs";
+import { formatBytes } from "../lib/edge-cases";
+import type { FileClass } from "../lib/edge-cases";
 
 // Human-readable change type for the binary row (diff-review.md §5:
 // "change type + size delta").

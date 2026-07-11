@@ -16,7 +16,7 @@
 import { Effect, Schema } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
-import { WalkthroughAnnotation, WalkthroughRange } from "@shared/schemas/walkthrough.ts";
+import { WalkthroughAnnotation, WalkthroughRange } from "@shared/schemas/walkthrough";
 import {
   attempt,
   CliUsageError,
@@ -28,15 +28,15 @@ import {
   requireFlag,
   resolveBody,
   writeContext,
-} from "./index.ts";
-import type { ParsedArgs } from "./index.ts";
-import type { ChangeRefs } from "../services/findings-write.ts";
-import { resolveBlobShaAt } from "../services/git.ts";
+} from "./index";
+import type { ParsedArgs } from "./index";
+import type { ChangeRefs } from "../services/findings-write";
+import { resolveBlobShaAt } from "../services/git";
 import {
   addWalkthroughCapture,
   addWalkthroughSection,
   writeWalkthrough,
-} from "../services/walkthrough-write.ts";
+} from "../services/walkthrough-write";
 
 const WALKTHROUGH_KINDS = ["code", "product"] as const;
 const CAPTURE_KINDS = ["screenshot", "recording"] as const;

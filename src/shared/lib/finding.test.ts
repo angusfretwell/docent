@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import type { FindingRecord } from "../schemas/finding.ts";
-import { findingLocation, foldFinding, sortFoldedFindings } from "./finding.ts";
+import type { FindingRecord } from "../schemas/finding";
+import { findingLocation, foldFinding, sortFoldedFindings } from "./finding";
 
 const angus = { display: "Angus", id: "angusfretwell@me.com", kind: "human" as const };
 const claude = { display: "Claude Code", id: "claude-code", kind: "agent" as const };

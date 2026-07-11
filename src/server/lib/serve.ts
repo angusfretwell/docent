@@ -21,13 +21,13 @@ import {
   HttpServerRequest,
   HttpServerResponse,
 } from "effect/unstable/http";
-import { lookupAsset } from "@shared/lib/assets.ts";
-import type { ClientAssets } from "@shared/lib/assets.ts";
-import { ViewedRequest } from "@shared/schemas/dossier.ts";
-import { FindingWrite } from "@shared/schemas/finding-write.ts";
-import type { PendingRange } from "@shared/schemas/pending.ts";
-import { appendViewedEvent, dossierDirPath, readDossierSnapshot } from "../services/dossier.ts";
-import { writeFindingRecord } from "../services/findings-write.ts";
+import { lookupAsset } from "@shared/lib/assets";
+import type { ClientAssets } from "@shared/lib/assets";
+import { ViewedRequest } from "@shared/schemas/dossier";
+import { FindingWrite } from "@shared/schemas/finding-write";
+import type { PendingRange } from "@shared/schemas/pending";
+import { appendViewedEvent, dossierDirPath, readDossierSnapshot } from "../services/dossier";
+import { writeFindingRecord } from "../services/findings-write";
 import {
   resolveAuthor,
   resolveBlob,
@@ -37,8 +37,8 @@ import {
   resolvePending,
   resolveRepo,
   resolveWorktreeFile,
-} from "../services/git.ts";
-import { DocentWatch, layer as watchLayer } from "./watch.ts";
+} from "../services/git";
+import { DocentWatch, layer as watchLayer } from "./watch";
 
 export interface ServeOptions {
   /** Built browser UI, keyed by request path (dev disk or embedded binary). */

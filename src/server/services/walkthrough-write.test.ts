@@ -3,13 +3,13 @@ import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { BunServices } from "@effect/platform-bun";
 import { ManagedRuntime } from "effect";
-import { readDossierSnapshot } from "./dossier.ts";
-import { cleanupScratchDirs, scratchDir } from "../lib/test-fixtures.ts";
+import { readDossierSnapshot } from "./dossier";
+import { cleanupScratchDirs, scratchDir } from "../lib/test-fixtures";
 import {
   addWalkthroughCapture,
   addWalkthroughSection,
   writeWalkthrough,
-} from "./walkthrough-write.ts";
+} from "./walkthrough-write";
 
 const runtime = ManagedRuntime.make(BunServices.layer);
 const run = runtime.runPromise;

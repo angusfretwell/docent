@@ -19,23 +19,23 @@ import { Replayer } from "rrweb";
 import type { eventWithTime } from "rrweb";
 import { useEffect, useRef, useState } from "react";
 import "rrweb/dist/style.css";
-import type { ChangeRecord, FindingEntry, WalkthroughEntry } from "@shared/schemas/dossier.ts";
-import type { DriftState } from "@shared/schemas/drift.ts";
-import { foldFinding } from "@shared/lib/finding.ts";
-import type { FoldedFinding } from "@shared/lib/finding.ts";
-import type { Anchor } from "@shared/schemas/finding.ts";
+import type { ChangeRecord, FindingEntry, WalkthroughEntry } from "@shared/schemas/dossier";
+import type { DriftState } from "@shared/schemas/drift";
+import { foldFinding } from "@shared/lib/finding";
+import type { FoldedFinding } from "@shared/lib/finding";
+import type { Anchor } from "@shared/schemas/finding";
 import {
   captureById,
   identityDrift,
   interleaveCaptureSegments,
   walkthroughStaleness,
-} from "@shared/lib/walkthrough.ts";
+} from "@shared/lib/walkthrough";
 import type {
   Capture,
   WalkthroughAnnotation,
   WalkthroughSection,
-} from "@shared/schemas/walkthrough.ts";
-import { captureUrl, fetchCaptureEvents } from "../lib/blobs.ts";
+} from "@shared/schemas/walkthrough";
+import { captureUrl, fetchCaptureEvents } from "../lib/blobs";
 
 const pillStyle: React.CSSProperties = {
   borderRadius: "0.35rem",

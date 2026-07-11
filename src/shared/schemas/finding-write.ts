@@ -11,7 +11,7 @@
  */
 
 import { Schema } from "effect";
-import { Anchor, Disposition } from "./finding.ts";
+import { Anchor, Disposition } from "./finding";
 
 /** Open a new Finding: the root record carries the content-addressed anchor. */
 const OpenWrite = Schema.Struct({

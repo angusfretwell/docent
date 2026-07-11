@@ -11,8 +11,8 @@
  */
 
 import { Schema } from "effect";
-import { FindingRecord } from "./finding.ts";
-import { Walkthrough, WalkthroughSection } from "./walkthrough.ts";
+import { FindingRecord } from "./finding";
+import { Walkthrough, WalkthroughSection } from "./walkthrough";
 
 /** `docent/dossier@3` — the `dossier.json` identity record (data-model.md §3). */
 export class Dossier extends Schema.Class<Dossier>("Dossier")({

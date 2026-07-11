@@ -8,9 +8,9 @@ import { Effect, Schema, Stream } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 import { ChildProcess } from "effect/unstable/process";
-import { Change } from "@shared/schemas/change.ts";
-import type { PendingRange } from "@shared/schemas/pending.ts";
-import { Pending } from "@shared/schemas/pending.ts";
+import { Change } from "@shared/schemas/change";
+import type { PendingRange } from "@shared/schemas/pending";
+import { Pending } from "@shared/schemas/pending";
 
 const TRAILING_NEWLINE = /\n$/;
 

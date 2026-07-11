@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import type { WalkthroughRange } from "@shared/schemas/walkthrough.ts";
-import { indexDiffFiles } from "./drift.ts";
-import { planRange } from "./walkthrough-drift.ts";
+import type { WalkthroughRange } from "@shared/schemas/walkthrough";
+import { indexDiffFiles } from "./drift";
+import { planRange } from "./walkthrough-drift";
 
 const HEAD = "bbbb222";
 const BASE = "aaaa111";

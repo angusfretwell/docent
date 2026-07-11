@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { assetsFromManifest, contentTypeFor, lookupAsset } from "./assets.ts";
+import { assetsFromManifest, contentTypeFor, lookupAsset } from "./assets";
 
 describe("contentTypeFor", () => {
   test("maps known extensions and defaults to octet-stream", () => {

@@ -21,12 +21,12 @@
 import { Effect, Option, Schema } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
-import type { WalkthroughAnnotation, WalkthroughRange } from "@shared/schemas/walkthrough.ts";
-import { Capture, Walkthrough, WalkthroughSection } from "@shared/schemas/walkthrough.ts";
-import { dossierDirPath, ensureDossier, makeId, readRecord } from "./dossier.ts";
-import type { ChangeRefs } from "./findings-write.ts";
-import { mintChange } from "./findings-write.ts";
-import { recordFile, serializeFrontmatter } from "../lib/records.ts";
+import type { WalkthroughAnnotation, WalkthroughRange } from "@shared/schemas/walkthrough";
+import { Capture, Walkthrough, WalkthroughSection } from "@shared/schemas/walkthrough";
+import { dossierDirPath, ensureDossier, makeId, readRecord } from "./dossier";
+import type { ChangeRefs } from "./findings-write";
+import { mintChange } from "./findings-write";
+import { recordFile, serializeFrontmatter } from "../lib/records";
 
 const KINDS = ["code", "product"] as const;
 type WalkthroughKind = (typeof KINDS)[number];

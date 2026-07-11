@@ -4,7 +4,7 @@
 // `bun build --compile` turns into a standalone per-platform executable (#6).
 
 import { resolve } from "node:path";
-import { startServer } from "./server.ts";
+import { startServer } from "./server";
 
 const root = resolve(process.argv[2] ?? process.cwd());
 const { url } = startServer({ root });

@@ -14,12 +14,12 @@
 
 import { processPatch } from "@pierre/diffs";
 import { useEffect, useState } from "react";
-import type { AnchorContext, DriftState } from "@shared/schemas/drift.ts";
-import { excerptLines, planDrift, reanchorRange, splitLines } from "@shared/lib/drift.ts";
-import type { FindingEntry } from "@shared/schemas/dossier.ts";
-import type { Anchor } from "@shared/schemas/finding.ts";
-import { foldFinding } from "@shared/lib/finding.ts";
-import { fetchBlobText, isRealObjectId } from "./blobs.ts";
+import type { AnchorContext, DriftState } from "@shared/schemas/drift";
+import { excerptLines, planDrift, reanchorRange, splitLines } from "@shared/lib/drift";
+import type { FindingEntry } from "@shared/schemas/dossier";
+import type { Anchor } from "@shared/schemas/finding";
+import { foldFinding } from "@shared/lib/finding";
+import { fetchBlobText, isRealObjectId } from "./blobs";
 
 /** One changed file's identity as drift reads it: its shas, its rename/delete standing. */
 export interface DiffFile {

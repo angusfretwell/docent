@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useRef } from "react";
-import type { FileEntry, FileOrder, TreeNode } from "../lib/nav.ts";
+import type { FileEntry, FileOrder, TreeNode } from "../lib/nav";
 
 /** Per-file viewed read-out for a tree row (folded upstream in DiffView). */
 export interface RowState {
