@@ -18,6 +18,7 @@ import { Console, Effect } from "effect";
 import open from "open";
 
 import { runFinding } from "./cli/index";
+import { runInstall } from "./cli/install";
 import { runValidate } from "./cli/validate";
 import { runCapture, runWalkthrough } from "./cli/walkthrough";
 import { webHandler } from "./lib/serve";
@@ -107,12 +108,14 @@ function crash(error: unknown) {
 }
 
 // The non-serve CLI subcommands, each an argv → effect the binary runs against
-// git + fs (architecture.md §5). `finding` is the review loop's I/O; `walkthrough`
-// and `capture` the walkthrough write path — one binary, one write implementation;
-// `validate` the non-gating schema oracle over any `.docent/` tree (§3). Each
-// carries its own typed error channel, so they are matched (not unified into one
-// callable) and run through the shared `provide + crash` tail below.
+// git + fs (architecture.md §5). `install` is the onboarding wizard; `finding`
+// is the review loop's I/O; `walkthrough` and `capture` the walkthrough write
+// path — one binary, one write implementation; `validate` the non-gating schema
+// oracle over any `.docent/` tree (§3). Each carries its own typed error channel,
+// so they are matched (not unified into one callable) and run through the shared
+// `provide + crash` tail below.
 const CLI_SUBCOMMANDS = [
+  "install",
   "finding",
   "walkthrough",
   "capture",
@@ -131,13 +134,17 @@ function runCli<E>(
 /**
  * The process entry: dispatch the subcommand and run it. `serve` — the default
  * when no subcommand is given — boots the server; the non-serve subcommands
- * (`finding`, `walkthrough`, `capture` write; `validate` reports) are the CLI
- * path. Every subcommand is served by this one binary (architecture.md §5).
+ * (`install` onboards; `finding`, `walkthrough`, `capture` write; `validate`
+ * reports) are the CLI path. Every subcommand is served by this one binary
+ * (architecture.md §5).
  */
 export function runMain(entry: EntryOptions): void {
   const subcommand = process.argv[2] ?? "serve";
   const argv = process.argv.slice(3);
 
+  if (subcommand === "install") {
+    return runCli(runInstall(process.cwd(), argv));
+  }
   if (subcommand === "finding") {
     return runCli(runFinding(process.cwd(), argv));
   }
