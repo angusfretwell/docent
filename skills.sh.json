@@ -5,7 +5,7 @@
     {
       "title": "Review loop",
       "description": "The skills you invoke in your own agent session to review, fix, and reconcile a branch under review.",
-      "skills": ["docent", "to-docent", "address"]
+      "skills": ["docent", "to-docent", "from-docent"]
     },
     {
       "title": "Walkthrough authoring",

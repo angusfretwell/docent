@@ -27,12 +27,12 @@ The round-trip collapses to a **single actor-agnostic findings queue** over `.do
 
 ### 2.2 Two interface primitives
 
-| Primitive | Does | UI equivalent | CLI surface (§3.3) |
-| --- | --- | --- | --- |
-| **write-findings** | Append findings / replies / resolves / reopens / edits | The UI performs this when you write a comment | `docent finding add / reply / resolve / reopen / edit` |
-| **fetch-findings** | Read findings (any author), filtered on open/resolved + what's-next (+ anchor / author scope) | The UI performs this when it renders | `docent finding list` + filter flags |
+| Primitive | Skill (§3.1) | Does | UI equivalent | CLI surface (§3.3) |
+| --- | --- | --- | --- | --- |
+| **write-findings** | `/to-docent` | Append findings / replies / resolves / reopens / edits | The UI performs this when you write a comment | `docent finding add / reply / resolve / reopen / edit` |
+| **fetch-findings** | `/from-docent` | Read findings (any author), filtered on open/resolved + what's-next (+ anchor / author scope) | The UI performs this when it renders | `docent finding list` + filter flags |
 
-Chosen over manual copy-paste or a UI "copy as prompt" button: it keeps `.docent/` authoritative, preserves anchors, and scales to a whole review pass ([#18](https://github.com/angusfretwell/docent/issues/18)). Every finding-touching skill conforms to these two primitives ([#18](https://github.com/angusfretwell/docent/issues/18)).
+Chosen over manual copy-paste or a UI "copy as prompt" button: it keeps `.docent/` authoritative, preserves anchors, and scales to a whole review pass ([#18](https://github.com/angusfretwell/docent/issues/18)). The two invokable review-loop skills realize the primitives directly — **write-findings → `/to-docent`**, **fetch-findings → `/from-docent`** (§3.1) — and every other finding-touching skill conforms to the same two ([#18](https://github.com/angusfretwell/docent/issues/18), [#80](https://github.com/angusfretwell/docent/issues/80)).
 
 ### 2.3 State model
 
@@ -81,7 +81,7 @@ docent ships **7 skills**, pinned by [#21](https://github.com/angusfretwell/doce
 | Skill | Kind | Role | Reads | Writes |
 | --- | --- | --- | --- | --- |
 | `/to-docent` | Invokable | Recorder — writes the session's review outcomes | The session's own outcomes (a review pass, a fix pass over `/from-docent` findings), the open findings queue | Fresh Findings; Disposition-carrying replies; resolves / re-comments — the full write vocabulary |
-| `/address` | Invokable | Fixer | Needs-action Findings, the code | Code edits; reply records carrying a Disposition. **Never a resolve** |
+| `/from-docent` | Invokable | Fetcher — pulls Findings into the session for the human's own fixing process | The findings queue (default **needs-action**), filtered on open/resolved + what's-next + anchor / author (§2.2) | — (read-only; recording outcomes back is `/to-docent`'s job) |
 | `/docent` | Invokable | Walkthrough reconciler, end-to-end | `.docent/capture.md` (the drivability gate); Head Change; each pillar's latest walkthrough's `bornChangeId`; `docent status` | Fresh immutable `wlk_*` for stale/missing pillars only; `.docent/capture.md` first-run; then starts `docent serve` (if none is up) and opens the browser |
 | `/docent-cli` | Reference | CLI usage guide | — | — (describes the `docent` binary's non-`serve` subcommands) |
 | `/author-code-walkthrough` | Reference | Code-walkthrough author | A Change (via `git`), optional focus | `walkthroughs/code/wlk_*/` — manifest + ordered sections, `bornChangeId`-bound, immutable |
@@ -94,7 +94,7 @@ Artifact schemas the walkthrough skills produce are owned by [walkthroughs.md](w
 
 **`/to-docent` — record the session's review outcomes.** docent is out of the reviewing business: the outcomes come from whatever process the human already ran this session — `/code-review`, an ad-hoc conversation, another tool, or a fix pass over findings pulled via `/from-docent`. The skill **records what that session produced**, driving the finding CLI's **full write vocabulary**: **fresh Findings** (born needs-action), **Disposition-carrying replies** (`actioned` / `declined` / `question`), and **resolves** — distinguishing "a reply to an existing Finding" from "a new Finding" by matching against the open queue. It reviews and fixes nothing of its own; it transcribes outcomes already in the session, and it never invents a Finding, Disposition, or resolution the work did not produce. Because one skill now carries the full write vocabulary, the loop's _fixer ≠ resolver_ guidance holds **as prose in the skill** ("don't resolve a Finding you claimed to fix in the same turn"), no longer by construction — the old `/review` (reviewer + verifier/resolver) is retired ([#21](https://github.com/angusfretwell/docent/issues/21), [#79](https://github.com/angusfretwell/docent/issues/79)).
 
-**`/address` — fix.** Reads **needs-action** Findings plus the code; writes code edits (ordinary file edits) plus reply records carrying a **Disposition** (`actioned` / `declined` / `question`). **It never writes a resolve** — that is what keeps it the fixer, not the resolver ([#21](https://github.com/angusfretwell/docent/issues/21)).
+**`/from-docent` — fetch.** The read half of the loop: it pulls Findings from the Review into the session — defaulting to the **needs-action** queue and narrowing on the full fetch-findings filter vocabulary (open/resolved, what's-next kind, anchor-file scope, author; §2.2) — and renders each Finding's thread, anchor, and what's-next faithfully. It **prescribes no fix and writes nothing**: how to act on each Finding is the session's own process, and it closes by routing outcome-recording back through `/to-docent` (Disposition-carrying replies), which is what keeps the queue's what's-next derivation fed. The old `/address` — a fixer skill that owned both the fetch and the reply-writing — is retired: its fetch is this skill, its reply-writing moved to `/to-docent` ([#21](https://github.com/angusfretwell/docent/issues/21), [#79](https://github.com/angusfretwell/docent/issues/79), [#80](https://github.com/angusfretwell/docent/issues/80)).
 
 **`/docent` — the walkthrough reconciler, end-to-end** (a docent gives the guided tour). "Type `/docent`, get a browser tab with the tour." The run is three acts ([#81](https://github.com/angusfretwell/docent/issues/81)):
 
