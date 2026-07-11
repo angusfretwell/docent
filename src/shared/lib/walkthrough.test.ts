@@ -8,9 +8,13 @@ import {
   Walkthrough,
   WalkthroughSection,
 } from "../schemas/walkthrough";
-import type { WalkthroughRange } from "../schemas/walkthrough";
+import type {
+  WalkthroughAnnotation,
+  WalkthroughRange,
+} from "../schemas/walkthrough";
 import {
   captureById,
+  foldSectionAnnotations,
   identityAnchorDrift,
   identityDrift,
   interleaveCaptureSegments,
@@ -636,5 +640,141 @@ describe("WalkthroughSection product frontmatter", () => {
     expect(
       anchor?.kind === "screenshot-region" ? anchor.rect : "x"
     ).toBeUndefined();
+  });
+});
+
+describe("foldSectionAnnotations", () => {
+  function annotationsOf(
+    annotations: readonly unknown[]
+  ): readonly WalkthroughAnnotation[] {
+    return (
+      decodeSection({
+        annotations,
+        body: "Body.",
+        id: "sec_x",
+        schema: "docent/walkthrough-section@2",
+        title: "Section",
+      }).annotations ?? []
+    );
+  }
+
+  test("skips capture-arm annotations — they pin to their capture", () => {
+    const folded = foldSectionAnnotations(
+      annotationsOf([
+        { anchor: { capture: "cap_a", kind: "screenshot-region" }, body: "A" },
+        {
+          anchor: { capture: "cap_b", kind: "recording-timestamp" },
+          body: "B",
+        },
+      ])
+    );
+
+    expect(folded.notes).toEqual([]);
+    expect(folded.quotes).toEqual([]);
+  });
+
+  test("surfaces a file-anchored annotation as a note located by its file", () => {
+    const folded = foldSectionAnnotations(
+      annotationsOf([
+        {
+          anchor: {
+            blobSha: "sha",
+            file: "src/upload.tsx",
+            kind: "file",
+            side: "head",
+          },
+          body: "This screen is driven by the upload module.",
+        },
+      ])
+    );
+
+    expect(folded.notes).toEqual([
+      {
+        body: "This screen is driven by the upload module.",
+        location: "src/upload.tsx",
+      },
+    ]);
+  });
+
+  test("locates line, change, and walkthrough-section annotation notes", () => {
+    const folded = foldSectionAnnotations(
+      annotationsOf([
+        {
+          anchor: {
+            blobSha: "sha",
+            file: "src/a.ts",
+            kind: "line",
+            lines: [4, 9],
+            side: "head",
+          },
+          body: "L",
+        },
+        { anchor: { kind: "change" }, body: "C" },
+        {
+          anchor: {
+            kind: "walkthrough-section",
+            sectionId: "sec_9",
+            walkthroughId: "wlk_1",
+          },
+          body: "S",
+        },
+      ])
+    );
+
+    expect(folded.notes).toEqual([
+      { body: "L", location: "src/a.ts:4" },
+      { body: "C", location: "Whole change" },
+      { body: "S", location: "§ sec_9" },
+    ]);
+  });
+
+  test("a text-span annotation both notes and highlights its quote", () => {
+    const folded = foldSectionAnnotations(
+      annotationsOf([
+        {
+          anchor: { kind: "text-span", quote: "on blur", section: "sec_x" },
+          body: "Validation fires.",
+        },
+      ])
+    );
+
+    expect(folded.notes).toEqual([
+      { body: "Validation fires.", location: "on blur" },
+    ]);
+    expect(folded.quotes).toEqual(["on blur"]);
+  });
+
+  test("mixes arms without dropping any non-capture annotation", () => {
+    const folded = foldSectionAnnotations(
+      annotationsOf([
+        {
+          anchor: {
+            capture: "cap_a",
+            kind: "screenshot-region",
+            rect: [0.1, 0.2, 0.3, 0.1],
+          },
+          body: "pin",
+        },
+        {
+          anchor: {
+            blobSha: "sha",
+            file: "src/x.ts",
+            kind: "file",
+            side: "head",
+          },
+          body: "file",
+        },
+        {
+          anchor: { kind: "text-span", quote: "q", section: "sec_x" },
+          body: "span",
+        },
+      ])
+    );
+
+    expect(folded.notes).toEqual([
+      { body: "file", location: "src/x.ts" },
+      { body: "span", location: "q" },
+    ]);
+    expect(folded.quotes).toEqual(["q"]);
   });
 });
