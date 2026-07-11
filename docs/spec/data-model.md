@@ -78,9 +78,9 @@ The **Review** is the durable per-branch file of record — everything docent ho
 
 | Field    | Type   | Meaning                                                      |
 | -------- | ------ | ------------------------------------------------------------ |
-| `schema` | string | `"docent/review@4"`                                         |
+| `schema` | string | `"docent/review@4"`                                          |
 | `id`     | string | Stable opaque id (ULID-based)                                |
-| `branch` | string | The branch name — the Review's identity                     |
+| `branch` | string | The branch name — the Review's identity                      |
 | `base`   | string | Base ref recorded at creation (default: repo default branch) |
 
 ```json
@@ -106,15 +106,15 @@ A **Change** is an immutable snapshot of a diff, identified by its resolved `(ba
 
 ### `docent/change@3`
 
-| Field        | Type   | Meaning                                            |
-| ------------ | ------ | -------------------------------------------------- |
-| `schema`     | string | `"docent/change@3"`                                |
+| Field        | Type   | Meaning                                           |
+| ------------ | ------ | ------------------------------------------------- |
+| `schema`     | string | `"docent/change@3"`                               |
 | `id`         | string | Sequential per-Review id: `chg_001`, `chg_002`, … |
-| `baseSha`    | string | Resolved merge-base SHA — frozen identity          |
-| `headSha`    | string | Head commit SHA — frozen identity                  |
-| `baseRef`    | string | Base ref label at capture (e.g. `main`)            |
-| `headRef`    | string | Head ref label at capture (e.g. `feat/stream`)     |
-| `capturedAt` | string | ISO-8601 timestamp of the mint                     |
+| `baseSha`    | string | Resolved merge-base SHA — frozen identity         |
+| `headSha`    | string | Head commit SHA — frozen identity                 |
+| `baseRef`    | string | Base ref label at capture (e.g. `main`)           |
+| `headRef`    | string | Head ref label at capture (e.g. `feat/stream`)    |
+| `capturedAt` | string | ISO-8601 timestamp of the mint                    |
 
 ```json
 {
@@ -352,7 +352,7 @@ Semantics (manual-only checkbox, collapse-on-view, progress read-model, edge cas
 
 | Schema                         | Current version                                     | Pinned by                                                                                                                                                          | Supersedes / lineage                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | ------------------------------ | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `docent/review@4`             | `@4`                                                | [#61](https://github.com/angusfretwell/docent/issues/61)                                                                                                           | `docent/review@1` ([#2](https://github.com/angusfretwell/docent/issues/2), provisional) → `docent/review@2` ([#3](https://github.com/angusfretwell/docent/issues/3), PR-keyed, `currentChangeId`/`changeIds`) → renamed to `docent/dossier@3`, pointers dropped ([#24](https://github.com/angusfretwell/docent/issues/24)) → renamed back to `docent/review@4` ([#61](https://github.com/angusfretwell/docent/issues/61))                                                                                                                                                             |
+| `docent/review@4`              | `@4`                                                | [#61](https://github.com/angusfretwell/docent/issues/61)                                                                                                           | `docent/review@1` ([#2](https://github.com/angusfretwell/docent/issues/2), provisional) → `docent/review@2` ([#3](https://github.com/angusfretwell/docent/issues/3), PR-keyed, `currentChangeId`/`changeIds`) → renamed to `docent/dossier@3`, pointers dropped ([#24](https://github.com/angusfretwell/docent/issues/24)) → renamed back to `docent/review@4` ([#61](https://github.com/angusfretwell/docent/issues/61))                                                                                                                                                             |
 | `docent/change@3`              | `@3`                                                | [#24](https://github.com/angusfretwell/docent/issues/24)                                                                                                           | `docent/change@1` ([#2](https://github.com/angusfretwell/docent/issues/2), provisional) → `docent/change@2` ([#3](https://github.com/angusfretwell/docent/issues/3), `source` union + PR metadata) → flattened, GitHub source deferred ([#24](https://github.com/angusfretwell/docent/issues/24))                                                                                                                                                                                                                                                                                     |
 | `docent/finding@3`             | `@3`                                                | consolidation (this spec), folding the amendments below                                                                                                            | `docent/comment@1` ([#2](https://github.com/angusfretwell/docent/issues/2), single file, `resolved:` frontmatter) → `docent/comment@2` ([#7](https://github.com/angusfretwell/docent/issues/7), event-sourced `comments/thr_*` dirs) → + optional `disposition` on replies ([#18](https://github.com/angusfretwell/docent/issues/18)) → + `changeId` on every record ([#20](https://github.com/angusfretwell/docent/issues/20)) → renamed `findings/fnd_*` + `docent/finding@3`, resolving the naming-alignment item [#24](https://github.com/angusfretwell/docent/issues/24) flagged |
 | `docent/walkthrough@2`         | `@2` — detail in [walkthroughs.md](walkthroughs.md) | [#14](https://github.com/angusfretwell/docent/issues/14) (`kind: code`), [#15](https://github.com/angusfretwell/docent/issues/15) (`kind: product` + `captures[]`) | `docent/walkthrough@1` ([#2](https://github.com/angusfretwell/docent/issues/2), draft)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
