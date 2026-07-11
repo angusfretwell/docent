@@ -61,7 +61,7 @@ function recordCountsOnDisk(reviewDir: string) {
 }
 
 describe("dev fixture", () => {
-  // The snapshot reader is the parse oracle (spec #82 Testing Decisions): it
+  // The snapshot reader is the parse oracle (@see docs/spec/testing.md): it
   // reads the whole dossier through the shared Effect schemas but is best-effort
   // — a record it cannot decode is silently skipped, never fatal. So validity is
   // asserted as parity: every record materialized on disk must survive into the
@@ -70,12 +70,19 @@ describe("dev fixture", () => {
   test("every materialized record reads back through the snapshot reader", async () => {
     const root = scratchDir("docent-fixture-");
     const { branch } = materializeFixture(root);
+    const reviewDir = reviewDirPath(root, branch);
+    // Capture the fixture's own review.json id BEFORE the reader runs: ensureReview
+    // rewrites review.json with a freshly minted id whenever it can't decode the
+    // existing one, so a read afterwards would tautologically match the snapshot.
+    // Comparing the snapshot to the pre-read id makes a drifted review.json fail.
+    const fixtureReviewId = JSON.parse(
+      readFileSync(path.join(reviewDir, "review.json"), "utf-8")
+    ).id;
 
     const snap = await runtime.runPromise(
       readReviewSnapshot({ base: "main", branch, root })
     );
 
-    const reviewDir = reviewDirPath(root, branch);
     const onDisk = recordCountsOnDisk(reviewDir);
     expect({
       changes: snap.changes.length,
@@ -87,15 +94,16 @@ describe("dev fixture", () => {
       ),
       walkthroughs: snap.walkthroughs.length,
     }).toEqual(onDisk);
-    // Guard against a vacuous 0 === 0 parity if the fixture ever stops emitting.
+    // Guard against a vacuous 0 === 0 parity if the fixture ever stops emitting a
+    // record kind — the walkthrough especially (a core rich-fixture element).
     expect(onDisk.changes).toBeGreaterThan(0);
     expect(onDisk.findingRecords).toBeGreaterThan(0);
-    // The single `review.json` sits outside the append-only dirs: assert its id
-    // survived, proving the reader parsed it rather than auto-creating a fresh one.
-    const review = JSON.parse(
-      readFileSync(path.join(reviewDir, "review.json"), "utf-8")
-    );
-    expect(snap.review.id).toBe(review.id);
+    expect(onDisk.viewed).toBeGreaterThan(0);
+    expect(onDisk.walkthroughs).toBeGreaterThan(0);
+    expect(onDisk.walkthroughSections).toBeGreaterThan(0);
+    // The single `review.json` sits outside the append-only dirs: assert the
+    // reader parsed the fixture's record rather than auto-creating a fresh one.
+    expect(snap.review.id).toBe(fixtureReviewId);
   });
 
   test("a malformed record is dropped, so validation catches fixture drift", async () => {
