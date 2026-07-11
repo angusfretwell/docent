@@ -29,7 +29,7 @@ The round-trip collapses to a **single actor-agnostic findings queue** over `.do
 
 | Primitive | Does | UI equivalent | CLI surface (§3.3) |
 | --- | --- | --- | --- |
-| **write-findings** | Append findings / replies / resolves | The UI performs this when you write a comment | `docent finding add / reply / resolve` |
+| **write-findings** | Append findings / replies / resolves / reopens / edits | The UI performs this when you write a comment | `docent finding add / reply / resolve / reopen / edit` |
 | **fetch-findings** | Read findings (any author), filtered on open/resolved + what's-next (+ anchor / author scope) | The UI performs this when it renders | `docent finding list` + filter flags |
 
 Chosen over manual copy-paste or a UI "copy as prompt" button: it keeps `.docent/` authoritative, preserves anchors, and scales to a whole review pass ([#18](https://github.com/angusfretwell/docent/issues/18)). Every finding-touching skill conforms to these two primitives ([#18](https://github.com/angusfretwell/docent/issues/18)).
@@ -115,7 +115,7 @@ Artifact schemas the walkthrough skills produce are owned by [walkthroughs.md](w
 The `docent` binary has two faces ([#21](https://github.com/angusfretwell/docent/issues/21)):
 
 - **`docent serve`** — the server + UI ([architecture.md](architecture.md)): watches `.docent/`, renders, streams updates over SSE.
-- **Non-`serve` subcommands** — `docent finding list / add / reply / resolve`, plus `walkthrough` and `capture` write subcommands: the single home for ULID minting, anchor construction, append semantics, content-addressing, and what's-next / Disposition derivation. Both the UI's write path and agents use it; neither is required to (non-gating).
+- **Non-`serve` subcommands** — `docent finding list / add / reply / resolve / reopen / edit`, plus `walkthrough` and `capture` write subcommands: the single home for ULID minting, anchor construction, append semantics, content-addressing, and what's-next / Disposition derivation. Both the UI's write path and agents use it; neither is required to (non-gating).
 
 ### 3.4 Deliberately _not_ skills
 

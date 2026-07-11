@@ -8,14 +8,14 @@ description: Reference for the `docent` binary's non-`serve` subcommands — the
 The `docent` binary has **two faces** (agent-integration.md §3.3):
 
 - **`docent serve`** — the server + UI. Watches `.docent/`, renders the Review, streams updates over SSE. Not covered here.
-- **Non-`serve` subcommands** — `docent finding list / add / reply / resolve`, plus the `docent walkthrough` / `docent capture` write path. This skill documents them.
+- **Non-`serve` subcommands** — `docent finding list / add / reply / resolve / reopen / edit`, plus the `docent walkthrough` / `docent capture` write path. This skill documents them.
 
 The finding subcommands are the CLI half of the review loop's **two I/O primitives** (agent-integration.md §2.2):
 
 | Primitive | Subcommand | Does |
 | --- | --- | --- |
 | **fetch-findings** | `docent finding list --filter …` | Read the queue (any author), filtered |
-| **write-findings** | `docent finding add / reply / resolve` | Append a finding / a reply / a resolve record |
+| **write-findings** | `docent finding add / reply / resolve / reopen / edit` | Append a finding / reply / resolve / reopen / edit record |
 
 ## Non-gating — the CLI is convenience, never a lock
 
@@ -132,6 +132,29 @@ docent finding resolve --finding fnd_… --body "Verified against head — the g
 
 Resolution is **unconstrained**: any actor may resolve any Finding, including an agent resolving another agent's. It is safe because a resolve is an append-only, attributed, **reopenable** event — a later reply reopens the Finding (agent-integration.md §2.6). Whether a given actor _should_ resolve is a role question, not a mechanism one: a verify pass resolves; a fixer never resolves what it just fixed (§3.1, §2.6).
 
+## `docent finding reopen` — return a resolved Finding to open
+
+Appends a reopen record → back to **needs-action**. A later reply reopens a Finding implicitly; `reopen` is the explicit gesture when you want to reopen without adding a comment.
+
+```bash
+docent finding reopen --finding fnd_…
+```
+
+`--finding <id>` is required (a missing or empty id is a usage error). No body.
+
+## `docent finding edit` — supersede a record's body
+
+Appends an edit record that supersedes an earlier record's body at fold time (data-model.md §5.1) — the append-only equivalent of an in-place body edit. `--record` names the target record's filename (as returned by `add` / `reply` / `resolve`, e.g. `002-reply.md`); the new body replaces the target's when the Finding is folded. The original file is never rewritten.
+
+```bash
+docent finding edit --finding fnd_… --record 001-open.md --body "Revised: the flush races the drain, not the mark."
+docent finding edit --finding fnd_… --record 002-reply.md <<'EOF'
+Multi-line revised body…
+EOF
+```
+
+`--finding <id>` and `--record <name>` are both required (a missing or empty flag is a usage error). Body required — `--body <text>` or piped stdin. Editing only supersedes the target's **body**; it never changes its anchor, disposition, or resolved-state, so what's-next is unaffected.
+
 ## `docent walkthrough` — the walkthrough write path
 
 Mints and grows a walkthrough (walkthroughs.md §4, §5). A manifest is assembled incrementally: `create` writes the shell, then `add-section` appends. Two subcommands:
@@ -203,7 +226,7 @@ When you run one of these subcommands **as an agent inside a skill**, pass `--ag
 ## Output shape
 
 - `finding list` → `{ "findings": [ { "id", "anchor", "body", "participants", "replies", "resolved", "whatsNext" }, … ] }`
-- `finding add` / `reply` / `resolve` → `{ "changeId": "chg_…", "findingId": "fnd_…", "record": "NNN-<type>.md" }`
+- `finding add` / `reply` / `resolve` / `reopen` / `edit` → `{ "changeId": "chg_…", "findingId": "fnd_…", "record": "NNN-<type>.md" }`
 - `walkthrough create` → `{ "changeId", "walkthroughId" }`; `walkthrough add-section` → `{ "section", "sectionId", "walkthroughId" }`
 - `capture add` → `{ "captureId", "media", "registry", "walkthroughId" }`
 
