@@ -163,6 +163,12 @@
       "skillPath": "skills/engineering/wayfinder/SKILL.md",
       "computedHash": "3eb72cd9abdfaa00e10fa69f0b4410ff8639a6cf4eb9e5d187b289c3aa9be2fc"
     },
+    "wizard": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "skillPath": "skills/in-progress/wizard/SKILL.md",
+      "computedHash": "6ac45e430f0ca1409e618729156096fb042a81a12e0d2824920b7dfc0adc9329"
+    },
     "writing-great-skills": {
       "source": "mattpocock/skills",
       "sourceType": "github",
