@@ -26,6 +26,7 @@ import type { DiffViewHandle } from "./diff-view";
 import { DiffView } from "./diff-view";
 import { FindingsPanel } from "./findings-panel";
 import { ProductWalkthroughView } from "./product-walkthrough-view";
+import type { OpenInDiff } from "./walkthrough-view";
 import { WalkthroughView } from "./walkthrough-view";
 
 // Append a Finding record. The write lands a file in `.docent/`, which trips the
@@ -261,11 +262,15 @@ function ChangeBody({
   review,
   diffRef,
   drift,
+  fileOrder,
+  onExitFileOrder,
 }: {
   state: LoadState;
   review: ReviewSnapshot | null;
   diffRef: React.Ref<DiffViewHandle>;
   drift: ReadonlyMap<string, DriftResult>;
+  fileOrder: readonly string[] | undefined;
+  onExitFileOrder: () => void;
 }) {
   if (state.kind === "loading") {
     return <Notice>Loading diff…</Notice>;
@@ -285,8 +290,10 @@ function ChangeBody({
   return (
     <DiffView
       drift={drift}
+      fileOrder={fileOrder}
       findings={review?.findings ?? NO_FINDINGS}
       generated={change.generated}
+      onExitFileOrder={onExitFileOrder}
       onWrite={handleWrite}
       patch={change.patch}
       ref={diffRef}
@@ -340,8 +347,10 @@ function DiffTab({
   diffRef,
   selected,
   range,
+  fileOrder,
   onSelect,
   onRange,
+  onExitFileOrder,
 }: {
   change: LoadState;
   pending: Pending | null;
@@ -350,8 +359,10 @@ function DiffTab({
   diffRef: React.RefObject<DiffViewHandle | null>;
   selected: Selection;
   range: PendingRange;
+  fileOrder: readonly string[] | undefined;
   onSelect: (selection: Selection) => void;
   onRange: (range: PendingRange) => void;
+  onExitFileOrder: () => void;
 }) {
   const dirty = pending?.dirty ?? false;
   const effective: Selection =
@@ -375,8 +386,10 @@ function DiffTab({
         ) : (
           <ChangeBody
             diffRef={diffRef}
-            review={review}
             drift={drift}
+            fileOrder={fileOrder}
+            onExitFileOrder={onExitFileOrder}
+            review={review}
             state={change}
           />
         )}
@@ -393,7 +406,7 @@ function WalkthroughTab({
 }: {
   review: ReviewSnapshot | null;
   patch: string;
-  onOpenInDiff: (file: string, line: number, side: "base" | "head") => void;
+  onOpenInDiff: OpenInDiff;
 }) {
   const walkthrough = latestCodeWalkthrough(review?.walkthroughs ?? []);
   if (!(walkthrough && review)) {
@@ -443,6 +456,10 @@ export function App() {
     line: number;
     side: "base" | "head";
   } | null>(null);
+  // The walkthrough-order override for the committed Diff surface: the tour's
+  // file sequence, set by "open Diff tab in walkthrough order" and held until the
+  // reviewer picks a path/size sort (diff-review.md §2).
+  const [fileOrder, setFileOrder] = useState<readonly string[] | undefined>();
   const diffRef = useRef<DiffViewHandle>(null);
 
   // One live loop for the whole tab: fetch the Change, the Pending preview (at
@@ -533,9 +550,20 @@ export function App() {
   // DiffView's imperative handle is live, given a frame for the renderer to lay
   // out, and clears the one-shot request. When Diff is already active the tab set
   // is a no-op and the same effect still scrolls.
-  function openInDiff(file: string, line: number, side: "base" | "head") {
+  // The OpenInDiff seam's implementation. `func-style` requires a declaration
+  // here, so this one site spells the signature out; every consuming prop wears
+  // the OpenInDiff alias, so widening the seam no longer edits them in lockstep.
+  function openInDiff(
+    file: string,
+    line: number,
+    side: "base" | "head",
+    order?: readonly string[]
+  ) {
     setTab("diff");
     setPendingJump({ file, line, side });
+    if (order) {
+      setFileOrder(order);
+    }
   }
   useEffect(() => {
     if (tab !== "diff" || pendingJump === null) {
@@ -566,12 +594,14 @@ export function App() {
       <DiffTab
         change={change}
         diffRef={diffRef}
-        review={review}
         drift={drift}
+        fileOrder={fileOrder}
+        onExitFileOrder={() => setFileOrder(undefined)}
         onRange={setRange}
         onSelect={setSelected}
         pending={pending}
         range={range}
+        review={review}
         selected={selected}
       />
     );

@@ -244,6 +244,7 @@ export function FileTree({
   activeId,
   filter,
   order,
+  explicitOrder,
   split,
   collapsed,
   rowStates,
@@ -264,6 +265,8 @@ export function FileTree({
   activeId: string | undefined;
   filter: string;
   order: FileOrder;
+  /** A walkthrough-order override is active, overriding the path/size toggle. */
+  explicitOrder: boolean;
   split: boolean;
   collapsed: ReadonlySet<string>;
   rowStates: ReadonlyMap<string, RowState>;
@@ -280,6 +283,16 @@ export function FileTree({
   onFindingsOnlyChange: (value: boolean) => void;
   onJump: (kind: "file" | "change", direction: 1 | -1) => void;
 }) {
+  // The sort control doubles as the walkthrough-order exit: while an explicit
+  // order is active it reads "Sort: walkthrough" and returns to the persisted
+  // path/size sort; otherwise it toggles between path and size.
+  let orderLabel = order === "size" ? "Sort: size" : "Sort: path";
+  let nextOrder: FileOrder = order === "size" ? "path" : "size";
+  if (explicitOrder) {
+    orderLabel = "Sort: walkthrough";
+    nextOrder = order;
+  }
+
   return (
     <aside
       style={{
@@ -328,11 +341,8 @@ export function FileTree({
           />
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem" }}>
-          <button
-            onClick={() => onOrderChange(order === "size" ? "path" : "size")}
-            type="button"
-          >
-            {order === "size" ? "Sort: size" : "Sort: path"}
+          <button onClick={() => onOrderChange(nextOrder)} type="button">
+            {orderLabel}
           </button>
           <button onClick={() => onSplitChange(!split)} type="button">
             {split ? "Split" : "Unified"}

@@ -8,6 +8,7 @@
 
 import type { ChangeTypes, FileDiffMetadata } from "@pierre/diffs";
 import { processPatch } from "@pierre/diffs";
+import { fork } from "radashi";
 
 /** VS Code-style single-letter change badge. */
 export type ChangeType = "A" | "M" | "D" | "R";
@@ -125,6 +126,35 @@ export function sortEntries(
     sorted.sort((a, b) => comparePath(a.path, b.path));
   }
   return sorted;
+}
+
+/**
+ * Order entries by an explicit file list — the "open Diff tab in walkthrough
+ * order" payload (diff-review.md §2). Files named in `order` lead, in that
+ * order; every other file trails in path order, so the reordering is a
+ * predictable override rather than a reshuffle. A listed path the Change no
+ * longer contains is skipped; a path listed more than once keeps its first
+ * appearance (the same file surfacing across sections collapses to one rank).
+ */
+export function orderByFiles(
+  entries: FileEntry[],
+  order: readonly string[]
+): FileEntry[] {
+  const rankByPath = new Map<string, number>();
+  for (const [index, path] of order.entries()) {
+    if (!rankByPath.has(path)) {
+      rankByPath.set(path, index);
+    }
+  }
+
+  const [listed, rest] = fork(entries, (entry) => rankByPath.has(entry.path));
+
+  listed.sort(
+    (a, b) => (rankByPath.get(a.path) ?? 0) - (rankByPath.get(b.path) ?? 0)
+  );
+  rest.sort((a, b) => comparePath(a.path, b.path));
+
+  return [...listed, ...rest];
 }
 
 /** Collapse single-child directory chains into one row (VS Code style). */
