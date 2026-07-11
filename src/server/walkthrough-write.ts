@@ -51,6 +51,19 @@ export class CaptureKindMismatch extends Schema.TaggedErrorClass<CaptureKindMism
   }
 }
 
+/**
+ * A section carried the wrong arm for its walkthrough's `kind` (walkthroughs.md
+ * §5): `ranges` on a product tour, or `captures`/`annotations` on a code tour.
+ */
+export class SectionArmMismatch extends Schema.TaggedErrorClass<SectionArmMismatch>()(
+  "SectionArmMismatch",
+  { arm: Schema.String, id: Schema.String, kind: Schema.String },
+) {
+  override get message(): string {
+    return `walkthrough ${this.id} is a ${this.kind} tour; ${this.arm} is the ${this.kind === "code" ? "product" : "code"} arm`;
+  }
+}
+
 /** The shared read scope every write resolves its Dossier against. */
 interface WriteBase {
   root: string;
@@ -90,7 +103,7 @@ const writeManifest = Effect.fn("writeManifest")(function* writeManifest(
   );
 });
 
-/** A located walkthrough: its dir, decoded manifest, and pillar. */
+/** A located walkthrough: its dir and decoded manifest (whose `kind` is authoritative). */
 interface LoadedWalkthrough {
   dir: string;
   manifest: Walkthrough;
@@ -171,6 +184,26 @@ export const addWalkthroughSection = Effect.fn("addWalkthroughSection")(
     const dossierDir = dossierDirPath(params.root, params.branch);
     yield* ensureDossier({ base: params.base, branch: params.branch, dossierDir });
     const { dir, manifest } = yield* loadWalkthrough(dossierDir, params.walkthroughId);
+
+    // A section carries the arm for its tour's kind (walkthroughs.md §5): ranges
+    // for code, captures/annotations for product. Refuse the crossed arm.
+    const hasRanges = (params.ranges?.length ?? 0) > 0;
+    const hasProduct =
+      (params.captureIds?.length ?? 0) > 0 || (params.annotations?.length ?? 0) > 0;
+    if (manifest.kind === "product" && hasRanges) {
+      return yield* Effect.fail(
+        new SectionArmMismatch({ arm: "--range", id: params.walkthroughId, kind: manifest.kind }),
+      );
+    }
+    if (manifest.kind === "code" && hasProduct) {
+      return yield* Effect.fail(
+        new SectionArmMismatch({
+          arm: "--capture/--annotation",
+          id: params.walkthroughId,
+          kind: manifest.kind,
+        }),
+      );
+    }
 
     const id = yield* makeId("sec");
     const section = yield* Schema.decodeUnknownEffect(WalkthroughSection)({

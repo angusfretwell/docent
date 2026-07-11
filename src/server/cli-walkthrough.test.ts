@@ -4,7 +4,13 @@ import path from "node:path";
 import { BunServices } from "@effect/platform-bun";
 import { ManagedRuntime } from "effect";
 import { CliUsageError } from "./cli.ts";
-import { parseDimensions, parseRangeSpec, runCapture, runWalkthrough } from "./cli-walkthrough.ts";
+import {
+  parseDimensions,
+  parseDurationMs,
+  parseRangeSpec,
+  runCapture,
+  runWalkthrough,
+} from "./cli-walkthrough.ts";
 import { readDossierSnapshot } from "./dossier.ts";
 import { cleanupScratchDirs, git, scratchRepo } from "./test-fixtures.ts";
 
@@ -78,6 +84,18 @@ describe("parseDimensions", () => {
   test("a non-WxH value is a usage error", () => {
     expect(() => parseDimensions("viewport", "1280")).toThrow(CliUsageError);
     expect(() => parseDimensions("dims", "big")).toThrow(CliUsageError);
+  });
+});
+
+describe("parseDurationMs", () => {
+  test("a non-negative integer parses", () => {
+    expect(parseDurationMs("8200")).toBe(8200);
+  });
+
+  test("a non-integer or negative value is a usage error", () => {
+    expect(() => parseDurationMs("foo")).toThrow(CliUsageError);
+    expect(() => parseDurationMs("-5")).toThrow(CliUsageError);
+    expect(() => parseDurationMs("1.5")).toThrow(CliUsageError);
   });
 });
 
@@ -202,6 +220,51 @@ describe("runCapture — end to end", () => {
       `${capture?.media}.png`,
     );
     expect(existsSync(blob)).toBe(true);
+  });
+
+  test("--duration-ms on a screenshot (or --dims on a recording) is refused", async () => {
+    const repo = featureRepo();
+    await run(runWalkthrough(repo, ["create", "--kind", "product", "--title", "T"]));
+    const walkthroughId = await currentWalkthroughId(repo);
+    writeFileSync(path.join(repo, "shot.png"), "bytes");
+
+    const wrongDuration = await runtime.runPromiseExit(
+      runCapture(repo, [
+        "add",
+        "--walkthrough",
+        walkthroughId,
+        "--kind",
+        "screenshot",
+        "--media",
+        "shot.png",
+        "--route",
+        "/",
+        "--viewport",
+        "1x1",
+        "--duration-ms",
+        "8200",
+      ]),
+    );
+    const wrongDims = await runtime.runPromiseExit(
+      runCapture(repo, [
+        "add",
+        "--walkthrough",
+        walkthroughId,
+        "--kind",
+        "recording",
+        "--media",
+        "shot.png",
+        "--route",
+        "/",
+        "--viewport",
+        "1x1",
+        "--dims",
+        "1x2",
+      ]),
+    );
+
+    expect(wrongDuration._tag).toBe("Failure");
+    expect(wrongDims._tag).toBe("Failure");
   });
 
   test("a missing media file is a usage error", async () => {

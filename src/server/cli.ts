@@ -467,12 +467,13 @@ export const resolveFinding = Effect.fn("resolveFinding")(function* resolveFindi
 
 // ── argv dispatch ────────────────────────────────────────────────────────────
 
-function requireFinding(args: ParsedArgs): string {
-  const findingId = one(args, "finding")?.trim();
-  if (findingId === undefined || findingId === "") {
-    throw new CliUsageError({ reason: "--finding <id> is required" });
+/** The last value of a required flag, or a usage error naming it. */
+export function requireFlag(args: ParsedArgs, key: string): string {
+  const value = one(args, key)?.trim();
+  if (value === undefined || value === "") {
+    throw new CliUsageError({ reason: `--${key} <value> is required` });
   }
-  return findingId;
+  return value;
 }
 
 function parseDisposition(value: string | undefined): Disposition | undefined {
@@ -537,7 +538,7 @@ export const runFinding = Effect.fn("runFinding")(function* runFinding(
   }
   if (op === "reply") {
     const args = yield* attempt(() => parseArgs(rest, new Set()));
-    const findingId = yield* attempt(() => requireFinding(args));
+    const findingId = yield* attempt(() => requireFlag(args, "finding"));
     const disposition = yield* attempt(() => parseDisposition(one(args, "disposition")));
     const body = yield* resolveBody(args, true);
     return yield* printJson(
@@ -551,7 +552,7 @@ export const runFinding = Effect.fn("runFinding")(function* runFinding(
   }
   if (op === "resolve") {
     const args = yield* attempt(() => parseArgs(rest, new Set()));
-    const findingId = yield* attempt(() => requireFinding(args));
+    const findingId = yield* attempt(() => requireFlag(args, "finding"));
     const body = yield* resolveBody(args, false);
     return yield* printJson(
       yield* resolveFinding(cwd, {

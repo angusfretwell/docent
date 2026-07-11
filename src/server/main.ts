@@ -70,11 +70,14 @@ function crash(error: unknown) {
 // The non-serve CLI subcommands, each an argv → effect the binary runs against
 // git + fs (architecture.md §5). `finding` is the review loop's I/O; `walkthrough`
 // and `capture` the walkthrough write path — one binary, one write implementation.
-const CLI = {
-  capture: runCapture,
-  finding: runFinding,
-  walkthrough: runWalkthrough,
-} as const;
+// Each carries its own typed error channel, so they are matched (not unified into
+// one callable) and run through the shared `provide + crash` tail below.
+const CLI_SUBCOMMANDS = ["finding", "walkthrough", "capture"] as const;
+
+/** Run one non-serve CLI effect: provide the Bun services and crash on failure. */
+function runCli<E>(effect: Effect.Effect<void, E, BunServices.BunServices>): void {
+  BunRuntime.runMain(effect.pipe(Effect.provide(BunServices.layer), Effect.catch(crash)));
+}
 
 /**
  * The process entry: dispatch the subcommand and run it. `serve` — the default
@@ -84,20 +87,20 @@ const CLI = {
  */
 export function runMain(assets: ClientAssets): void {
   const subcommand = process.argv[2] ?? "serve";
+  const argv = process.argv.slice(3);
 
-  const cli = (CLI as Record<string, (typeof CLI)[keyof typeof CLI] | undefined>)[subcommand];
-  if (cli !== undefined) {
-    BunRuntime.runMain(
-      cli(process.cwd(), process.argv.slice(3)).pipe(
-        Effect.provide(BunServices.layer),
-        Effect.catch(crash),
-      ),
-    );
-    return;
+  if (subcommand === "finding") {
+    return runCli(runFinding(process.cwd(), argv));
+  }
+  if (subcommand === "walkthrough") {
+    return runCli(runWalkthrough(process.cwd(), argv));
+  }
+  if (subcommand === "capture") {
+    return runCli(runCapture(process.cwd(), argv));
   }
 
   if (subcommand !== "serve") {
-    const known = ["serve", ...Object.keys(CLI)].map((name) => `"${name}"`).join(", ");
+    const known = ["serve", ...CLI_SUBCOMMANDS].map((name) => `"${name}"`).join(", ");
     console.error(`unknown subcommand: ${subcommand} (expected one of ${known})`);
     process.exit(1);
   }

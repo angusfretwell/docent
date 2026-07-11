@@ -25,10 +25,12 @@ import {
   parseArgs,
   parseEnum,
   printJson,
+  requireFlag,
   resolveBody,
   writeContext,
 } from "./cli.ts";
 import type { ParsedArgs } from "./cli.ts";
+import type { ChangeRefs } from "./findings-write.ts";
 import { resolveBlobShaAt } from "./git.ts";
 import {
   addWalkthroughCapture,
@@ -39,15 +41,6 @@ import {
 const WALKTHROUGH_KINDS = ["code", "product"] as const;
 const CAPTURE_KINDS = ["screenshot", "recording"] as const;
 const SIDES = ["base", "head"] as const;
-
-/** The last value for a required flag, or a usage error naming it. */
-function requireFlag(args: ParsedArgs, key: string): string {
-  const value = one(args, key)?.trim();
-  if (value === undefined || value === "") {
-    throw new CliUsageError({ reason: `--${key} <value> is required` });
-  }
-  return value;
-}
 
 // A `--range` token: `<file>:<start>[-<end>][@<side>]`, e.g.
 // `src/index.ts:10-24@head` or `src/parser.ts:40` (side defaults to head).
@@ -89,21 +82,30 @@ export function parseRangeSpec(spec: string): RangeSpec {
 }
 
 // A `WxH` viewport/dimensions token, e.g. `1280x800`.
-const DIMENSIONS = /^(?<w>\d+)x(?<h>\d+)$/;
+const DIMENSIONS = /^(?<width>\d+)x(?<height>\d+)$/;
 
-/** Parse a `WxH` flag (`--viewport` / `--dims`) into `[w, h]`, or a usage error. */
+/** Parse a `WxH` flag (`--viewport` / `--dims`) into `[width, height]`, or a usage error. */
 export function parseDimensions(flag: string, value: string): [number, number] {
   const match = DIMENSIONS.exec(value.trim());
   if (match?.groups === undefined) {
     throw new CliUsageError({ reason: `bad --${flag}: ${value} (WxH, e.g. 1280x800)` });
   }
-  return [Number(match.groups.w), Number(match.groups.h)];
+  return [Number(match.groups.width), Number(match.groups.height)];
+}
+
+/** Parse `--duration-ms` as a non-negative integer, or a usage error. */
+export function parseDurationMs(value: string): number {
+  const millis = Number(value.trim());
+  if (!Number.isInteger(millis) || millis < 0) {
+    throw new CliUsageError({ reason: `bad --duration-ms: ${value} (a non-negative integer)` });
+  }
+  return millis;
 }
 
 /** Resolve each `--range` spec's content-addressed `blobSha` from git. */
 const buildRanges = Effect.fn("buildRanges")(function* buildRanges(
   root: string,
-  refs: { baseSha: string; headSha: string },
+  refs: Pick<ChangeRefs, "baseSha" | "headSha">,
   specs: readonly RangeSpec[],
 ) {
   return yield* Effect.forEach(
@@ -228,11 +230,25 @@ const runCaptureAdd = Effect.fn("runCaptureAdd")(function* runCaptureAdd(
   const route = yield* attempt(() => requireFlag(args, "route"));
   const viewport = yield* attempt(() => parseDimensions("viewport", requireFlag(args, "viewport")));
 
+  // The metadata arms are kind-specific (walkthroughs.md §6): `dims` (full-page
+  // pixels) rides a screenshot, `durationMs` a recording. Refuse the mismatch
+  // rather than write a nonsensical registry entry.
   const dimsFlag = one(args, "dims");
+  const durationFlag = one(args, "duration-ms");
+  if (kind === "recording" && dimsFlag !== undefined) {
+    return yield* Effect.fail(
+      new CliUsageError({ reason: "--dims is for screenshots; a recording takes --duration-ms" }),
+    );
+  }
+  if (kind === "screenshot" && durationFlag !== undefined) {
+    return yield* Effect.fail(
+      new CliUsageError({ reason: "--duration-ms is for recordings; a screenshot takes --dims" }),
+    );
+  }
   const dims =
     dimsFlag === undefined ? undefined : yield* attempt(() => parseDimensions("dims", dimsFlag));
-  const durationFlag = one(args, "duration-ms");
-  const durationMs = durationFlag === undefined ? undefined : Number(durationFlag);
+  const durationMs =
+    durationFlag === undefined ? undefined : yield* attempt(() => parseDurationMs(durationFlag));
 
   const media = yield* fs
     .readFile(path.resolve(cwd, mediaPath))

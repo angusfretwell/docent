@@ -140,6 +140,42 @@ describe("addWalkthroughSection", () => {
 
     expect(exit._tag).toBe("Failure");
   });
+
+  test("a range on a product tour is refused (wrong arm)", async () => {
+    const root = scratchDir("docent-wlk-");
+    const { walkthroughId } = await create(root, "product", "Product tour");
+
+    const exit = await runtime.runPromiseExit(
+      addWalkthroughSection({
+        ...base,
+        body: "x",
+        ranges: [{ blobSha: "9c2a", file: "src/index.ts", lines: [1, 2], side: "head" }],
+        root,
+        title: "T",
+        walkthroughId,
+      }),
+    );
+
+    expect(exit._tag).toBe("Failure");
+  });
+
+  test("captures/annotations on a code tour are refused (wrong arm)", async () => {
+    const root = scratchDir("docent-wlk-");
+    const { walkthroughId } = await create(root, "code", "Code tour");
+
+    const exit = await runtime.runPromiseExit(
+      addWalkthroughSection({
+        ...base,
+        body: "x",
+        captureIds: ["cap_a"],
+        root,
+        title: "T",
+        walkthroughId,
+      }),
+    );
+
+    expect(exit._tag).toBe("Failure");
+  });
 });
 
 describe("addWalkthroughCapture", () => {
