@@ -1,6 +1,6 @@
 /**
  * The Finding write path over `.docent/`: lazy Change minting and append-only
- * record drops. The mirror of `dossier.ts`'s read path — every write here lands
+ * record drops. The mirror of `review.ts`'s read path — every write here lands
  * a file the read walk parses back, in the identical shape an agent writes
  * directly (data-model.md §4–5, architecture.md §2).
  *
@@ -10,21 +10,21 @@
  * new file, never a rewrite.
  */
 
-import { ChangeRecord } from "@shared/schemas/dossier";
 import type { Anchor, Disposition } from "@shared/schemas/finding";
 import type { FindingWrite } from "@shared/schemas/finding-write";
+import { ChangeRecord } from "@shared/schemas/review";
 import { Clock, Effect, Option } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 
 import { recordFile, serializeFrontmatter } from "../lib/records";
 import {
-  dossierDirPath,
-  ensureDossier,
+  ensureReview,
   listDir,
   makeId,
   readRecord,
-} from "./dossier";
+  reviewDirPath,
+} from "./review";
 
 /** The plain human/agent attribution a write stamps onto its record. */
 export interface AuthorInput {
@@ -66,12 +66,12 @@ function maxSequence(names: readonly string[], pattern: RegExp): number {
  * (data-model.md §4).
  */
 export const mintChange = Effect.fn("mintChange")(function* mintChange(params: {
-  dossierDir: string;
+  reviewDir: string;
   refs: ChangeRefs;
 }) {
   const fs = yield* FileSystem;
   const path = yield* Path;
-  const dir = path.join(params.dossierDir, "changes");
+  const dir = path.join(params.reviewDir, "changes");
   const names = (yield* listDir(dir))
     .filter((name) => name.endsWith(".json"))
     .toSorted();
@@ -160,16 +160,16 @@ export const writeFindingRecord = Effect.fn("writeFindingRecord")(
     const fs = yield* FileSystem;
     const path = yield* Path;
 
-    const dossierDir = dossierDirPath(params.root, params.branch);
-    yield* ensureDossier({
+    const reviewDir = reviewDirPath(params.root, params.branch);
+    yield* ensureReview({
       base: params.base,
       branch: params.branch,
-      dossierDir,
+      reviewDir,
     });
-    const change = yield* mintChange({ dossierDir, refs: params.refs });
+    const change = yield* mintChange({ refs: params.refs, reviewDir });
     const createdAt = yield* now;
 
-    const findingsDir = path.join(dossierDir, "findings");
+    const findingsDir = path.join(reviewDir, "findings");
     const { write } = params;
 
     // Resolve the target finding dir, record type, next filename, body, and the

@@ -1,6 +1,6 @@
 # Walkthroughs — the Code and Product pillars
 
-A **Walkthrough** is a curated, ordered tour of a Change authored for a reader — prose woven through selected diff ranges (code) or captures (product). This document owns the walkthrough schemas — it is the appendix of record for `docent/walkthrough@2` and `docent/walkthrough-section@2` — plus captures, annotations, walkthrough drift and staleness, and the capture pipeline. The core entities (Dossier, Change, Finding), the anchor union, and the drift algorithm are owned by [data-model.md](data-model.md); the skills that generate walkthroughs are owned by [agent-integration.md](agent-integration.md).
+A **Walkthrough** is a curated, ordered tour of a Change authored for a reader — prose woven through selected diff ranges (code) or captures (product). This document owns the walkthrough schemas — it is the appendix of record for `docent/walkthrough@2` and `docent/walkthrough-section@2` — plus captures, annotations, walkthrough drift and staleness, and the capture pipeline. The core entities (Review, Change, Finding), the anchor union, and the drift algorithm are owned by [data-model.md](data-model.md); the skills that generate walkthroughs are owned by [agent-integration.md](agent-integration.md).
 
 ## 1. Frame — two self-contained tabs
 
@@ -17,7 +17,7 @@ There is **one** walkthrough schema, not two: `docent/walkthrough@2` with a `kin
 Invariants, both kinds ([#14](https://github.com/angusfretwell/docent/issues/14), [#15](https://github.com/angusfretwell/docent/issues/15)):
 
 - **Bound to `bornChangeId`** — the Change the walkthrough was authored against. A Walkthrough referencing the branch head is a first-reference event that mints a Change if none exists for that head (see [data-model.md](data-model.md); lazy minting per [#24](https://github.com/angusfretwell/docent/issues/24)).
-- **Durable + immutable.** Walkthroughs live in the Dossier alongside Findings and Changes; viewing one against a later Change never mutates it. Regeneration **mints a new `wlk_` id** bound to the new Change; the old walkthrough persists, immutable and greppable. Throwaway/regenerate-in-place was rejected — it orphans narrative Findings and discards the durable tour ([#14](https://github.com/angusfretwell/docent/issues/14)).
+- **Durable + immutable.** Walkthroughs live in the Review alongside Findings and Changes; viewing one against a later Change never mutates it. Regeneration **mints a new `wlk_` id** bound to the new Change; the old walkthrough persists, immutable and greppable. Throwaway/regenerate-in-place was rejected — it orphans narrative Findings and discards the durable tour ([#14](https://github.com/angusfretwell/docent/issues/14)).
 - **One walkthrough per Change per pillar in v1.** Each walkthrough tab shows _the_ walkthrough, no picker. Identity is **multiplicity-ready**: the `wlk_`/`sec_` ids and the `walkthroughId`-carrying anchor arm mean multiple walkthroughs later (an "architecture tour" + a "security tour") is an additive layout + tab-subselector change, never a data or anchor migration ([#14](https://github.com/angusfretwell/docent/issues/14)).
 - **Order = manifest array order, full stop.** No `rank`/`priority` field — array position _is_ the rank; a second field would be a source of truth that can disagree with the array. "High-signal first" is the generator's editorial call made when it chooses the order, not a data-model concept. Numeric filename prefixes (`s01-`) are cosmetic; reordering edits the manifest, not filenames ([#14](https://github.com/angusfretwell/docent/issues/14)).
 - **Human-editable after.** A walkthrough is plain files; a human edits prose or order directly and the tool re-renders — no special affordance ([#14](https://github.com/angusfretwell/docent/issues/14), [#15](https://github.com/angusfretwell/docent/issues/15)).
@@ -26,10 +26,10 @@ The product spine is **prose-primary**: an ordered list of authored sections, ea
 
 ## 3. On-disk layout
 
-Walkthroughs live under the Dossier, per the canonical `.docent/` layout ([data-model.md](data-model.md); root `.docent/` and the per-branch `dossiers/<branch-slug>/` per [#24](https://github.com/angusfretwell/docent/issues/24), superseding the provisional `.review/reviews/pr-<N>/` paths in [#14](https://github.com/angusfretwell/docent/issues/14)/[#15](https://github.com/angusfretwell/docent/issues/15)):
+Walkthroughs live under the Review, per the canonical `.docent/` layout ([data-model.md](data-model.md); root `.docent/` and the per-branch `reviews/<branch-slug>/` per [#24](https://github.com/angusfretwell/docent/issues/24), superseding the provisional `.review/reviews/pr-<N>/` paths in [#14](https://github.com/angusfretwell/docent/issues/14)/[#15](https://github.com/angusfretwell/docent/issues/15)):
 
 ```
-.docent/dossiers/<branch-slug>/walkthroughs/
+.docent/reviews/<branch-slug>/walkthroughs/
   code/
     wlk_<ulid>/
       manifest.json
@@ -155,7 +155,7 @@ A **capture** is one media artifact — one screenshot **or** one recording. It 
 Two distinct acts point at walkthrough content, kept as **separate mechanisms sharing one pointer vocabulary** ([#15](https://github.com/angusfretwell/docent/issues/15)):
 
 - **Annotation** — the generation agent's authored callout; lives _in the section_ (frontmatter `annotations[]`), rendered as a pin overlaid on its capture; durable; not a thread; not resolvable.
-- **Finding** — a reviewer's anchored, append-only thread; lives in the Dossier's Finding records; replied-to, resolved, drifts ([data-model.md](data-model.md)).
+- **Finding** — a reviewer's anchored, append-only thread; lives in the Review's Finding records; replied-to, resolved, drifts ([data-model.md](data-model.md)).
 
 Both render through the same overlay framework, but they are different data with different lifecycles — which also keeps a section a self-contained authored artifact ([#15](https://github.com/angusfretwell/docent/issues/15)).
 

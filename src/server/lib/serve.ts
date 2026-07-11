@@ -1,8 +1,8 @@
 /**
  * The `docent serve` app shell: a Bun-native local server that serves the built
  * browser UI, the live branch diff (`GET /api/diff`), raw git blobs for context
- * expansion (`GET /api/blob/:sha`), the active Dossier snapshot
- * (`GET /api/dossier`), and the SSE live-reload stream (`GET /api/events`) fed
+ * expansion (`GET /api/blob/:sha`), the active Review snapshot
+ * (`GET /api/review`), and the SSE live-reload stream (`GET /api/events`) fed
  * by a `.docent/` watch. Exposed as an Effect `Layer`; runtime boundaries
  * (bin.ts, tests) build it and keep it alive for the server's lifetime.
  *
@@ -14,9 +14,9 @@
 import { BunHttpServer } from "@effect/platform-bun";
 import { lookupAsset } from "@shared/lib/assets";
 import type { ClientAssets } from "@shared/lib/assets";
-import { ViewedRequest } from "@shared/schemas/dossier";
 import { FindingWrite } from "@shared/schemas/finding-write";
 import type { PendingRange } from "@shared/schemas/pending";
+import { ViewedRequest } from "@shared/schemas/review";
 import { Effect, Layer, Stream } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
@@ -27,11 +27,6 @@ import {
   HttpServerResponse,
 } from "effect/unstable/http";
 
-import {
-  appendViewedEvent,
-  dossierDirPath,
-  readDossierSnapshot,
-} from "../services/dossier";
 import { writeFindingRecord } from "../services/findings-write";
 import {
   resolveAuthor,
@@ -43,6 +38,11 @@ import {
   resolveRepo,
   resolveWorktreeFile,
 } from "../services/git";
+import {
+  appendViewedEvent,
+  readReviewSnapshot,
+  reviewDirPath,
+} from "../services/review";
 import { DocentWatch, layer as watchLayer } from "./watch";
 
 export interface ServeOptions {
@@ -184,9 +184,9 @@ function captureContentType(file: string): string {
 
 /**
  * `GET /api/capture/:walkthrough/:file` — the raw bytes of a product-walkthrough
- * capture blob, read off `.docent/dossiers/<slug>/walkthroughs/product/<wlk>/
+ * capture blob, read off `.docent/reviews/<slug>/walkthroughs/product/<wlk>/
  * captures/<file>` (walkthroughs.md §3, §6). Unlike code ranges, capture media
- * is **not a git blob** — it lives in the gitignored Dossier, born with its
+ * is **not a git blob** — it lives in the gitignored Review, born with its
  * immutable walkthrough — so `git cat-file` (`/api/blob/:sha`) cannot serve it.
  * The `<file>` is `<media-sha>.png` (screenshots, served `image/png` for a bare
  * `<img src>`) or `<media-sha>.rrweb.json` (recordings, served `application/json`
@@ -214,7 +214,7 @@ function captureRoute(cwd: string) {
       const fs = yield* FileSystem;
       const path = yield* Path;
       const filePath = path.join(
-        dossierDirPath(repo.root, repo.branch),
+        reviewDirPath(repo.root, repo.branch),
         "walkthroughs",
         "product",
         walkthrough,
@@ -337,17 +337,17 @@ function assetRoute(assets: ClientAssets) {
 }
 
 /**
- * `GET /api/dossier` — the JSON snapshot of the active Dossier (the one for the
+ * `GET /api/review` — the JSON snapshot of the active Review (the one for the
  * checked-out branch), walked live off `.docent/` on every request (uncached).
- * The Dossier auto-creates on first use; the branch/base come from git.
+ * The Review auto-creates on first use; the branch/base come from git.
  */
-function dossierRoute(cwd: string) {
+function reviewRoute(cwd: string) {
   return HttpRouter.add(
     "GET",
-    "/api/dossier",
+    "/api/review",
     resolveRepo(cwd).pipe(
       Effect.flatMap((repo) =>
-        readDossierSnapshot({
+        readReviewSnapshot({
           base: repo.defaultBranch.name,
           branch: repo.branch,
           root: repo.root,
@@ -367,7 +367,7 @@ function dossierRoute(cwd: string) {
 }
 
 /**
- * `POST /api/viewed` — append one mark-as-viewed toggle to the active Dossier's
+ * `POST /api/viewed` — append one mark-as-viewed toggle to the active Review's
  * `viewed/` log (diff-review.md §3). The body is `{ path, blobSha }`; the server
  * stamps the timestamp and writes the event, then the `.docent/` watch re-pushes
  * the snapshot over SSE so every client's progress refreshes. A malformed body
@@ -465,12 +465,12 @@ function sseFrame(payload: string) {
   return encoder.encode(payload);
 }
 const SSE_OPEN = sseFrame(": connected\n\n");
-const SSE_CHANGED = sseFrame("event: dossier-changed\ndata: {}\n\n");
+const SSE_CHANGED = sseFrame("event: review-changed\ndata: {}\n\n");
 
 /**
  * `GET /api/events` — the one-way SSE live-reload stream. Emits an opening
- * comment, then a `dossier-changed` frame each time the `.docent/` watch fires;
- * the browser re-fetches `GET /api/dossier` on receipt (architecture.md §2).
+ * comment, then a `review-changed` frame each time the `.docent/` watch fires;
+ * the browser re-fetches `GET /api/review` on receipt (architecture.md §2).
  */
 const eventsRoute = HttpRouter.add(
   "GET",
@@ -504,7 +504,7 @@ export function layer(options: ServeOptions) {
     captureRoute(options.cwd),
     pendingRoute(options.cwd),
     worktreeRoute(options.cwd),
-    dossierRoute(options.cwd),
+    reviewRoute(options.cwd),
     viewedRoute(options.cwd),
     findingsRoute(options.cwd),
     eventsRoute,

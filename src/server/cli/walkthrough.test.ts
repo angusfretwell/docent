@@ -6,7 +6,7 @@ import { BunServices } from "@effect/platform-bun";
 import { ManagedRuntime } from "effect";
 
 import { cleanupScratchDirs, git, scratchRepo } from "../lib/test-fixtures";
-import { readDossierSnapshot } from "../services/dossier";
+import { readReviewSnapshot } from "../services/review";
 import { CliUsageError } from "./index";
 import {
   parseDimensions,
@@ -38,16 +38,16 @@ function featureRepo(): string {
 }
 
 function snapshot(root: string) {
-  return run(readDossierSnapshot({ base: "main", branch: "feature", root }));
+  return run(readReviewSnapshot({ base: "main", branch: "feature", root }));
 }
 
-/** The single walkthrough in the Dossier (the tests create exactly one). */
+/** The single walkthrough in the Review (the tests create exactly one). */
 async function onlyWalkthrough(root: string) {
   const snap = await snapshot(root);
   return snap.walkthroughs.at(0);
 }
 
-/** The id of the single walkthrough in the Dossier. */
+/** The id of the single walkthrough in the Review. */
 async function currentWalkthroughId(root: string): Promise<string> {
   const entry = await onlyWalkthrough(root);
   return entry?.id ?? "";
@@ -255,7 +255,7 @@ describe("runCapture — end to end", () => {
     const blob = path.join(
       repo,
       ".docent",
-      "dossiers",
+      "reviews",
       "feature",
       "walkthroughs",
       "product",

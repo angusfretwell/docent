@@ -1,6 +1,6 @@
 # Data model
 
-The schema appendix of record for docent's core model: the storage philosophy, the canonical `.docent/` tree, and the **Dossier**, **Change**, and **Finding** entities with their drift, what's-next, and viewed-state semantics. Terms are used exactly as defined in [`CONTEXT.md`](../../CONTEXT.md); the model is pinned by [#3](https://github.com/angusfretwell/docent/issues/3) as amended by the model-simplification pass [#24](https://github.com/angusfretwell/docent/issues/24), which overrides earlier ticket wording wherever they differ.
+The schema appendix of record for docent's core model: the storage philosophy, the canonical `.docent/` tree, and the **Review**, **Change**, and **Finding** entities with their drift, what's-next, and viewed-state semantics. Terms are used exactly as defined in [`CONTEXT.md`](../../CONTEXT.md); the model is pinned by [#3](https://github.com/angusfretwell/docent/issues/3) as amended by the model-simplification pass [#24](https://github.com/angusfretwell/docent/issues/24), which overrides earlier ticket wording wherever they differ.
 
 Sibling documents own what this one references: product overview ([README.md](README.md)), app shell and HTTP API ([architecture.md](architecture.md)), diff-review UX and viewed semantics ([diff-review.md](diff-review.md)), walkthrough and capture schema detail ([walkthroughs.md](walkthroughs.md)), skills and the serving runbook ([agent-integration.md](agent-integration.md)).
 
@@ -32,10 +32,10 @@ Layout pinned by [#24](https://github.com/angusfretwell/docent/issues/24) (super
 .docent/                            # in-repo, gitignored (#2); the state root (#24)
   capture.md                        # optional serving runbook — markdown brief the capture
                                     #   skill reads/authors; detail in agent-integration.md (#19)
-  dossiers/
-    feat-stream/                    # one Dossier per branch; dir = branch-name slug,
+  reviews/
+    feat-stream/                    # one Review per branch; dir = branch-name slug,
                                     #   slashes → dashes (#24)
-      dossier.json                  # docent/dossier@3 — { schema, id, branch, base }
+      review.json                  # docent/review@4 — { schema, id, branch, base }
       changes/                      # the append-only Change log; the dir IS the history —
                                     #   no index or pointer file (#24)
         chg_001.json                # docent/change@3 — one immutable snapshot per mint;
@@ -63,30 +63,30 @@ Layout pinned by [#24](https://github.com/angusfretwell/docent/issues/24) (super
               a1b2c3d….rrweb.json   # content-addressed recording blob
 ```
 
-## 3. Dossier
+## 3. Review
 
-The **Dossier** is the durable per-branch file of record — everything docent holds about one branch under review: its append-only history of Changes, its Findings, and its Walkthroughs ([#24](https://github.com/angusfretwell/docent/issues/24), renaming Review-the-entity to kill the act/artifact clash with the `/review` skill).
+The **Review** is the durable per-branch file of record — everything docent holds about one branch under review: its append-only history of Changes, its Findings, and its Walkthroughs. Review names the artifact; the act is a "review pass" ([#61](https://github.com/angusfretwell/docent/issues/61), accepting the act/artifact overlap that [#24](https://github.com/angusfretwell/docent/issues/24) had renamed away).
 
-- **Identity = branch name.** One Dossier per branch. The directory name is the branch-name slug (slashes → dashes); the `branch` field holds the real name.
+- **Identity = branch name.** One Review per branch. The directory name is the branch-name slug (slashes → dashes); the `branch` field holds the real name.
 - **Base ref recorded at creation** — default: the repo's default branch.
 - **Auto-created on first use.** There is no explicit "start a review" step.
-- **Branch rename = new Dossier** — an accepted edge ([#24](https://github.com/angusfretwell/docent/issues/24)).
-- **No stored pointers.** `dossier.json` carries no `currentChangeId` (the current head is whatever git says — never a stored pointer under lazy minting) and no `changeIds` (the `changes/` directory _is_ the append-only log; sequential ids self-order) ([#24](https://github.com/angusfretwell/docent/issues/24)).
+- **Branch rename = new Review** — an accepted edge ([#24](https://github.com/angusfretwell/docent/issues/24)).
+- **No stored pointers.** `review.json` carries no `currentChangeId` (the current head is whatever git says — never a stored pointer under lazy minting) and no `changeIds` (the `changes/` directory _is_ the append-only log; sequential ids self-order) ([#24](https://github.com/angusfretwell/docent/issues/24)).
 - **Intent has no field.** What the change is for is read from the branch name, the `base..head` commit messages, and the agent's own session context ([#24](https://github.com/angusfretwell/docent/issues/24)).
 
-### `docent/dossier@3`
+### `docent/review@4`
 
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `schema` | string | `"docent/dossier@3"` |
+| `schema` | string | `"docent/review@4"` |
 | `id` | string | Stable opaque id (ULID-based) |
-| `branch` | string | The branch name — the Dossier's identity |
+| `branch` | string | The branch name — the Review's identity |
 | `base` | string | Base ref recorded at creation (default: repo default branch) |
 
 ```json
 {
-  "schema": "docent/dossier@3",
-  "id": "dsr_01J9GPXQ4H2M",
+  "schema": "docent/review@4",
+  "id": "rev_01J9GPXQ4H2M",
   "branch": "feat/stream",
   "base": "main"
 }
@@ -106,15 +106,15 @@ A **Change** is an immutable snapshot of a diff, identified by its resolved `(ba
 
 ### `docent/change@3`
 
-| Field        | Type   | Meaning                                            |
-| ------------ | ------ | -------------------------------------------------- |
-| `schema`     | string | `"docent/change@3"`                                |
-| `id`         | string | Sequential per-Dossier id: `chg_001`, `chg_002`, … |
-| `baseSha`    | string | Resolved merge-base SHA — frozen identity          |
-| `headSha`    | string | Head commit SHA — frozen identity                  |
-| `baseRef`    | string | Base ref label at capture (e.g. `main`)            |
-| `headRef`    | string | Head ref label at capture (e.g. `feat/stream`)     |
-| `capturedAt` | string | ISO-8601 timestamp of the mint                     |
+| Field        | Type   | Meaning                                           |
+| ------------ | ------ | ------------------------------------------------- |
+| `schema`     | string | `"docent/change@3"`                               |
+| `id`         | string | Sequential per-Review id: `chg_001`, `chg_002`, … |
+| `baseSha`    | string | Resolved merge-base SHA — frozen identity         |
+| `headSha`    | string | Head commit SHA — frozen identity                 |
+| `baseRef`    | string | Base ref label at capture (e.g. `main`)           |
+| `headRef`    | string | Head ref label at capture (e.g. `feat/stream`)    |
+| `capturedAt` | string | ISO-8601 timestamp of the mint                    |
 
 ```json
 {
@@ -132,7 +132,7 @@ A **Change** is an immutable snapshot of a diff, identified by its resolved `(ba
 
 ## 5. Finding
 
-A **Finding** is the entity: a single anchored, append-only review conversation, held by a Dossier, authored by any actor ([#24](https://github.com/angusfretwell/docent/issues/24), promoting [#7](https://github.com/angusfretwell/docent/issues/7)'s "comment thread" to the entity itself). _Comment_, _reply_, _thread_, and _record_ are plain English within a Finding, never entity names.
+A **Finding** is the entity: a single anchored, append-only review conversation, held by a Review, authored by any actor ([#24](https://github.com/angusfretwell/docent/issues/24), promoting [#7](https://github.com/angusfretwell/docent/issues/7)'s "comment thread" to the entity itself). _Comment_, _reply_, _thread_, and _record_ are plain English within a Finding, never entity names.
 
 ### 5.1 Event-sourced record directory
 
@@ -351,7 +351,7 @@ The `write-findings` / `fetch-findings` I/O primitives and skill contracts over 
 
 Semantics (manual-only checkbox, collapse-on-view, progress read-model, edge cases) are owned by [diff-review.md](diff-review.md); this section pins the storage shape ([#9](https://github.com/angusfretwell/docent/issues/9)):
 
-- **Append-only viewed events** under the Dossier (`viewed/`, directory-of-files per [#2](https://github.com/angusfretwell/docent/issues/2)'s granularity convention), each event `{ path, blobSha, ts }`.
+- **Append-only viewed events** under the Review (`viewed/`, directory-of-files per [#2](https://github.com/angusfretwell/docent/issues/2)'s granularity convention), each event `{ path, blobSha, ts }`.
 - **Keyed on the file's head blob SHA** — "viewed" asserts _I've seen this file's resulting content_. On a new Change: head blob byte-identical → viewed persists; head blob changed → viewed clears and the file flags "changed since viewed". A pure rebase that leaves head content identical keeps the marks — consistent with the content-addressed drift philosophy.
 - **Viewed is orthogonal to Finding resolution** — its own axis, exactly as resolution is orthogonal to drift. Solo tool → single reviewer, no multi-user viewed state.
 - **Progress** (viewed files / total files in the Change) is a pure read-model over the viewed events — nothing else is persisted; it recomputes per Change automatically.
@@ -368,7 +368,7 @@ Semantics (manual-only checkbox, collapse-on-view, progress read-model, edge cas
 
 | Schema | Current version | Pinned by | Supersedes / lineage |
 | --- | --- | --- | --- |
-| `docent/dossier@3` | `@3` | [#24](https://github.com/angusfretwell/docent/issues/24) | `docent/review@1` ([#2](https://github.com/angusfretwell/docent/issues/2), provisional) → `docent/review@2` ([#3](https://github.com/angusfretwell/docent/issues/3), PR-keyed, `currentChangeId`/`changeIds`) → renamed Dossier, pointers dropped ([#24](https://github.com/angusfretwell/docent/issues/24)) |
+| `docent/review@4` | `@4` | [#61](https://github.com/angusfretwell/docent/issues/61) | `docent/review@1` ([#2](https://github.com/angusfretwell/docent/issues/2), provisional) → `docent/review@2` ([#3](https://github.com/angusfretwell/docent/issues/3), PR-keyed, `currentChangeId`/`changeIds`) → renamed to `docent/dossier@3`, pointers dropped ([#24](https://github.com/angusfretwell/docent/issues/24)) → renamed back to `docent/review@4` ([#61](https://github.com/angusfretwell/docent/issues/61)) |
 | `docent/change@3` | `@3` | [#24](https://github.com/angusfretwell/docent/issues/24) | `docent/change@1` ([#2](https://github.com/angusfretwell/docent/issues/2), provisional) → `docent/change@2` ([#3](https://github.com/angusfretwell/docent/issues/3), `source` union + PR metadata) → flattened, GitHub source deferred ([#24](https://github.com/angusfretwell/docent/issues/24)) |
 | `docent/finding@3` | `@3` | consolidation (this spec), folding the amendments below | `docent/comment@1` ([#2](https://github.com/angusfretwell/docent/issues/2), single file, `resolved:` frontmatter) → `docent/comment@2` ([#7](https://github.com/angusfretwell/docent/issues/7), event-sourced `comments/thr_*` dirs) → + optional `disposition` on replies ([#18](https://github.com/angusfretwell/docent/issues/18)) → + `changeId` on every record ([#20](https://github.com/angusfretwell/docent/issues/20)) → renamed `findings/fnd_*` + `docent/finding@3`, resolving the naming-alignment item [#24](https://github.com/angusfretwell/docent/issues/24) flagged |
 | `docent/walkthrough@2` | `@2` — detail in [walkthroughs.md](walkthroughs.md) | [#14](https://github.com/angusfretwell/docent/issues/14) (`kind: code`), [#15](https://github.com/angusfretwell/docent/issues/15) (`kind: product` + `captures[]`) | `docent/walkthrough@1` ([#2](https://github.com/angusfretwell/docent/issues/2), draft) |
