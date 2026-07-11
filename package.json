@@ -3,10 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build:client": "vite build",
-    "build": "bun run build:client && bun scripts/embed-assets.ts",
+    "build": "bun scripts/bundle-worker.ts",
     "compile": "bun run build && bun build --compile --outfile dist/docent bin.ts",
     "serve": "bun run build && bun bin.ts",
+    "dev": "bun run build && bun --watch dev.ts",
     "typecheck": "tsc --noEmit",
     "fix": "ultracite fix",
     "check": "ultracite check",
@@ -23,12 +23,9 @@
   "devDependencies": {
     "@effect/language-service": "^0.86.6",
     "@pierre/diffs": "1.2.12",
-    "@rolldown/plugin-babel": "^0.2.3",
     "@types/bun": "latest",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.3",
-    "babel-plugin-react-compiler": "^1.0.0",
     "oxfmt": "^0.58.0",
     "oxlint": "^1.73.0",
     "oxlint-tsgolint": "^0.24.0",
@@ -36,7 +33,6 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "typescript": "^7.0.2",
-    "ultracite": "7.9.3",
-    "vite": "^8.1.4"
+    "ultracite": "7.9.3"
   }
 }
