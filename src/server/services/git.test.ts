@@ -286,6 +286,39 @@ describe("resolvePending", () => {
     expect(cumulative.patch).toContain("committed.txt");
     expect(cumulative.patch).toContain("working.txt");
   });
+
+  test("keys the head side on the full content SHA, carried into the Change on commit", async () => {
+    const repo = repoWithOneCommit();
+    git(repo, "checkout", "-b", "feature");
+    writeFileSync(path.join(repo, "hello.txt"), "hello\nedited\n");
+
+    const result = await pending(repo, "incremental");
+
+    // The full 40-char blob id git assigns this working-tree content — the key
+    // mark-as-viewed asserts against. Committing the identical bytes mints a
+    // Change whose head blob is the same content-addressed SHA, so a Pending
+    // viewed mark carries over rather than reading as changed-since-viewed.
+    const blobSha = git(repo, "hash-object", path.join(repo, "hello.txt"));
+    expect(blobSha).toMatch(/^[0-9a-f]{40}$/);
+    expect(result.patch).toContain(blobSha);
+    git(repo, "add", ".");
+    git(repo, "commit", "-m", "commit the edit");
+    const change = await resolve(repo);
+    expect(change.patch).toContain(blobSha);
+  });
+
+  test("keys an untracked add on the full content SHA", async () => {
+    const repo = repoWithOneCommit();
+    writeFileSync(path.join(repo, "fresh.txt"), "brand\nnew\n");
+
+    const result = await pending(repo);
+
+    // The untracked add goes through `git diff --no-index`, which still hashes
+    // the worktree file for its index line — full-length under `--full-index`.
+    const blobSha = git(repo, "hash-object", path.join(repo, "fresh.txt"));
+    expect(blobSha).toMatch(/^[0-9a-f]{40}$/);
+    expect(result.patch).toContain(blobSha);
+  });
 });
 
 describe("resolveWorktreeFile", () => {
