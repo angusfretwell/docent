@@ -4,9 +4,26 @@
 
 Don't trust your training data for any library, framework, SDK, API, or CLI tool; versions move and signatures change. Use `/find-docs` to fetch current documentation before writing code that uses one. This applies even to well-known libraries like React.
 
+## Commands
+
+```
+mise build      # build the client and embed assets
+mise compile    # compile the project
+mise serve      # compile and run the project
+mise fix        # format and auto-fix linter errors
+mise typecheck  # run type checks
+mise test       # run tests
+```
+
 ## Local Effect Source
 
 The Effect v4 repository is cloned to `.repos/effect` for reference by `mise prepare-effect`. Use this to explore APIs, find usage examples, and understand implementation details when the documentation isn't enough.
+
+## Worktrees
+
+Use worktrees when working on a branch. Worktrees are managed by /worktrunk which handles installing dependencies.
+
+Run `/wt-switch-create <branch>` to create a branch and worktree and switch to it.
 
 ## Agent skills
 

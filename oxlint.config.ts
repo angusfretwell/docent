@@ -2,12 +2,13 @@ import { defineConfig } from "oxlint";
 import core from "ultracite/oxlint/core";
 import react from "ultracite/oxlint/react";
 import tanstack from "ultracite/oxlint/tanstack";
+import vitest from "ultracite/oxlint/vitest";
 
 export default defineConfig({
   env: {
     builtin: true,
   },
-  extends: [core, react, tanstack],
+  extends: [core, react, tanstack, vitest],
   ignorePatterns: ["prototypes", ".agents"],
   options: {
     typeAware: true,
