@@ -8,7 +8,7 @@
  * is skipped, never fatal (architecture.md §3).
  */
 
-import { FindingRecord, RECORD_TYPES } from "@shared/schemas/finding";
+import { FindingRecord } from "@shared/schemas/finding";
 import {
   ChangeRecord,
   FindingEntry,
@@ -22,6 +22,8 @@ import { Walkthrough, WalkthroughSection } from "@shared/schemas/walkthrough";
 import { Clock, Effect, Option, Schema } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
+
+import { FRONTMATTER, recordType, splitEnvelope } from "../lib/records";
 
 const STATE_ROOT = ".docent";
 const GITIGNORE_ENTRY = `${STATE_ROOT}/`;
@@ -135,46 +137,17 @@ const readJsonRecords = Effect.fn("readJsonRecords")(function* readJsonRecords<
   return somes(records);
 });
 
-// A record filename is `NNN-<type>.md`; the suffix is the record type (the
-// frontmatter carries no type field — data-model.md §5.1). The type vocabulary
-// is owned by the schema, so the pattern is derived from it, never re-spelled.
-const RECORD_NAME = new RegExp(
-  `^\\d+-(?<type>${RECORD_TYPES.join("|")})\\.md$`
-);
-// Split a record into its YAML frontmatter envelope and markdown body. A file
-// without the `---` fences yields empty frontmatter, so it fails to decode and
-// is skipped — the best-effort walk (architecture.md §3).
-const FRONTMATTER =
-  /^---\r?\n(?<frontmatter>[\s\S]*?)\r?\n?---\r?\n?(?<body>[\s\S]*)$/;
-
-/**
- * Split a frontmatter-over-markdown file into its parsed YAML `meta` and trimmed
- * `body` — the shared envelope of Finding records and walkthrough sections
- * (data-model.md §5.1). A file without `---` fences yields empty `meta`, so the
- * caller's decode fails and the record is skipped (the best-effort walk).
- */
-const parseEnvelope = Effect.fn("parseEnvelope")(function* parseEnvelope(
-  text: string
-) {
-  const match = FRONTMATTER.exec(text);
-  const frontmatter = match?.groups?.frontmatter ?? "";
-  const body = (match?.groups?.body ?? "").trim();
-  const meta = yield* Effect.try(() => Bun.YAML.parse(frontmatter) ?? {});
-  return { body, meta: meta as object };
-});
-
 /** Parse one `NNN-<type>.md` record; `None` on any read/parse/decode failure. */
 const readFindingRecord = Effect.fn("readFindingRecord")(
   function* readFindingRecord(file: string, name: string) {
     const fs = yield* FileSystem;
     const text = yield* fs.readFileString(file);
-    const { body, meta } = yield* parseEnvelope(text);
-    const type = RECORD_NAME.exec(name)?.groups?.type;
+    const { body, meta } = yield* splitEnvelope(text);
     return yield* Schema.decodeUnknownEffect(FindingRecord)({
       ...meta,
       body,
       name,
-      type,
+      type: recordType(name),
     });
   },
   Effect.option
@@ -265,7 +238,7 @@ const readWalkthroughSection = Effect.fn("readWalkthroughSection")(
   function* readWalkthroughSection(file: string) {
     const fs = yield* FileSystem;
     const text = yield* fs.readFileString(file);
-    const { body, meta } = yield* parseEnvelope(text);
+    const { body, meta } = yield* splitEnvelope(text);
     return yield* Schema.decodeUnknownEffect(WalkthroughSection)({
       ...meta,
       body,
