@@ -1,0 +1,9 @@
+body {
+  font-family: system-ui, sans-serif;
+  margin: 2rem;
+}
+
+#swatches {
+  display: flex;
+  gap: 8px;
+}

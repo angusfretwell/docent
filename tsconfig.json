@@ -36,5 +36,5 @@
     }
   },
 
-  "exclude": ["dist", "bin.ts", "dev.ts"]
+  "exclude": ["dist", "bin.ts", "dev.ts", "fixtures", ".dev"]
 }
