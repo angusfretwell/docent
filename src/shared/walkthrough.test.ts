@@ -3,8 +3,12 @@ import { Schema } from "effect";
 import type { DriftState } from "./drift.ts";
 import {
   Capture,
+  captureById,
+  identityDrift,
+  interleaveCaptureSegments,
   interleaveSegments,
   latestCodeWalkthrough,
+  latestProductWalkthrough,
   rangeAnchor,
   rollupDrift,
   Walkthrough,
@@ -219,5 +223,187 @@ describe("latestCodeWalkthrough", () => {
 
   test("no code walkthrough yields undefined", () => {
     expect(latestCodeWalkthrough([{ id: "wlk_01C", kind: "product" as const }])).toBeUndefined();
+  });
+});
+
+describe("latestProductWalkthrough", () => {
+  test("picks the newest product walkthrough by id, ignoring code", () => {
+    const entries = [
+      { id: "wlk_01A", kind: "product" as const },
+      { id: "wlk_01D", kind: "code" as const },
+      { id: "wlk_01C", kind: "product" as const },
+    ];
+    expect(latestProductWalkthrough(entries)?.id).toBe("wlk_01C");
+  });
+
+  test("no product walkthrough yields undefined", () => {
+    expect(latestProductWalkthrough([{ id: "wlk_01A", kind: "code" as const }])).toBeUndefined();
+  });
+});
+
+describe("interleaveCaptureSegments", () => {
+  test("no markers renders prose then every capture in order", () => {
+    expect(interleaveCaptureSegments("Drag a file onto the dropzone.", 2)).toEqual([
+      { kind: "prose", text: "Drag a file onto the dropzone." },
+      { index: 0, kind: "capture" },
+      { index: 1, kind: "capture" },
+    ]);
+  });
+
+  test("markers interleave prose and captures in document order", () => {
+    expect(
+      interleaveCaptureSegments("Drag {{capture:0}} and the upload begins {{capture:1}}.", 2),
+    ).toEqual([
+      { kind: "prose", text: "Drag" },
+      { index: 0, kind: "capture" },
+      { kind: "prose", text: "and the upload begins" },
+      { index: 1, kind: "capture" },
+      { kind: "prose", text: "." },
+    ]);
+  });
+
+  test("an out-of-range marker index stays literal prose", () => {
+    expect(interleaveCaptureSegments("see {{capture:5}}", 1)).toEqual([
+      { kind: "prose", text: "see {{capture:5}}" },
+      { index: 0, kind: "capture" },
+    ]);
+  });
+
+  test("captures left unreferenced append after the prose in index order", () => {
+    expect(interleaveCaptureSegments("only {{capture:1}} here", 3)).toEqual([
+      { kind: "prose", text: "only" },
+      { index: 1, kind: "capture" },
+      { kind: "prose", text: "here" },
+      { index: 0, kind: "capture" },
+      { index: 2, kind: "capture" },
+    ]);
+  });
+
+  test("range and capture markers do not cross-fire", () => {
+    // A `{{range:0}}` marker is inert in a product body — it stays literal prose,
+    // and the lone capture still appends after (the flat fallback).
+    expect(interleaveCaptureSegments("uses {{range:0}} not captures", 1)).toEqual([
+      { kind: "prose", text: "uses {{range:0}} not captures" },
+      { index: 0, kind: "capture" },
+    ]);
+  });
+});
+
+describe("identityDrift", () => {
+  test("present in the shown walkthrough is live; absent is outdated (no shifted)", () => {
+    expect(identityDrift(true)).toBe("live");
+    expect(identityDrift(false)).toBe("outdated");
+  });
+});
+
+describe("Capture schema (dims and durationMs)", () => {
+  test("decodes a screenshot with dims", () => {
+    const capture = decodeCapture({
+      dims: [1280, 2400],
+      id: "cap_a",
+      kind: "screenshot",
+      media: "sha-a",
+      route: "/signup",
+      viewport: [1280, 800],
+    });
+    expect(capture.kind).toBe("screenshot");
+    expect(capture.dims).toEqual([1280, 2400]);
+    expect(capture.durationMs).toBeUndefined();
+  });
+
+  test("decodes a recording with durationMs", () => {
+    const capture = decodeCapture({
+      durationMs: 8200,
+      id: "cap_b",
+      kind: "recording",
+      media: "sha-b",
+      route: "/signup",
+      viewport: [1280, 800],
+    });
+    expect(capture.kind).toBe("recording");
+    expect(capture.durationMs).toBe(8200);
+  });
+});
+
+describe("Walkthrough product manifest", () => {
+  const manifest = {
+    bornChangeId: "chg_002",
+    captures: [
+      {
+        dims: [1280, 2400],
+        id: "cap_a",
+        kind: "screenshot",
+        media: "sha-a",
+        route: "/",
+        viewport: [1280, 800],
+      },
+      {
+        durationMs: 8200,
+        id: "cap_b",
+        kind: "recording",
+        media: "sha-b",
+        route: "/",
+        viewport: [1280, 800],
+      },
+    ],
+    id: "wlk_01A",
+    kind: "product",
+    schema: "docent/walkthrough@2",
+    sections: ["s01-upload.md"],
+    title: "Signup",
+  };
+
+  test("decodes the captures[] registry as typed captures", () => {
+    const decoded = decodeManifest(manifest);
+    expect(decoded.captures?.map((capture) => capture.id)).toEqual(["cap_a", "cap_b"]);
+    expect(decoded.captures?.[0]?.kind).toBe("screenshot");
+  });
+
+  test("captureById finds a registered capture and misses an unknown id", () => {
+    const decoded = decodeManifest(manifest);
+    expect(captureById(decoded, "cap_b")?.kind).toBe("recording");
+    expect(captureById(decoded, "cap_z")).toBeUndefined();
+  });
+});
+
+describe("WalkthroughSection product frontmatter", () => {
+  test("decodes captures ids and annotations with capture anchors", () => {
+    const section = decodeSection({
+      annotations: [
+        {
+          anchor: { capture: "cap_a", kind: "screenshot-region", rect: [0.1, 0.2, 0.3, 0.1] },
+          body: "The upload control.",
+        },
+        {
+          anchor: { capture: "cap_b", fromMs: 3200, kind: "recording-timestamp", toMs: 5000 },
+          body: "Validation fires.",
+        },
+      ],
+      body: "Drag a file {{capture:0}}.",
+      captures: ["cap_a", "cap_b"],
+      id: "sec_1",
+      schema: "docent/walkthrough-section@2",
+      title: "Uploading a file",
+    });
+    expect(section.captures).toEqual(["cap_a", "cap_b"]);
+    expect(section.annotations?.length).toBe(2);
+    expect(section.annotations?.[0]?.anchor.kind).toBe("screenshot-region");
+    expect(section.annotations?.[1]?.anchor.kind).toBe("recording-timestamp");
+  });
+
+  test("decodes a whole-capture annotation with the coordinate omitted", () => {
+    const section = decodeSection({
+      annotations: [
+        { anchor: { capture: "cap_a", kind: "screenshot-region" }, body: "This whole screen." },
+      ],
+      body: "Overview.",
+      captures: ["cap_a"],
+      id: "sec_2",
+      schema: "docent/walkthrough-section@2",
+      title: "Overview",
+    });
+    const anchor = section.annotations?.[0]?.anchor;
+    expect(anchor?.kind).toBe("screenshot-region");
+    expect(anchor?.kind === "screenshot-region" ? anchor.rect : "x").toBeUndefined();
   });
 });

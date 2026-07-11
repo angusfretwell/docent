@@ -6,12 +6,13 @@
  * the client (which renders and drifts them) share one definition, and every
  * fold below is a plain unit-tested function.
  *
- * This module owns the **code** arm. The manifest is `kind`-discriminated and a
- * section swaps its targets by kind (walkthroughs.md §2); the product arm
- * (`captures`/`annotations`) is carried through but not folded here — it is a
- * separate tab's concern. A range is `{ file, side, blobSha, lines }`, the same
- * coordinate as the `line` anchor arm, so drift is the Finding re-anchor reused
- * verbatim (walkthroughs.md §5, §8; no second algorithm).
+ * The manifest is `kind`-discriminated and a section swaps its targets by kind
+ * (walkthroughs.md §2). The **code** arm folds a range — `{ file, side, blobSha,
+ * lines }`, the same coordinate as the `line` anchor arm, so drift is the Finding
+ * re-anchor reused verbatim (§5, §8; no second algorithm). The **product** arm
+ * folds captures/annotations: the `{{capture:i}}` interleave, `captureById`, and
+ * identity-based drift (`identityDrift` — live/outdated, no shifted, §8), each a
+ * plain unit-tested function the Product tab renders over.
  */
 
 import { Schema } from "effect";
@@ -108,26 +109,43 @@ export function rangeAnchor(range: WalkthroughRange): Extract<Anchor, { kind: "l
   };
 }
 
-/** One placed piece of a section body: a run of prose, or a target range by index. */
-export type Segment = { kind: "prose"; text: string } | { kind: "range"; index: number };
+/**
+ * One placed piece of a section body: a run of prose, or a target by index — a
+ * code `range` or a product `capture`. The target kind mirrors the section kind;
+ * a section only ever emits one target kind.
+ */
+export type Segment =
+  | { kind: "prose"; text: string }
+  | { kind: "range"; index: number }
+  | { kind: "capture"; index: number };
 
-// A literate `{{range:i}}` marker; `i` is a position in the frontmatter list.
+// The literate `{{range:i}}` / `{{capture:i}}` markers; `i` is a position in the
+// frontmatter target list. Global so `exec` walks every occurrence.
 const RANGE_MARKER = /\{\{range:(?<index>\d+)\}\}/g;
+const CAPTURE_MARKER = /\{\{capture:(?<index>\d+)\}\}/g;
 
 /**
- * Fold a section body into its rendered segments (walkthroughs.md §5):
+ * Fold a section body into its rendered segments against one marker kind
+ * (walkthroughs.md §5):
  *
- * - **No valid markers ⇒** the prose, then every range in index order (the flat
+ * - **No valid markers ⇒** the prose, then every target in index order (the flat
  *   fallback).
- * - **Markers present ⇒** prose and ranges interleave in document order; a
- *   marker whose index is out of range stays literal prose; any range left
+ * - **Markers present ⇒** prose and targets interleave in document order; a
+ *   marker whose index is out of range stays literal prose; any target left
  *   unreferenced appends after, in index order, so no target is silently
  *   dropped.
  *
  * Prose runs are trimmed and empty runs elided, so adjacent markers don't emit
- * blank prose between them.
+ * blank prose between them. The other kind's marker is inert here — it isn't
+ * matched, so it survives as literal prose (a `{{capture:i}}` in a code body, or
+ * vice versa, is never a target).
  */
-export function interleaveSegments(body: string, rangeCount: number): Segment[] {
+function interleave(
+  body: string,
+  count: number,
+  marker: RegExp,
+  targetKind: "range" | "capture",
+): Segment[] {
   const segments: Segment[] = [];
   const referenced = new Set<number>();
   let cursor = 0;
@@ -138,36 +156,49 @@ export function interleaveSegments(body: string, rangeCount: number): Segment[] 
       segments.push({ kind: "prose", text });
     }
   }
+  function pushTarget(index: number) {
+    segments.push(targetKind === "range" ? { index, kind: "range" } : { index, kind: "capture" });
+  }
 
-  RANGE_MARKER.lastIndex = 0;
-  for (let match = RANGE_MARKER.exec(body); match !== null; match = RANGE_MARKER.exec(body)) {
+  marker.lastIndex = 0;
+  for (let match = marker.exec(body); match !== null; match = marker.exec(body)) {
     const index = Number(match.groups?.index);
-    if (index >= rangeCount) {
+    if (index >= count) {
       // Out of range: leave the marker text in place as literal prose.
       continue;
     }
     pushProse(body.slice(cursor, match.index));
-    segments.push({ index, kind: "range" });
+    pushTarget(index);
     referenced.add(index);
     cursor = match.index + match[0].length;
   }
   pushProse(body.slice(cursor));
 
-  // No marker placed any range: prose already pushed, append every range.
+  // No marker placed any target: prose already pushed, append every target.
   if (referenced.size === 0) {
-    for (let index = 0; index < rangeCount; index += 1) {
-      segments.push({ index, kind: "range" });
+    for (let index = 0; index < count; index += 1) {
+      pushTarget(index);
     }
     return segments;
   }
 
-  // Some ranges went unreferenced: append them after, in index order.
-  for (let index = 0; index < rangeCount; index += 1) {
+  // Some targets went unreferenced: append them after, in index order.
+  for (let index = 0; index < count; index += 1) {
     if (!referenced.has(index)) {
-      segments.push({ index, kind: "range" });
+      pushTarget(index);
     }
   }
   return segments;
+}
+
+/** Fold a code section body over its `{{range:i}}` markers (walkthroughs.md §5). */
+export function interleaveSegments(body: string, rangeCount: number): Segment[] {
+  return interleave(body, rangeCount, RANGE_MARKER, "range");
+}
+
+/** Fold a product section body over its `{{capture:i}}` markers (walkthroughs.md §5). */
+export function interleaveCaptureSegments(body: string, captureCount: number): Segment[] {
+  return interleave(body, captureCount, CAPTURE_MARKER, "capture");
 }
 
 // Worst-of ordering for the section rollup: outdated dominates shifted dominates
@@ -216,18 +247,53 @@ export function walkthroughStaleness(
 }
 
 /**
- * The walkthrough the code tab shows: the newest code walkthrough by id. Ids are
+ * The walkthrough a pillar tab shows: the newest entry of `kind` by id. Ids are
  * ULID-shaped, so the lexically-greatest id is the most recently minted — the
- * "one walkthrough per Change per pillar" the tab renders (walkthroughs.md §2).
+ * "one walkthrough per Change per pillar" a tab renders (walkthroughs.md §2).
  */
-export function latestCodeWalkthrough<T extends { id: string; kind: "code" | "product" }>(
+function latestWalkthrough<T extends { id: string; kind: "code" | "product" }>(
   entries: readonly T[],
+  kind: "code" | "product",
 ): T | undefined {
   let latest: T | undefined;
   for (const entry of entries) {
-    if (entry.kind === "code" && (latest === undefined || entry.id > latest.id)) {
+    if (entry.kind === kind && (latest === undefined || entry.id > latest.id)) {
       latest = entry;
     }
   }
   return latest;
+}
+
+/** The newest **code** walkthrough — the one the Code walkthrough tab renders. */
+export function latestCodeWalkthrough<T extends { id: string; kind: "code" | "product" }>(
+  entries: readonly T[],
+): T | undefined {
+  return latestWalkthrough(entries, "code");
+}
+
+/** The newest **product** walkthrough — the one the Product walkthrough tab renders. */
+export function latestProductWalkthrough<T extends { id: string; kind: "code" | "product" }>(
+  entries: readonly T[],
+): T | undefined {
+  return latestWalkthrough(entries, "product");
+}
+
+/**
+ * Identity-based capture/section drift (walkthroughs.md §8). Product has **no
+ * blob-to-blob re-anchor and no `shifted`**: a capture or section anchor is
+ * `live` while its target still exists in the (immutable) shown walkthrough, and
+ * `outdated` once superseded — then it detaches and renders against its born
+ * capture. The caller decides presence (a set-membership check); this pins the
+ * live/outdated mapping in one place.
+ */
+export function identityDrift(present: boolean): DriftState {
+  return present ? "live" : "outdated";
+}
+
+/** Look one capture up in a manifest's `captures[]` registry by id (walkthroughs.md §6). */
+export function captureById(
+  manifest: { captures?: readonly Capture[] } | undefined,
+  captureId: string,
+): Capture | undefined {
+  return manifest?.captures?.find((capture) => capture.id === captureId);
 }

@@ -274,8 +274,9 @@ function writeWalkthrough(
   id: string,
   manifest: string,
   sections: Record<string, string>,
+  kind: "code" | "product" = "code",
 ) {
-  const dir = path.join(root, ".docent", "dossiers", branch, "walkthroughs", "code", id);
+  const dir = path.join(root, ".docent", "dossiers", branch, "walkthroughs", kind, id);
   mkdirSync(dir, { recursive: true });
   writeFileSync(path.join(dir, "manifest.json"), manifest);
   for (const [name, body] of Object.entries(sections)) {
@@ -370,6 +371,88 @@ describe("readDossierSnapshot walkthroughs", () => {
 
     const walkthrough = snap.walkthroughs.find((entry) => entry.id === "wlk_01DEF");
     expect(walkthrough?.sections.map((s) => s.id)).toEqual(["sec_ok"]);
+  });
+
+  test("parses a product manifest's captures registry and product section frontmatter", async () => {
+    const root = scratchDir("docent-dossier-");
+    await snapshot(root, "feature");
+    writeWalkthrough(
+      root,
+      "feature",
+      "wlk_01PROD",
+      JSON.stringify({
+        bornChangeId: "chg_002",
+        captures: [
+          {
+            dims: [1280, 2400],
+            id: "cap_a",
+            kind: "screenshot",
+            media: "sha-a",
+            route: "/signup",
+            viewport: [1280, 800],
+          },
+          {
+            durationMs: 8200,
+            id: "cap_b",
+            kind: "recording",
+            media: "sha-b",
+            route: "/signup",
+            viewport: [1280, 800],
+          },
+        ],
+        id: "wlk_01PROD",
+        kind: "product",
+        schema: "docent/walkthrough@2",
+        sections: ["s01-upload.md"],
+        title: "Signup tour",
+      }),
+      {
+        "s01-upload.md": [
+          "---",
+          "schema: docent/walkthrough-section@2",
+          "id: sec_upload",
+          'title: "Uploading a file"',
+          "captures: [cap_a, cap_b]",
+          "annotations:",
+          "  - anchor: { kind: screenshot-region, capture: cap_a, rect: [0.1, 0.2, 0.3, 0.1] }",
+          '    body: "The new upload control."',
+          "  - anchor: { kind: recording-timestamp, capture: cap_b, fromMs: 3200, toMs: 5000 }",
+          '    body: "Validation fires on blur."',
+          "---",
+          "",
+          "Drag a file onto the dropzone {{capture:0}} and the upload begins {{capture:1}}.",
+          "",
+        ].join("\n"),
+      },
+      "product",
+    );
+
+    const snap = await snapshot(root, "feature");
+
+    const walkthrough = snap.walkthroughs.find((entry) => entry.id === "wlk_01PROD");
+    if (walkthrough === undefined) {
+      throw new Error("expected the product walkthrough");
+    }
+    expect(walkthrough.kind).toBe("product");
+    expect(walkthrough.manifest?.captures?.map((capture) => capture.id)).toEqual([
+      "cap_a",
+      "cap_b",
+    ]);
+    expect(walkthrough.manifest?.captures?.[0]?.dims).toEqual([1280, 2400]);
+    expect(walkthrough.manifest?.captures?.[1]?.durationMs).toBe(8200);
+    const [section] = walkthrough.sections;
+    expect(section?.captures).toEqual(["cap_a", "cap_b"]);
+    expect(section?.annotations?.length).toBe(2);
+    expect(section?.annotations?.[0]?.anchor).toMatchObject({
+      capture: "cap_a",
+      kind: "screenshot-region",
+      rect: [0.1, 0.2, 0.3, 0.1],
+    });
+    expect(section?.annotations?.[1]?.anchor).toMatchObject({
+      capture: "cap_b",
+      fromMs: 3200,
+      kind: "recording-timestamp",
+    });
   });
 
   test("a walkthrough dir with no manifest yields an entry with no sections", async () => {

@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { existsSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { ManagedRuntime, Schema } from "effect";
 import { assetsFromManifest } from "../client/assets.ts";
@@ -39,6 +39,22 @@ async function readSse(
   });
   const { value, done } = await Promise.race([reader.read(), timeout]);
   return done || value === undefined ? "" : decoder.decode(value);
+}
+
+/** Write a product-walkthrough capture blob under a feature branch's Dossier. */
+function writeCapture(repo: string, walkthroughId: string, file: string, bytes: string) {
+  const dir = path.join(
+    repo,
+    ".docent",
+    "dossiers",
+    "feature",
+    "walkthroughs",
+    "product",
+    walkthroughId,
+    "captures",
+  );
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(path.join(dir, file), bytes);
 }
 
 /** A scratch repo on branch `feature` with one committed change off `main`. */
@@ -229,6 +245,50 @@ describe("server layer", () => {
     const res = await fetch(new URL("/api/blob/not-a-sha/size", url));
 
     expect(res.status).toBe(400);
+  });
+
+  test("GET /api/capture serves a screenshot blob as image/png, cached forever", async () => {
+    const repo = featureRepo();
+    const { url } = await serve(repo);
+    writeCapture(repo, "wlk_01PROD", "shaA.png", "PNGBYTES");
+
+    const res = await fetch(new URL("/api/capture/wlk_01PROD/shaA.png", url));
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("image/png");
+    expect(await res.text()).toBe("PNGBYTES");
+    // Content-addressed → immutable → cache forever.
+    expect(res.headers.get("cache-control")).toMatch(/immutable/);
+  });
+
+  test("GET /api/capture serves a recording blob as application/json", async () => {
+    const repo = featureRepo();
+    const { url } = await serve(repo);
+    writeCapture(repo, "wlk_01PROD", "shaB.rrweb.json", '[{"type":4}]');
+
+    const res = await fetch(new URL("/api/capture/wlk_01PROD/shaB.rrweb.json", url));
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("application/json");
+    expect(await res.json()).toEqual([{ type: 4 }]);
+  });
+
+  test("GET /api/capture 404s an absent capture file", async () => {
+    const { url } = await serve(featureRepo());
+
+    const res = await fetch(new URL("/api/capture/wlk_01PROD/missing.png", url));
+
+    expect(res.status).toBe(404);
+  });
+
+  test("GET /api/capture 400s a walkthrough id or filename that could traverse", async () => {
+    const { url } = await serve(featureRepo());
+
+    const badWlk = await fetch(new URL("/api/capture/not-a-wlk/shaA.png", url));
+    const badFile = await fetch(`${url}api/capture/wlk_01PROD/%2e%2e%2fsecret`);
+
+    expect(badWlk.status).toBe(400);
+    expect(badFile.status).toBe(400);
   });
 
   test("GET /api/pending returns the dirty working-tree preview as JSON", async () => {

@@ -20,6 +20,31 @@ export function worktreeUrl(path: string): string {
   return `/api/worktree?path=${encodeURIComponent(path)}`;
 }
 
+/**
+ * The content-addressed endpoint for a product-walkthrough capture blob
+ * (walkthroughs.md §6). A screenshot's media sha resolves to `<sha>.png`, a
+ * recording's to `<sha>.rrweb.json` — the extension the server keys its
+ * content-type off. Served from the walkthrough's own `captures/` dir, not
+ * `git cat-file`, since capture media is a gitignored Dossier file.
+ */
+export function captureUrl(
+  walkthroughId: string,
+  media: string,
+  kind: "screenshot" | "recording",
+): string {
+  const ext = kind === "screenshot" ? "png" : "rrweb.json";
+  return `/api/capture/${walkthroughId}/${media}.${ext}`;
+}
+
+/** Fetch a recording capture's rrweb event stream from its content-addressed blob. */
+export async function fetchCaptureEvents(url: string): Promise<unknown[]> {
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`GET ${url} failed: HTTP ${res.status}`);
+  }
+  return res.json() as Promise<unknown[]>;
+}
+
 /** The content-addressed byte-size endpoint for a git blob (binary size deltas). */
 export function blobSizeUrl(sha: string): string {
   return `/api/blob/${sha}/size`;
