@@ -151,6 +151,17 @@ function resolveTemplate(
   });
 }
 
+/**
+ * A content-addressed product-walkthrough capture blob, living under a
+ * walkthrough's `captures/` dir (walkthroughs.md §6). Its filename **is** the
+ * sha-256 of its bytes, so it is copied verbatim — never templated: a single
+ * altered byte (a resolved token, a re-encoded PNG) would break the hash the
+ * manifest references and the server serves it under.
+ */
+function isCaptureBlob(relativePath: string): boolean {
+  return relativePath.split(path.sep).includes("captures");
+}
+
 /** Copy `fixtures/docent/` into the repo's `.docent/`, resolving tokens en route. */
 function materializeDocent(refs: ReadonlyMap<string, string>): void {
   const entries = readdirSync(docentSource, {
@@ -162,12 +173,13 @@ function materializeDocent(refs: ReadonlyMap<string, string>): void {
       continue;
     }
     const absolute = path.join(entry.parentPath, entry.name);
-    const destination = path.join(
-      target,
-      ".docent",
-      path.relative(docentSource, absolute)
-    );
+    const relative = path.relative(docentSource, absolute);
+    const destination = path.join(target, ".docent", relative);
     mkdirSync(path.dirname(destination), { recursive: true });
+    if (isCaptureBlob(relative)) {
+      cpSync(absolute, destination);
+      continue;
+    }
     writeFileSync(
       destination,
       resolveTemplate(readFileSync(absolute, "utf-8"), refs)

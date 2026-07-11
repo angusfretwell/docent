@@ -1,0 +1,29 @@
+{
+  "schema": "docent/walkthrough@2",
+  "id": "wlk_01JZFIXTUREPROD0000000001",
+  "kind": "product",
+  "bornChangeId": "chg_001",
+  "title": "Generating a palette",
+  "sections": [
+    "s01-the-palette-on-load.md",
+    "s02-regenerating-the-palette.md"
+  ],
+  "captures": [
+    {
+      "id": "cap_01JZFIXTUREPROD00000000C1",
+      "kind": "screenshot",
+      "media": "459c3b41545cd1a2bf27a599ad82cfa866a34bc6b56024e546531b25b3dee8fe",
+      "route": "/",
+      "viewport": [1280, 800],
+      "dims": [1280, 800]
+    },
+    {
+      "id": "cap_01JZFIXTUREPROD00000000C2",
+      "kind": "recording",
+      "media": "e90f48fe69282182ec030f18da7de0ca21662c52e0151b26749b04d1c3a9d137",
+      "route": "/",
+      "viewport": [1280, 800],
+      "durationMs": 2187
+    }
+  ]
+}
