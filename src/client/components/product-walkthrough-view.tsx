@@ -25,18 +25,19 @@ import {
   walkthroughStaleness,
 } from "@shared/lib/walkthrough-annotations";
 import { interleaveCaptureSegments } from "@shared/lib/walkthrough-segments";
-
-import "rrweb/dist/style.css";
 import type {
   ChangeRecord,
   FindingEntry,
   WalkthroughEntry,
 } from "@shared/schemas/review";
+
+import "rrweb/dist/style.css";
 import type {
   Capture,
   WalkthroughAnnotation,
   WalkthroughSection,
 } from "@shared/schemas/walkthrough";
+import { useLayoutEffect, useRef, useState } from "react";
 
 import { useRrwebReplayer } from "../hooks/use-rrweb-replayer";
 import { captureUrl } from "../lib/blobs";
@@ -211,9 +212,35 @@ function ScreenshotCapture({
   );
 }
 
-// A recording's replay stage is sized to the recorded viewport, capped to the
-// column width; rrweb scales its reconstructed DOM to fill it.
+// A recording's replay stage is capped to the column width; the replay is
+// scaled down to fit it (see useReplayScale).
 const RECORDING_MAX_WIDTH = 520;
+
+/**
+ * rrweb's `Replayer` reconstructs the DOM at the recorded viewport size and
+ * never scales it (scale-to-fit is an rrweb-player feature) — measure the
+ * stage and scale the mount ourselves so the replay fits instead of clipping.
+ */
+function useReplayScale(recordedWidth: number) {
+  const stageRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useLayoutEffect(() => {
+    const stage = stageRef.current;
+    if (stage === null) {
+      return;
+    }
+
+    const observer = new ResizeObserver(() => {
+      setScale(stage.clientWidth / recordedWidth);
+    });
+    observer.observe(stage);
+
+    return () => observer.disconnect();
+  }, [recordedWidth]);
+
+  return { scale, stageRef };
+}
 
 /**
  * One recording capture: a self-contained rrweb replay of the captured session
@@ -238,22 +265,32 @@ function RecordingCapture({
   );
   const { times, whole } = recordingPins(annotations, findings, capture);
   const [vw, vh] = capture.viewport;
+  const { scale, stageRef } = useReplayScale(vw);
   const duration = capture.durationMs ?? 0;
 
   return (
     <figure style={{ margin: "0.6rem 0" }}>
       <div
+        ref={stageRef}
         style={{
           background: "#fff",
           border: "1px solid rgba(128,128,128,0.25)",
           borderRadius: "0.4rem",
-          height: `${vh}px`,
+          height: `${vh * scale}px`,
           maxWidth: "100%",
           overflow: "hidden",
           width: `${Math.min(vw, RECORDING_MAX_WIDTH)}px`,
         }}
       >
-        <div ref={rootRef} style={{ height: "100%", width: "100%" }} />
+        <div
+          ref={rootRef}
+          style={{
+            height: `${vh}px`,
+            transform: `scale(${scale})`,
+            transformOrigin: "top left",
+            width: `${vw}px`,
+          }}
+        />
       </div>
       {failed ? (
         <p style={{ fontSize: "0.8rem", opacity: 0.6 }}>
