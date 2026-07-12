@@ -2,19 +2,19 @@ import {
   latestCodeWalkthrough,
   latestProductWalkthrough,
 } from "@shared/lib/walkthrough";
-import { Change, DiffError } from "@shared/schemas/change";
 import type { FindingWrite } from "@shared/schemas/finding-write";
-import type { PendingRange } from "@shared/schemas/pending";
-import { Pending } from "@shared/schemas/pending";
-import { ReviewSnapshot } from "@shared/schemas/review";
+import type { Pending, PendingRange } from "@shared/schemas/pending";
 import type {
   FindingEntry,
+  ReviewSnapshot,
   ViewedEvent,
   WalkthroughEntry,
 } from "@shared/schemas/review";
-import { Schema } from "effect";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
+import { useDiffDeepLink } from "../hooks/use-diff-deep-link";
+import type { LoadState } from "../hooks/use-review-data";
+import { useReviewData } from "../hooks/use-review-data";
 import {
   fetchPendingExpandedFileDiff,
   isPendingExpandable,
@@ -41,12 +41,6 @@ const NO_VIEWED: readonly ViewedEvent[] = [];
 const NO_FINDINGS: readonly FindingEntry[] = [];
 const NO_WALKTHROUGHS: readonly WalkthroughEntry[] = [];
 
-// Sync decode boundary: the fetch handlers below own the try/catch.
-const decodeChange = Schema.decodeUnknownSync(Change);
-const decodeDiffError = Schema.decodeUnknownSync(DiffError);
-const decodeSnapshot = Schema.decodeUnknownSync(ReviewSnapshot);
-const decodePending = Schema.decodeUnknownSync(Pending);
-
 // Which selector entry is showing: the committed Change, or the read-only
 // Pending working-tree preview.
 type Selection = "change" | "pending";
@@ -55,19 +49,6 @@ type Selection = "change" | "pending";
 // surface over the same Change: the Diff tab, the Code walkthrough tab, and the
 // Product walkthrough tab (#15).
 type Tab = "diff" | "walkthrough" | "product";
-
-type LoadState =
-  | { kind: "loading" }
-  | { kind: "error"; message: string }
-  | { kind: "loaded"; change: Change };
-
-function failureMessage(body: unknown, status: number): string {
-  try {
-    return decodeDiffError(body).error;
-  } catch {
-    return `HTTP ${status}`;
-  }
-}
 
 // Fixed pill over the diff; hoisted so it isn't rebuilt on every render.
 const statusStyle: React.CSSProperties = {
@@ -443,96 +424,19 @@ function ProductWalkthroughTab({ review }: { review: ReviewSnapshot | null }) {
 }
 
 export function App() {
-  const [change, setChange] = useState<LoadState>({ kind: "loading" });
-  const [pending, setPending] = useState<Pending | null>(null);
-  const [review, setReview] = useState<ReviewSnapshot | null>(null);
   const [selected, setSelected] = useState<Selection>("change");
   const [range, setRange] = useState<PendingRange>("incremental");
   const [tab, setTab] = useState<Tab>("diff");
-  // A one-shot Diff deep-link from the walkthrough tab: switch to Diff, then
-  // scroll to the range's file/line once DiffView has mounted (walkthroughs.md §1).
-  const [pendingJump, setPendingJump] = useState<{
-    file: string;
-    line: number;
-    side: "base" | "head";
-  } | null>(null);
   // The walkthrough-order override for the committed Diff surface: the tour's
   // file sequence, set by "open Diff tab in walkthrough order" and held until the
   // reviewer picks a path/size sort (diff-review.md §2).
   const [fileOrder, setFileOrder] = useState<readonly string[] | undefined>();
   const diffRef = useRef<DiffViewHandle>(null);
 
-  // One live loop for the whole tab: fetch the Change, the Pending preview (at
-  // the current range), and the review once, then re-fetch all three on every
-  // SSE change event — an agent editing the working tree pushes a coarse event
-  // and Pending refreshes live (architecture.md §2). Re-runs when the range
-  // toggles, which reloads Pending for the new range.
-  useEffect(() => {
-    let cancelled = false;
-    async function loadChange() {
-      try {
-        const res = await fetch("/api/diff");
-        const body: unknown = await res.json();
-        if (cancelled) {
-          return;
-        }
-        if (!res.ok) {
-          throw new Error(failureMessage(body, res.status));
-        }
-        // oxlint-disable-next-line react-compiler
-        setChange({ change: decodeChange(body), kind: "loaded" });
-      } catch (error) {
-        if (!cancelled) {
-          // oxlint-disable-next-line react-compiler
-          setChange({
-            kind: "error",
-            message: error instanceof Error ? error.message : String(error),
-          });
-        }
-      }
-    }
-    // Best-effort read: on any failure keep the last good value until the next
-    // event, so a transient error never blanks the Pending preview or review.
-    async function loadBestEffort<T>(
-      url: string,
-      decode: (value: unknown) => T,
-      apply: (value: T) => void
-    ) {
-      try {
-        const res = await fetch(url);
-        if (res.ok && !cancelled) {
-          apply(decode(await res.json()));
-        }
-      } catch {
-        // Ignored by design (see above).
-      }
-    }
-    function loadPending() {
-      // oxlint-disable-next-line react-compiler
-      return loadBestEffort(
-        `/api/pending?range=${range}`,
-        decodePending,
-        setPending
-      );
-    }
-    function loadReview() {
-      // oxlint-disable-next-line react-compiler
-      return loadBestEffort("/api/review", decodeSnapshot, setReview);
-    }
-    function refetchAll() {
-      void loadChange();
-      void loadPending();
-      void loadReview();
-    }
-    // oxlint-disable-next-line react-doctor/query-no-query-in-effect
-    refetchAll();
-    const events = new EventSource("/api/events");
-    events.addEventListener("review-changed", refetchAll);
-    return () => {
-      cancelled = true;
-      events.close();
-    };
-  }, [range]);
+  // One live loop for the whole tab: fetches the Change, the Pending preview
+  // (at the current range), and the review, then keeps them fresh off the
+  // `.docent/` watch's SSE stream (architecture.md §2).
+  const { change, pending, review } = useReviewData(range);
 
   // Drift is judged against the committed Change (Pending carries no Findings),
   // computed lazily from each Finding's born anchor (data-model.md §6). The map
@@ -546,39 +450,13 @@ export function App() {
 
   // The deep-link loop: a walkthrough range or a Findings-panel row (the panel is
   // global, so the click can come from any tab) opens the Diff tab at its
-  // file/line. Switching to Diff mounts DiffView; the effect then scrolls once
-  // DiffView's imperative handle is live, given a frame for the renderer to lay
-  // out, and clears the one-shot request. When Diff is already active the tab set
-  // is a no-op and the same effect still scrolls.
-  // The OpenInDiff seam's implementation. `func-style` requires a declaration
-  // here, so this one site spells the signature out; every consuming prop wears
-  // the OpenInDiff alias, so widening the seam no longer edits them in lockstep.
-  function openInDiff(
-    file: string,
-    line: number,
-    side: "base" | "head",
-    order?: readonly string[]
-  ) {
-    setTab("diff");
-    setPendingJump({ file, line, side });
-    if (order) {
-      setFileOrder(order);
-    }
-  }
-  useEffect(() => {
-    if (tab !== "diff" || pendingJump === null) {
-      return;
-    }
-    const frame = requestAnimationFrame(() => {
-      diffRef.current?.scrollToLine(
-        pendingJump.file,
-        pendingJump.line,
-        pendingJump.side
-      );
-      setPendingJump(null);
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [tab, pendingJump]);
+  // file/line (walkthroughs.md §1).
+  const openInDiff = useDiffDeepLink({
+    active: tab === "diff",
+    diffRef,
+    onActivate: () => setTab("diff"),
+    onFileOrder: setFileOrder,
+  });
 
   const patch = change.kind === "loaded" ? change.change.patch : "";
 
