@@ -12,10 +12,13 @@
  *
  * Unlike Findings (pure append-only record dirs), a walkthrough's `manifest.json`
  * is assembled incrementally: `create` writes the shell, then `add-section` /
- * `add-capture` read-modify-write the manifest to append. This is safe here —
- * docent is single-user and local, and these are sequential CLI invocations, so
- * there is no concurrent writer to race (the multi-writer rationale that makes
- * Findings append-only does not apply to one agent building one tour).
+ * `add-capture` read-modify-write the manifest to append. The read-modify-write
+ * itself — locating a walkthrough, writing a manifest canonically, and the
+ * shared load-mutate-persist append shape — lives in `manifest-store.ts`. This
+ * is safe here — docent is single-user and local, and these are sequential CLI
+ * invocations, so there is no concurrent writer to race (the multi-writer
+ * rationale that makes Findings append-only does not apply to one agent
+ * building one tour).
  */
 
 import type {
@@ -27,30 +30,27 @@ import {
   Walkthrough,
   WalkthroughSection,
 } from "@shared/schemas/walkthrough";
-import { Effect, Option, Schema } from "effect";
+import { Effect, Schema } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 
 import { makeId } from "../store/id";
-import { readRecord } from "../store/io";
 import { reviewDirPath } from "../store/layout";
 import { recordFile, serializeFrontmatter } from "../store/records";
 import type { ChangeRefs } from "./findings-write";
 import { mintChange } from "./findings-write";
+import {
+  appendToManifest,
+  assertSectionArms,
+  loadWalkthrough,
+  walkthroughDir,
+  writeManifest,
+} from "./manifest-store";
 import { ensureReview } from "./review";
 
-const KINDS = ["code", "product"] as const;
-type WalkthroughKind = (typeof KINDS)[number];
+export { SectionArmMismatch, WalkthroughNotFound } from "./manifest-store";
 
-/** A referenced walkthrough was not found under `walkthroughs/{code,product}/`. */
-export class WalkthroughNotFound extends Schema.TaggedErrorClass<WalkthroughNotFound>()(
-  "WalkthroughNotFound",
-  { id: Schema.String }
-) {
-  override get message(): string {
-    return `no walkthrough ${this.id} in this Review`;
-  }
-}
+type WalkthroughKind = Walkthrough["kind"];
 
 /** A capture write targeted a `code` walkthrough — captures are the product arm. */
 export class CaptureKindMismatch extends Schema.TaggedErrorClass<CaptureKindMismatch>()(
@@ -59,19 +59,6 @@ export class CaptureKindMismatch extends Schema.TaggedErrorClass<CaptureKindMism
 ) {
   override get message(): string {
     return `walkthrough ${this.id} is a code tour; captures belong to product tours`;
-  }
-}
-
-/**
- * A section carried the wrong arm for its walkthrough's `kind` (walkthroughs.md
- * §5): `ranges` on a product tour, or `captures`/`annotations` on a code tour.
- */
-export class SectionArmMismatch extends Schema.TaggedErrorClass<SectionArmMismatch>()(
-  "SectionArmMismatch",
-  { arm: Schema.String, id: Schema.String, kind: Schema.String }
-) {
-  override get message(): string {
-    return `walkthrough ${this.id} is a ${this.kind} tour; ${this.arm} is the ${this.kind === "code" ? "product" : "code"} arm`;
   }
 }
 
@@ -98,53 +85,6 @@ function slug(title: string): string {
     .replaceAll(EDGE_DASHES, "");
   return slugged === "" ? "section" : slugged;
 }
-
-/** The walkthroughs root under a Review: `<reviewDir>/walkthroughs/`. */
-function walkthroughsRoot(path: Path, reviewDir: string): string {
-  return path.join(reviewDir, "walkthroughs");
-}
-
-/** Write a manifest canonically: 2-space JSON with a trailing newline. */
-const writeManifest = Effect.fn("writeManifest")(function* writeManifest(
-  dir: string,
-  manifest: Walkthrough
-) {
-  const fs = yield* FileSystem;
-  const path = yield* Path;
-  yield* fs.writeFileString(
-    path.join(dir, "manifest.json"),
-    `${JSON.stringify(manifest, null, 2)}\n`
-  );
-});
-
-/** A located walkthrough: its dir and decoded manifest (whose `kind` is authoritative). */
-interface LoadedWalkthrough {
-  dir: string;
-  manifest: Walkthrough;
-}
-
-/**
- * Resolve a walkthrough by id, searching both pillars (there are only two). The
- * manifest's own `kind` is authoritative; a missing manifest is a not-found.
- */
-const loadWalkthrough = Effect.fn("loadWalkthrough")(function* loadWalkthrough(
-  reviewDir: string,
-  id: string
-) {
-  const path = yield* Path;
-  const root = walkthroughsRoot(path, reviewDir);
-  for (const kind of KINDS) {
-    const dir = path.join(root, kind, id);
-    const manifest = yield* readRecord(
-      path.join(dir, "manifest.json"),
-      Walkthrough
-    );
-    if (Option.isSome(manifest)) {
-      return { dir, manifest: manifest.value } satisfies LoadedWalkthrough;
-    }
-  }
-  return yield* Effect.fail(new WalkthroughNotFound({ id }));
-});
 
 /**
  * Create a walkthrough shell: mint a `wlk_` id, mint-or-reuse the live head's
@@ -180,7 +120,7 @@ export const writeWalkthrough = Effect.fn("writeWalkthrough")(
       sections: [],
       title: params.title,
     });
-    const dir = path.join(walkthroughsRoot(path, reviewDir), params.kind, id);
+    const dir = walkthroughDir(path, reviewDir, params.kind, id);
     yield* fs.makeDirectory(dir, { recursive: true });
     yield* writeManifest(dir, manifest);
 
@@ -216,10 +156,8 @@ export const addWalkthroughSection = Effect.fn("addWalkthroughSection")(
       reviewDir,
       root: params.root,
     });
-    const { dir, manifest } = yield* loadWalkthrough(
-      reviewDir,
-      params.walkthroughId
-    );
+    const loaded = yield* loadWalkthrough(reviewDir, params.walkthroughId);
+    const { dir, manifest } = loaded;
 
     // A section carries the arm for its tour's kind (walkthroughs.md §5): ranges
     // for code, captures/annotations for product. Refuse the crossed arm.
@@ -227,23 +165,13 @@ export const addWalkthroughSection = Effect.fn("addWalkthroughSection")(
     const hasProduct =
       (params.captureIds?.length ?? 0) > 0 ||
       (params.annotations?.length ?? 0) > 0;
-    if (manifest.kind === "product" && hasRanges) {
-      return yield* Effect.fail(
-        new SectionArmMismatch({
-          arm: "--range",
-          id: params.walkthroughId,
-          kind: manifest.kind,
-        })
-      );
-    }
-    if (manifest.kind === "code" && hasProduct) {
-      return yield* Effect.fail(
-        new SectionArmMismatch({
-          arm: "--capture/--annotation",
-          id: params.walkthroughId,
-          kind: manifest.kind,
-        })
-      );
+    const mismatch = assertSectionArms(
+      manifest.kind,
+      { hasProduct, hasRanges },
+      params.walkthroughId
+    );
+    if (mismatch !== undefined) {
+      return yield* Effect.fail(mismatch);
     }
 
     const id = yield* makeId("sec");
@@ -275,11 +203,12 @@ export const addWalkthroughSection = Effect.fn("addWalkthroughSection")(
       recordFile(frontmatter, section.body)
     );
 
-    const updated = Walkthrough.make({
-      ...manifest,
-      sections: [...manifest.sections, filename],
-    });
-    yield* writeManifest(dir, updated);
+    yield* appendToManifest(loaded, (current) =>
+      Walkthrough.make({
+        ...current,
+        sections: [...current.sections, filename],
+      })
+    );
 
     return {
       section: filename,
@@ -318,10 +247,8 @@ export const addWalkthroughCapture = Effect.fn("addWalkthroughCapture")(
       reviewDir,
       root: params.root,
     });
-    const { dir, manifest } = yield* loadWalkthrough(
-      reviewDir,
-      params.walkthroughId
-    );
+    const loaded = yield* loadWalkthrough(reviewDir, params.walkthroughId);
+    const { dir, manifest } = loaded;
     if (manifest.kind !== "product") {
       return yield* Effect.fail(
         new CaptureKindMismatch({ id: params.walkthroughId })
@@ -350,11 +277,12 @@ export const addWalkthroughCapture = Effect.fn("addWalkthroughCapture")(
         : { durationMs: params.durationMs }),
     });
 
-    const updated = Walkthrough.make({
-      ...manifest,
-      captures: [...(manifest.captures ?? []), entry],
-    });
-    yield* writeManifest(dir, updated);
+    yield* appendToManifest(loaded, (current) =>
+      Walkthrough.make({
+        ...current,
+        captures: [...(current.captures ?? []), entry],
+      })
+    );
 
     return {
       captureId: id,
