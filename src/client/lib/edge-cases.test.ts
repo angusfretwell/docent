@@ -4,9 +4,7 @@ import {
   autoViewed,
   bodyReplaced,
   classifyFiles,
-  formatBytes,
   isGeneratedPath,
-  parsePatchBlocks,
 } from "./edge-cases";
 
 const BINARY = `diff --git a/data.bin b/data.bin
@@ -84,31 +82,6 @@ function classifyOne(block: string, generated: readonly string[] = []) {
   }
   return only;
 }
-
-describe("parsePatchBlocks", () => {
-  test("splits a multi-file patch into per-file blocks in order", () => {
-    const blocks = parsePatchBlocks(BINARY + MODE_ONLY + NORMAL);
-    expect(blocks).toHaveLength(3);
-    expect(blocks[0]).toContain("data.bin");
-    expect(blocks[1]).toContain("perm.txt");
-    expect(blocks[2]).toContain("text.txt");
-  });
-
-  test("does not split on a content line that begins with diff --git", () => {
-    const patch = `diff --git a/a.txt b/a.txt
-index 1..2 100644
---- a/a.txt
-+++ b/a.txt
-@@ -0,0 +1 @@
-+diff --git a/x b/x
-`;
-    expect(parsePatchBlocks(patch)).toHaveLength(1);
-  });
-
-  test("empty patch yields no blocks", () => {
-    expect(parsePatchBlocks("")).toHaveLength(0);
-  });
-});
 
 describe("classifyFiles — per-case detection", () => {
   test("binary non-image", () => {
@@ -270,19 +243,5 @@ describe("classifyFiles — keying", () => {
   test("keys each class by the CodeView item id (name#index)", () => {
     const map = classifyFiles(BINARY + NORMAL, []);
     expect([...map.keys()]).toEqual(["data.bin#0", "text.txt#1"]);
-  });
-});
-
-describe("formatBytes", () => {
-  test.each([
-    [0, "0 B"],
-    [512, "512 B"],
-    [1024, "1 KB"],
-    [1536, "1.5 KB"],
-    [1_048_576, "1 MB"],
-    [2_411_724, "2.3 MB"],
-    [1_073_741_824, "1 GB"],
-  ])("formats %i bytes as %s", (bytes, expected) => {
-    expect(formatBytes(bytes)).toBe(expected);
   });
 });

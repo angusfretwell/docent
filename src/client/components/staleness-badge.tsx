@@ -1,4 +1,4 @@
-import type { Staleness } from "@shared/lib/walkthrough";
+import type { Staleness } from "@shared/lib/walkthrough-annotations";
 
 const staleStyle: React.CSSProperties = {
   background: "rgba(210,153,34,0.2)",

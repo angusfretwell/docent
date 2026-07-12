@@ -15,12 +15,12 @@ import type { CodeViewFileItem } from "@pierre/diffs";
 import { CodeView } from "@pierre/diffs/react";
 import { findingLocation, foldFinding } from "@shared/lib/finding";
 import type { FoldedFinding } from "@shared/lib/finding";
+import { identityAnchorDrift } from "@shared/lib/identity-drift";
 import {
-  identityAnchorDrift,
-  interleaveSegments,
   rollupDrift,
   walkthroughStaleness,
-} from "@shared/lib/walkthrough";
+} from "@shared/lib/walkthrough-annotations";
+import { interleaveSegments } from "@shared/lib/walkthrough-segments";
 import type { DriftState } from "@shared/schemas/drift";
 import type {
   ChangeRecord,

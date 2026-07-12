@@ -22,9 +22,9 @@ import type { FoldedFinding } from "@shared/lib/finding";
 import {
   captureById,
   foldSectionAnnotations,
-  interleaveCaptureSegments,
   walkthroughStaleness,
-} from "@shared/lib/walkthrough";
+} from "@shared/lib/walkthrough-annotations";
+import { interleaveCaptureSegments } from "@shared/lib/walkthrough-segments";
 
 import "rrweb/dist/style.css";
 import type {

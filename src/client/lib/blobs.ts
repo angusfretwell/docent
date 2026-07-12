@@ -9,6 +9,7 @@
 
 import type { FileDiffMetadata } from "@pierre/diffs";
 import { parseDiffFromFile } from "@pierre/diffs";
+import { isRealObjectId } from "@shared/lib/drift";
 
 /** The content-addressed blob endpoint for a git object id. */
 export function blobUrl(sha: string): string {
@@ -48,11 +49,6 @@ export async function fetchCaptureEvents(url: string): Promise<unknown[]> {
 /** The content-addressed byte-size endpoint for a git blob (binary size deltas). */
 export function blobSizeUrl(sha: string): string {
   return `/api/blob/${sha}/size`;
-}
-
-/** Whether an object id names real content — a null id (all zeros) has no blob. */
-export function isRealObjectId(id: string | undefined): id is string {
-  return id !== undefined && !/^0+$/.test(id);
 }
 
 /**

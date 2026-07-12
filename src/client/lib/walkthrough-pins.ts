@@ -11,7 +11,7 @@
  */
 
 import type { FoldedFinding } from "@shared/lib/finding";
-import { identityDrift } from "@shared/lib/walkthrough";
+import { identityDrift } from "@shared/lib/identity-drift";
 import type { DriftState } from "@shared/schemas/drift";
 import type { Anchor } from "@shared/schemas/finding";
 import type {

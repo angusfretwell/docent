@@ -1,7 +1,7 @@
 import {
   latestCodeWalkthrough,
   latestProductWalkthrough,
-} from "@shared/lib/walkthrough";
+} from "@shared/lib/identity-drift";
 import type { FindingWrite } from "@shared/schemas/finding-write";
 import type { Pending, PendingRange } from "@shared/schemas/pending";
 import type {

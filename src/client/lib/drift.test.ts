@@ -1,9 +1,10 @@
 import { describe, expect, test } from "bun:test";
 
+import type { DriftPlan } from "@shared/schemas/drift";
 import type { Anchor } from "@shared/schemas/finding";
 
 import type { DiffFile } from "./drift";
-import { anchorContext, indexDiffFiles } from "./drift";
+import { anchorContext, indexDiffFiles, triagePlan } from "./drift";
 
 const HEAD = "bbbb222";
 const BASE = "aaaa111";
@@ -111,5 +112,70 @@ describe("anchorContext", () => {
     expect(anchorContext(lineAnchor({ file: "src/b.ts" }), files).renamed).toBe(
       false
     );
+  });
+});
+
+describe("triagePlan", () => {
+  const NULL = "0".repeat(40);
+
+  test("a settled line/range plan is a base result at its lines", () => {
+    const plan: DriftPlan = { kind: "resolved", state: "live" };
+
+    expect(triagePlan("k", plan, [1, 2])).toEqual({
+      base: { lines: [1, 2], state: "live" },
+    });
+  });
+
+  test("a settled whole-file/change plan (no lines) is a base result with no lines", () => {
+    const plan: DriftPlan = { kind: "resolved", state: "outdated" };
+
+    expect(triagePlan("k", plan)).toEqual({
+      base: { state: "outdated" },
+    });
+  });
+
+  test("a re-anchor whose current side names real content becomes a fetch job", () => {
+    const plan: DriftPlan = {
+      bornSha: "aaaa111",
+      currentSha: "bbbb222",
+      kind: "reanchor",
+      range: [4, 6],
+    };
+
+    expect(triagePlan("k", plan, [4, 6])).toEqual({
+      job: {
+        bornSha: "aaaa111",
+        currentSha: "bbbb222",
+        id: "k",
+        range: [4, 6],
+      },
+    });
+  });
+
+  test("a re-anchor whose current side is gone is outdated now and asks for the born excerpt", () => {
+    const plan: DriftPlan = {
+      bornSha: "aaaa111",
+      currentSha: NULL,
+      kind: "reanchor",
+      range: [4, 6],
+    };
+
+    expect(triagePlan("k", plan, [4, 6])).toEqual({
+      base: { lines: [4, 6], state: "outdated" },
+      excerpt: { bornSha: "aaaa111", id: "k", range: [4, 6] },
+    });
+  });
+
+  test("a re-anchor with neither side addressable settles outdated with no fetch", () => {
+    const plan: DriftPlan = {
+      bornSha: NULL,
+      currentSha: NULL,
+      kind: "reanchor",
+      range: [4, 6],
+    };
+
+    expect(triagePlan("k", plan, [4, 6])).toEqual({
+      base: { lines: [4, 6], state: "outdated" },
+    });
   });
 });

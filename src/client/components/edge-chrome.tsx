@@ -9,10 +9,10 @@
  */
 
 import type { ChangeTypes, FileDiffMetadata } from "@pierre/diffs";
+import { formatBytes, isRealObjectId } from "@shared/lib/drift";
 import { useEffect, useState } from "react";
 
-import { blobUrl, fetchBlobSize, isRealObjectId } from "../lib/blobs";
-import { formatBytes } from "../lib/edge-cases";
+import { blobUrl, fetchBlobSize } from "../lib/blobs";
 import type { FileClass } from "../lib/edge-cases";
 
 // Human-readable change type for the binary row (diff-review.md §5:

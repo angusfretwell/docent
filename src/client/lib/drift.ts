@@ -15,18 +15,23 @@
 import { processPatch } from "@pierre/diffs";
 import {
   excerptLines,
+  isRealObjectId,
   planDrift,
   reanchorRange,
   splitLines,
 } from "@shared/lib/drift";
 import { foldFinding } from "@shared/lib/finding";
-import { identityAnchorDrift } from "@shared/lib/walkthrough";
-import type { AnchorContext, DriftState } from "@shared/schemas/drift";
+import { identityAnchorDrift } from "@shared/lib/identity-drift";
+import type {
+  AnchorContext,
+  DriftPlan,
+  DriftState,
+} from "@shared/schemas/drift";
 import type { Anchor } from "@shared/schemas/finding";
 import type { FindingEntry, WalkthroughEntry } from "@shared/schemas/review";
 import { useEffect, useState } from "react";
 
-import { fetchBlobText, isRealObjectId } from "./blobs";
+import { fetchBlobText } from "./blobs";
 
 /** One changed file's identity as drift reads it: its shas, its rename/delete standing. */
 export interface DiffFile {
@@ -197,6 +202,62 @@ function anchorLines(anchor: Anchor): [number, number] | undefined {
     : undefined;
 }
 
+/**
+ * How one planned anchor folds into the drift buckets: a settled `base` result to
+ * place by id, plus any fetch `job`/`excerpt` its resolution still needs.
+ */
+export interface PlanTriage {
+  base?: DriftResult;
+  excerpt?: ExcerptJob;
+  job?: ReanchorJob;
+}
+
+/**
+ * Triage one content anchor's drift plan into the buckets a drift map fills by id
+ * (data-model.md §6.1) — the shared reducer step behind both the Finding drift
+ * map (`useDrift`) and the walkthrough range drift map (`useRangeDrift`), keyed by
+ * an opaque `id` (a Finding id or a range key):
+ *
+ * - a **settled** plan is a `base` result at `lines` — a line/range anchor's own
+ *   lines, absent for a whole-`file`/`change` anchor;
+ * - a **re-anchor** whose current side still names real content becomes a fetch
+ *   `job`;
+ * - a re-anchor whose current side is gone is `outdated` at once and, if its born
+ *   blob is still addressable, additionally asks for an `excerpt` to detach
+ *   against.
+ */
+export function triagePlan(
+  id: string,
+  plan: DriftPlan,
+  lines: [number, number] | undefined
+): PlanTriage {
+  if (plan.kind === "resolved") {
+    return {
+      base: { state: plan.state, ...(lines === undefined ? {} : { lines }) },
+    };
+  }
+  if (isRealObjectId(plan.currentSha)) {
+    return {
+      job: {
+        bornSha: plan.bornSha,
+        currentSha: plan.currentSha,
+        id,
+        range: plan.range,
+      },
+    };
+  }
+  if (isRealObjectId(plan.bornSha)) {
+    // The current side is gone (a deletion), so the anchor is outdated — read as
+    // outdated at once, then detach against its still-addressable born text once
+    // fetched.
+    return {
+      base: { lines: plan.range, state: "outdated" },
+      excerpt: { bornSha: plan.bornSha, id, range: plan.range },
+    };
+  }
+  return { base: { lines: plan.range, state: "outdated" } };
+}
+
 function planFindings(
   findings: readonly FindingEntry[],
   files: ReadonlyMap<string, DiffFile>,
@@ -227,26 +288,15 @@ function planFindings(
     }
 
     const plan = planDrift(anchor, anchorContext(anchor, files));
-    if (plan.kind === "resolved") {
-      const lines = anchorLines(anchor);
-      base.set(finding.id, {
-        state: plan.state,
-        ...(lines === undefined ? {} : { lines }),
-      });
-    } else if (isRealObjectId(plan.currentSha)) {
-      jobs.push({ ...plan, id: finding.id });
-    } else if (isRealObjectId(plan.bornSha)) {
-      // The current side is gone (a deletion), so the Finding is outdated — read
-      // as outdated at once, then detach against its still-addressable born text
-      // once fetched.
-      base.set(finding.id, { lines: plan.range, state: "outdated" });
-      excerpts.push({
-        bornSha: plan.bornSha,
-        id: finding.id,
-        range: plan.range,
-      });
-    } else {
-      base.set(finding.id, { lines: plan.range, state: "outdated" });
+    const triage = triagePlan(finding.id, plan, anchorLines(anchor));
+    if (triage.base !== undefined) {
+      base.set(finding.id, triage.base);
+    }
+    if (triage.job !== undefined) {
+      jobs.push(triage.job);
+    }
+    if (triage.excerpt !== undefined) {
+      excerpts.push(triage.excerpt);
     }
   }
   return { base, excerpts, jobs };

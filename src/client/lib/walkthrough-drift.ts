@@ -2,81 +2,29 @@
  * Per-range walkthrough drift — the Finding re-anchor reused verbatim, one range
  * at a time (walkthroughs.md §8). A range IS a `line` anchor (`rangeAnchor`), so
  * `planDrift` settles the fast paths and `reanchorRange` resolves the rest — no
- * second drift algorithm. `planRange` is the pure seam (parsed patch in, a
- * settled result or a fetch request out), so the fast-path decisions are
- * unit-tested; `useRangeDrift` is the thin React wiring that resolves the
- * re-anchors lazily and folds them in as they land.
+ * second drift algorithm. The plan is triaged into drift buckets by the shared
+ * `triagePlan` (client/drift.ts), the same reducer step the Finding drift map
+ * uses, keyed by the range key instead of a Finding id; `useRangeDrift` is the
+ * thin React wiring that resolves the re-anchors lazily and folds them in as they
+ * land.
  */
 
 import { planDrift } from "@shared/lib/drift";
-import { rangeAnchor } from "@shared/lib/walkthrough";
+import { rangeAnchor } from "@shared/lib/walkthrough-annotations";
 import type { WalkthroughRange } from "@shared/schemas/walkthrough";
 
-import { isRealObjectId } from "./blobs";
-import { anchorContext, indexDiffFiles, useReanchor } from "./drift";
-import type { DiffFile, DriftResult, ExcerptJob, ReanchorJob } from "./drift";
+import {
+  anchorContext,
+  indexDiffFiles,
+  triagePlan,
+  useReanchor,
+} from "./drift";
+import type { DriftResult, ExcerptJob, ReanchorJob } from "./drift";
 
 /** A range plus the stable key its drift is published under. */
 export interface KeyedRange {
   key: string;
   range: WalkthroughRange;
-}
-
-/**
- * A range's drift plan against the current patch: a state settled synchronously,
- * a blob-to-blob re-anchor to run, or a born-only excerpt (the current side is
- * gone, so it is outdated but its born text is still addressable). Mirrors the
- * Finding drift triage (client/drift.ts), keyed by the range instead of a
- * Finding id.
- */
-export type RangePlan =
-  | { key: string; kind: "resolved"; result: DriftResult }
-  | {
-      bornSha: string;
-      currentSha: string;
-      key: string;
-      kind: "reanchor";
-      range: [number, number];
-    }
-  | { bornSha: string; key: string; kind: "excerpt"; range: [number, number] };
-
-/**
- * Plan one range's drift from the indexed patch. A range unchanged base..head is
- * live at its born lines; a changed file requests a re-anchor against the current
- * side blob; a deleted current side settles outdated and asks only for the born
- * text to detach against (data-model.md §6.1).
- */
-export function planRange(
-  keyed: KeyedRange,
-  files: ReadonlyMap<string, DiffFile>
-): RangePlan {
-  const anchor = rangeAnchor(keyed.range);
-  const plan = planDrift(anchor, anchorContext(anchor, files));
-  const range: [number, number] = [keyed.range.lines[0], keyed.range.lines[1]];
-  if (plan.kind === "resolved") {
-    return {
-      key: keyed.key,
-      kind: "resolved",
-      result: { lines: range, state: plan.state },
-    };
-  }
-  if (isRealObjectId(plan.currentSha)) {
-    return {
-      bornSha: plan.bornSha,
-      currentSha: plan.currentSha,
-      key: keyed.key,
-      kind: "reanchor",
-      range,
-    };
-  }
-  if (isRealObjectId(plan.bornSha)) {
-    return { bornSha: plan.bornSha, key: keyed.key, kind: "excerpt", range };
-  }
-  return {
-    key: keyed.key,
-    kind: "resolved",
-    result: { lines: range, state: "outdated" },
-  };
 }
 
 /**
@@ -91,24 +39,26 @@ export function useRangeDrift(
   patch: string
 ): ReadonlyMap<string, DriftResult> {
   const files = indexDiffFiles(patch);
-  const plans = ranges.map((keyed) => planRange(keyed, files));
 
   const base = new Map<string, DriftResult>();
   const jobs: ReanchorJob[] = [];
   const excerpts: ExcerptJob[] = [];
-  for (const plan of plans) {
-    if (plan.kind === "resolved") {
-      base.set(plan.key, plan.result);
-    } else if (plan.kind === "reanchor") {
-      jobs.push({
-        bornSha: plan.bornSha,
-        currentSha: plan.currentSha,
-        id: plan.key,
-        range: plan.range,
-      });
-    } else {
-      base.set(plan.key, { lines: plan.range, state: "outdated" });
-      excerpts.push({ bornSha: plan.bornSha, id: plan.key, range: plan.range });
+  for (const keyed of ranges) {
+    const anchor = rangeAnchor(keyed.range);
+    const plan = planDrift(anchor, anchorContext(anchor, files));
+    const lines: [number, number] = [
+      keyed.range.lines[0],
+      keyed.range.lines[1],
+    ];
+    const triage = triagePlan(keyed.key, plan, lines);
+    if (triage.base !== undefined) {
+      base.set(keyed.key, triage.base);
+    }
+    if (triage.job !== undefined) {
+      jobs.push(triage.job);
+    }
+    if (triage.excerpt !== undefined) {
+      excerpts.push(triage.excerpt);
     }
   }
 
