@@ -2,13 +2,20 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { App } from "./components/app";
+import { ThemeProvider } from "./components/theme-provider";
 
-const root = document.querySelector("#root");
-if (root === null) {
+const container = document.querySelector("#root");
+
+if (container === null) {
   throw new Error("missing #root element");
 }
-createRoot(root).render(
+
+const root = (import.meta.hot.data.root ??= createRoot(container));
+
+root.render(
   <StrictMode>
-    <App />
+    <ThemeProvider>
+      <App />
+    </ThemeProvider>
   </StrictMode>
 );
