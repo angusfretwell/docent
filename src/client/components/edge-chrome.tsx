@@ -10,9 +10,10 @@
 
 import type { ChangeTypes, FileDiffMetadata } from "@pierre/diffs";
 import { formatBytes, isRealObjectId } from "@shared/lib/drift";
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
-import { blobUrl, fetchBlobSize } from "../lib/blobs";
+import { blobSizeQuery } from "../data/blobs";
+import { blobUrl } from "../lib/blobs";
 import type { FileClass } from "../lib/edge-cases";
 
 // Human-readable change type for the binary row (diff-review.md §5:
@@ -51,26 +52,14 @@ function shortMode(mode: string | undefined): string {
  * numbers, keeping the `Binary` label.
  */
 function BinarySizeRow({ item }: { item: FileDiffMetadata }) {
-  const { prevObjectId, newObjectId } = item;
-  const [sizes, setSizes] = useState<
-    { before: number; after: number } | undefined
-  >();
-
-  useEffect(() => {
-    let cancelled = false;
-    void Promise.all([fetchBlobSize(prevObjectId), fetchBlobSize(newObjectId)])
-      .then(([before, after]) => {
-        if (!cancelled) {
-          setSizes({ after, before });
-        }
-      })
-      .catch(() => {
-        // Best-effort: leave the label without sizes on a failed fetch.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [prevObjectId, newObjectId]);
+  // Best-effort: either side erroring leaves `sizes` undefined, so the label
+  // renders without numbers rather than half a delta.
+  const before = useQuery(blobSizeQuery(item.prevObjectId));
+  const after = useQuery(blobSizeQuery(item.newObjectId));
+  const sizes =
+    before.data !== undefined && after.data !== undefined
+      ? { after: after.data, before: before.data }
+      : undefined;
 
   const delta = sizes ? formatDelta(sizes.after - sizes.before) : "";
   return (

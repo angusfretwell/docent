@@ -1,16 +1,18 @@
 /**
  * A self-contained rrweb replay of a recording capture (walkthroughs.md §6):
- * fetches the event stream from its content-addressed blob and drives an
+ * reads the event stream from its content-addressed blob query (the cache
+ * holds only the fetched event array — never the `Replayer`) and drives an
  * rrweb `Replayer` mounted on the returned `rootRef`, with no network beyond
  * that one fetch. `seek` plays the replay from a given millisecond offset;
  * `ready`/`failed` gate the timeline controls and the load-failure note.
  */
 
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { Replayer } from "rrweb";
 import type { eventWithTime } from "rrweb";
 
-import { fetchCaptureEvents } from "../lib/blobs";
+import { captureEventsQuery } from "../data/blobs";
 
 export interface RrwebReplayer {
   /** Mount point the replayer reconstructs the recorded DOM into. */
@@ -28,40 +30,33 @@ export function useRrwebReplayer(url: string): RrwebReplayer {
   const rootRef = useRef<HTMLDivElement>(null);
   const replayerRef = useRef<Replayer | null>(null);
   const [ready, setReady] = useState(false);
-  const [failed, setFailed] = useState(false);
+
+  const events = useQuery(captureEventsQuery(url));
+  const eventStream = events.data;
 
   useEffect(() => {
-    let cancelled = false;
-    let replayer: Replayer | null = null;
-    fetchCaptureEvents(url)
-      .then((events) => {
-        if (cancelled || rootRef.current === null) {
-          return;
-        }
-        replayer = new Replayer(events as eventWithTime[], {
-          mouseTail: false,
-          root: rootRef.current,
-          skipInactive: false,
-          speed: 1,
-        });
-        replayerRef.current = replayer;
-        setReady(true);
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setFailed(true);
-        }
-      });
+    if (eventStream === undefined || rootRef.current === null) {
+      return;
+    }
+
+    const replayer = new Replayer(eventStream as eventWithTime[], {
+      mouseTail: false,
+      root: rootRef.current,
+      skipInactive: false,
+      speed: 1,
+    });
+    replayerRef.current = replayer;
+    setReady(true);
+
     return () => {
-      cancelled = true;
-      replayer?.destroy();
+      replayer.destroy();
       replayerRef.current = null;
     };
-  }, [url]);
+  }, [eventStream]);
 
   function seek(ms: number) {
     replayerRef.current?.play(ms);
   }
 
-  return { failed, ready, rootRef, seek };
+  return { failed: events.isError, ready, rootRef, seek };
 }

@@ -12,12 +12,13 @@ import type { FindingWrite } from "@shared/schemas/finding-write";
 import type { FindingEntry, ViewedEvent } from "@shared/schemas/review";
 import { useRef, useState } from "react";
 
+import { fetchExpandedFileDiff } from "../data/blobs";
+import { useViewedState } from "../data/viewed";
 import { useContextExpansion } from "../hooks/use-context-expansion";
 import { useDiffFindings } from "../hooks/use-diff-findings";
 import { useDiffNav } from "../hooks/use-diff-nav";
 import { usePersisted } from "../hooks/use-persisted";
-import { useViewedState } from "../hooks/use-viewed-state";
-import { fetchExpandedFileDiff, isExpandable } from "../lib/blobs";
+import { isExpandable } from "../lib/blobs";
 import { themes } from "../lib/code-view";
 import type { Annotation } from "../lib/diff-annotations";
 import type { DriftResult } from "../lib/drift";

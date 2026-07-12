@@ -12,13 +12,11 @@ import type {
 } from "@shared/schemas/review";
 import { useRef, useState } from "react";
 
+import { fetchPendingExpandedFileDiff } from "../data/blobs";
+import type { LoadState } from "../data/review";
+import { useReviewData, useReviewStream } from "../data/review";
 import { useDiffDeepLink } from "../hooks/use-diff-deep-link";
-import type { LoadState } from "../hooks/use-review-data";
-import { useReviewData } from "../hooks/use-review-data";
-import {
-  fetchPendingExpandedFileDiff,
-  isPendingExpandable,
-} from "../lib/blobs";
+import { isPendingExpandable } from "../lib/blobs";
 import type { DriftResult } from "../lib/drift";
 import { useDrift } from "../lib/drift";
 import { writeFinding } from "../lib/findings-client";
@@ -427,9 +425,11 @@ export function App() {
   const [fileOrder, setFileOrder] = useState<readonly string[] | undefined>();
   const diffRef = useRef<DiffViewHandle>(null);
 
-  // One live loop for the whole tab: fetches the Change, the Pending preview
-  // (at the current range), and the review, then keeps them fresh off the
-  // `.docent/` watch's SSE stream (architecture.md §2).
+  // One live loop for the whole tab: the SSE bridge (one connection for the
+  // app's lifetime) invalidates the Change, Pending, and review queries on
+  // every `review-changed` event (architecture.md §2), and `useReviewData`
+  // reads them at the current range.
+  useReviewStream();
   const { change, pending, review } = useReviewData(range);
 
   // Drift is judged against the committed Change (Pending carries no Findings),

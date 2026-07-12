@@ -2,19 +2,29 @@
  * The Diff tab's mark-as-viewed overlay (diff-review.md §3): an optimistic
  * per-file override so the checkbox and body-collapse respond instantly, ahead
  * of the watch → SSE → re-fetch round trip that folds a toggle into the
- * Review's viewed events. Factored out of `diff-view.tsx` so the overlay/
- * rollback lifecycle is legible on its own; the underlying fold
+ * Review's viewed events. The overlay is deliberately local state rather than
+ * a patch of the `["review"]` cache: the server's fold (`computeViewed` over
+ * append-only events) is the source of truth, and the SSE-driven snapshot
+ * re-fetch delivers it unmodified. The underlying fold
  * (`computeViewed`/`viewedStateFor`) stays in `lib/viewed.ts`.
  */
 
+import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 
 import type { FileEntry } from "../lib/nav";
 import type { ViewedModel } from "../lib/viewed";
 import { viewedStateFor } from "../lib/viewed";
 
-/** Post a mark-as-viewed toggle, throwing on a non-2xx so the caller can roll back. */
-async function postViewed(entry: FileEntry): Promise<void> {
+interface ViewedToggle {
+  entry: FileEntry;
+  id: string;
+  viewed: boolean;
+}
+
+/** Post a mark-as-viewed toggle, throwing on a non-2xx so `onError` rolls back. */
+async function postViewed(toggle: ViewedToggle): Promise<void> {
+  const { entry } = toggle;
   const res = await fetch("/api/viewed", {
     body: JSON.stringify({ blobSha: entry.blobSha, path: entry.path }),
     headers: { "content-type": "application/json" },
@@ -39,14 +49,34 @@ export function useViewedState(
   model: ViewedModel
 ): ViewedState {
   // Optimistic viewed overrides, keyed by file id and stamped with the head
-  // blob the toggle asserted against, so the checkbox and collapse respond
-  // instantly ahead of the watch → SSE → re-fetch round trip. Blob-stamping
-  // makes the override self-invalidating: once a new Change gives the file a
-  // different head blob, the stamp no longer matches and the fold's cleared /
-  // changed-since-viewed state shows through — no reconcile pass needed.
+  // blob the toggle asserted against. Blob-stamping makes the override
+  // self-invalidating: once a new Change gives the file a different head blob,
+  // the stamp no longer matches and the fold's cleared / changed-since-viewed
+  // state shows through — no reconcile pass needed.
   const [overlay, setOverlay] = useState<
     ReadonlyMap<string, { viewed: boolean; blobSha: string }>
   >(new Map());
+
+  const toggle = useMutation({
+    mutationFn: postViewed,
+    onError: (_error, variables) => {
+      // The write failed, so nothing persisted: drop the override and let the
+      // checkbox fall back to the fold rather than lie about a saved toggle.
+      setOverlay((prev) => {
+        const rolledBack = new Map(prev);
+        rolledBack.delete(variables.id);
+        return rolledBack;
+      });
+    },
+    onMutate: (variables) => {
+      setOverlay((prev) =>
+        new Map(prev).set(variables.id, {
+          blobSha: variables.entry.blobSha,
+          viewed: variables.viewed,
+        })
+      );
+    },
+  });
 
   function isViewed(id: string): boolean {
     const override = overlay.get(id);
@@ -64,20 +94,7 @@ export function useViewedState(
     if (entry === undefined) {
       return;
     }
-
-    const next = !isViewed(id);
-    setOverlay((prev) =>
-      new Map(prev).set(id, { blobSha: entry.blobSha, viewed: next })
-    );
-    void postViewed(entry).catch(() => {
-      // The write failed, so nothing persisted: drop the override and let the
-      // checkbox fall back to the fold rather than lie about a saved toggle.
-      setOverlay((prev) => {
-        const rolledBack = new Map(prev);
-        rolledBack.delete(id);
-        return rolledBack;
-      });
-    });
+    toggle.mutate({ entry, id, viewed: !isViewed(id) });
   }
 
   return { isViewed, toggleViewed };
