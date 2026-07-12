@@ -232,7 +232,7 @@ describe("changeHistory", () => {
       body: "",
       changeId: "chg_001",
       createdAt: "2026-07-10T02:14:00Z",
-      schema: "docent/finding@3",
+      schema: "docent/finding",
       ...fields,
     } as FindingRecord;
   }

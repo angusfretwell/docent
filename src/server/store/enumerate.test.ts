@@ -87,7 +87,7 @@ describe("listWalkthroughIds", () => {
 
 const VALID_FINDING = [
   "---",
-  "schema: docent/finding@3",
+  "schema: docent/finding",
   'author: { kind: human, id: a@b.com, display: "A" }',
   "changeId: chg_001",
   "createdAt: 2026-07-10T02:14:00Z",
@@ -140,7 +140,7 @@ describe("Finding record: decodeFindingRecord (strict) vs. readFindingRecord (be
 
 const VALID_SECTION = [
   "---",
-  "schema: docent/walkthrough-section@2",
+  "schema: docent/walkthrough-section",
   "id: sec_entry",
   'title: "Entry"',
   "ranges: []",

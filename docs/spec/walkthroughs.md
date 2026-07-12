@@ -1,6 +1,6 @@
 # Walkthroughs — the Code and Product pillars
 
-A **Walkthrough** is a curated, ordered tour of a Change authored for a reader — prose woven through selected diff ranges (code) or captures (product). This document owns the walkthrough schemas — it is the appendix of record for `docent/walkthrough@2` and `docent/walkthrough-section@2` — plus captures, annotations, walkthrough drift and staleness, and the capture pipeline. The core entities (Review, Change, Finding), the anchor union, and the drift algorithm are owned by [data-model.md](data-model.md); the skills that generate walkthroughs are owned by [agent-integration.md](agent-integration.md).
+A **Walkthrough** is a curated, ordered tour of a Change authored for a reader — prose woven through selected diff ranges (code) or captures (product). This document owns the walkthrough schemas — it is the appendix of record for `docent/walkthrough` and `docent/walkthrough-section` — plus captures, annotations, walkthrough drift and staleness, and the capture pipeline. The core entities (Review, Change, Finding), the anchor union, and the drift algorithm are owned by [data-model.md](data-model.md); the skills that generate walkthroughs are owned by [agent-integration.md](agent-integration.md).
 
 ## 1. Frame — two self-contained tabs
 
@@ -12,7 +12,7 @@ The tool has three tabbed view modes: **Diff**, **Code walkthrough**, **Product 
 
 ## 2. The unified model
 
-There is **one** walkthrough schema, not two: `docent/walkthrough@2` with a `kind: code | product` discriminant, and one section schema `docent/walkthrough-section@2` whose targets swap by kind ([#14](https://github.com/angusfretwell/docent/issues/14), [#15](https://github.com/angusfretwell/docent/issues/15) — #15 opened scoping product as its own entity, then aligned to #14's unified model when it landed mid-ticket). The product walkthrough is the `kind: product` arm of the shared envelope; only the envelope and schema names are shared — everything product-specific (captures, capture anchors, capture drift, the split generation skills) slots inside it ([#15](https://github.com/angusfretwell/docent/issues/15)).
+There is **one** walkthrough schema, not two: `docent/walkthrough` with a `kind: code | product` discriminant, and one section schema `docent/walkthrough-section` whose targets swap by kind ([#14](https://github.com/angusfretwell/docent/issues/14), [#15](https://github.com/angusfretwell/docent/issues/15) — #15 opened scoping product as its own entity, then aligned to #14's unified model when it landed mid-ticket). The product walkthrough is the `kind: product` arm of the shared envelope; only the envelope and schema names are shared — everything product-specific (captures, capture anchors, capture drift, the split generation skills) slots inside it ([#15](https://github.com/angusfretwell/docent/issues/15)).
 
 Invariants, both kinds ([#14](https://github.com/angusfretwell/docent/issues/14), [#15](https://github.com/angusfretwell/docent/issues/15)):
 
@@ -47,15 +47,15 @@ Walkthroughs live under the Review, per the canonical `.docent/` layout ([data-m
 
 Captures live **inside** the `wlk_<ulid>/` dir — born with that immutable walkthrough; regeneration mints a new dir with fresh captures ([#15](https://github.com/angusfretwell/docent/issues/15)).
 
-## 4. Manifest — `docent/walkthrough@2`
+## 4. Manifest — `docent/walkthrough`
 
-One schema, `kind`-discriminated (upgrades the provisional `@1` draft; [#14](https://github.com/angusfretwell/docent/issues/14), [#15](https://github.com/angusfretwell/docent/issues/15)).
+One schema, `kind`-discriminated (upgrades the provisional draft; [#14](https://github.com/angusfretwell/docent/issues/14), [#15](https://github.com/angusfretwell/docent/issues/15)).
 
 **`kind: code`:**
 
 ```jsonc
 {
-  "schema": "docent/walkthrough@2",
+  "schema": "docent/walkthrough",
   "id": "wlk_…",
   "kind": "code",
   "title": "…",
@@ -68,7 +68,7 @@ One schema, `kind`-discriminated (upgrades the provisional `@1` draft; [#14](htt
 
 ```jsonc
 {
-  "schema": "docent/walkthrough@2",
+  "schema": "docent/walkthrough",
   "id": "wlk_…",
   "kind": "product",
   "title": "…",
@@ -95,7 +95,7 @@ One schema, `kind`-discriminated (upgrades the provisional `@1` draft; [#14](htt
 }
 ```
 
-## 5. Section — `docent/walkthrough-section@2`
+## 5. Section — `docent/walkthrough-section`
 
 A section is one step of the tour: a titled unit of prose interleaved with its targets. It carries **`id`, `title`, its targets, and a markdown body — nothing else** ([#14](https://github.com/angusfretwell/docent/issues/14)). The two kinds mirror each other with the targets swapped ([#15](https://github.com/angusfretwell/docent/issues/15)).
 
@@ -103,7 +103,7 @@ A section is one step of the tour: a titled unit of prose interleaved with its t
 
 ```yaml
 ---
-schema: docent/walkthrough-section@2
+schema: docent/walkthrough-section
 id: sec_<ulid>
 title: "Entry point & dispatch"
 ranges:
@@ -120,7 +120,7 @@ The request enters here {{range:0}} and is handed to the parser {{range:1}}.
 
 ```yaml
 ---
-schema: docent/walkthrough-section@2
+schema: docent/walkthrough-section
 id: sec_…
 title: "Uploading a file"
 captures: [cap_a, cap_b]

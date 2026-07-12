@@ -19,7 +19,7 @@ The finding subcommands are the CLI half of the review loop's **two I/O primitiv
 
 ## Non-gating — the CLI is convenience, never a lock
 
-The files under `.docent/` stay **plain and directly writable**. The CLI is the _canonical, convenient_ path — it is the single home for ULID minting, anchor construction (resolving a code arm's content-addressed `blobSha` from git), append semantics, and what's-next / Disposition derivation — but it never gates. An agent could hand-author the identical `docent/finding@3` record file, and a running `docent serve` fs-watches every write, CLI-made or direct, and re-renders over SSE (agent-integration.md §1, §3.3). Both the UI's write path and the CLI share **one** `writeFindingRecord` implementation — no divergence.
+The files under `.docent/` stay **plain and directly writable**. The CLI is the _canonical, convenient_ path — it is the single home for ULID minting, anchor construction (resolving a code arm's content-addressed `blobSha` from git), append semantics, and what's-next / Disposition derivation — but it never gates. An agent could hand-author the identical `docent/finding` record file, and a running `docent serve` fs-watches every write, CLI-made or direct, and re-renders over SSE (agent-integration.md §1, §3.3). Both the UI's write path and the CLI share **one** `writeFindingRecord` implementation — no divergence.
 
 Prefer the CLI: it validates the record against the same schema the server uses and resolves anchors for you. Hand-authoring is the fallback when the CLI isn't available.
 

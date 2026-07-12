@@ -96,7 +96,7 @@ export const mintChange = Effect.fn("mintChange")(function* mintChange(params: {
     headRef: params.refs.headRef,
     headSha: params.refs.headSha,
     id,
-    schema: "docent/change@3",
+    schema: "docent/change",
   });
   yield* fs.makeDirectory(dir, { recursive: true });
   yield* fs.writeFileString(
@@ -129,7 +129,7 @@ function frontmatter(fields: {
       : { model: fields.author.model }),
   };
   const ordered: [string, unknown][] = [
-    ["schema", "docent/finding@3"],
+    ["schema", "docent/finding"],
     ["author", author],
     ["changeId", fields.changeId],
     ["createdAt", fields.createdAt],

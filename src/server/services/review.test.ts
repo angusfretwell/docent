@@ -26,7 +26,7 @@ describe("readReviewSnapshot", () => {
 
     const snap = await snapshot(root, "feature", "trunk");
 
-    expect(snap.review.schema).toBe("docent/review@4");
+    expect(snap.review.schema).toBe("docent/review");
     expect(snap.review.branch).toBe("feature");
     expect(snap.review.base).toBe("trunk");
     expect(snap.review.id).not.toBe("");
@@ -84,7 +84,7 @@ describe("readReviewSnapshot", () => {
         headRef: "feature",
         headSha: "bbb",
         id: "chg_001",
-        schema: "docent/change@3",
+        schema: "docent/change",
       })
     );
 
@@ -114,7 +114,7 @@ describe("readReviewSnapshot", () => {
         headRef: "feature",
         headSha: "bbb",
         id: "chg_002",
-        schema: "docent/change@3",
+        schema: "docent/change",
       })
     );
 
@@ -139,7 +139,7 @@ describe("readReviewSnapshot", () => {
       path.join(fndDir, "001-open.md"),
       [
         "---",
-        "schema: docent/finding@3",
+        "schema: docent/finding",
         'author: { kind: agent, id: claude-code, display: "Claude Code" }',
         "changeId: chg_001",
         "createdAt: 2026-07-10T02:14:00Z",
@@ -154,7 +154,7 @@ describe("readReviewSnapshot", () => {
       path.join(fndDir, "002-reply.md"),
       [
         "---",
-        "schema: docent/finding@3",
+        "schema: docent/finding",
         'author: { kind: human, id: angusfretwell@me.com, display: "Angus" }',
         "changeId: chg_002",
         "createdAt: 2026-07-10T03:02:11Z",
@@ -199,7 +199,7 @@ describe("readReviewSnapshot", () => {
     writeFileSync(
       path.join(fndDir, "001-open.md"),
       `---
-schema: docent/finding@3
+schema: docent/finding
 anchor: { kind: line, file: src/parser/stream.ts, side: head, blobSha: 9c2a1f0, lines: [42, 47] }
 ---
 
@@ -232,7 +232,7 @@ body
       path.join(fndDir, "002-reply.md"),
       [
         "---",
-        "schema: docent/finding@3",
+        "schema: docent/finding",
         'author: { kind: human, id: angusfretwell@me.com, display: "Angus" }',
         "changeId: chg_001",
         "createdAt: 2026-07-10T03:02:11Z",
@@ -268,14 +268,14 @@ body
       path.join(fndDir, "001-open.md"),
       [
         "---",
-        "schema: docent/finding@2",
+        "schema: docent/comment",
         'author: { kind: human, id: angusfretwell@me.com, display: "Angus" }',
         "changeId: chg_001",
         "createdAt: 2026-07-10T02:14:00Z",
         "anchor: { kind: change }",
         "---",
         "",
-        "wrong envelope version",
+        "wrong schema tag",
         "",
       ].join("\n")
     );
@@ -283,7 +283,7 @@ body
       path.join(fndDir, "002-reply.md"),
       [
         "---",
-        "schema: docent/finding@3",
+        "schema: docent/finding",
         'author: { kind: human, id: angusfretwell@me.com, display: "Angus" }',
         "changeId: chg_001",
         "createdAt: 2026-07-10T03:02:11Z",
@@ -331,7 +331,7 @@ function writeWalkthrough(
 function sectionFile(id: string, title: string, ranges: string, body: string) {
   return [
     "---",
-    "schema: docent/walkthrough-section@2",
+    "schema: docent/walkthrough-section",
     `id: ${id}`,
     `title: "${title}"`,
     ranges,
@@ -354,7 +354,7 @@ describe("readReviewSnapshot walkthroughs", () => {
         bornChangeId: "chg_002",
         id: "wlk_01ABC",
         kind: "code",
-        schema: "docent/walkthrough@2",
+        schema: "docent/walkthrough",
         sections: ["s02-dispatch.md", "s01-entry.md"],
         title: "Entry tour",
       }),
@@ -408,7 +408,7 @@ describe("readReviewSnapshot walkthroughs", () => {
         bornChangeId: "chg_001",
         id: "wlk_01DEF",
         kind: "code",
-        schema: "docent/walkthrough@2",
+        schema: "docent/walkthrough",
         sections: ["s01-broken.md", "s02-ok.md"],
         title: "Partial",
       }),
@@ -455,14 +455,14 @@ describe("readReviewSnapshot walkthroughs", () => {
         ],
         id: "wlk_01PROD",
         kind: "product",
-        schema: "docent/walkthrough@2",
+        schema: "docent/walkthrough",
         sections: ["s01-upload.md"],
         title: "Signup tour",
       }),
       {
         "s01-upload.md": [
           "---",
-          "schema: docent/walkthrough-section@2",
+          "schema: docent/walkthrough-section",
           "id: sec_upload",
           'title: "Uploading a file"',
           "captures: [cap_a, cap_b]",
@@ -555,7 +555,7 @@ describe("parseAnchor", () => {
 
   test("no frontmatter or no anchor yields empty", () => {
     expect(parseAnchor("just a body")).toEqual({});
-    expect(parseAnchor("---\nschema: docent/finding@3\n---\nbody")).toEqual({});
+    expect(parseAnchor("---\nschema: docent/finding\n---\nbody")).toEqual({});
   });
 
   test("does not leak a file key from beyond the anchor object", () => {

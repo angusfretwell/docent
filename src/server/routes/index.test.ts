@@ -357,7 +357,7 @@ describe("serve routes", () => {
 
     expect(res.status).toBe(200);
     const snap = decodeSnapshot(await res.json());
-    expect(snap.review.schema).toBe("docent/review@4");
+    expect(snap.review.schema).toBe("docent/review");
     expect(snap.review.branch).toBe("feature");
     expect(snap.review.base).toBe("main");
     expect(

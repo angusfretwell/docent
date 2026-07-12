@@ -7,7 +7,7 @@
  *   Review, folds each Finding, and filters the queue on open/resolved +
  *   what's-next (+ anchor / author scope), emitting machine-readable JSON.
  * - **write-findings** → `docent finding add / reply / resolve / reopen / edit`:
- *   appends the same validated `docent/finding@3` records as `POST
+ *   appends the same validated `docent/finding` records as `POST
  *   /api/findings`, through the *same* `writeFindingRecord` implementation — no
  *   divergence. Anchor construction (resolving a code arm's content-addressed
  *   `blobSha` from git) lives here so the CLI is the single home for it.

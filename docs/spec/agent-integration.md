@@ -21,7 +21,7 @@ The round-trip collapses to a **single actor-agnostic findings queue** over `.do
 
 ### 2.1 Roles, not actors
 
-- The Review holds a queue of **Findings**; the Finding is the unit — an anchored, append-only review conversation ([#18](https://github.com/angusfretwell/docent/issues/18), [#24](https://github.com/angusfretwell/docent/issues/24); records at `findings/fnd_*/NNN-*.md`, schema `docent/finding@3`, owned by [data-model.md](data-model.md)).
+- The Review holds a queue of **Findings**; the Finding is the unit — an anchored, append-only review conversation ([#18](https://github.com/angusfretwell/docent/issues/18), [#24](https://github.com/angusfretwell/docent/issues/24); records at `findings/fnd_*/NNN-*.md`, schema `docent/finding`, owned by [data-model.md](data-model.md)).
 - **Review, fix, and resolve are roles, not actors.** A human (via the docent UI) or an agent (via a skill) can occupy any role. An agent may resolve another agent's Finding ([#18](https://github.com/angusfretwell/docent/issues/18)).
 - **Attribution is metadata only** — it records _who did it_, never gates _who may_ ([#18](https://github.com/angusfretwell/docent/issues/18)).
 

@@ -75,7 +75,7 @@ function section_(over: Partial<WalkthroughSection> = {}): WalkthroughSection {
   return {
     body: "",
     id: "sec_1",
-    schema: "docent/walkthrough-section@2",
+    schema: "docent/walkthrough-section",
     title: "Section",
     ...over,
   } as WalkthroughSection;

@@ -30,7 +30,7 @@ function manifest(overrides: Partial<typeof Walkthrough.Type> = {}) {
     bornChangeId: "chg_001",
     id: "wlk_test",
     kind: "product",
-    schema: "docent/walkthrough@2",
+    schema: "docent/walkthrough",
     sections: [],
     title: "A tour",
     ...overrides,

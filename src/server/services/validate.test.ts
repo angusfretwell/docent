@@ -25,7 +25,7 @@ const VALID_REVIEW = JSON.stringify({
   base: "main",
   branch: "feature",
   id: "rev_x",
-  schema: "docent/review@4",
+  schema: "docent/review",
 });
 const VALID_CHANGE = JSON.stringify({
   baseRef: "main",
@@ -34,11 +34,11 @@ const VALID_CHANGE = JSON.stringify({
   headRef: "feature",
   headSha: "bbb",
   id: "chg_001",
-  schema: "docent/change@3",
+  schema: "docent/change",
 });
 const VALID_FINDING = [
   "---",
-  "schema: docent/finding@3",
+  "schema: docent/finding",
   'author: { kind: human, id: a@b.com, display: "A" }',
   "changeId: chg_001",
   "createdAt: 2026-07-10T02:14:00Z",
@@ -91,13 +91,13 @@ describe("validateStateRoot", () => {
     ]);
   });
 
-  test("reports a record whose schema version is wrong", async () => {
+  test("reports a record whose schema tag is wrong", async () => {
     const root = scratchDir("docent-validate-");
     const dir = reviewDir(root);
     writeUnder(
       dir,
       ["findings", "fnd_01", "001-open.md"],
-      VALID_FINDING.replace("docent/finding@3", "docent/finding@2")
+      VALID_FINDING.replace("docent/finding", "docent/comment")
     );
 
     const report = await run(validateStateRoot(path.join(root, ".docent")));
@@ -118,7 +118,7 @@ describe("validateStateRoot", () => {
         bornChangeId: "chg_001",
         id: "wlk_01",
         kind: "code",
-        schema: "docent/walkthrough@2",
+        schema: "docent/walkthrough",
         sections: ["s01.md"],
         title: "T",
       })

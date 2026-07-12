@@ -15,7 +15,7 @@ import { Schema } from "effect";
 import { FindingRecord } from "./finding";
 import { Walkthrough, WalkthroughSection } from "./walkthrough";
 
-/** `docent/review@4` — the `review.json` identity record (data-model.md §3). */
+/** `docent/review` — the `review.json` identity record (data-model.md §3). */
 export class Review extends Schema.Class<Review>("Review")({
   /** Base ref recorded at creation (default: repo default branch). */
   base: Schema.String,
@@ -23,10 +23,10 @@ export class Review extends Schema.Class<Review>("Review")({
   branch: Schema.String,
   /** Stable opaque id (ULID-based). */
   id: Schema.String,
-  schema: Schema.Literal("docent/review@4"),
+  schema: Schema.Literal("docent/review"),
 }) {}
 
-/** `docent/change@3` — one immutable minted-Change record (data-model.md §4). */
+/** `docent/change` — one immutable minted-Change record (data-model.md §4). */
 export class ChangeRecord extends Schema.Class<ChangeRecord>("ChangeRecord")({
   baseRef: Schema.String,
   baseSha: Schema.String,
@@ -35,7 +35,7 @@ export class ChangeRecord extends Schema.Class<ChangeRecord>("ChangeRecord")({
   headSha: Schema.String,
   /** Sequential per-Review id: `chg_001`, `chg_002`, … */
   id: Schema.String,
-  schema: Schema.Literal("docent/change@3"),
+  schema: Schema.Literal("docent/change"),
 }) {}
 
 /** An append-only mark-as-viewed event (`viewed/*.json`, data-model.md §8). */

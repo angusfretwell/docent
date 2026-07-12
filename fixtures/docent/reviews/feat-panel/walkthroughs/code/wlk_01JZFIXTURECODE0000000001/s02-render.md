@@ -1,5 +1,5 @@
 ---
-schema: docent/walkthrough-section@2
+schema: docent/walkthrough-section
 id: sec_01JZFIXTURECODE00000000S02
 title: "Rendering the swatches"
 ranges: [{ file: app.js, side: head, blobSha: {{blob change1 app.js}}, lines: [16, 24] }]

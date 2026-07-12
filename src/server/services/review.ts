@@ -79,7 +79,7 @@ export const ensureReview = Effect.fn("ensureReview")(
       base: params.base,
       branch: params.branch,
       id,
-      schema: "docent/review@4",
+      schema: "docent/review",
     });
     yield* fs.makeDirectory(params.reviewDir, { recursive: true });
     yield* fs.writeFileString(file, `${JSON.stringify(review, null, 2)}\n`);

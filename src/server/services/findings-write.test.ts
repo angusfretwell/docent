@@ -65,13 +65,13 @@ describe("mintChange", () => {
     return runtime.runPromise(mintChange({ refs, reviewDir: reviewDir(root) }));
   }
 
-  test("mints chg_001 in docent/change@3 shape with base at the merge-base", async () => {
+  test("mints chg_001 in docent/change shape with base at the merge-base", async () => {
     const root = scratchDir("docent-write-");
 
     const change = await mint(root);
 
     expect(change.id).toBe("chg_001");
-    expect(change.schema).toBe("docent/change@3");
+    expect(change.schema).toBe("docent/change");
     expect(change.baseSha).toBe("aaaa");
     expect(change.headSha).toBe("bbbb");
     const file = path.join(reviewDir(root), "changes", "chg_001.json");

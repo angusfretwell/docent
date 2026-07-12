@@ -27,11 +27,11 @@ Every on-disk schema, stated once in its owning document:
 
 | Schema | Shape | Owned by |
 | --- | --- | --- |
-| `docent/review@4` | `review.json` — per-branch file of record | [data-model.md](data-model.md) |
-| `docent/change@3` | `changes/chg_NNN.json` — immutable diff snapshot | [data-model.md](data-model.md) |
-| `docent/finding@3` | `findings/fnd_*/NNN-*.md` — Finding records (anchors, dispositions, drift inputs) | [data-model.md](data-model.md) |
-| `docent/walkthrough@2` | `walkthroughs/{code,product}/wlk_*/manifest.json` — unified, `kind: code \| product` | [walkthroughs.md](walkthroughs.md) |
-| `docent/walkthrough-section@2` | section files — prose interleaved with ranges (code) or captures (product) | [walkthroughs.md](walkthroughs.md) |
+| `docent/review` | `review.json` — per-branch file of record | [data-model.md](data-model.md) |
+| `docent/change` | `changes/chg_NNN.json` — immutable diff snapshot | [data-model.md](data-model.md) |
+| `docent/finding` | `findings/fnd_*/NNN-*.md` — Finding records (anchors, dispositions, drift inputs) | [data-model.md](data-model.md) |
+| `docent/walkthrough` | `walkthroughs/{code,product}/wlk_*/manifest.json` — unified, `kind: code \| product` | [walkthroughs.md](walkthroughs.md) |
+| `docent/walkthrough-section` | section files — prose interleaved with ranges (code) or captures (product) | [walkthroughs.md](walkthroughs.md) |
 
 ## Out of scope for v1
 

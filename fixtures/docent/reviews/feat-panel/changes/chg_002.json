@@ -1,5 +1,5 @@
 {
-  "schema": "docent/change@3",
+  "schema": "docent/change",
   "id": "chg_002",
   "baseSha": "{{sha base}}",
   "headSha": "{{sha change2}}",

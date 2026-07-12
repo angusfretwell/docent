@@ -1,5 +1,5 @@
 /**
- * The Product walkthrough tab: a hand-authored `docent/walkthrough@2`
+ * The Product walkthrough tab: a hand-authored `docent/walkthrough`
  * (kind: product) rendered as an ordered tour — prose interleaved with captures
  * (walkthroughs.md §1, §5). Screenshot captures render as dims-aware embeds;
  * recording captures replay through rrweb, self-contained with no network

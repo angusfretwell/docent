@@ -1,5 +1,5 @@
 ---
-schema: docent/walkthrough-section@2
+schema: docent/walkthrough-section
 id: sec_01JZFIXTUREPROD00000000S01
 title: The palette on load
 captures: [cap_01JZFIXTUREPROD00000000C1]

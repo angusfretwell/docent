@@ -1,5 +1,5 @@
 ---
-schema: docent/walkthrough-section@2
+schema: docent/walkthrough-section
 id: sec_01JZFIXTURECODE00000000S01
 title: "Mixing a random color"
 ranges: [{ file: app.js, side: head, blobSha: {{blob change1 app.js}}, lines: [9, 14] }]

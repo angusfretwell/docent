@@ -1,5 +1,5 @@
 /**
- * The Finding record schema (`docent/finding@3`) and the anchor / disposition
+ * The Finding record schema (`docent/finding`) and the anchor / disposition
  * vocabulary it carries (data-model.md §5 & §7). Runtime-neutral: no Bun or DOM
  * globals, so the server (which parses record files off disk) and the client
  * (which folds and renders) share one definition.
@@ -125,7 +125,7 @@ export class FindingRecord extends Schema.Class<FindingRecord>("FindingRecord")(
     /** The record's filename, e.g. `002-reply.md` — orders the log and is the edit target. */
     name: Schema.String,
     /** The envelope discriminant; a record without it fails to decode and is skipped. */
-    schema: Schema.Literal("docent/finding@3"),
+    schema: Schema.Literal("docent/finding"),
     type: RecordType,
   }
 ) {}

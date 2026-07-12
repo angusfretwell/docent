@@ -162,7 +162,7 @@ describe("schema — code and product arms", () => {
       bornChangeId: "chg_002",
       id: "wlk_01A",
       kind: "code",
-      schema: "docent/walkthrough@2",
+      schema: "docent/walkthrough",
       sections: ["s01-entry.md", "s02-dispatch.md"],
       title: "Entry & dispatch",
     });
@@ -193,7 +193,7 @@ describe("schema — code and product arms", () => {
       ],
       id: "wlk_01B",
       kind: "product",
-      schema: "docent/walkthrough@2",
+      schema: "docent/walkthrough",
       sections: ["s01-upload.md"],
       title: "Uploading",
     });
@@ -216,7 +216,7 @@ describe("schema — code and product arms", () => {
           side: "head",
         },
       ],
-      schema: "docent/walkthrough-section@2",
+      schema: "docent/walkthrough-section",
       title: "Entry point",
     });
     expect(section.ranges?.at(0)?.file).toBe("src/index.ts");
@@ -237,7 +237,7 @@ describe("schema — code and product arms", () => {
       body: "Drag a file {{capture:0}}.",
       captures: ["cap_a", "cap_b"],
       id: "sec_2",
-      schema: "docent/walkthrough-section@2",
+      schema: "docent/walkthrough-section",
       title: "Uploading a file",
     });
     expect(section.captures).toEqual(["cap_a", "cap_b"]);
@@ -566,7 +566,7 @@ describe("Walkthrough product manifest", () => {
     ],
     id: "wlk_01A",
     kind: "product",
-    schema: "docent/walkthrough@2",
+    schema: "docent/walkthrough",
     sections: ["s01-upload.md"],
     title: "Signup",
   };
@@ -612,7 +612,7 @@ describe("WalkthroughSection product frontmatter", () => {
       body: "Drag a file {{capture:0}}.",
       captures: ["cap_a", "cap_b"],
       id: "sec_1",
-      schema: "docent/walkthrough-section@2",
+      schema: "docent/walkthrough-section",
       title: "Uploading a file",
     });
     expect(section.captures).toEqual(["cap_a", "cap_b"]);
@@ -632,7 +632,7 @@ describe("WalkthroughSection product frontmatter", () => {
       body: "Overview.",
       captures: ["cap_a"],
       id: "sec_2",
-      schema: "docent/walkthrough-section@2",
+      schema: "docent/walkthrough-section",
       title: "Overview",
     });
     const anchor = section.annotations?.[0]?.anchor;
@@ -652,7 +652,7 @@ describe("foldSectionAnnotations", () => {
         annotations,
         body: "Body.",
         id: "sec_x",
-        schema: "docent/walkthrough-section@2",
+        schema: "docent/walkthrough-section",
         title: "Section",
       }).annotations ?? []
     );

@@ -1,8 +1,8 @@
 /**
  * The `docent walkthrough` and `docent capture` subcommands — the CLI face of
  * the walkthrough write path (agent-integration.md §3.3, walkthroughs.md §4–6).
- * They mint validated `docent/walkthrough@2` manifests, `docent/walkthrough-
- * section@2` sections, and content-addressed captures through the shared
+ * They mint validated `docent/walkthrough` manifests, `docent/walkthrough-
+ * section` sections, and content-addressed captures through the shared
  * `walkthrough-write.ts` implementation, reusing the finding CLI's argv parsing,
  * git-ref resolution (`writeContext`), and JSON result printing — one CLI
  * substrate, no divergence.

@@ -28,7 +28,7 @@ const PROBE_TIMEOUT_MS = 1500;
 
 /** The recorded address of a live `docent serve` process for a repo. */
 export const ServeAddress = Schema.Struct({
-  schema: Schema.Literal("docent/serve-address@1"),
+  schema: Schema.Literal("docent/serve-address"),
   url: Schema.String,
 });
 export type ServeAddress = typeof ServeAddress.Type;
@@ -53,7 +53,7 @@ export const writeServeAddress = Effect.fn("writeServeAddress")(
     const fs = yield* FileSystem;
     const path = yield* Path;
     const address: ServeAddress = {
-      schema: "docent/serve-address@1",
+      schema: "docent/serve-address",
       url,
     };
 

@@ -1,5 +1,5 @@
 /**
- * The Code walkthrough tab: a hand-authored `docent/walkthrough@2` (kind: code)
+ * The Code walkthrough tab: a hand-authored `docent/walkthrough` (kind: code)
  * rendered as an ordered tour — prose interleaved with diff ranges, each range
  * rendered through the same `@pierre/diffs` `CodeView` substrate as the Diff tab
  * and deep-linking into it (walkthroughs.md §1, §5). Staleness (bornChangeId vs

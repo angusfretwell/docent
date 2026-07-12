@@ -1,6 +1,6 @@
 /**
- * The walkthrough schemas — `docent/walkthrough@2` (the manifest) and
- * `docent/walkthrough-section@2` (one section), plus the product-only `Capture`
+ * The walkthrough schemas — `docent/walkthrough` (the manifest) and
+ * `docent/walkthrough-section` (one section), plus the product-only `Capture`
  * registry entry (walkthroughs.md §4, §5, §6). Runtime-neutral: no Bun or DOM
  * globals, so the server (which parses these files off disk) and the client
  * (which renders and drifts them) share one definition.
@@ -43,7 +43,7 @@ export class WalkthroughAnnotation extends Schema.Class<WalkthroughAnnotation>(
 }) {}
 
 /**
- * `docent/walkthrough-section@2` — one step of the tour: a titled unit of prose
+ * `docent/walkthrough-section` — one step of the tour: a titled unit of prose
  * interleaved with its targets (walkthroughs.md §5). `body` is lifted from the
  * markdown after the frontmatter at parse time (the same envelope split as a
  * Finding record). `ranges` is the code arm; `captures`/`annotations` are the
@@ -59,12 +59,12 @@ export class WalkthroughSection extends Schema.Class<WalkthroughSection>(
   captures: Schema.optional(Schema.Array(Schema.String)),
   id: Schema.String,
   ranges: Schema.optional(Schema.Array(WalkthroughRange)),
-  schema: Schema.Literal("docent/walkthrough-section@2"),
+  schema: Schema.Literal("docent/walkthrough-section"),
   title: Schema.String,
 }) {}
 
 /**
- * `docent/walkthrough@2`'s product-only `captures[]` registry entry
+ * `docent/walkthrough`'s product-only `captures[]` registry entry
  * (walkthroughs.md §6): one atomic media artifact — a screenshot or a
  * recording. `media` is a content sha addressing the blob at
  * `captures/<sha>.png` / `captures/<sha>.rrweb.json`; `dims` rides screenshots
@@ -82,7 +82,7 @@ export class Capture extends Schema.Class<Capture>("Capture")({
 }) {}
 
 /**
- * `docent/walkthrough@2` — the manifest. `sections` is the ordered list of
+ * `docent/walkthrough` — the manifest. `sections` is the ordered list of
  * section filenames; **array position IS the order** (walkthroughs.md §4). The
  * product-only `captures` registry is validated (walkthroughs.md §6); code
  * manifests omit it and the code tab never reads it.
@@ -92,7 +92,7 @@ export class Walkthrough extends Schema.Class<Walkthrough>("Walkthrough")({
   captures: Schema.optional(Schema.Array(Capture)),
   id: Schema.String,
   kind: Schema.Literals(["code", "product"]),
-  schema: Schema.Literal("docent/walkthrough@2"),
+  schema: Schema.Literal("docent/walkthrough"),
   sections: Schema.Array(Schema.String),
   title: Schema.String,
 }) {}

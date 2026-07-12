@@ -1,5 +1,5 @@
 ---
-schema: docent/walkthrough-section@2
+schema: docent/walkthrough-section
 id: sec_01JZFIXTUREPROD00000000S02
 title: Regenerating the palette
 captures: [cap_01JZFIXTUREPROD00000000C2]

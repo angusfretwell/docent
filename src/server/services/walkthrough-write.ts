@@ -89,7 +89,7 @@ function slug(title: string): string {
 /**
  * Create a walkthrough shell: mint a `wlk_` id, mint-or-reuse the live head's
  * Change as `bornChangeId` (the shared lazy-mint), and write an empty-`sections`
- * `docent/walkthrough@2` manifest. Sections and captures append later.
+ * `docent/walkthrough` manifest. Sections and captures append later.
  */
 export const writeWalkthrough = Effect.fn("writeWalkthrough")(
   function* writeWalkthrough(
@@ -116,7 +116,7 @@ export const writeWalkthrough = Effect.fn("writeWalkthrough")(
       bornChangeId: change.id,
       id,
       kind: params.kind,
-      schema: "docent/walkthrough@2",
+      schema: "docent/walkthrough",
       sections: [],
       title: params.title,
     });
@@ -130,7 +130,7 @@ export const writeWalkthrough = Effect.fn("writeWalkthrough")(
 
 /**
  * Append a section to a walkthrough: mint a `sec_` id, validate the assembled
- * `docent/walkthrough-section@2` against the schema, write it as a numbered
+ * `docent/walkthrough-section` against the schema, write it as a numbered
  * `sNN-<slug>.md` file (the prefix is cosmetic — the manifest array is the
  * order), and append the filename to the manifest. `ranges` is the code arm;
  * `captureIds`/`annotations` the product arm.
@@ -178,7 +178,7 @@ export const addWalkthroughSection = Effect.fn("addWalkthroughSection")(
     const section = yield* Schema.decodeUnknownEffect(WalkthroughSection)({
       body: params.body,
       id,
-      schema: "docent/walkthrough-section@2",
+      schema: "docent/walkthrough-section",
       title: params.title,
       ...(params.ranges === undefined ? {} : { ranges: params.ranges }),
       ...(params.captureIds === undefined

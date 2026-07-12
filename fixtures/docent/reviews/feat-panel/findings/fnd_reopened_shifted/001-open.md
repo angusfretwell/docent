@@ -1,5 +1,5 @@
 ---
-schema: docent/finding@3
+schema: docent/finding
 author: { kind: human, id: angusfretwell@me.com, display: "Angus" }
 changeId: chg_001
 createdAt: 2026-07-10T02:45:00Z
