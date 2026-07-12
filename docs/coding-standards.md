@@ -2,8 +2,8 @@
 
 ## Quick Reference
 
-- **Format code**: `mise fix`
-- **Check for issues**: `mise check`
+- **Format code**: `bun run fix`
+- **Check for issues**: `bun run check`
 
 ## Core Principles
 

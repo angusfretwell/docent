@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 /**
  * Materialize the dev fixture repo: delete and deterministically rebuild a real
- * git repo at the gitignored `.dev/fixture/` from the checked-in source under
+ * git repo at the gitignored `.dev/` from the checked-in source under
  * `fixtures/`, so that pointing `docent serve` at it shows a rich review — a
  * diff with a Pending section, a Findings queue spanning the full state matrix
  * with drift badges, and a stale code walkthrough with the Change history lit up.
@@ -200,7 +200,7 @@ function leavePendingEdit(target: string): void {
 /**
  * Delete and deterministically rebuild the fixture repo at `target`, returning
  * the feature branch it opens and the resolved `ref → SHA` map. The caller owns
- * `target`: the CLI points it at `.dev/fixture`; the CI validation test points
+ * `target`: the CLI points it at `.dev/`; the CI validation test points
  * it at a throwaway scratch dir so the fixture is parsed against the shared
  * schemas without touching `.dev/`.
  */
@@ -226,10 +226,6 @@ export function materializeFixture(target: string): {
 }
 
 if (import.meta.main) {
-  const target = path.join(repoRoot, ".dev", "fixture");
-  const { branch, refs } = materializeFixture(target);
-
-  console.log(
-    `materialized fixture → ${path.relative(repoRoot, target)} (${branch} @ ${refs.get("change2")?.slice(0, 7)}, base @ ${refs.get("base")?.slice(0, 7)})`
-  );
+  const target = path.join(repoRoot, ".dev");
+  materializeFixture(target);
 }

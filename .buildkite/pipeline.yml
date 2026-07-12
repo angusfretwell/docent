@@ -10,23 +10,23 @@ steps:
   - label: ":oxc: check"
     key: check
     command: |
-      mise ci
-      mise check --format=junit > junit-lint.xml
+      bun ci
+      bun run check --format=junit > junit-lint.xml
     artifact_paths: junit-check.xml
     plugins: *plugins
 
   - label: ":typescript: typecheck"
     key: typecheck
     command: |
-      mise ci
-      mise typecheck
+      bun ci
+      bun run typecheck
     plugins: *plugins
 
   - label: ":bun: test"
     key: test
     command: |
-      mise ci
-      mise test --reporter=junit --reporter-outfile=junit-test.xml
+      bun ci
+      bun test --reporter=junit --reporter-outfile=junit-test.xml
     artifact_paths: junit-test.xml
     plugins: *plugins
 

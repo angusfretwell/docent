@@ -8,7 +8,7 @@ import { readReviewSnapshot, reviewDirPath } from "@server/services/review";
 import { ManagedRuntime } from "effect";
 import { sum } from "radashi";
 
-import { materializeFixture } from "./fixture";
+import { materializeFixture } from "./prepare-fixture.ts";
 
 const runtime = ManagedRuntime.make(BunServices.layer);
 
@@ -66,7 +66,7 @@ describe("dev fixture", () => {
   // — a record it cannot decode is silently skipped, never fatal. So validity is
   // asserted as parity: every record materialized on disk must survive into the
   // snapshot. Fixture drift against the data model therefore fails CI instead of
-  // silently breaking `mise dev`.
+  // silently breaking `bun dev`.
   test("every materialized record reads back through the snapshot reader", async () => {
     const root = scratchDir("docent-fixture-");
     const { branch } = materializeFixture(root);

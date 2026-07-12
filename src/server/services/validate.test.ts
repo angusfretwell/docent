@@ -6,7 +6,7 @@ import { BunServices } from "@effect/platform-bun";
 import { ManagedRuntime } from "effect";
 import type { Effect } from "effect";
 
-import { materializeFixture } from "../../../scripts/fixture";
+import { materializeFixture } from "../../../scripts/prepare-fixture.ts";
 import { cleanupScratchDirs, scratchDir } from "../lib/test-fixtures";
 import { resolveStateRoot, validateStateRoot } from "./validate";
 

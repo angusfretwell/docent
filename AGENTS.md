@@ -7,18 +7,17 @@ Don't trust your training data for any library, framework, SDK, API, or CLI tool
 ## Commands
 
 ```
-mise build      # build the client and embed assets
-mise compile    # compile the project
-mise serve      # compile and run the project
-mise fix        # format and auto-fix linter errors
-mise typecheck  # run type checks
-mise test       # run tests
-mise preflight  # check, typecheck, test, and compile
+bun run dev        # start dev server
+bun run build      # create production build
+bun run fix        # format and auto-fix linter errors
+bun run typecheck  # run type checks
+bun run test       # run tests
+bun run preflight  # check, typecheck, test, and compile
 ```
 
 ## Local Effect Source
 
-The Effect v4 repository is cloned to `.repos/effect` for reference by `mise prepare-effect`. Use this to explore APIs, find usage examples, and understand implementation details when the documentation isn't enough.
+The Effect v4 repository is cloned to `.repos/effect` for reference by the `prepare:effect` script. Use this to explore APIs, find usage examples, and understand implementation details when the documentation isn't enough.
 
 ## Worktrees
 

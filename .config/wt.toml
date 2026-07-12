@@ -5,4 +5,4 @@ trust = "mise trust -q"
 install = "mise install"
 
 [[pre-start]]
-deps = "mise run install"
+deps = "bun install"
