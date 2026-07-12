@@ -42,4 +42,4 @@ The spike surfaced four constraints that are non-obvious from the code and drove
 - **No React Compiler.** Memoization is manual where it matters.
 - **Serving lives in an inverted stack.** Anyone touching the entry points or the web handler must keep the plain-Bun-on-top / Effect-underneath split intact and use `provideMerge` for request-time services — see finding 1 and 2 above.
 
-Serving details are specified in [architecture.md](../spec/architecture.md) §§1, 4, 5; the web handler and its wiring live in `src/server/lib/serve.ts` and the entry points in `bin.ts` / `dev.ts`.
+Serving details are specified in [architecture.md](../spec/architecture.md) §§1, 4, 5; the web handler and its wiring live in `src/server/routes/` (`index.ts`) and the entry points in `bin.ts` / `dev.ts`.

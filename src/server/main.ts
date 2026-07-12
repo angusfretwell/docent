@@ -22,8 +22,8 @@ import { runInstall } from "./cli/install";
 import { runStatus } from "./cli/status";
 import { runValidate } from "./cli/validate";
 import { runCapture, runWalkthrough } from "./cli/walkthrough";
-import { webHandler } from "./lib/serve";
 import { removeServeAddress, writeServeAddress } from "./lib/serve-address";
+import { webHandler } from "./routes";
 import { resolveChange } from "./services/git";
 
 /** What an entry point hands `runMain`: the bundled client and dev/prod knobs. */

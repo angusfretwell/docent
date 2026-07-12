@@ -3,7 +3,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { BunServices } from "@effect/platform-bun";
 import { ManagedRuntime } from "effect";
 
-import { webHandler } from "./serve";
+import { webHandler } from "../routes";
 import {
   removeServeAddress,
   resolveServeStatus,
