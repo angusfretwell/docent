@@ -37,11 +37,8 @@ import {
   resolveRepo,
   resolveWorktreeFile,
 } from "../services/git";
-import {
-  appendViewedEvent,
-  readReviewSnapshot,
-  reviewDirPath,
-} from "../services/review";
+import { appendViewedEvent, readReviewSnapshot } from "../services/review";
+import { reviewDirPath } from "../store/layout";
 import { DocentWatch, layer as watchLayer } from "./watch";
 
 export interface ServeOptions {

@@ -25,7 +25,7 @@ import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 
 import { resolveGitDir, resolveRepo } from "../services/git";
-import { ensureStateRootGitignore } from "../services/review";
+import { ensureStateRootGitignore } from "../store/layout";
 import { makeMatcher, parseGitignore } from "./gitignore";
 import type { IgnoreMatcher } from "./gitignore";
 

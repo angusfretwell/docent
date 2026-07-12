@@ -17,14 +17,11 @@ import { Clock, Effect, Option } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 
-import { recordFile, serializeFrontmatter } from "../lib/records";
-import {
-  ensureReview,
-  listDir,
-  makeId,
-  readRecord,
-  reviewDirPath,
-} from "./review";
+import { makeId } from "../store/id";
+import { listDir, readRecord } from "../store/io";
+import { reviewDirPath } from "../store/layout";
+import { recordFile, serializeFrontmatter } from "../store/records";
+import { ensureReview } from "./review";
 
 /** The plain human/agent attribution a write stamps onto its record. */
 export interface AuthorInput {

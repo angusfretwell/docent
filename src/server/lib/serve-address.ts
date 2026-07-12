@@ -17,7 +17,7 @@ import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 
 import { resolveRepo } from "../services/git";
-import { readRecord } from "../services/review";
+import { readRecord } from "../store/io";
 
 const STATE_ROOT = ".docent";
 const ADDRESS_FILENAME = "serve.json";

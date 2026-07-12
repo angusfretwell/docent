@@ -4,7 +4,8 @@ import path from "node:path";
 
 import { BunServices } from "@effect/platform-bun";
 import { cleanupScratchDirs, scratchDir } from "@server/lib/test-fixtures";
-import { readReviewSnapshot, reviewDirPath } from "@server/services/review";
+import { readReviewSnapshot } from "@server/services/review";
+import { reviewDirPath } from "@server/store/layout";
 import { ManagedRuntime } from "effect";
 import { sum } from "radashi";
 

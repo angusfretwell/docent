@@ -21,7 +21,7 @@ import { Effect, Schema } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 
-import { recordType, splitEnvelope } from "../lib/records";
+import { recordType, splitEnvelope } from "../store/records";
 
 const STATE_ROOT = ".docent";
 const WALKTHROUGH_KINDS = ["code", "product"] as const;

@@ -2,11 +2,11 @@
  * The shared on-disk record envelope: a YAML frontmatter block over a trimmed
  * markdown body (`---\n…\n---\n<body>`), the greppable shape (data-model.md
  * §5.1–5.2). This module owns **both** directions — the serializer every write
- * path emits (Finding records in `findings-write.ts`, walkthrough sections in
- * `walkthrough-write.ts`) and the parser every read path splits back apart (the
- * snapshot reader in `services/review.ts` and the `docent validate` oracle in
- * `services/validate.ts`) — so the envelope shape is spelled in exactly one
- * place.
+ * path emits (Finding records in `services/findings-write.ts`, walkthrough
+ * sections in `services/walkthrough-write.ts`) and the parser every read path
+ * splits back apart (the snapshot reader in `services/review.ts` and the
+ * `docent validate` oracle in `services/validate.ts`) — so the envelope shape
+ * is spelled in exactly one place.
  */
 
 import { RECORD_TYPES } from "@shared/schemas/finding";

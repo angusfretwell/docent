@@ -23,87 +23,14 @@ import { Clock, Effect, Option, Schema } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 
-import { FRONTMATTER, recordType, splitEnvelope } from "../lib/records";
-
-const STATE_ROOT = ".docent";
-
-/**
- * The `.docent/.gitignore` commit policy (data-model.md §1): everything under
- * `.docent/` is machine-local working state, so only the capture runbook —
- * earned setup knowledge — and this policy file itself travel with the repo.
- * The `!.gitignore` line is what lets the policy be committed rather than
- * ignoring itself.
- */
-const STATE_ROOT_GITIGNORE = "*\n!capture.md\n!.gitignore\n";
-
-/** Directory name for a branch's Review: the branch name, slashes → dashes. */
-export function branchSlug(branch: string): string {
-  return branch.replaceAll("/", "-");
-}
-
-/** The absolute directory of a branch's Review under `<root>/.docent/`. */
-export function reviewDirPath(root: string, branch: string): string {
-  return `${root}/${STATE_ROOT}/reviews/${branchSlug(branch)}`;
-}
-
-/**
- * Seed `<root>/.docent/.gitignore` with the commit policy when it is absent —
- * the single home for the policy, run by every path that lazily creates
- * `.docent` (data-model.md §1). Idempotent: an existing file is left untouched,
- * so a re-run never duplicates a line. Best-effort at every call site.
- */
-export const ensureStateRootGitignore = Effect.fn("ensureStateRootGitignore")(
-  function* ensureStateRootGitignore(root: string) {
-    const fs = yield* FileSystem;
-    const path = yield* Path;
-    const dir = path.join(root, STATE_ROOT);
-    const file = path.join(dir, ".gitignore");
-
-    const present = yield* fs
-      .exists(file)
-      .pipe(Effect.orElseSucceed(() => false));
-    if (present) {
-      return;
-    }
-
-    yield* fs.makeDirectory(dir, { recursive: true });
-    yield* fs.writeFileString(file, STATE_ROOT_GITIGNORE);
-  }
-);
-
-const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
-
-/**
- * A ULID-shaped opaque id under `prefix`: `<prefix>_` + 10 time chars + 16
- * random chars, Crockford base32. The time head keeps ids lexically sortable by
- * mint order — which is also the append-only `viewed/` file order.
- */
-export const makeId = Effect.fn("makeId")(function* makeId(prefix: string) {
-  const now = yield* Clock.currentTimeMillis;
-  let time = now;
-  let head = "";
-  for (let i = 0; i < 10; i += 1) {
-    head = CROCKFORD.charAt(time % 32) + head;
-    time = Math.floor(time / 32);
-  }
-  const bytes = new Uint8Array(16);
-  crypto.getRandomValues(bytes);
-  let tail = "";
-  for (const byte of bytes) {
-    tail += CROCKFORD.charAt(byte % 32);
-  }
-  return `${prefix}_${head}${tail}`;
-});
-
-/** Decode a JSON file against a schema; `None` on any read/parse/decode failure. */
-export const readRecord = Effect.fn("readRecord")(function* readRecord<
-  S extends Schema.Constraint,
->(file: string, schema: S) {
-  const fs = yield* FileSystem;
-  const text = yield* fs.readFileString(file);
-  const json = yield* Effect.try(() => JSON.parse(text));
-  return yield* Schema.decodeUnknownEffect(schema)(json);
-}, Effect.option);
+import { makeId } from "../store/id";
+import { listDir, readRecord } from "../store/io";
+import {
+  branchSlug,
+  ensureStateRootGitignore,
+  STATE_ROOT,
+} from "../store/layout";
+import { FRONTMATTER, recordType, splitEnvelope } from "../store/records";
 
 /** Unwrap the `Some` values of an Options array (best-effort walk survivors). */
 function somes<A>(options: readonly Option.Option<A>[]): A[] {
@@ -115,12 +42,6 @@ function somes<A>(options: readonly Option.Option<A>[]): A[] {
   }
   return values;
 }
-
-/** List a directory's entries, or `[]` when it does not exist. */
-export const listDir = Effect.fn("listDir")(function* listDir(dir: string) {
-  const fs = yield* FileSystem;
-  return yield* fs.readDirectory(dir).pipe(Effect.orElseSucceed(() => []));
-});
 
 /** Read `review.json`, creating it (auto-create on first use) when absent. */
 export const ensureReview = Effect.fn("ensureReview")(

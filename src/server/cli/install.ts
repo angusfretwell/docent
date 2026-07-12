@@ -17,7 +17,7 @@ import { Console, Effect, Schema } from "effect";
 import { ChildProcess } from "effect/unstable/process";
 
 import { resolveRepo } from "../services/git";
-import { ensureStateRootGitignore } from "../services/review";
+import { ensureStateRootGitignore } from "../store/layout";
 import { attempt, CliUsageError } from "./index";
 
 /** The skills.sh source the CLI installs from: this repo's shipped skills. */

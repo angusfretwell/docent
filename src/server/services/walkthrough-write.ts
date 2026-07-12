@@ -31,10 +31,13 @@ import { Effect, Option, Schema } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 
-import { recordFile, serializeFrontmatter } from "../lib/records";
+import { makeId } from "../store/id";
+import { readRecord } from "../store/io";
+import { reviewDirPath } from "../store/layout";
+import { recordFile, serializeFrontmatter } from "../store/records";
 import type { ChangeRefs } from "./findings-write";
 import { mintChange } from "./findings-write";
-import { ensureReview, makeId, readRecord, reviewDirPath } from "./review";
+import { ensureReview } from "./review";
 
 const KINDS = ["code", "product"] as const;
 type WalkthroughKind = (typeof KINDS)[number];
