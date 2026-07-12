@@ -1,5 +1,9 @@
 # AGENTS.md
 
+## Pre-release
+
+This project is pre-release with no external users. Breaking changes are fine: don't version schemas, write migrations, keep backwards-compatible shims, or deprecate gradually — change things in place. Stale local state (e.g. old `.docent/` records) can simply be deleted and re-minted.
+
 ## Libraries and tools
 
 Don't trust your training data for any library, framework, SDK, API, or CLI tool; versions move and signatures change. Use `/find-docs` to fetch current documentation before writing code that uses one. This applies even to well-known libraries like React.
