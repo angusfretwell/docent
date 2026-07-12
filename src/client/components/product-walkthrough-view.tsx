@@ -41,6 +41,7 @@ import type {
 import { useRrwebReplayer } from "../hooks/use-rrweb-replayer";
 import { captureUrl } from "../lib/blobs";
 import { highlightQuotes } from "../lib/highlight-quotes";
+import { narrativeBySectionId } from "../lib/walkthrough-narrative";
 import {
   ANNOTATION_TONE,
   annotationsFor,
@@ -53,23 +54,9 @@ import {
   TEXT_SPAN,
 } from "../lib/walkthrough-pins";
 import type { Tone } from "../lib/walkthrough-pins";
+import { DetachedSection } from "./detached-section";
+import { StalenessBadge } from "./staleness-badge";
 
-const pillStyle: React.CSSProperties = {
-  borderRadius: "0.35rem",
-  fontSize: "0.75rem",
-  padding: "0.05rem 0.45rem",
-  whiteSpace: "nowrap",
-};
-const staleStyle: React.CSSProperties = {
-  ...pillStyle,
-  background: "rgba(210,153,34,0.2)",
-  color: "#d29922",
-};
-const outdatedStyle: React.CSSProperties = {
-  ...pillStyle,
-  background: "rgba(224,108,32,0.2)",
-  color: "#e0863c",
-};
 const proseStyle: React.CSSProperties = {
   lineHeight: 1.5,
   margin: "0.5rem 0",
@@ -477,26 +464,6 @@ function Section({
   );
 }
 
-/** Group narrative (`walkthrough-section`) Findings on this walkthrough by section id. */
-function narrativeBySectionId(
-  folded: readonly FoldedFinding[],
-  walkthroughId: string
-): Map<string, FoldedFinding[]> {
-  const bySection = new Map<string, FoldedFinding[]>();
-  for (const finding of folded) {
-    const { anchor } = finding;
-    if (
-      anchor?.kind === "walkthrough-section" &&
-      anchor.walkthroughId === walkthroughId
-    ) {
-      const list = bySection.get(anchor.sectionId) ?? [];
-      list.push(finding);
-      bySection.set(anchor.sectionId, list);
-    }
-  }
-  return bySection;
-}
-
 /** Group `text-span` Findings by the section id they quote into. */
 function textSpansBySectionId(
   folded: readonly FoldedFinding[]
@@ -550,20 +517,7 @@ function DetachedFindings({
     return null;
   }
   return (
-    <section
-      style={{
-        borderTop: "1px solid rgba(128,128,128,0.2)",
-        padding: "1rem 0",
-      }}
-    >
-      <div style={{ alignItems: "center", display: "flex", gap: "0.5rem" }}>
-        <h2 style={{ fontSize: "1.05rem", margin: 0 }}>Detached findings</h2>
-        <span style={outdatedStyle}>Outdated</span>
-      </div>
-      <p style={{ fontSize: "0.8rem", opacity: 0.6 }}>
-        These Findings point at captures no longer placed in this walkthrough;
-        they render against their born capture.
-      </p>
+    <DetachedSection explanation="These Findings point at captures no longer placed in this walkthrough; they render against their born capture.">
       {detached.map((finding) => {
         const captureId = captureAnchorId(finding.anchor) ?? "";
         const born = findBornCapture(walkthroughs, captureId);
@@ -587,7 +541,7 @@ function DetachedFindings({
           </div>
         );
       })}
-    </section>
+    </DetachedSection>
   );
 }
 
@@ -648,12 +602,7 @@ export function ProductWalkthroughView({
           <h1 style={{ fontSize: "1.4rem", margin: 0 }}>
             {manifest?.title ?? "Product walkthrough"}
           </h1>
-          {staleness.stale ? (
-            <span style={staleStyle}>
-              {staleness.behind} change{staleness.behind === 1 ? "" : "s"}{" "}
-              behind
-            </span>
-          ) : null}
+          <StalenessBadge staleness={staleness} />
         </div>
       </header>
       {sections.length === 0 ? (

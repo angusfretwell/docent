@@ -12,7 +12,7 @@
  */
 
 import type { CodeViewFileItem } from "@pierre/diffs";
-import { CodeView, WorkerPoolContextProvider } from "@pierre/diffs/react";
+import { CodeView } from "@pierre/diffs/react";
 import { findingLocation, foldFinding } from "@shared/lib/finding";
 import type { FoldedFinding } from "@shared/lib/finding";
 import {
@@ -22,7 +22,6 @@ import {
   walkthroughStaleness,
 } from "@shared/lib/walkthrough";
 import type { DriftState } from "@shared/schemas/drift";
-import type { Anchor } from "@shared/schemas/finding";
 import type {
   ChangeRecord,
   FindingEntry,
@@ -36,12 +35,16 @@ import { unique } from "radashi";
 import { useState } from "react";
 
 import { useRangeWindow } from "../hooks/use-range-window";
-import { themes, workerFactory } from "../lib/code-view";
+import { themes } from "../lib/code-view";
 import type { DriftResult } from "../lib/drift";
 import { CONTEXT_STEP } from "../lib/walkthrough-context";
 import type { RangeWindow } from "../lib/walkthrough-context";
 import { useRangeDrift } from "../lib/walkthrough-drift";
 import type { KeyedRange } from "../lib/walkthrough-drift";
+import { narrativeBySectionId } from "../lib/walkthrough-narrative";
+import { CodeViewWorkerPool } from "./code-view-worker-pool";
+import { DetachedSection } from "./detached-section";
+import { StalenessBadge } from "./staleness-badge";
 
 /**
  * Deep-link into the Diff tab at a file/line/side. The optional fourth argument
@@ -99,11 +102,6 @@ const buttonStyle: React.CSSProperties = {
   font: "inherit",
   fontSize: "0.75rem",
   padding: "0.1rem 0.5rem",
-};
-const staleStyle: React.CSSProperties = {
-  ...pillStyle,
-  background: "rgba(210,153,34,0.2)",
-  color: "#d29922",
 };
 const proseStyle: React.CSSProperties = {
   lineHeight: 1.5,
@@ -394,34 +392,6 @@ function Section({
   );
 }
 
-/** Whether a folded finding is a narrative anchor on this walkthrough. */
-function isNarrative(anchor: Anchor | undefined, walkthroughId: string) {
-  return (
-    anchor?.kind === "walkthrough-section" &&
-    anchor.walkthroughId === walkthroughId
-  );
-}
-
-/** Group narrative Findings by the section id they anchor. */
-function narrativeBySectionId(
-  folded: readonly FoldedFinding[],
-  walkthroughId: string
-): Map<string, FoldedFinding[]> {
-  const bySection = new Map<string, FoldedFinding[]>();
-  for (const finding of folded) {
-    const { anchor } = finding;
-    if (
-      anchor?.kind === "walkthrough-section" &&
-      isNarrative(anchor, walkthroughId)
-    ) {
-      const list = bySection.get(anchor.sectionId) ?? [];
-      list.push(finding);
-      bySection.set(anchor.sectionId, list);
-    }
-  }
-  return bySection;
-}
-
 /** A superseded narrative Finding plus the born section prose it detaches to. */
 interface DetachedNote {
   bornText?: string;
@@ -483,20 +453,7 @@ function DetachedNarrative({ notes }: { notes: readonly DetachedNote[] }) {
     return null;
   }
   return (
-    <section
-      style={{
-        borderTop: "1px solid rgba(128,128,128,0.2)",
-        padding: "1rem 0",
-      }}
-    >
-      <div style={{ alignItems: "center", display: "flex", gap: "0.5rem" }}>
-        <h2 style={{ fontSize: "1.05rem", margin: 0 }}>Detached findings</h2>
-        <span style={{ ...pillStyle, ...TONE.signal }}>Outdated</span>
-      </div>
-      <p style={{ fontSize: "0.8rem", opacity: 0.6 }}>
-        These Findings were left on a superseded walkthrough; they render
-        against their born section prose.
-      </p>
+    <DetachedSection explanation="These Findings were left on a superseded walkthrough; they render against their born section prose.">
       {notes.map(({ finding, bornText }) => (
         <div key={finding.id} style={{ margin: "0.6rem 0" }}>
           {bornText === undefined ? null : <p style={proseStyle}>{bornText}</p>}
@@ -506,7 +463,7 @@ function DetachedNarrative({ notes }: { notes: readonly DetachedNote[] }) {
           </div>
         </div>
       ))}
-    </section>
+    </DetachedSection>
   );
 }
 
@@ -566,24 +523,13 @@ export function WalkthroughView({
 
   return (
     <div style={{ height: "100%", overflow: "auto", padding: "0 1.5rem 3rem" }}>
-      <WorkerPoolContextProvider
-        highlighterOptions={{ theme: themes, useTokenTransformer: true }}
-        poolOptions={{
-          poolSize: Math.min(8, navigator.hardwareConcurrency || 4),
-          workerFactory,
-        }}
-      >
+      <CodeViewWorkerPool>
         <header style={{ padding: "1rem 0" }}>
           <div style={headerRowStyle}>
             <h1 style={{ fontSize: "1.4rem", margin: 0 }}>
               {walkthrough.manifest?.title ?? "Code walkthrough"}
             </h1>
-            {staleness.stale ? (
-              <span style={staleStyle}>
-                {staleness.behind} change{staleness.behind === 1 ? "" : "s"}{" "}
-                behind
-              </span>
-            ) : null}
+            <StalenessBadge staleness={staleness} />
             {firstRange ? (
               <button
                 onClick={() =>
@@ -619,7 +565,7 @@ export function WalkthroughView({
           ))
         )}
         <DetachedNarrative notes={detached} />
-      </WorkerPoolContextProvider>
+      </CodeViewWorkerPool>
     </div>
   );
 }

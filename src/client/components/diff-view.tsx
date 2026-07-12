@@ -7,7 +7,7 @@ import type {
   LineAnnotation,
 } from "@pierre/diffs";
 import type { CodeViewHandle } from "@pierre/diffs/react";
-import { CodeView, WorkerPoolContextProvider } from "@pierre/diffs/react";
+import { CodeView } from "@pierre/diffs/react";
 import type { FindingWrite } from "@shared/schemas/finding-write";
 import type { FindingEntry, ViewedEvent } from "@shared/schemas/review";
 import { useRef, useState } from "react";
@@ -15,9 +15,10 @@ import { useRef, useState } from "react";
 import { useContextExpansion } from "../hooks/use-context-expansion";
 import { useDiffFindings } from "../hooks/use-diff-findings";
 import { useDiffNav } from "../hooks/use-diff-nav";
+import { usePersisted } from "../hooks/use-persisted";
 import { useViewedState } from "../hooks/use-viewed-state";
 import { fetchExpandedFileDiff, isExpandable } from "../lib/blobs";
-import { themes, workerFactory } from "../lib/code-view";
+import { themes } from "../lib/code-view";
 import type { Annotation } from "../lib/diff-annotations";
 import type { DriftResult } from "../lib/drift";
 import { bodyReplaced } from "../lib/edge-cases";
@@ -29,45 +30,11 @@ import {
   visibleFiles,
 } from "../lib/file-model";
 import type { FileOrder } from "../lib/nav";
+import { toggleInSet } from "../lib/set";
+import { CodeViewWorkerPool } from "./code-view-worker-pool";
 import { EdgeChrome } from "./edge-chrome";
 import { FileTree } from "./file-tree";
 import type { RowState, ViewedRows } from "./file-tree";
-
-/** Flip an id's membership in a `Set` state — the add/remove toggle both the
- * directory-collapse and the large-file "Load diff" state share. */
-function toggleInSet(
-  setState: React.Dispatch<React.SetStateAction<ReadonlySet<string>>>,
-  id: string
-) {
-  setState((prev) => {
-    const next = new Set(prev);
-    if (next.has(id)) {
-      next.delete(id);
-    } else {
-      next.add(id);
-    }
-    return next;
-  });
-}
-
-/** A localStorage-backed preference, so layout/order survive reloads. */
-function usePersisted<T extends string>(
-  key: string,
-  initial: T,
-  decode: (raw: string) => T | undefined
-): [T, (value: T) => void] {
-  const [value, setValue] = useState<T>(() => {
-    const raw = globalThis.localStorage?.getItem(key);
-    return (
-      (raw === null || raw === undefined ? undefined : decode(raw)) ?? initial
-    );
-  });
-  function set(next: T) {
-    setValue(next);
-    globalThis.localStorage?.setItem(key, next);
-  }
-  return [value, set];
-}
 
 /** The imperative surface the Findings panel and the walkthrough tab drive to jump into the diff. */
 export interface DiffViewHandle {
@@ -204,13 +171,7 @@ function DiffScroll({
 
   return (
     <div style={{ flex: 1, minWidth: 0 }}>
-      <WorkerPoolContextProvider
-        highlighterOptions={{ theme: themes, useTokenTransformer: true }}
-        poolOptions={{
-          poolSize: Math.min(8, navigator.hardwareConcurrency || 4),
-          workerFactory,
-        }}
-      >
+      <CodeViewWorkerPool>
         <CodeView
           items={items}
           onScroll={onScroll}
@@ -244,7 +205,7 @@ function DiffScroll({
           // wrapper breaks both scrolling and virtualization.
           style={{ height: "100%", overflow: "auto" }}
         />
-      </WorkerPoolContextProvider>
+      </CodeViewWorkerPool>
     </div>
   );
 }
@@ -397,11 +358,11 @@ export function DiffView({
 
   // Reveal or re-collapse an oversized/minified file's body (diff-review.md §5).
   function toggleLarge(id: string) {
-    toggleInSet(setLargeLoaded, id);
+    setLargeLoaded((prev) => toggleInSet(prev, id));
   }
 
   function toggleDir(path: string) {
-    toggleInSet(setCollapsed, path);
+    setCollapsed((prev) => toggleInSet(prev, path));
   }
 
   return (
