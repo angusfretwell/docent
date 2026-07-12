@@ -16,6 +16,7 @@
 - Separate logical paragraphs inside a function with a blank line: declarations from the statements that use them, guard clauses from each other, side-effect assignments from the following `return`. Tight one-liners can stay together.
 - No single-letter variable names. Use descriptive names, even in callbacks: `items.map(item => ...)` not `items.map(i => ...)`
 - Name event-handler parameters `event`, not `e`: `onChange={(event) => ...}`, `onSubmit={(event) => ...}`.
+- Import paths: relative is fine up to one level up — `./sibling` and `../sibling` are allowed. Two or more levels up (`../../` or deeper) must use the `@client`/`@server`/`@shared` aliases instead.
 
 ## React
 
