@@ -24,6 +24,7 @@ import { useDrift } from "../lib/drift";
 import { writeFinding } from "../lib/findings-client";
 import type { DiffViewHandle } from "./diff-view";
 import { DiffView } from "./diff-view";
+import { ErrorBoundary } from "./error-boundary";
 import { FindingsPanel } from "./findings-panel";
 import { ProductWalkthroughView } from "./product-walkthrough-view";
 import type { OpenInDiff } from "./walkthrough-view";
@@ -463,25 +464,37 @@ export function App() {
   let body: React.ReactNode;
   if (tab === "walkthrough") {
     body = (
-      <WalkthroughTab review={review} onOpenInDiff={openInDiff} patch={patch} />
+      <ErrorBoundary label="Code walkthrough tab">
+        <WalkthroughTab
+          review={review}
+          onOpenInDiff={openInDiff}
+          patch={patch}
+        />
+      </ErrorBoundary>
     );
   } else if (tab === "product") {
-    body = <ProductWalkthroughTab review={review} />;
+    body = (
+      <ErrorBoundary label="Product walkthrough tab">
+        <ProductWalkthroughTab review={review} />
+      </ErrorBoundary>
+    );
   } else {
     body = (
-      <DiffTab
-        change={change}
-        diffRef={diffRef}
-        drift={drift}
-        fileOrder={fileOrder}
-        onExitFileOrder={() => setFileOrder(undefined)}
-        onRange={setRange}
-        onSelect={setSelected}
-        pending={pending}
-        range={range}
-        review={review}
-        selected={selected}
-      />
+      <ErrorBoundary label="Diff tab">
+        <DiffTab
+          change={change}
+          diffRef={diffRef}
+          drift={drift}
+          fileOrder={fileOrder}
+          onExitFileOrder={() => setFileOrder(undefined)}
+          onRange={setRange}
+          onSelect={setSelected}
+          pending={pending}
+          range={range}
+          review={review}
+          selected={selected}
+        />
+      </ErrorBoundary>
     );
   }
 
@@ -501,12 +514,14 @@ export function App() {
           {body}
         </div>
         {review ? (
-          <FindingsPanel
-            drift={drift}
-            findings={review.findings}
-            onJump={(file, line) => openInDiff(file, line, "head")}
-            onWrite={handleWrite}
-          />
+          <ErrorBoundary label="Findings panel">
+            <FindingsPanel
+              drift={drift}
+              findings={review.findings}
+              onJump={(file, line) => openInDiff(file, line, "head")}
+              onWrite={handleWrite}
+            />
+          </ErrorBoundary>
         ) : null}
       </div>
     </div>

@@ -22,6 +22,9 @@ try {
     entrypoints: [path.join(root, "src", "docent.ts")],
     minify: true,
     plugins: [tailwind],
+    // No `splitting: true`: under `compile`, Bun 1.3.14 drops one client
+    // shared chunk from the served routes (404), so the split app can't boot.
+    // Everything stays in one client chunk until that's fixed upstream.
   });
 
   if (result.logs.length > 0) {
