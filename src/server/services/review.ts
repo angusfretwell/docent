@@ -8,7 +8,6 @@
  * is skipped, never fatal (architecture.md §3).
  */
 
-import { FindingRecord } from "@shared/schemas/finding";
 import {
   ChangeRecord,
   FindingEntry,
@@ -18,19 +17,30 @@ import {
   WalkthroughEntry,
 } from "@shared/schemas/review";
 import type { ViewedRequest } from "@shared/schemas/review";
-import { Walkthrough, WalkthroughSection } from "@shared/schemas/walkthrough";
-import { Clock, Effect, Option, Schema } from "effect";
+import { Walkthrough } from "@shared/schemas/walkthrough";
+import type { Schema } from "effect";
+import { Clock, Effect, Option } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 
+import {
+  listFindingIds,
+  listJsonRecordNames,
+  listMarkdownRecordNames,
+  listWalkthroughIds,
+  readFindingRecord,
+  readWalkthroughSection,
+  WALKTHROUGH_KINDS,
+} from "../store/enumerate";
+import type { WalkthroughKind } from "../store/enumerate";
 import { makeId } from "../store/id";
-import { listDir, readRecord } from "../store/io";
+import { readRecord } from "../store/io";
 import {
   branchSlug,
   ensureStateRootGitignore,
   STATE_ROOT,
 } from "../store/layout";
-import { FRONTMATTER, recordType, splitEnvelope } from "../store/records";
+import { FRONTMATTER } from "../store/records";
 
 /** Unwrap the `Some` values of an Options array (best-effort walk survivors). */
 function somes<A>(options: readonly Option.Option<A>[]): A[] {
@@ -83,9 +93,7 @@ const readJsonRecords = Effect.fn("readJsonRecords")(function* readJsonRecords<
 >(reviewDir: string, sub: string, schema: S) {
   const path = yield* Path;
   const dir = path.join(reviewDir, sub);
-  const names = (yield* listDir(dir))
-    .filter((name) => name.endsWith(".json"))
-    .toSorted();
+  const names = yield* listJsonRecordNames(dir);
   const records = yield* Effect.forEach(
     names,
     (name) => readRecord(path.join(dir, name), schema),
@@ -95,22 +103,6 @@ const readJsonRecords = Effect.fn("readJsonRecords")(function* readJsonRecords<
   );
   return somes(records);
 });
-
-/** Parse one `NNN-<type>.md` record; `None` on any read/parse/decode failure. */
-const readFindingRecord = Effect.fn("readFindingRecord")(
-  function* readFindingRecord(file: string, name: string) {
-    const fs = yield* FileSystem;
-    const text = yield* fs.readFileString(file);
-    const { body, meta } = yield* splitEnvelope(text);
-    return yield* Schema.decodeUnknownEffect(FindingRecord)({
-      ...meta,
-      body,
-      name,
-      type: recordType(name),
-    });
-  },
-  Effect.option
-);
 
 const ANCHOR_FILE = /\bfile:\s*(?<file>[^,}\n]+)/;
 const SURROUNDING_QUOTES = /^["']|["']$/g;
@@ -158,9 +150,7 @@ const readFinding = Effect.fn("readFinding")(function* readFinding(
   id: string
 ) {
   const path = yield* Path;
-  const names = (yield* listDir(path.join(dir, id)))
-    .filter((name) => name.endsWith(".md"))
-    .toSorted();
+  const names = yield* listMarkdownRecordNames(path.join(dir, id));
   const parsed = yield* Effect.forEach(
     names,
     (name) => readFindingRecord(path.join(dir, id, name), name),
@@ -178,33 +168,11 @@ const readFindings = Effect.fn("readFindings")(function* readFindings(
 ) {
   const path = yield* Path;
   const dir = path.join(reviewDir, "findings");
-  const ids = (yield* listDir(dir))
-    .filter((name) => name.startsWith("fnd_"))
-    .toSorted();
+  const ids = yield* listFindingIds(dir);
   return yield* Effect.forEach(ids, (id) => readFinding(dir, id), {
     concurrency: "unbounded",
   });
 });
-
-/**
- * Parse one `docent/walkthrough-section@2` file: the same frontmatter/body
- * envelope split as a Finding record (YAML frontmatter over a markdown body).
- * The lifted `body` rides the decoded section so the client renders prose and
- * ranges from one record. `None` on any read/parse/decode failure — the
- * best-effort walk (architecture.md §3).
- */
-const readWalkthroughSection = Effect.fn("readWalkthroughSection")(
-  function* readWalkthroughSection(file: string) {
-    const fs = yield* FileSystem;
-    const text = yield* fs.readFileString(file);
-    const { body, meta } = yield* splitEnvelope(text);
-    return yield* Schema.decodeUnknownEffect(WalkthroughSection)({
-      ...meta,
-      body,
-    });
-  },
-  Effect.option
-);
 
 /**
  * Walk one walkthrough's directory: parse its `manifest.json`, then parse its
@@ -215,7 +183,7 @@ const readWalkthroughSection = Effect.fn("readWalkthroughSection")(
  */
 const readWalkthrough = Effect.fn("readWalkthrough")(function* readWalkthrough(
   dir: string,
-  kind: "code" | "product",
+  kind: WalkthroughKind,
   id: string
 ) {
   const path = yield* Path;
@@ -241,12 +209,10 @@ const readWalkthrough = Effect.fn("readWalkthrough")(function* readWalkthrough(
 
 /** Walk one walkthrough kind (`code`/`product`) into its entries. */
 const readWalkthroughKind = Effect.fn("readWalkthroughKind")(
-  function* readWalkthroughKind(root: string, kind: "code" | "product") {
+  function* readWalkthroughKind(root: string, kind: WalkthroughKind) {
     const path = yield* Path;
     const dir = path.join(root, kind);
-    const ids = (yield* listDir(dir))
-      .filter((name) => name.startsWith("wlk_"))
-      .toSorted();
+    const ids = yield* listWalkthroughIds(dir);
     return yield* Effect.forEach(ids, (id) => readWalkthrough(dir, kind, id), {
       concurrency: "unbounded",
     });
@@ -258,7 +224,7 @@ const readWalkthroughs = Effect.fn("readWalkthroughs")(
     const path = yield* Path;
     const root = path.join(reviewDir, "walkthroughs");
     const entries = yield* Effect.forEach(
-      ["code", "product"] as const,
+      WALKTHROUGH_KINDS,
       (kind) => readWalkthroughKind(root, kind),
       { concurrency: "unbounded" }
     );

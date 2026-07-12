@@ -14,17 +14,24 @@
  * `.docent/` tree — a checked-out repo, a fixture, or a bare state root.
  */
 
-import { FindingRecord } from "@shared/schemas/finding";
 import { ChangeRecord, Review, ViewedEvent } from "@shared/schemas/review";
-import { Walkthrough, WalkthroughSection } from "@shared/schemas/walkthrough";
-import { Effect, Schema } from "effect";
+import { Walkthrough } from "@shared/schemas/walkthrough";
+import { Effect } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 
-import { recordType, splitEnvelope } from "../store/records";
-
-const STATE_ROOT = ".docent";
-const WALKTHROUGH_KINDS = ["code", "product"] as const;
+import {
+  decodeFindingRecord,
+  decodeWalkthroughSection,
+  listFindingIds,
+  listJsonRecordNames,
+  listMarkdownRecordNames,
+  listWalkthroughIds,
+  WALKTHROUGH_KINDS,
+} from "../store/enumerate";
+import type { WalkthroughKind } from "../store/enumerate";
+import { decodeJsonRecord, listDir } from "../store/io";
+import { STATE_ROOT } from "../store/layout";
 
 /** One record that failed to decode: its path (relative to the state root) and why. */
 export interface Problem {
@@ -66,49 +73,11 @@ export const resolveStateRoot = Effect.fn("resolveStateRoot")(
   }
 );
 
-/** List a directory's entries sorted, or `[]` when it does not exist. */
-const listDir = Effect.fn("listDir")(function* listDir(dir: string) {
-  const fs = yield* FileSystem;
-  const names = yield* fs
-    .readDirectory(dir)
-    .pipe(Effect.orElseSucceed(() => []));
-  return names.toSorted();
-});
-
 /** Does a file exist? `false` on any stat failure — a missing file, never fatal. */
 const exists = Effect.fn("exists")(function* exists(file: string) {
   const fs = yield* FileSystem;
   return yield* fs.exists(file).pipe(Effect.orElseSucceed(() => false));
 });
-
-/** Decode a JSON record's text against `schema`. */
-function decodeJson<S extends Schema.Constraint>(schema: S) {
-  return (text: string) =>
-    Effect.flatMap(
-      Effect.try(() => JSON.parse(text) as unknown),
-      Schema.decodeUnknownEffect(schema)
-    );
-}
-
-/** Decode one `NNN-<type>.md` Finding record: split the envelope, then decode. */
-function decodeFinding(name: string) {
-  return (text: string) =>
-    Effect.flatMap(splitEnvelope(text), ({ body, meta }) =>
-      Schema.decodeUnknownEffect(FindingRecord)({
-        ...meta,
-        body,
-        name,
-        type: recordType(name),
-      })
-    );
-}
-
-/** Decode one walkthrough section file: split the envelope, then decode. */
-function decodeSection(text: string) {
-  return Effect.flatMap(splitEnvelope(text), ({ body, meta }) =>
-    Schema.decodeUnknownEffect(WalkthroughSection)({ ...meta, body })
-  );
-}
 
 /** One record to validate: where it lives and how to decode its bytes. */
 interface Task {
@@ -157,28 +126,30 @@ const check = Effect.fn("check")(function* check(task: Task) {
 const walkthroughTasks = Effect.fn("walkthroughTasks")(
   function* walkthroughTasks(
     reviewDir: string,
-    kind: (typeof WALKTHROUGH_KINDS)[number],
+    kind: WalkthroughKind,
     toTask: (file: string, decode: Task["decode"]) => Task
   ) {
     const path = yield* Path;
     const kindDir = path.join(reviewDir, "walkthroughs", kind);
-    const ids = (yield* listDir(kindDir)).filter((name) =>
-      name.startsWith("wlk_")
-    );
+    const ids = yield* listWalkthroughIds(kindDir);
     const tasks: Task[] = [];
     for (const id of ids) {
       const walkthroughDir = path.join(kindDir, id);
 
       const manifest = path.join(walkthroughDir, "manifest.json");
       if (yield* exists(manifest)) {
-        tasks.push(toTask(manifest, decodeJson(Walkthrough)));
+        tasks.push(
+          toTask(manifest, (text) => decodeJsonRecord(text, Walkthrough))
+        );
       }
 
-      const sections = (yield* listDir(walkthroughDir)).filter((name) =>
-        name.endsWith(".md")
-      );
+      // Every `.md` file present is checked, independent of the manifest's
+      // declared `sections` — a stray or unlisted section must still validate.
+      const sections = yield* listMarkdownRecordNames(walkthroughDir);
       for (const section of sections) {
-        tasks.push(toTask(path.join(walkthroughDir, section), decodeSection));
+        tasks.push(
+          toTask(path.join(walkthroughDir, section), decodeWalkthroughSection)
+        );
       }
     }
     return tasks;
@@ -203,7 +174,7 @@ const reviewTasks = Effect.fn("reviewTasks")(function* reviewTasks(
 
   const reviewJson = path.join(reviewDir, "review.json");
   if (yield* exists(reviewJson)) {
-    tasks.push(toTask(reviewJson, decodeJson(Review)));
+    tasks.push(toTask(reviewJson, (text) => decodeJsonRecord(text, Review)));
   }
 
   for (const [sub, schema] of [
@@ -211,25 +182,25 @@ const reviewTasks = Effect.fn("reviewTasks")(function* reviewTasks(
     ["viewed", ViewedEvent],
   ] as const) {
     const dir = path.join(reviewDir, sub);
-    const names = (yield* listDir(dir)).filter((name) =>
-      name.endsWith(".json")
-    );
+    const names = yield* listJsonRecordNames(dir);
     for (const name of names) {
-      tasks.push(toTask(path.join(dir, name), decodeJson(schema)));
+      tasks.push(
+        toTask(path.join(dir, name), (text) => decodeJsonRecord(text, schema))
+      );
     }
   }
 
   const findingsDir = path.join(reviewDir, "findings");
-  const findingIds = (yield* listDir(findingsDir)).filter((name) =>
-    name.startsWith("fnd_")
-  );
+  const findingIds = yield* listFindingIds(findingsDir);
   for (const id of findingIds) {
     const findingDir = path.join(findingsDir, id);
-    const records = (yield* listDir(findingDir)).filter((name) =>
-      name.endsWith(".md")
-    );
+    const records = yield* listMarkdownRecordNames(findingDir);
     for (const name of records) {
-      tasks.push(toTask(path.join(findingDir, name), decodeFinding(name)));
+      tasks.push(
+        toTask(path.join(findingDir, name), (text) =>
+          decodeFindingRecord(text, name)
+        )
+      );
     }
   }
 
@@ -249,7 +220,7 @@ const reviewTasks = Effect.fn("reviewTasks")(function* reviewTasks(
 export const validateStateRoot = Effect.fn("validateStateRoot")(
   function* validateStateRoot(stateRoot: string) {
     const path = yield* Path;
-    const slugs = yield* listDir(path.join(stateRoot, "reviews"));
+    const slugs = (yield* listDir(path.join(stateRoot, "reviews"))).toSorted();
     const perReview = yield* Effect.forEach(
       slugs,
       (slug) => reviewTasks(stateRoot, slug),
