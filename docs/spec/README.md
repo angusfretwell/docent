@@ -15,7 +15,7 @@ This directory is the build-ready spec: every cross-cutting decision is resolved
 | Document | Owns |
 | --- | --- |
 | [data-model.md](data-model.md) | The core entities — Review, Change, Finding — and their schemas; the canonical `.docent/` layout; the anchor union; drift; the what's-next state machine. The schema appendix of record for the core model. |
-| [architecture.md](architecture.md) | The app shell: Bun-native local server, the `server/client/skills/shared` layout, the React client stack (TanStack Query, nuqs, Tailwind + Base UI + coss/ui, react-markdown) served by Bun's fullstack bundler, HTTP file API + SSE live-reload, packaging and delivery (`npx docent`). |
+| [architecture.md](architecture.md) | The app shell: Bun-native local server, the `cli/api/core/client/shared` layout, the React client stack (TanStack Query, nuqs, Tailwind + Base UI + coss/ui, react-markdown) served by Bun's fullstack bundler, HTTP file API + SSE live-reload, packaging and delivery (`npx docent`). |
 | [diff-review.md](diff-review.md) | The Diff tab: @pierre/diffs rendering, virtualized review surface, nav tree, mark-as-viewed, context expansion, the Pending entry, the Findings panel. |
 | [walkthroughs.md](walkthroughs.md) | The Code and Product walkthrough pillars: the unified walkthrough schema, sections and ranges, captures and annotations, the capture pipeline (agent-browser + rrweb), staleness and regeneration. The schema appendix of record for walkthroughs. |
 | [agent-integration.md](agent-integration.md) | The human↔agent review loop: the findings queue, roles-not-actors, the skills catalogue (`/to-docent`, `/from-docent`, `/docent` + reference skills), the docent CLI, serving the app under review. |

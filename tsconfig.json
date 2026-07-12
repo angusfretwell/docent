@@ -30,8 +30,10 @@
     "plugins": [{ "name": "@effect/language-service" }],
 
     "paths": {
+      "@api/*": ["./src/api/*"],
+      "@cli/*": ["./src/cli/*"],
       "@client/*": ["./src/client/*"],
-      "@server/*": ["./src/server/*"],
+      "@core/*": ["./src/core/*"],
       "@shared/*": ["./src/shared/*"]
     }
   },

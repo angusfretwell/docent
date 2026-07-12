@@ -18,6 +18,6 @@ export function workerFactory() {
   // Bun's fullstack bundler can't bundle a browser Web Worker referenced by
   // `new Worker(new URL(…, import.meta.url))` (oven-sh/bun#29478), so the worker
   // is pre-bundled (scripts/bundle-worker.ts) and served at this fixed route by
-  // the server (see the `/diff-worker.js` route in src/server/main.ts).
+  // the server (see the `/diff-worker.js` route in src/api/serve.ts).
   return new Worker("/diff-worker.js", { type: "module" });
 }

@@ -2,10 +2,10 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
+import { readReviewSnapshot } from "@core/review";
+import { reviewDirPath } from "@core/store/layout";
+import { cleanupScratchDirs, scratchDir } from "@core/test-fixtures";
 import { BunServices } from "@effect/platform-bun";
-import { cleanupScratchDirs, scratchDir } from "@server/lib/test-fixtures";
-import { readReviewSnapshot } from "@server/services/review";
-import { reviewDirPath } from "@server/store/layout";
 import { ManagedRuntime } from "effect";
 import { sum } from "radashi";
 
