@@ -17,7 +17,7 @@ import type { HTMLBundle } from "bun";
 import { Console, Effect } from "effect";
 import open from "open";
 
-import { runFinding } from "./cli/index";
+import { runFinding } from "./cli/finding";
 import { runInstall } from "./cli/install";
 import { runStatus } from "./cli/status";
 import { runValidate } from "./cli/validate";
@@ -118,23 +118,6 @@ function crash(error: unknown) {
   );
 }
 
-// The non-serve CLI subcommands, each an argv → effect the binary runs against
-// git + fs (architecture.md §5). `install` is the onboarding wizard; `finding`
-// is the review loop's I/O; `walkthrough` and `capture` the walkthrough write
-// path — one binary, one write implementation; `validate` the non-gating schema
-// oracle over any `.docent/` tree (§3); `status` reports whether a docent server
-// is already serving this repo. Each carries its own typed error channel, so
-// they are matched (not unified into one callable) and run through the shared
-// `provide + crash` tail below.
-const CLI_SUBCOMMANDS = [
-  "install",
-  "finding",
-  "walkthrough",
-  "capture",
-  "validate",
-  "status",
-] as const;
-
 /** Run one non-serve CLI effect: provide the Bun services and crash on failure. */
 function runCli<E>(
   effect: Effect.Effect<void, E, BunServices.BunServices>
@@ -144,45 +127,69 @@ function runCli<E>(
   );
 }
 
+// An argv-consuming non-serve subcommand: resolves against git + fs from `cwd`
+// (architecture.md §5) and produces its own typed error channel. The `unknown`
+// here is only the dispatch table's storage type — each registered runner
+// below keeps its own concrete error type at its definition; entries are
+// matched runners, never unified into one callable.
+type SubcommandRunner = (
+  cwd: string,
+  argv: readonly string[]
+) => Effect.Effect<void, unknown, BunServices.BunServices>;
+
+// The non-serve CLI subcommands, each an argv → effect the binary runs against
+// git + fs. `install` is the onboarding wizard; `finding` is the review loop's
+// I/O; `walkthrough` and `capture` the walkthrough write path — one binary, one
+// write implementation; `validate` the non-gating schema oracle over any
+// `.docent/` tree (§3); `status` reports whether a docent server is already
+// serving this repo.
+const CLI_SUBCOMMANDS: Record<string, SubcommandRunner> = {
+  capture: runCapture,
+  finding: runFinding,
+  install: runInstall,
+  status: runStatus,
+  validate: runValidate,
+  walkthrough: runWalkthrough,
+};
+
+/**
+ * Look up `name` in `table` and run its registered effect through the shared
+ * `provide + crash` tail, or — for a name not registered — print the usual
+ * "unknown subcommand" usage error (naming every registered name plus `serve`)
+ * and exit non-zero.
+ */
+function dispatch(
+  name: string,
+  argv: readonly string[],
+  table: Record<string, SubcommandRunner>
+): void {
+  const runner = table[name];
+  if (runner === undefined) {
+    const known = ["serve", ...Object.keys(table)]
+      .map((candidate) => `"${candidate}"`)
+      .join(", ");
+    console.error(`unknown subcommand: ${name} (expected one of ${known})`);
+    process.exit(1);
+    return;
+  }
+  runCli(runner(process.cwd(), argv));
+}
+
 /**
  * The process entry: dispatch the subcommand and run it. `serve` — the default
- * when no subcommand is given — boots the server; the non-serve subcommands
+ * when no subcommand is given — boots the server; every other subcommand
  * (`install` onboards; `finding`, `walkthrough`, `capture` write; `validate`
- * reports) are the CLI path. Every subcommand is served by this one binary
- * (architecture.md §5).
+ * reports; `status` detects) runs through `dispatch` against `CLI_SUBCOMMANDS`.
+ * Every subcommand is served by this one binary (architecture.md §5).
  */
 export function runMain(entry: EntryOptions): void {
   const subcommand = process.argv[2] ?? "serve";
   const argv = process.argv.slice(3);
 
-  if (subcommand === "install") {
-    return runCli(runInstall(process.cwd(), argv));
-  }
-  if (subcommand === "finding") {
-    return runCli(runFinding(process.cwd(), argv));
-  }
-  if (subcommand === "walkthrough") {
-    return runCli(runWalkthrough(process.cwd(), argv));
-  }
-  if (subcommand === "capture") {
-    return runCli(runCapture(process.cwd(), argv));
-  }
-  if (subcommand === "validate") {
-    return runCli(runValidate(process.cwd(), argv));
-  }
-  if (subcommand === "status") {
-    return runCli(runStatus(process.cwd()));
+  if (subcommand === "serve") {
+    BunRuntime.runMain(serve(entry).pipe(Effect.catch(crash)));
+    return;
   }
 
-  if (subcommand !== "serve") {
-    const known = ["serve", ...CLI_SUBCOMMANDS]
-      .map((name) => `"${name}"`)
-      .join(", ");
-    console.error(
-      `unknown subcommand: ${subcommand} (expected one of ${known})`
-    );
-    process.exit(1);
-  }
-
-  BunRuntime.runMain(serve(entry).pipe(Effect.catch(crash)));
+  dispatch(subcommand, argv, CLI_SUBCOMMANDS);
 }

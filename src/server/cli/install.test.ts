@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { CliUsageError } from "./index";
+import { CliUsageError } from "./args";
 import { parseInstallArgs, skillsAddArgs } from "./install";
 
 describe("parseInstallArgs", () => {

@@ -7,7 +7,7 @@ import { ManagedRuntime } from "effect";
 
 import { cleanupScratchDirs, git, scratchRepo } from "../lib/test-fixtures";
 import { readReviewSnapshot } from "../services/review";
-import { CliUsageError } from "./index";
+import { CliUsageError } from "./args";
 import {
   parseDimensions,
   parseDurationMs,

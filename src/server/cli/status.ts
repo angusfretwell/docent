@@ -9,7 +9,7 @@
 import { Effect } from "effect";
 
 import { resolveServeStatus } from "../lib/serve-address";
-import { printJson } from "./index";
+import { printJson } from "./args";
 
 /** Run `docent status`: print whether a docent server is live for this repo. */
 export const runStatus = Effect.fn("runStatus")(function* runStatus(

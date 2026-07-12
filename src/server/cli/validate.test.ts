@@ -6,7 +6,7 @@ import { BunServices } from "@effect/platform-bun";
 import { ManagedRuntime } from "effect";
 
 import { cleanupScratchDirs, scratchDir } from "../lib/test-fixtures";
-import { CliUsageError } from "./index";
+import { CliUsageError } from "./args";
 import { parseValidateArgs, runValidate } from "./validate";
 
 const runtime = ManagedRuntime.make(BunServices.layer);

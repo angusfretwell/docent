@@ -38,9 +38,9 @@ import {
   printJson,
   requireFlag,
   resolveBody,
-  writeContext,
-} from "./index";
-import type { ParsedArgs } from "./index";
+} from "./args";
+import type { ParsedArgs } from "./args";
+import { writeContext } from "./finding";
 
 const WALKTHROUGH_KINDS = ["code", "product"] as const;
 const CAPTURE_KINDS = ["screenshot", "recording"] as const;

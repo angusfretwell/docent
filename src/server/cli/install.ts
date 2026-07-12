@@ -18,7 +18,7 @@ import { ChildProcess } from "effect/unstable/process";
 
 import { resolveRepo } from "../services/git";
 import { ensureStateRootGitignore } from "../store/layout";
-import { attempt, CliUsageError } from "./index";
+import { attempt, CliUsageError } from "./args";
 
 /** The skills.sh source the CLI installs from: this repo's shipped skills. */
 const SKILLS_SOURCE = "angusfretwell/docent";

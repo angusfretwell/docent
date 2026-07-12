@@ -7,21 +7,20 @@ import type { FoldedFinding } from "@shared/lib/finding";
 import { Effect, ManagedRuntime } from "effect";
 
 import { cleanupScratchDirs, git, scratchRepo } from "../lib/test-fixtures";
+import { CliUsageError, parseArgs } from "./args";
 import {
   addFinding,
   applyFindingFilter,
   buildAuthor,
-  CliUsageError,
   editFinding,
   listFindings,
   parseAnchorSpec,
-  parseArgs,
   parseListArgs,
   reopenFinding,
   replyFinding,
   resolveFinding,
   runFinding,
-} from "./index";
+} from "./finding";
 
 const runtime = ManagedRuntime.make(BunServices.layer);
 
@@ -65,32 +64,6 @@ function folded(overrides: Partial<FoldedFinding>): FoldedFinding {
     ...overrides,
   };
 }
-
-describe("parseArgs", () => {
-  test("splits --flag value, --flag=value, and bare booleans", () => {
-    const parsed = parseArgs(
-      ["--file", "a.ts", "--side=head", "--change"],
-      new Set(["change"])
-    );
-
-    expect(parsed.values.get("file")).toEqual(["a.ts"]);
-    expect(parsed.values.get("side")).toEqual(["head"]);
-    expect(parsed.bools.has("change")).toBe(true);
-  });
-
-  test("accumulates a repeated flag", () => {
-    const parsed = parseArgs(
-      ["--whats-next", "needs-action", "--whats-next", "closed"],
-      new Set()
-    );
-
-    expect(parsed.values.get("whats-next")).toEqual(["needs-action", "closed"]);
-  });
-
-  test("rejects a stray positional", () => {
-    expect(() => parseArgs(["oops"], new Set())).toThrow(CliUsageError);
-  });
-});
 
 describe("parseListArgs", () => {
   test("--open and --resolved together clear the status filter", () => {

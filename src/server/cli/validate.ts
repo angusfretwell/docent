@@ -15,7 +15,7 @@ import { Console, Effect, Schema } from "effect";
 import { Path } from "effect/Path";
 
 import { resolveStateRoot, validateStateRoot } from "../services/validate";
-import { attempt, CliUsageError } from "./index";
+import { attempt, CliUsageError } from "./args";
 
 /**
  * The report found invalid records. A typed failure so the shared crash tail
