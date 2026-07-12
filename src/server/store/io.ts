@@ -1,9 +1,10 @@
 /**
- * The `.docent/` filesystem read primitives shared by the read and write
- * paths: decode a JSON record against a schema, tolerating any read/parse/
- * decode failure as absence rather than a fatal error, and list a directory's
+ * The `.docent/` filesystem read/write primitives shared across the record
+ * writers: decode a JSON record against a schema, tolerating any read/parse/
+ * decode failure as absence rather than a fatal error; list a directory's
  * entries, tolerating a missing directory as empty (architecture.md §3 —
- * the filesystem is the interface, best-effort by design).
+ * the filesystem is the interface, best-effort by design); and serialize a
+ * record to its canonical on-disk bytes.
  *
  * `decodeJsonRecord` is the strict half `readRecord` wraps in `Effect.option`
  * — `docent validate`'s oracle (`services/validate.ts`) consumes it directly,
@@ -39,3 +40,16 @@ export const listDir = Effect.fn("listDir")(function* listDir(dir: string) {
   const fs = yield* FileSystem;
   return yield* fs.readDirectory(dir).pipe(Effect.orElseSucceed(() => []));
 });
+
+/**
+ * Write `value` as a JSON record at `file`: 2-space indent, trailing newline —
+ * the canonical on-disk shape every `.docent/` record writer produces, and the
+ * write counterpart of `readRecord`. Does not create parent directories; the
+ * caller ensures those (each writer's own directory-creation policy differs).
+ */
+export const writeJsonRecord = Effect.fn("writeJsonRecord")(
+  function* writeJsonRecord(file: string, value: unknown) {
+    const fs = yield* FileSystem;
+    yield* fs.writeFileString(file, `${JSON.stringify(value, null, 2)}\n`);
+  }
+);

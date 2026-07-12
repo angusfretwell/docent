@@ -17,7 +17,7 @@ import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 
 import { resolveRepo } from "../services/git";
-import { readRecord } from "../store/io";
+import { readRecord, writeJsonRecord } from "../store/io";
 
 const STATE_ROOT = ".docent";
 const ADDRESS_FILENAME = "serve.json";
@@ -58,10 +58,7 @@ export const writeServeAddress = Effect.fn("writeServeAddress")(
     };
 
     yield* fs.makeDirectory(path.join(root, STATE_ROOT), { recursive: true });
-    yield* fs.writeFileString(
-      addressPath(root, path),
-      `${JSON.stringify(address, null, 2)}\n`
-    );
+    yield* writeJsonRecord(addressPath(root, path), address);
   }
 );
 

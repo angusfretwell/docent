@@ -8,7 +8,11 @@ import type { FindingWrite } from "@shared/schemas/finding-write";
 import { ManagedRuntime } from "effect";
 
 import { cleanupScratchDirs, scratchDir } from "../lib/test-fixtures";
-import { mintChange, writeFindingRecord } from "./findings-write";
+import {
+  mintChange,
+  resolveWriteContext,
+  writeFindingRecord,
+} from "./findings-write";
 import { readReviewSnapshot } from "./review";
 
 const runtime = ManagedRuntime.make(BunServices.layer);
@@ -101,6 +105,38 @@ describe("mintChange", () => {
       "chg_001",
       "chg_002",
     ]);
+  });
+});
+
+describe("resolveWriteContext", () => {
+  test("auto-creates the Review and mints the Change for the given refs", async () => {
+    const root = scratchDir("docent-write-");
+
+    const resolved = await runtime.runPromise(
+      resolveWriteContext({ base: "main", branch: "feature", refs: REFS, root })
+    );
+
+    expect(resolved.reviewDir).toBe(reviewDir(root));
+    expect(resolved.change.id).toBe("chg_001");
+    expect(resolved.change.baseSha).toBe("aaaa");
+    expect(resolved.change.headSha).toBe("bbbb");
+    const snap = await snapshot(root);
+    expect(snap.review.branch).toBe("feature");
+  });
+
+  test("reuses an already-minted Change for the same refs", async () => {
+    const root = scratchDir("docent-write-");
+    await runtime.runPromise(
+      resolveWriteContext({ base: "main", branch: "feature", refs: REFS, root })
+    );
+
+    const second = await runtime.runPromise(
+      resolveWriteContext({ base: "main", branch: "feature", refs: REFS, root })
+    );
+
+    expect(second.change.id).toBe("chg_001");
+    const snap = await snapshot(root);
+    expect(snap.changes.map((change) => change.id)).toEqual(["chg_001"]);
   });
 });
 

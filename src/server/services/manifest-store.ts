@@ -14,10 +14,9 @@
 
 import { Walkthrough } from "@shared/schemas/walkthrough";
 import { Effect, Option, Schema } from "effect";
-import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 
-import { readRecord } from "../store/io";
+import { readRecord, writeJsonRecord } from "../store/io";
 
 const KINDS = ["code", "product"] as const;
 
@@ -116,12 +115,8 @@ export const writeManifest = Effect.fn("writeManifest")(function* writeManifest(
   dir: string,
   manifest: Walkthrough
 ) {
-  const fs = yield* FileSystem;
   const path = yield* Path;
-  yield* fs.writeFileString(
-    path.join(dir, "manifest.json"),
-    `${JSON.stringify(manifest, null, 2)}\n`
-  );
+  yield* writeJsonRecord(path.join(dir, "manifest.json"), manifest);
 });
 
 /**

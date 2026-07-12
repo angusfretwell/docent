@@ -34,7 +34,7 @@ import {
 } from "../store/enumerate";
 import type { WalkthroughKind } from "../store/enumerate";
 import { makeId } from "../store/id";
-import { readRecord } from "../store/io";
+import { readRecord, writeJsonRecord } from "../store/io";
 import {
   branchSlug,
   ensureStateRootGitignore,
@@ -82,7 +82,7 @@ export const ensureReview = Effect.fn("ensureReview")(
       schema: "docent/review",
     });
     yield* fs.makeDirectory(params.reviewDir, { recursive: true });
-    yield* fs.writeFileString(file, `${JSON.stringify(review, null, 2)}\n`);
+    yield* writeJsonRecord(file, review);
     return review;
   }
 );
@@ -317,10 +317,7 @@ export const appendViewedEvent = Effect.fn("appendViewedEvent")(
       ts: new Date(now).toISOString(),
     });
     const id = yield* makeId("vew");
-    yield* fs.writeFileString(
-      path.join(viewedDir, `${id}.json`),
-      `${JSON.stringify(event, null, 2)}\n`
-    );
+    yield* writeJsonRecord(path.join(viewedDir, `${id}.json`), event);
     return event;
   }
 );

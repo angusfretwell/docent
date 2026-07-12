@@ -18,7 +18,7 @@ import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 
 import { makeId } from "../store/id";
-import { listDir, readRecord } from "../store/io";
+import { listDir, readRecord, writeJsonRecord } from "../store/io";
 import { reviewDirPath } from "../store/layout";
 import { recordFile, serializeFrontmatter } from "../store/records";
 import { ensureReview } from "./review";
@@ -99,12 +99,35 @@ export const mintChange = Effect.fn("mintChange")(function* mintChange(params: {
     schema: "docent/change",
   });
   yield* fs.makeDirectory(dir, { recursive: true });
-  yield* fs.writeFileString(
-    path.join(dir, `${id}.json`),
-    `${JSON.stringify(record, null, 2)}\n`
-  );
+  yield* writeJsonRecord(path.join(dir, `${id}.json`), record);
   return record;
 });
+
+/**
+ * Resolve the write scope shared by every Change-scoped write: the branch's
+ * Review dir (auto-created on first use) and the live head's Change, minted
+ * or reused for `refs` (data-model.md §4). `findings-write.ts` and
+ * `walkthrough-write.ts` both assemble this identical context before writing
+ * their own record; this is the one place it happens.
+ */
+export const resolveWriteContext = Effect.fn("resolveWriteContext")(
+  function* resolveWriteContext(params: {
+    root: string;
+    branch: string;
+    base: string;
+    refs: ChangeRefs;
+  }) {
+    const reviewDir = reviewDirPath(params.root, params.branch);
+    yield* ensureReview({
+      base: params.base,
+      branch: params.branch,
+      reviewDir,
+      root: params.root,
+    });
+    const change = yield* mintChange({ refs: params.refs, reviewDir });
+    return { change, reviewDir };
+  }
+);
 
 /**
  * Serialize a record's frontmatter envelope: block-style top-level keys with
@@ -160,14 +183,12 @@ export const writeFindingRecord = Effect.fn("writeFindingRecord")(
     const fs = yield* FileSystem;
     const path = yield* Path;
 
-    const reviewDir = reviewDirPath(params.root, params.branch);
-    yield* ensureReview({
+    const { change, reviewDir } = yield* resolveWriteContext({
       base: params.base,
       branch: params.branch,
-      reviewDir,
+      refs: params.refs,
       root: params.root,
     });
-    const change = yield* mintChange({ refs: params.refs, reviewDir });
     const createdAt = yield* now;
 
     const findingsDir = path.join(reviewDir, "findings");

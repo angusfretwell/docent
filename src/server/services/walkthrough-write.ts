@@ -5,10 +5,11 @@
  * lands the exact plain files the walk parses back, in the shape an agent could
  * hand-author (walkthroughs.md §10; non-gating).
  *
- * It shares the finding write path's minting primitives verbatim — `mintChange`
- * for the lazy `bornChangeId`, `makeId` for the ULID ids, `ensureReview`, and
- * the `records.ts` frontmatter envelope — so there is one implementation of
- * ULID/Change/anchor minting and validation, never a second (issue #44).
+ * It shares the finding write path's minting primitives verbatim —
+ * `resolveWriteContext` for the lazy `bornChangeId` (via `mintChange`),
+ * `makeId` for the ULID ids, `ensureReview`, and the `records.ts` frontmatter
+ * envelope — so there is one implementation of ULID/Change/anchor minting and
+ * validation, never a second (issue #44).
  *
  * Unlike Findings (pure append-only record dirs), a walkthrough's `manifest.json`
  * is assembled incrementally: `create` writes the shell, then `add-section` /
@@ -38,7 +39,7 @@ import { makeId } from "../store/id";
 import { reviewDirPath } from "../store/layout";
 import { recordFile, serializeFrontmatter } from "../store/records";
 import type { ChangeRefs } from "./findings-write";
-import { mintChange } from "./findings-write";
+import { resolveWriteContext } from "./findings-write";
 import {
   appendToManifest,
   assertSectionArms,
@@ -102,14 +103,12 @@ export const writeWalkthrough = Effect.fn("writeWalkthrough")(
     const fs = yield* FileSystem;
     const path = yield* Path;
 
-    const reviewDir = reviewDirPath(params.root, params.branch);
-    yield* ensureReview({
+    const { change, reviewDir } = yield* resolveWriteContext({
       base: params.base,
       branch: params.branch,
-      reviewDir,
+      refs: params.refs,
       root: params.root,
     });
-    const change = yield* mintChange({ refs: params.refs, reviewDir });
     const id = yield* makeId("wlk");
 
     const manifest = Walkthrough.make({

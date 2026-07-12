@@ -1,12 +1,12 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import { BunServices } from "@effect/platform-bun";
 import { ManagedRuntime, Option, Schema } from "effect";
 
 import { cleanupScratchDirs, scratchDir } from "../lib/test-fixtures";
-import { listDir, readRecord } from "./io";
+import { listDir, readRecord, writeJsonRecord } from "./io";
 
 const runtime = ManagedRuntime.make(BunServices.layer);
 
@@ -59,6 +59,31 @@ describe("readRecord", () => {
     const result = await runtime.runPromise(readRecord(file, Widget));
 
     expect(Option.isNone(result)).toBe(true);
+  });
+});
+
+describe("writeJsonRecord", () => {
+  test("writes canonical 2-space JSON with a trailing newline", async () => {
+    const root = scratchDir("docent-io-");
+    const file = path.join(root, "widget.json");
+    const value = { count: 3, id: "w1" };
+
+    await runtime.runPromise(writeJsonRecord(file, value));
+
+    expect(readFileSync(file, "utf-8")).toBe(
+      `${JSON.stringify(value, null, 2)}\n`
+    );
+  });
+
+  test("round-trips through readRecord", async () => {
+    const root = scratchDir("docent-io-");
+    const file = path.join(root, "widget.json");
+    const value = { count: 3, id: "w1" };
+
+    await runtime.runPromise(writeJsonRecord(file, value));
+    const result = await runtime.runPromise(readRecord(file, Widget));
+
+    expect(Option.isSome(result) && result.value).toEqual(value);
   });
 });
 
