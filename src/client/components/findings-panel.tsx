@@ -13,6 +13,7 @@ import type { FindingEntry } from "@shared/schemas/review";
 import { useState } from "react";
 
 import type { DriftResult } from "../lib/drift";
+import { useFindingParam, useResolvedParam } from "../url/params";
 import { Composer } from "./composer";
 import { DRIFT_SIGNAL, DriftPill } from "./drift-badge";
 import { FindingThread } from "./finding-thread";
@@ -149,8 +150,8 @@ export function FindingsPanel({
   onJump: (file: string, line: number) => void;
   onWrite: (write: FindingWrite) => Promise<void>;
 }) {
-  const [showResolved, setShowResolved] = useState(false);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showResolved, setShowResolved] = useResolvedParam();
+  const [expandedId, setExpandedId] = useFindingParam();
   const [changeComposerOpen, setChangeComposerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -167,7 +168,9 @@ export function FindingsPanel({
     : folded.filter((finding) => !finding.resolved);
 
   function toggle(finding: FoldedFinding) {
-    setExpandedId((current) => (current === finding.id ? null : finding.id));
+    void setExpandedId((current) =>
+      current === finding.id ? null : finding.id
+    );
     const target = findingJumpTarget(finding.anchor);
     if (target !== undefined) {
       onJump(target.file, target.line);
@@ -202,7 +205,9 @@ export function FindingsPanel({
           >
             <input
               checked={showResolved}
-              onChange={(event) => setShowResolved(event.target.checked)}
+              onChange={(event) => {
+                void setShowResolved(event.target.checked);
+              }}
               type="checkbox"
             />
             Show resolved

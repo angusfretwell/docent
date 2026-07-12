@@ -27,6 +27,7 @@
     "date-fns": "^4.4.0",
     "effect": "^4.0.0-beta.97",
     "lucide-react": "^1.24.0",
+    "nuqs": "^2.9.0",
     "open": "^11.0.0",
     "radashi": "^12.9.1",
     "rrweb": "^2.1.0",

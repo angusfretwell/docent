@@ -22,6 +22,8 @@ import {
 import type { DriftResult } from "../lib/drift";
 import { useDrift } from "../lib/drift";
 import { writeFinding } from "../lib/findings-client";
+import type { Selection, Tab } from "../url/params";
+import { useRangeParam, useTabParam, useViewParam } from "../url/params";
 import type { DiffViewHandle } from "./diff-view";
 import { DiffView } from "./diff-view";
 import { ErrorBoundary } from "./error-boundary";
@@ -41,15 +43,6 @@ async function handleWrite(write: FindingWrite): Promise<void> {
 const NO_VIEWED: readonly ViewedEvent[] = [];
 const NO_FINDINGS: readonly FindingEntry[] = [];
 const NO_WALKTHROUGHS: readonly WalkthroughEntry[] = [];
-
-// Which selector entry is showing: the committed Change, or the read-only
-// Pending working-tree preview.
-type Selection = "change" | "pending";
-
-// The tab / view mode (walkthroughs.md §1). Each is its own self-contained
-// surface over the same Change: the Diff tab, the Code walkthrough tab, and the
-// Product walkthrough tab (#15).
-type Tab = "diff" | "walkthrough" | "product";
 
 // Fixed pill over the diff; hoisted so it isn't rebuilt on every render.
 const statusStyle: React.CSSProperties = {
@@ -425,9 +418,9 @@ function ProductWalkthroughTab({ review }: { review: ReviewSnapshot | null }) {
 }
 
 export function App() {
-  const [selected, setSelected] = useState<Selection>("change");
-  const [range, setRange] = useState<PendingRange>("incremental");
-  const [tab, setTab] = useState<Tab>("diff");
+  const [selected, setSelected] = useViewParam();
+  const [range, setRange] = useRangeParam();
+  const [tab, setTab] = useTabParam();
   // The walkthrough-order override for the committed Diff surface: the tour's
   // file sequence, set by "open Diff tab in walkthrough order" and held until the
   // reviewer picks a path/size sort (diff-review.md §2).
@@ -451,11 +444,9 @@ export function App() {
 
   // The deep-link loop: a walkthrough range or a Findings-panel row (the panel is
   // global, so the click can come from any tab) opens the Diff tab at its
-  // file/line (walkthroughs.md §1).
+  // file/line (walkthroughs.md §1), via one atomic URL update.
   const openInDiff = useDiffDeepLink({
-    active: tab === "diff",
     diffRef,
-    onActivate: () => setTab("diff"),
     onFileOrder: setFileOrder,
   });
 
@@ -487,8 +478,12 @@ export function App() {
           drift={drift}
           fileOrder={fileOrder}
           onExitFileOrder={() => setFileOrder(undefined)}
-          onRange={setRange}
-          onSelect={setSelected}
+          onRange={(next) => {
+            void setRange(next);
+          }}
+          onSelect={(next) => {
+            void setSelected(next);
+          }}
           pending={pending}
           range={range}
           review={review}
@@ -501,7 +496,12 @@ export function App() {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       {review ? <ReviewStatus review={review} /> : null}
-      <TabBar onTab={setTab} tab={tab} />
+      <TabBar
+        onTab={(next) => {
+          void setTab(next);
+        }}
+        tab={tab}
+      />
       <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
         <div
           style={{

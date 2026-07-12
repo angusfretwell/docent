@@ -1,3 +1,4 @@
+import { NuqsAdapter } from "nuqs/adapters/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
@@ -14,8 +15,10 @@ const root = (import.meta.hot.data.root ??= createRoot(container));
 
 root.render(
   <StrictMode>
-    <ThemeProvider>
-      <App />
-    </ThemeProvider>
+    <NuqsAdapter defaultOptions={{ history: "push" }}>
+      <ThemeProvider>
+        <App />
+      </ThemeProvider>
+    </NuqsAdapter>
   </StrictMode>
 );
