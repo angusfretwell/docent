@@ -205,7 +205,7 @@ export function changeHistoryLabel(records: readonly FindingRecord[]): string {
 }
 
 /** Whether an object id names real content — a null id (all zeros) has no blob. */
-export function isRealObjectId(id: string | undefined): id is string {
+export function isRealObjectId(id?: string): id is string {
   return id !== undefined && !/^0+$/.test(id);
 }
 

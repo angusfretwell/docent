@@ -229,7 +229,7 @@ export interface PlanTriage {
 export function triagePlan(
   id: string,
   plan: DriftPlan,
-  lines: [number, number] | undefined
+  lines?: [number, number]
 ): PlanTriage {
   if (plan.kind === "resolved") {
     return {
