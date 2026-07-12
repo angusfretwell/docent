@@ -33,12 +33,12 @@ import type {
   WalkthroughSection,
 } from "@shared/schemas/walkthrough";
 import { unique } from "radashi";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-import { fetchBlobText } from "../lib/blobs";
+import { useRangeWindow } from "../hooks/use-range-window";
 import { themes, workerFactory } from "../lib/code-view";
 import type { DriftResult } from "../lib/drift";
-import { CONTEXT_STEP, rangeWindow } from "../lib/walkthrough-context";
+import { CONTEXT_STEP } from "../lib/walkthrough-context";
 import type { RangeWindow } from "../lib/walkthrough-context";
 import { useRangeDrift } from "../lib/walkthrough-drift";
 import type { KeyedRange } from "../lib/walkthrough-drift";
@@ -254,31 +254,9 @@ function RangeCode({
   findings: readonly FoldedFinding[];
   onOpenInDiff: OpenInDiff;
 }) {
-  const [full, setFull] = useState<string | null>(null);
-  const [failed, setFailed] = useState(false);
   // Context lines revealed on each side of the range, grown by "Expand context".
   const [context, setContext] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchBlobText(range.blobSha)
-      .then((text) => {
-        if (!cancelled) {
-          setFull(text);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setFailed(true);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [range.blobSha]);
-
-  const codeWindow =
-    full === null ? null : rangeWindow(full, range.lines, context);
+  const { codeWindow, failed } = useRangeWindow(range, context);
 
   const targetLine = drift?.lines?.[0] ?? range.lines[0];
   const state = drift?.state ?? "live";

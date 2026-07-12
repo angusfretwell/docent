@@ -22,14 +22,11 @@ import type { FoldedFinding } from "@shared/lib/finding";
 import {
   captureById,
   foldSectionAnnotations,
-  identityDrift,
   interleaveCaptureSegments,
   walkthroughStaleness,
 } from "@shared/lib/walkthrough";
 
 import "rrweb/dist/style.css";
-import type { DriftState } from "@shared/schemas/drift";
-import type { Anchor } from "@shared/schemas/finding";
 import type {
   ChangeRecord,
   FindingEntry,
@@ -40,11 +37,22 @@ import type {
   WalkthroughAnnotation,
   WalkthroughSection,
 } from "@shared/schemas/walkthrough";
-import { useEffect, useRef, useState } from "react";
-import { Replayer } from "rrweb";
-import type { eventWithTime } from "rrweb";
 
-import { captureUrl, fetchCaptureEvents } from "../lib/blobs";
+import { useRrwebReplayer } from "../hooks/use-rrweb-replayer";
+import { captureUrl } from "../lib/blobs";
+import { highlightQuotes } from "../lib/highlight-quotes";
+import {
+  ANNOTATION_TONE,
+  annotationsFor,
+  captureAnchorId,
+  captureFindingDrift,
+  RECORDING_TIMESTAMP,
+  recordingPins,
+  SCREENSHOT_REGION,
+  screenshotPins,
+  TEXT_SPAN,
+} from "../lib/walkthrough-pins";
+import type { Tone } from "../lib/walkthrough-pins";
 
 const pillStyle: React.CSSProperties = {
   borderRadius: "0.35rem",
@@ -94,21 +102,6 @@ const captionStyle: React.CSSProperties = {
   opacity: 0.85,
 };
 
-/** An overlay tone — the border and chip colour of a pin and its caption. */
-interface Tone {
-  border: string;
-  chip: string;
-}
-
-// Two visually distinct overlay tones: an authored annotation (durable, blue)
-// versus a reviewer Finding (orange), so a reader tells the two acts apart at a
-// glance (walkthroughs.md §7).
-const ANNOTATION_TONE: Tone = {
-  border: "#4c8dff",
-  chip: "rgba(56,132,255,0.9)",
-};
-const FINDING_TONE: Tone = { border: "#e0863c", chip: "rgba(224,108,32,0.9)" };
-
 // An authored annotation note (durable, blue) that has no capture to pin to —
 // a file / line / change / walkthrough-section / text-span arm (walkthroughs.md
 // §7). Toned like the annotation pins so a reader tells the two acts apart.
@@ -117,185 +110,12 @@ const annotationNoteStyle: React.CSSProperties = {
   borderLeftColor: ANNOTATION_TONE.border,
 };
 
-// The capture anchor arms, named once so narrowing and filters read one token.
-const SCREENSHOT_REGION = "screenshot-region";
-const RECORDING_TIMESTAMP = "recording-timestamp";
-const TEXT_SPAN = "text-span";
-
 // A highlighted text-span quote sitting inline in the section prose (§7).
 const markStyle: React.CSSProperties = {
   background: "rgba(224,108,32,0.22)",
   borderRadius: "0.2rem",
   padding: "0 0.1rem",
 };
-
-/** A screenshot-region rect an overlay can position, plus its callout body and tone. */
-interface RegionPin {
-  body: string;
-  label: string;
-  rect: readonly [number, number, number, number];
-  tone: Tone;
-}
-
-/** A recording-timestamp marker on the replay timeline, plus its callout. */
-interface TimePin {
-  atMs: number;
-  body: string;
-  label: string;
-  toMs?: number;
-  tone: Tone;
-}
-
-/** A capture-level callout with no coordinate — a whole-capture annotation or Finding. */
-interface WholePin {
-  body: string;
-  label: string;
-  tone: Tone;
-}
-
-// The two capture anchor arms are structurally identical across annotations and
-// Findings — same `kind`/`capture` plus an optional coordinate — so one raw
-// collector feeds both the screenshot and recording placement (§7). The shape is
-// the Finding union's two capture arms (an annotation anchor is assignable to it),
-// derived so it can't drift from the schema. A pin sourced from an annotation is
-// toned blue and labelled `A`; from a Finding, orange `F`.
-type CaptureAnchor = Extract<
-  Anchor,
-  { kind: "screenshot-region" | "recording-timestamp" }
->;
-
-interface RawPin {
-  anchor: CaptureAnchor;
-  body: string;
-  label: string;
-  tone: Tone;
-}
-
-/** The capture id an anchor targets, or `undefined` for a non-capture anchor. */
-function captureAnchorId(anchor: FoldedFinding["anchor"]): string | undefined {
-  if (
-    anchor?.kind === SCREENSHOT_REGION ||
-    anchor?.kind === RECORDING_TIMESTAMP
-  ) {
-    return anchor.capture;
-  }
-  return undefined;
-}
-
-/**
- * The identity drift of a capture-arm Finding (walkthroughs.md §8): `live` while
- * the capture it points at is still placed in a section here, `outdated` once
- * gone — the single live/outdated decision both the inline pins and the detached
- * section route off. `undefined` for a non-capture anchor. Placement, not mere
- * registry membership, is the test: a capture no section renders has nowhere to
- * pin a live Finding, so such Findings detach and surface rather than vanish.
- */
-function captureFindingDrift(
-  anchor: FoldedFinding["anchor"],
-  placedCaptureIds: ReadonlySet<string>
-): DriftState | undefined {
-  const id = captureAnchorId(anchor);
-  return id === undefined ? undefined : identityDrift(placedCaptureIds.has(id));
-}
-
-/**
- * The raw pins for one capture of one arm `kind`: annotations targeting it
- * (numbered `A1…`) then Findings anchored to it (numbered `F1…`). Whether each
- * pin is placed (has a coordinate) or whole-capture is decided by the caller,
- * which reads the coordinate off the anchor.
- */
-function rawPins(
-  annotations: readonly WalkthroughAnnotation[],
-  findings: readonly FoldedFinding[],
-  captureId: string,
-  kind: "screenshot-region" | "recording-timestamp"
-): RawPin[] {
-  const pins: RawPin[] = [];
-  let annotationCount = 0;
-  for (const annotation of annotations) {
-    if (annotation.anchor.kind === kind) {
-      annotationCount += 1;
-      pins.push({
-        anchor: annotation.anchor,
-        body: annotation.body,
-        label: `A${annotationCount}`,
-        tone: ANNOTATION_TONE,
-      });
-    }
-  }
-  let findingCount = 0;
-  for (const finding of findings) {
-    const { anchor } = finding;
-    if (anchor?.kind === kind && anchor.capture === captureId) {
-      findingCount += 1;
-      pins.push({
-        anchor,
-        body: finding.body,
-        label: `F${findingCount}`,
-        tone: FINDING_TONE,
-      });
-    }
-  }
-  return pins;
-}
-
-/** Split a capture's screenshot pins into placed region rects and whole-capture callouts. */
-function screenshotPins(
-  annotations: readonly WalkthroughAnnotation[],
-  findings: readonly FoldedFinding[],
-  capture: Capture
-): { regions: RegionPin[]; whole: WholePin[] } {
-  const regions: RegionPin[] = [];
-  const whole: WholePin[] = [];
-  for (const pin of rawPins(
-    annotations,
-    findings,
-    capture.id,
-    SCREENSHOT_REGION
-  )) {
-    const rect =
-      pin.anchor.kind === SCREENSHOT_REGION ? pin.anchor.rect : undefined;
-    if (rect) {
-      regions.push({ body: pin.body, label: pin.label, rect, tone: pin.tone });
-    } else {
-      whole.push({ body: pin.body, label: pin.label, tone: pin.tone });
-    }
-  }
-  return { regions, whole };
-}
-
-/** Split a capture's recording pins into placed timeline markers and whole-capture callouts. */
-function recordingPins(
-  annotations: readonly WalkthroughAnnotation[],
-  findings: readonly FoldedFinding[],
-  capture: Capture
-): { times: TimePin[]; whole: WholePin[] } {
-  const times: TimePin[] = [];
-  const whole: WholePin[] = [];
-  for (const pin of rawPins(
-    annotations,
-    findings,
-    capture.id,
-    RECORDING_TIMESTAMP
-  )) {
-    const from =
-      pin.anchor.kind === RECORDING_TIMESTAMP ? pin.anchor.fromMs : undefined;
-    const to =
-      pin.anchor.kind === RECORDING_TIMESTAMP ? pin.anchor.toMs : undefined;
-    if (from === undefined) {
-      whole.push({ body: pin.body, label: pin.label, tone: pin.tone });
-    } else {
-      times.push({
-        atMs: from,
-        body: pin.body,
-        label: pin.label,
-        toMs: to,
-        tone: pin.tone,
-      });
-    }
-  }
-  return { times, whole };
-}
 
 /** A numbered chip label used both on a pin and in its caption. */
 function Chip({ label, tone }: { label: string; tone: Tone }) {
@@ -426,46 +246,12 @@ function RecordingCapture({
   annotations: readonly WalkthroughAnnotation[];
   findings: readonly FoldedFinding[];
 }) {
-  const rootRef = useRef<HTMLDivElement>(null);
-  const replayerRef = useRef<Replayer | null>(null);
-  const [ready, setReady] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const { rootRef, ready, failed, seek } = useRrwebReplayer(
+    captureUrl(walkthroughId, capture.media, "recording")
+  );
   const { times, whole } = recordingPins(annotations, findings, capture);
   const [vw, vh] = capture.viewport;
   const duration = capture.durationMs ?? 0;
-
-  useEffect(() => {
-    let cancelled = false;
-    let replayer: Replayer | null = null;
-    fetchCaptureEvents(captureUrl(walkthroughId, capture.media, "recording"))
-      .then((events) => {
-        if (cancelled || rootRef.current === null) {
-          return;
-        }
-        replayer = new Replayer(events as eventWithTime[], {
-          mouseTail: false,
-          root: rootRef.current,
-          skipInactive: false,
-          speed: 1,
-        });
-        replayerRef.current = replayer;
-        setReady(true);
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setFailed(true);
-        }
-      });
-    return () => {
-      cancelled = true;
-      replayer?.destroy();
-      replayerRef.current = null;
-    };
-  }, [walkthroughId, capture.media]);
-
-  function seek(ms: number) {
-    replayerRef.current?.play(ms);
-  }
 
   return (
     <figure style={{ margin: "0.6rem 0" }}>
@@ -562,21 +348,6 @@ function CaptureView({
 }
 
 /**
- * The annotations in a section that target a given capture id — the capture-arm
- * annotations that pin onto this capture. An annotation's anchor spans the full
- * Finding vocabulary (§7), so a non-capture arm never matches a capture id here;
- * `foldSectionAnnotations` surfaces those as section notes so none is dropped.
- */
-function annotationsFor(
-  section: WalkthroughSection,
-  captureId: string
-): WalkthroughAnnotation[] {
-  return (section.annotations ?? []).filter(
-    (annotation) => captureAnchorId(annotation.anchor) === captureId
-  );
-}
-
-/**
  * A prose run with any text-span Finding quotes highlighted in place — the
  * quote-based anchor rendered **into the section prose** (walkthroughs.md §7),
  * not just listed beside it. Each quote's first occurrence in the run is wrapped;
@@ -584,39 +355,24 @@ function annotationsFor(
  * above the body).
  */
 function Prose({ text, quotes }: { text: string; quotes: readonly string[] }) {
-  const active = quotes.filter(
-    (quote) => quote.length > 0 && text.includes(quote)
-  );
-  if (active.length === 0) {
+  const segments = highlightQuotes(text, quotes);
+  const isPlainText = segments.length === 1 && segments[0]?.kind === "text";
+  if (isPlainText) {
     return <p style={proseStyle}>{text}</p>;
   }
-  const nodes: React.ReactNode[] = [];
-  let rest = text;
-  while (rest.length > 0) {
-    let at = -1;
-    let quote = "";
-    for (const candidate of active) {
-      const index = rest.indexOf(candidate);
-      if (index !== -1 && (at === -1 || index < at)) {
-        at = index;
-        quote = candidate;
-      }
-    }
-    if (at === -1) {
-      nodes.push(rest);
-      break;
-    }
-    if (at > 0) {
-      nodes.push(rest.slice(0, at));
-    }
-    nodes.push(
-      <mark key={`mark:${quote}:${nodes.length}`} style={markStyle}>
-        {quote}
-      </mark>
-    );
-    rest = rest.slice(at + quote.length);
-  }
-  return <p style={proseStyle}>{nodes}</p>;
+  return (
+    <p style={proseStyle}>
+      {segments.map((segment, index) =>
+        segment.kind === "quote" ? (
+          <mark key={`mark:${segment.text}:${index}`} style={markStyle}>
+            {segment.text}
+          </mark>
+        ) : (
+          segment.text
+        )
+      )}
+    </p>
+  );
 }
 
 /**
