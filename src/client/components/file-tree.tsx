@@ -19,6 +19,19 @@ export interface RowState {
   generated: boolean;
 }
 
+/** Per-file viewed rows and the toggle handler both DiffScroll and FileTree render/drive. */
+export interface ViewedRows {
+  rowStates: ReadonlyMap<string, RowState>;
+  onToggleViewed: (id: string) => void;
+}
+
+/** The tree's position/jump surface: the active-file highlight, select, and keyboard jump. */
+export interface FileTreeNav {
+  activeId: string | undefined;
+  onSelect: (id: string) => void;
+  onJump: (kind: "file" | "change", direction: 1 | -1) => void;
+}
+
 const BADGE_COLOR: Record<FileEntry["changeType"], string> = {
   A: "#3fb950",
   D: "#f85149",
@@ -241,13 +254,13 @@ function Progress({ viewed, total }: { viewed: number; total: number }) {
 
 export function FileTree({
   nodes,
-  activeId,
+  nav,
   filter,
   order,
   explicitOrder,
   split,
   collapsed,
-  rowStates,
+  viewed,
   progress,
   unviewedOnly,
   findingsOnly,
@@ -255,21 +268,18 @@ export function FileTree({
   onOrderChange,
   onSplitChange,
   onToggleDir,
-  onSelect,
-  onToggleViewed,
   onUnviewedOnlyChange,
   onFindingsOnlyChange,
-  onJump,
 }: {
   nodes: TreeNode[];
-  activeId: string | undefined;
+  nav: FileTreeNav;
   filter: string;
   order: FileOrder;
   /** A walkthrough-order override is active, overriding the path/size toggle. */
   explicitOrder: boolean;
   split: boolean;
   collapsed: ReadonlySet<string>;
-  rowStates: ReadonlyMap<string, RowState>;
+  viewed: ViewedRows;
   progress: { viewed: number; total: number };
   unviewedOnly: boolean;
   findingsOnly: boolean;
@@ -277,12 +287,12 @@ export function FileTree({
   onOrderChange: (order: FileOrder) => void;
   onSplitChange: (split: boolean) => void;
   onToggleDir: (path: string) => void;
-  onSelect: (id: string) => void;
-  onToggleViewed: (id: string) => void;
   onUnviewedOnlyChange: (value: boolean) => void;
   onFindingsOnlyChange: (value: boolean) => void;
-  onJump: (kind: "file" | "change", direction: 1 | -1) => void;
 }) {
+  const { onSelect } = nav;
+  const { onToggleViewed } = viewed;
+
   // The sort control doubles as the walkthrough-order exit: while an explicit
   // order is active it reads "Sort: walkthrough" and returns to the persisted
   // path/size sort; otherwise it toggles between path and size.
@@ -350,28 +360,28 @@ export function FileTree({
           <span style={{ flex: 1 }} />
           <button
             aria-label="Previous file"
-            onClick={() => onJump("file", -1)}
+            onClick={() => nav.onJump("file", -1)}
             type="button"
           >
             ↑file
           </button>
           <button
             aria-label="Next file"
-            onClick={() => onJump("file", 1)}
+            onClick={() => nav.onJump("file", 1)}
             type="button"
           >
             ↓file
           </button>
           <button
             aria-label="Previous change"
-            onClick={() => onJump("change", -1)}
+            onClick={() => nav.onJump("change", -1)}
             type="button"
           >
             ↑hunk
           </button>
           <button
             aria-label="Next change"
-            onClick={() => onJump("change", 1)}
+            onClick={() => nav.onJump("change", 1)}
             type="button"
           >
             ↓hunk
@@ -384,7 +394,7 @@ export function FileTree({
         ) : (
           nodes.map((node) => (
             <Row
-              activeId={activeId}
+              activeId={nav.activeId}
               collapsed={collapsed}
               depth={0}
               key={node.kind === "dir" ? node.path : node.entry.id}
@@ -392,7 +402,7 @@ export function FileTree({
               onSelect={onSelect}
               onToggle={onToggleDir}
               onToggleViewed={onToggleViewed}
-              rowStates={rowStates}
+              rowStates={viewed.rowStates}
             />
           ))
         )}

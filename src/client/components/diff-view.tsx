@@ -6,53 +6,33 @@ import type {
   FileDiffMetadata,
   LineAnnotation,
 } from "@pierre/diffs";
-import { processPatch } from "@pierre/diffs";
 import type { CodeViewHandle } from "@pierre/diffs/react";
 import { CodeView, WorkerPoolContextProvider } from "@pierre/diffs/react";
 import type { FindingWrite } from "@shared/schemas/finding-write";
 import type { FindingEntry, ViewedEvent } from "@shared/schemas/review";
-import { sift } from "radashi";
-import { useEffect, useImperativeHandle, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
+import { useContextExpansion } from "../hooks/use-context-expansion";
 import { useDiffFindings } from "../hooks/use-diff-findings";
+import { useDiffNav } from "../hooks/use-diff-nav";
+import { useViewedState } from "../hooks/use-viewed-state";
 import { fetchExpandedFileDiff, isExpandable } from "../lib/blobs";
 import { themes, workerFactory } from "../lib/code-view";
 import type { Annotation } from "../lib/diff-annotations";
 import type { DriftResult } from "../lib/drift";
-import { autoViewed, bodyReplaced, classifyFiles } from "../lib/edge-cases";
+import { bodyReplaced } from "../lib/edge-cases";
 import type { FileClass } from "../lib/edge-cases";
 import {
-  buildTree,
-  changeAnchors,
-  filterEntries,
-  flattenFiles,
-  orderByFiles,
-  parseFiles,
-  sortEntries,
-  stepChange,
-  stepFile,
-} from "../lib/nav";
-import type { FileEntry, FileOrder } from "../lib/nav";
-import { computeViewed, viewedStateFor } from "../lib/viewed";
-import type { ViewedModel } from "../lib/viewed";
+  buildFileModel,
+  buildRowStates,
+  countViewed,
+  visibleFiles,
+} from "../lib/file-model";
+import type { FileOrder } from "../lib/nav";
 import { EdgeChrome } from "./edge-chrome";
 import { FileTree } from "./file-tree";
-import type { RowState } from "./file-tree";
+import type { RowState, ViewedRows } from "./file-tree";
 
-// Keyboard jumps — [ ] step files, , . step changes.
-const KEY_ACTIONS: Record<string, ["file" | "change", 1 | -1]> = {
-  ",": ["change", -1],
-  ".": ["change", 1],
-  "[": ["file", -1],
-  "]": ["file", 1],
-};
-
-/**
- * Bind the `[ ] , .` file/change jump keys to the latest `jump`. The listener
- * subscribes once; a ref keeps it pointed at the current closure so React
- * Compiler's per-render identity doesn't churn the effect (and re-add the
- * listener) every render. Typing in an input/textarea is left alone.
- */
 /** Flip an id's membership in a `Set` state — the add/remove toggle both the
  * directory-collapse and the large-file "Load diff" state share. */
 function toggleInSet(
@@ -68,33 +48,6 @@ function toggleInSet(
     }
     return next;
   });
-}
-
-function useJumpKeys(
-  jump: (kind: "file" | "change", direction: 1 | -1) => void
-) {
-  const jumpRef = useRef(jump);
-  useEffect(() => {
-    jumpRef.current = jump;
-  });
-  useEffect(() => {
-    function onKey(event: KeyboardEvent) {
-      const { target } = event;
-      if (
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement
-      ) {
-        return;
-      }
-      const action = KEY_ACTIONS[event.key];
-      if (action) {
-        event.preventDefault();
-        jumpRef.current(action[0], action[1]);
-      }
-    }
-    globalThis.addEventListener("keydown", onKey);
-    return () => globalThis.removeEventListener("keydown", onKey);
-  }, []);
 }
 
 /** A localStorage-backed preference, so layout/order survive reloads. */
@@ -125,19 +78,6 @@ export interface DiffViewHandle {
 // A stable empty generated list, so the pre-snapshot render doesn't churn the
 // classification derivation.
 const NO_GENERATED: readonly string[] = [];
-
-// The no-edge-case default, so a file absent from the classification map (or a
-// lookup miss) reads as an ordinary diff.
-const NORMAL_CLASS: FileClass = {
-  binary: false,
-  generated: false,
-  image: false,
-  large: false,
-  modeOnly: false,
-  renameModify: false,
-  renamePure: false,
-  submodule: false,
-};
 
 /**
  * The sticky file-header metadata (diff-review.md §3): the "changed since
@@ -214,18 +154,6 @@ function HeaderMetadata({
   );
 }
 
-/** Post a mark-as-viewed toggle, throwing on a non-2xx so the caller can roll back. */
-async function postViewed(entry: FileEntry): Promise<void> {
-  const res = await fetch("/api/viewed", {
-    body: JSON.stringify({ blobSha: entry.blobSha, path: entry.path }),
-    headers: { "content-type": "application/json" },
-    method: "POST",
-  });
-  if (!res.ok) {
-    throw new Error(`POST /api/viewed failed: HTTP ${res.status}`);
-  }
-}
-
 /**
  * The right-hand diff pane: the whole-branch diff rendered as one continuous
  * virtualized cross-file scroll. Split out of DiffView so the tab's model/nav
@@ -235,43 +163,45 @@ async function postViewed(entry: FileEntry): Promise<void> {
 function DiffScroll({
   codeRef,
   classFor,
-  expanding,
-  isFileExpandable,
+  expansion,
   items,
   largeLoaded,
   onComment,
-  onExpandContext,
   onScroll,
   onSelectedLinesChange,
   onToggleLarge,
-  onToggleViewed,
   renderAnnotation,
-  rowStates,
   selectionEnabled,
   split,
+  viewed,
 }: {
   codeRef: React.RefObject<CodeViewHandle<Annotation> | null>;
   classFor: (id: string) => FileClass;
-  expanding: ReadonlySet<string>;
-  isFileExpandable: (fileDiff: FileDiffMetadata) => boolean;
+  /** The lazy-context-expansion surface: fetch gating, in-flight ids, and the fetch trigger. */
+  expansion: {
+    isFileExpandable: (fileDiff: FileDiffMetadata) => boolean;
+    expanding: ReadonlySet<string>;
+    onExpand: (id: string, fileDiff: FileDiffMetadata) => void;
+  };
   items: CodeViewItem<Annotation>[];
   largeLoaded: ReadonlySet<string>;
   onComment?: (item: CodeViewDiffItem<Annotation>) => void;
-  onExpandContext: (id: string, fileDiff: FileDiffMetadata) => void;
   onScroll: (
     scrollTop: number,
     viewer: NonNullable<ReturnType<CodeViewHandle<Annotation>["getInstance"]>>
   ) => void;
   onSelectedLinesChange: (selection: CodeViewLineSelection | null) => void;
   onToggleLarge: (id: string) => void;
-  onToggleViewed: (id: string) => void;
   renderAnnotation: (
     annotation: DiffLineAnnotation<Annotation> | LineAnnotation<Annotation>
   ) => React.ReactNode;
-  rowStates: Map<string, RowState>;
   selectionEnabled: boolean;
   split: "unified" | "split";
+  viewed: ViewedRows;
 }) {
+  const { onExpand: onExpandContext } = expansion;
+  const { onToggleViewed } = viewed;
+
   return (
     <div style={{ flex: 1, minWidth: 0 }}>
       <WorkerPoolContextProvider
@@ -296,16 +226,16 @@ function DiffScroll({
           renderHeaderMetadata={(item) =>
             item.type === "diff" ? (
               <HeaderMetadata
-                busy={expanding.has(item.id)}
+                busy={expansion.expanding.has(item.id)}
                 file={classFor(item.id)}
-                isFileExpandable={isFileExpandable}
+                isFileExpandable={expansion.isFileExpandable}
                 item={item}
                 largeLoaded={largeLoaded.has(item.id)}
                 onComment={onComment}
                 onExpandContext={onExpandContext}
                 onToggleLarge={onToggleLarge}
                 onToggleViewed={onToggleViewed}
-                row={rowStates.get(item.id)}
+                row={viewed.rowStates.get(item.id)}
               />
             ) : null
           }
@@ -320,46 +250,23 @@ function DiffScroll({
 }
 
 /**
- * Per-row viewed read-out for the tree, spanning every file (rows for hidden
- * files are simply never rendered). `changed` shows only while unviewed;
- * `generated` de-emphasizes the row (diff-review.md §5).
- */
-function buildRowStates(
-  entries: readonly FileEntry[],
-  model: ViewedModel,
-  isViewed: (id: string) => boolean,
-  classFor: (id: string) => FileClass
-): Map<string, RowState> {
-  return new Map(
-    entries.map((entry) => {
-      const state = viewedStateFor(model, entry.id);
-      const viewedNow = isViewed(entry.id);
-      return [
-        entry.id,
-        {
-          changed: state.changedSinceViewed && !viewedNow,
-          generated: classFor(entry.id).generated,
-          viewed: viewedNow,
-        },
-      ];
-    })
-  );
-}
-
-/**
  * The Diff tab: the compact-folder navigation tree beside the whole branch
  * diff rendered as one continuous virtualized cross-file scroll. The tree and
- * the scroll share a single ordered file model, so position stays in sync.
+ * the scroll share a single ordered file model (`lib/file-model.ts`), so
+ * position stays in sync.
  *
  * Mark-as-viewed (diff-review.md §3) rides on that same model: each file's
  * head-blob SHA folds the Review's append-only viewed events into per-file
  * viewed state, which collapses the file body, checks the tree row, and drives
- * the progress read-model. Toggling posts an event and optimistically overlays
- * the fold until the SSE snapshot catches up.
+ * the progress read-model. `useViewedState` overlays a toggle's effect
+ * optimistically ahead of the watch → SSE → re-fetch round trip.
  *
- * Context expansion is pluggable so the same surface renders both a committed
- * Change (both sides from `/api/blob/:sha`) and the Pending working-tree preview
- * (head side from `/api/worktree`). Defaults are the committed-Change fetchers.
+ * Context expansion (`useContextExpansion`) is pluggable so the same surface
+ * renders both a committed Change (both sides from `/api/blob/:sha`) and the
+ * Pending working-tree preview (head side from `/api/worktree`). Defaults are
+ * the committed-Change fetchers. Cross-file navigation — the active file, the
+ * `[ ] , .` keyboard jumps, and the imperative scroll-to-line handle — lives in
+ * `useDiffNav`.
  */
 export function DiffView({
   patch,
@@ -414,93 +321,54 @@ export function DiffView({
     (raw) => (raw === "split" || raw === "unified" ? raw : undefined)
   );
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
-  const [activeId, setActiveId] = useState<string | undefined>();
-  // Optimistic viewed overrides, keyed by file id and stamped with the head
-  // blob the toggle asserted against, so the checkbox and collapse respond
-  // instantly ahead of the watch → SSE → re-fetch round trip. Blob-stamping
-  // makes the override self-invalidating: once a new Change gives the file a
-  // different head blob, the stamp no longer matches and the fold's cleared /
-  // changed-since-viewed state shows through — no reconcile pass needed.
-  const [viewedOverlay, setViewedOverlay] = useState<
-    ReadonlyMap<string, { viewed: boolean; blobSha: string }>
-  >(new Map());
-  // Files whose full base/head blobs have been lazily fetched, keyed by item
-  // id. A present entry is a non-partial diff that the renderer can expand;
-  // `expanding` holds ids with a fetch in flight so the affordance can't
-  // double-fire.
-  const [expanded, setExpanded] = useState<
-    ReadonlyMap<string, FileDiffMetadata>
-  >(new Map());
-  const [expanding, setExpanding] = useState<ReadonlySet<string>>(new Set());
 
   const codeRef = useRef<CodeViewHandle<Annotation>>(null);
 
-  // The single ordered file model both surfaces read from. `allEntries` is every
-  // file in the Change (the viewed read-model and progress span all of them);
-  // filtering narrows what the tree and scroll show. An explicit walkthrough
-  // order, when present, wins over the path/size toggle. React Compiler memoizes
-  // these derivations, so no manual useMemo is needed.
-  const explicitOrder = fileOrder !== undefined && fileOrder.length > 0;
-  const allEntries =
-    fileOrder && fileOrder.length > 0
-      ? orderByFiles(parseFiles(patch), fileOrder)
-      : sortEntries(parseFiles(patch), order);
-  const entryById = new Map(allEntries.map((entry) => [entry.id, entry]));
-  // Per-file edge-case classification (diff-review.md §5), keyed by item id.
-  const classes = classifyFiles(patch, generated);
-  function classFor(id: string): FileClass {
-    return classes.get(id) ?? NORMAL_CLASS;
-  }
-  // Generated and pure-rename files auto-mark-viewed: the fold starts them from
-  // a viewed baseline, still counted in progress but un-viewable.
-  const model = computeViewed(viewed, allEntries, (entry) =>
-    autoViewed(classFor(entry.id))
+  // The single ordered file model both surfaces read from (lib/file-model.ts):
+  // `allEntries` is every file in the Change (the viewed read-model and
+  // progress span all of them); filtering narrows what the tree and scroll
+  // show. An explicit walkthrough order, when present, wins over the
+  // path/size toggle.
+  const fileModel = buildFileModel({
+    fileOrder,
+    findings,
+    generated,
+    order,
+    patch,
+    viewedEvents: viewed,
+  });
+  const { isViewed, toggleViewed } = useViewedState(
+    fileModel.entryById,
+    fileModel.viewedModel
   );
-  // Anchored files, from the finding fold — the has-findings quick filter.
-  const findingPaths = new Set(
-    sift(findings.map((finding) => finding.anchorFile))
-  );
-
-  function isViewed(id: string): boolean {
-    const override = viewedOverlay.get(id);
-    if (
-      override !== undefined &&
-      override.blobSha === entryById.get(id)?.blobSha
-    ) {
-      return override.viewed;
-    }
-    return viewedStateFor(model, id).viewed;
-  }
 
   // Substring filter first (nav's own), then the viewed / findings quick
   // filters. Filtering both the tree and the scroll keeps them in agreement.
-  const visible = filterEntries(allEntries, filter).filter((entry) => {
-    if (unviewedOnly && isViewed(entry.id)) {
-      return false;
-    }
-    if (findingsOnly && !findingPaths.has(entry.path)) {
-      return false;
-    }
-    return true;
-  });
-  const tree = buildTree(visible);
-  const entries = flattenFiles(tree);
-  const anchors = changeAnchors(entries);
-
-  const rowStates = buildRowStates(allEntries, model, isViewed, classFor);
-  const viewedCount = allEntries.reduce(
-    (total, entry) => total + (isViewed(entry.id) ? 1 : 0),
-    0
+  const { anchors, entries, tree } = visibleFiles(
+    fileModel,
+    { filter, findingsOnly, unviewedOnly },
+    isViewed
   );
+
+  const rowStates = buildRowStates(
+    fileModel.allEntries,
+    fileModel.viewedModel,
+    isViewed,
+    fileModel.classFor
+  );
+  const viewedCount = countViewed(fileModel.allEntries, isViewed);
 
   // A file's body collapses when it is an edge case whose body is replaced by
   // header chrome (binary/image/mode/submodule) or an oversized/minified file
   // not yet loaded via "Load diff" (diff-review.md §5). Folded into the item's
   // collapse alongside viewed state below.
   function isEdgeCollapsed(id: string): boolean {
-    const cls = classFor(id);
+    const cls = fileModel.classFor(id);
     return bodyReplaced(cls) || (cls.large && !largeLoaded.has(id));
   }
+
+  const { expanded, expanding, expandContext } =
+    useContextExpansion(expandFile);
 
   // The diff's Finding layer: the annotated item list, the inline thread/composer
   // renderer, and the compose lifecycle. A viewed or edge-collapsed file collapses
@@ -518,176 +386,56 @@ export function DiffView({
     patch,
   });
 
+  const { activeId, handleScroll, jump, scrollToId } = useDiffNav({
+    anchors,
+    codeRef,
+    entries,
+    items,
+    patch,
+    ref,
+  });
+
   // Reveal or re-collapse an oversized/minified file's body (diff-review.md §5).
   function toggleLarge(id: string) {
     toggleInSet(setLargeLoaded, id);
-  }
-
-  function toggleViewed(id: string) {
-    const entry = entryById.get(id);
-    if (entry === undefined) {
-      return;
-    }
-
-    const next = !isViewed(id);
-    setViewedOverlay((prev) =>
-      new Map(prev).set(id, { blobSha: entry.blobSha, viewed: next })
-    );
-    void postViewed(entry).catch(() => {
-      // The write failed, so nothing persisted: drop the override and let the
-      // checkbox fall back to the fold rather than lie about a saved toggle.
-      setViewedOverlay((prev) => {
-        const rolledBack = new Map(prev);
-        rolledBack.delete(id);
-        return rolledBack;
-      });
-    });
-  }
-
-  function scrollToId(id: string) {
-    codeRef.current?.scrollTo({ behavior: "smooth", id, type: "item" });
-    setActiveId(id);
-  }
-
-  // Jump the scroll to a Finding's anchored file/line. The item id encodes the
-  // file's index in the patch (`name#index`), so a Finding anchor — which knows
-  // only the path — is resolved against the parsed patch here, where that index
-  // lives. A file the diff no longer contains (an outdated Finding) is a no-op.
-  function scrollToLine(
-    file: string,
-    line: number,
-    side: "base" | "head" = "head"
-  ) {
-    const index = processPatch(patch).files.findIndex(
-      (fileDiff) => fileDiff.name === file
-    );
-    if (index === -1) {
-      return;
-    }
-    const id = `${file}#${index}`;
-    // git side → renderer column: base ⇒ deletions, head ⇒ additions.
-    codeRef.current?.scrollTo({
-      behavior: "smooth",
-      id,
-      lineNumber: line,
-      side: side === "base" ? "deletions" : "additions",
-      type: "line",
-    });
-    setActiveId(id);
-  }
-  useImperativeHandle(ref, () => ({ scrollToLine }));
-
-  // Two-way sync: the scroll drives the active file. The active file is the
-  // last item whose top has passed the viewport top.
-  function handleScroll(
-    scrollTop: number,
-    viewer: NonNullable<ReturnType<CodeViewHandle<Annotation>["getInstance"]>>
-  ) {
-    let current: string | undefined;
-    for (const item of items) {
-      const top = viewer.getTopForItem(item.id);
-      if (top !== undefined && top <= scrollTop + 8) {
-        current = item.id;
-      } else if (top !== undefined) {
-        break;
-      }
-    }
-    if (current !== undefined) {
-      setActiveId((prev) => (prev === current ? prev : current));
-    }
-  }
-
-  function jump(kind: "file" | "change", direction: 1 | -1) {
-    if (kind === "file") {
-      const next = stepFile(
-        entries.map((e) => e.id),
-        activeId,
-        direction
-      );
-      if (next !== undefined) {
-        scrollToId(next);
-      }
-      return;
-    }
-    const currentIndex = Math.max(
-      anchors.findIndex((a) => a.fileId === activeId),
-      0
-    );
-    const nextIndex = stepChange(anchors.length, currentIndex, direction);
-    const anchor = anchors[nextIndex];
-    if (anchor === undefined) {
-      return;
-    }
-    codeRef.current?.scrollTo({
-      behavior: "smooth",
-      id: anchor.fileId,
-      lineNumber: anchor.lineNumber,
-      type: "line",
-    });
-    setActiveId(anchor.fileId);
-  }
-
-  // Lazy context expansion: a patch-only file is `isPartial`, so the renderer
-  // hides its own hunk-expansion controls. The reviewer clicks "Expand
-  // context", we fetch that file's full base/head blobs from `/api/blob/:sha`,
-  // and swap in the non-partial diff — only then does the renderer expose
-  // hunk/whole-file expansion. Fetching is per-file and on demand, never eager.
-  function expandContext(id: string, fileDiff: FileDiffMetadata) {
-    setExpanding((prev) => new Set(prev).add(id));
-    void expandFile(fileDiff)
-      .then((full) => {
-        setExpanded((prev) => new Map(prev).set(id, full));
-      })
-      .catch(() => {
-        // Best-effort: leave the file partial on a failed blob fetch.
-      })
-      .finally(() => {
-        setExpanding((prev) => {
-          const next = new Set(prev);
-          next.delete(id);
-          return next;
-        });
-      });
   }
 
   function toggleDir(path: string) {
     toggleInSet(setCollapsed, path);
   }
 
-  useJumpKeys(jump);
-
   return (
     <div style={{ display: "flex", height: "100%" }}>
       <FileTree
-        activeId={activeId}
         collapsed={collapsed}
-        explicitOrder={explicitOrder}
+        explicitOrder={fileModel.explicitOrder}
         filter={filter}
         findingsOnly={findingsOnly}
+        nav={{ activeId, onJump: jump, onSelect: scrollToId }}
         nodes={tree}
         onFilterChange={setFilter}
         onFindingsOnlyChange={setFindingsOnly}
-        onJump={jump}
         onOrderChange={(next) => {
           onExitFileOrder?.();
           setOrder(next);
         }}
-        onSelect={scrollToId}
         onSplitChange={(next) => setSplit(next ? "split" : "unified")}
         onToggleDir={toggleDir}
-        onToggleViewed={toggleViewed}
         onUnviewedOnlyChange={setUnviewedOnly}
         order={order}
-        progress={{ total: allEntries.length, viewed: viewedCount }}
-        rowStates={rowStates}
+        progress={{ total: fileModel.allEntries.length, viewed: viewedCount }}
         split={split === "split"}
         unviewedOnly={unviewedOnly}
+        viewed={{ onToggleViewed: toggleViewed, rowStates }}
       />
       <DiffScroll
-        classFor={classFor}
+        classFor={fileModel.classFor}
         codeRef={codeRef}
-        expanding={expanding}
-        isFileExpandable={isFileExpandable}
+        expansion={{
+          expanding,
+          isFileExpandable,
+          onExpand: expandContext,
+        }}
         items={items}
         largeLoaded={largeLoaded}
         onComment={
@@ -695,15 +443,13 @@ export function DiffView({
             ? (item) => compose.commentOnFile(item.id, item.fileDiff)
             : undefined
         }
-        onExpandContext={expandContext}
         onScroll={handleScroll}
         onSelectedLinesChange={(selection) => compose.selectLines(selection)}
         onToggleLarge={toggleLarge}
-        onToggleViewed={toggleViewed}
         renderAnnotation={renderAnnotation}
-        rowStates={rowStates}
         selectionEnabled={canAuthor}
         split={split}
+        viewed={{ onToggleViewed: toggleViewed, rowStates }}
       />
     </div>
   );
