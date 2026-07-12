@@ -14,8 +14,8 @@
  *     incremental Pending diff, so the entry auto-hides without any polling.
  *
  * The channel carries `void`: the event says only *that* something changed, not
- * *what*. Every git read runs with `GIT_OPTIONAL_LOCKS=0` (git.ts), so a
- * recompute can't rewrite `.git/index` and feed surface 3 into a loop.
+ * *what*. Every git read runs with `GIT_OPTIONAL_LOCKS=0` (services/git/exec.ts),
+ * so a recompute can't rewrite `.git/index` and feed surface 3 into a loop.
  */
 
 import { watch } from "node:fs";
@@ -24,10 +24,14 @@ import { Context, Effect, Layer, Option, PubSub } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 
-import { resolveGitDir, resolveRepo } from "../services/git";
+import {
+  makeMatcher,
+  parseGitignore,
+  resolveGitDir,
+  resolveRepo,
+} from "../services/git";
+import type { IgnoreMatcher } from "../services/git";
 import { ensureStateRootGitignore } from "../store/layout";
-import { makeMatcher, parseGitignore } from "./gitignore";
-import type { IgnoreMatcher } from "./gitignore";
 
 /** Collapse a burst of file writes (agents write in bursts) into one push. */
 const DEBOUNCE_MS = 40;
