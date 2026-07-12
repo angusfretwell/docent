@@ -25,7 +25,7 @@ import {
   AccordionItem,
   AccordionPanel,
   AccordionTrigger,
-} from "@/components/ui/accordion"
+} from "@client/components/ui/accordion";
 ```
 
 ## Minimal pattern
@@ -89,4 +89,3 @@ See `p-accordion-1` through `p-accordion-4` for mapped items, single-open, multi
 - single-open static sections: `p-accordion-2`
 - multiple-open behavior: `p-accordion-3`
 - controlled value + external actions: `p-accordion-4`
-

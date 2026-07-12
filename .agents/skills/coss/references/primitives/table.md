@@ -31,7 +31,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@client/components/ui/table";
 ```
 
 ## Minimal pattern
@@ -78,4 +78,3 @@ import {
 - `CardFrame` + static table: `p-table-7`
 - `CardFrame` + TanStack + checkboxes: `p-table-6`
 - `CardFrame` + TanStack + sort + pagination: `p-table-8`
-

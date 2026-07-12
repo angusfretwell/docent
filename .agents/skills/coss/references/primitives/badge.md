@@ -20,7 +20,7 @@ npm install @base-ui/react
 ## Canonical imports
 
 ```tsx
-import { Badge } from "@/components/ui/badge"
+import { Badge } from "@client/components/ui/badge";
 ```
 
 ## Minimal pattern
@@ -60,7 +60,9 @@ Badge inside a button (use negative margin for alignment):
 ```tsx
 <Button variant="outline">
   Messages
-  <Badge className="-me-1" variant="outline">18</Badge>
+  <Badge className="-me-1" variant="outline">
+    18
+  </Badge>
 </Button>
 ```
 

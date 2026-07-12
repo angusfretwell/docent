@@ -20,12 +20,12 @@ npm install @base-ui/react
 ## Canonical imports
 
 ```tsx
-import { Button } from "@/components/ui/button"
+import { Button } from "@client/components/ui/button";
 import {
   PreviewCard,
   PreviewCardPopup,
   PreviewCardTrigger,
-} from "@/components/ui/preview-card"
+} from "@client/components/ui/preview-card";
 ```
 
 ## Minimal pattern

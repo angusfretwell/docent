@@ -20,7 +20,7 @@ Manual deps from docs:
 ## Canonical imports
 
 ```tsx
-import { Spinner } from "@/components/ui/spinner"
+import { Spinner } from "@client/components/ui/spinner";
 ```
 
 ## Minimal pattern

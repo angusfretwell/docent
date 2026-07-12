@@ -35,7 +35,7 @@ import {
   AlertDialogPopup,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from "@client/components/ui/alert-dialog";
 ```
 
 ## Minimal pattern
@@ -53,7 +53,9 @@ import {
       </AlertDialogDescription>
     </AlertDialogHeader>
     <AlertDialogFooter>
-      <AlertDialogClose render={<Button variant="ghost" />}>Cancel</AlertDialogClose>
+      <AlertDialogClose render={<Button variant="ghost" />}>
+        Cancel
+      </AlertDialogClose>
       <AlertDialogClose render={<Button variant="destructive" />}>
         Delete Account
       </AlertDialogClose>

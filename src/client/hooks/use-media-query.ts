@@ -30,14 +30,15 @@ function resolveMax(value: Breakpoint | number): string {
 }
 
 function parseQuery(
+  // oxlint-disable-next-line typescript/ban-types
   query: BreakpointQuery | MediaQueryInput | (string & {})
 ): string {
   if (typeof query !== "string") {
     const parts: string[] = [];
-    if (query.min != null) {
+    if (query.min) {
       parts.push(resolveMin(query.min));
     }
-    if (query.max != null) {
+    if (query.max) {
       parts.push(resolveMax(query.max));
     }
     if (query.pointer === "coarse") {
@@ -83,6 +84,7 @@ export interface MediaQueryInput {
 }
 
 export function useMediaQuery(
+  // oxlint-disable-next-line typescript/ban-types
   query: BreakpointQuery | MediaQueryInput | (string & {})
 ): boolean {
   const mediaQuery = parseQuery(query);
@@ -90,7 +92,9 @@ export function useMediaQuery(
   const subscribe = useCallback(
     (callback: () => void) => {
       if (typeof window === "undefined") {
-        return () => {};
+        return () => {
+          // noop
+        };
       }
       const mql = window.matchMedia(mediaQuery);
       mql.addEventListener("change", callback);

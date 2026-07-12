@@ -10,6 +10,7 @@
  */
 
 import path from "node:path";
+
 import tailwind from "bun-plugin-tailwind";
 
 const root = path.join(import.meta.dir, "..");

@@ -88,11 +88,14 @@ export default defineConfig({
   rules: {
     "class-methods-use-this": "off",
     "func-style": ["error", "declaration"],
+    "jsx-a11y/no-static-element-interactions": "off",
+    "jsx-a11y/prefer-tag-over-role": "off",
     "max-classes-per-file": "off",
     "no-await-in-loop": "off",
     "promise/avoid-new": "off",
     "promise/prefer-await-to-callbacks": "off",
     "promise/prefer-await-to-then": "off",
+    "react/jsx-no-constructed-context-values": "off",
     "require-unicode-regexp": "off",
     // most of these should be turned back on
     "typescript/await-thenable": "off",

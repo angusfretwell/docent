@@ -20,8 +20,8 @@ npm install @base-ui/react
 ## Canonical imports
 
 ```tsx
-import { Button } from "@/components/ui/button"
-import { Group, GroupSeparator } from "@/components/ui/group"
+import { Button } from "@client/components/ui/button";
+import { Group, GroupSeparator } from "@client/components/ui/group";
 ```
 
 ## Minimal pattern

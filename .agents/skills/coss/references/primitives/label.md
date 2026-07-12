@@ -20,7 +20,7 @@ Manual deps from docs:
 ## Canonical imports
 
 ```tsx
-import { Label } from "@/components/ui/label"
+import { Label } from "@client/components/ui/label";
 ```
 
 ## Minimal pattern
