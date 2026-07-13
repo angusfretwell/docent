@@ -44,7 +44,10 @@ export function useDiffFindings(params: {
   drift?: ReadonlyMap<string, DriftResult>;
 }) {
   const byName = new Map(
-    processPatch(params.patch).files.map((f, i) => [`${f.name}#${i}`, f])
+    processPatch(params.patch).files.map((file, index) => [
+      `${file.name}#${index}`,
+      file,
+    ])
   );
   function fileDiffFor(id: string) {
     return params.expanded.get(id) ?? byName.get(id);

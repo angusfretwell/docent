@@ -18,8 +18,11 @@
  */
 
 import {
+  calloutClass,
   DetachedSection,
+  findingClass,
   narrativeBySectionId,
+  proseClass,
   StalenessBadge,
 } from "@client/features/walkthrough-shared";
 import { captureUrl } from "@client/lib/blobs";
@@ -60,10 +63,6 @@ import {
 } from "./walkthrough-pins";
 import type { Tone } from "./walkthrough-pins";
 
-const proseClass = "my-2 leading-normal whitespace-pre-wrap break-words";
-const calloutClass =
-  "my-1.5 border-l-2 px-2.5 py-0.5 text-sm whitespace-pre-wrap break-words";
-const findingClass = `${calloutClass} border-l-info/50`;
 const captionClass = "my-1 text-[0.8rem] leading-snug text-muted-foreground";
 
 // An authored annotation note (durable, blue) that has no capture to pin to —
@@ -124,13 +123,13 @@ function ScreenshotCapture({
   findings: readonly FoldedFinding[];
 }) {
   const { regions, whole } = screenshotPins(annotations, findings, capture);
-  const [w, h] = capture.dims ?? capture.viewport;
+  const [width, height] = capture.dims ?? capture.viewport;
 
   return (
     <figure className="my-2.5">
       <div
         className="relative w-full overflow-hidden rounded-md border"
-        style={{ aspectRatio: `${w} / ${h}`, maxWidth: `${w}px` }}
+        style={{ aspectRatio: `${width} / ${height}`, maxWidth: `${width}px` }}
       >
         {/* A content-addressed capture blob served from the Review, not a
             build asset — a plain img is the right primitive here. */}

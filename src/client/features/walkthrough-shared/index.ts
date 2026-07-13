@@ -11,3 +11,4 @@ export { DriftPill } from "./drift-badge";
 export { FindingThread } from "./finding-thread";
 export { StalenessBadge } from "./staleness-badge";
 export { narrativeBySectionId } from "./walkthrough-narrative";
+export { calloutClass, findingClass, proseClass } from "./section-classes";

@@ -16,14 +16,18 @@ import {
   useQueryStates,
 } from "nuqs";
 
-// The tab / view mode (walkthroughs.md §1). Each is its own self-contained
-// surface over the same Change: the Diff tab, the Code walkthrough tab, and the
-// Product walkthrough tab (#15).
+/**
+ * The tab / view mode (walkthroughs.md §1). Each is its own self-contained
+ * surface over the same Change: the Diff tab, the Code walkthrough tab, and
+ * the Product walkthrough tab.
+ */
 const TABS = ["diff", "walkthrough", "product"] as const;
 export type Tab = (typeof TABS)[number];
 
-// Which selector entry is showing: the committed Change, or the read-only
-// Pending working-tree preview.
+/**
+ * Which selector entry is showing: the committed Change, or the read-only
+ * Pending working-tree preview.
+ */
 const VIEWS = ["change", "pending"] as const;
 export type Selection = (typeof VIEWS)[number];
 

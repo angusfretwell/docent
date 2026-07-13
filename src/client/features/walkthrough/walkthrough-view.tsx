@@ -14,7 +14,9 @@
 import {
   CodeViewWorkerPool,
   DetachedSection,
+  findingClass,
   narrativeBySectionId,
+  proseClass,
   StalenessBadge,
 } from "@client/features/walkthrough-shared";
 import { themes } from "@client/lib/code-view";
@@ -75,10 +77,6 @@ function overlaps(
 ): boolean {
   return a[0] <= b[1] && b[0] <= a[1];
 }
-
-const proseClass = "my-2 leading-normal whitespace-pre-wrap break-words";
-const findingClass =
-  "my-1.5 border-l-2 border-l-info/50 px-2.5 py-0.5 text-sm whitespace-pre-wrap break-words";
 
 /**
  * The drift badge for a range or a section rollup (walkthroughs.md §8): `moved`
