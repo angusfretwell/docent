@@ -44,7 +44,7 @@ import {
   MenuSubPopup,
   MenuSubTrigger,
   MenuTrigger,
-} from "@/components/ui/menu"
+} from "@client/components/ui/menu";
 ```
 
 ## Minimal pattern
@@ -95,4 +95,3 @@ Use popup positioning props like `align` / `sideOffset` only when a layout needs
 - switch-style checkbox items: `p-menu-9`
 - cross-component example: `p-dialog-2` (menu opening dialog)
 - responsive menu/drawer variant: `p-drawer-13`
-

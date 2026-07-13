@@ -1,14 +1,28 @@
+import { QueryClientProvider } from "@tanstack/react-query";
+import { NuqsAdapter } from "nuqs/adapters/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
-import { App } from "./components/app";
+import { App } from "./app";
+import { queryClient } from "./data/query-client";
+import { ThemeProvider } from "./theme-provider";
 
-const root = document.querySelector("#root");
-if (root === null) {
+const container = document.querySelector("#root");
+
+if (container === null) {
   throw new Error("missing #root element");
 }
-createRoot(root).render(
+
+const root = (import.meta.hot.data.root ??= createRoot(container));
+
+root.render(
   <StrictMode>
-    <App />
+    <QueryClientProvider client={queryClient}>
+      <NuqsAdapter defaultOptions={{ history: "push" }}>
+        <ThemeProvider>
+          <App />
+        </ThemeProvider>
+      </NuqsAdapter>
+    </QueryClientProvider>
   </StrictMode>
 );

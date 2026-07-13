@@ -28,7 +28,7 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from "@/components/ui/pagination"
+} from "@client/components/ui/pagination";
 ```
 
 ## Minimal pattern
@@ -68,7 +68,9 @@ Full pagination with active page:
       <PaginationLink href="#">1</PaginationLink>
     </PaginationItem>
     <PaginationItem>
-      <PaginationLink href="#" isActive>2</PaginationLink>
+      <PaginationLink href="#" isActive>
+        2
+      </PaginationLink>
     </PaginationItem>
     <PaginationItem>
       <PaginationLink href="#">3</PaginationLink>

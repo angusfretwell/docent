@@ -20,7 +20,7 @@ npm install @base-ui/react
 ## Canonical imports
 
 ```tsx
-import { Separator } from "@/components/ui/separator"
+import { Separator } from "@client/components/ui/separator";
 ```
 
 ## Minimal pattern

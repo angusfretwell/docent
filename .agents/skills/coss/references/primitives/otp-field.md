@@ -24,7 +24,7 @@ import {
   OTPField,
   OTPFieldInput,
   OTPFieldSeparator,
-} from "@/components/ui/otp-field"
+} from "@client/components/ui/otp-field";
 ```
 
 ## Minimal pattern

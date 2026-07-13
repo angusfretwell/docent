@@ -38,8 +38,11 @@ export function captureUrl(
 }
 
 /** Fetch a recording capture's rrweb event stream from its content-addressed blob. */
-export async function fetchCaptureEvents(url: string): Promise<unknown[]> {
-  const res = await fetch(url);
+export async function fetchCaptureEvents(
+  url: string,
+  signal?: AbortSignal
+): Promise<unknown[]> {
+  const res = await fetch(url, { signal });
   if (!res.ok) {
     throw new Error(`GET ${url} failed: HTTP ${res.status}`);
   }
@@ -57,12 +60,15 @@ export function blobSizeUrl(sha: string): string {
  * (diff-review.md §5). A null/absent id resolves to 0 — a missing side of an
  * add/delete contributes nothing to the delta.
  */
-export async function fetchBlobSize(sha: string | undefined): Promise<number> {
+export async function fetchBlobSize(
+  sha: string | undefined,
+  signal?: AbortSignal
+): Promise<number> {
   if (!isRealObjectId(sha)) {
     return 0;
   }
   const url = blobSizeUrl(sha);
-  const res = await fetch(url);
+  const res = await fetch(url, { signal });
   if (!res.ok) {
     throw new Error(`GET ${url} failed: HTTP ${res.status}`);
   }
@@ -122,9 +128,12 @@ export function expandedFileDiff(
 }
 
 /** Fetch a single blob's text from the content-addressed `/api/blob/:sha` endpoint. */
-export async function fetchBlobText(sha: string): Promise<string> {
+export async function fetchBlobText(
+  sha: string,
+  signal?: AbortSignal
+): Promise<string> {
   const url = blobUrl(sha);
-  const res = await fetch(url);
+  const res = await fetch(url, { signal });
   if (!res.ok) {
     throw new Error(`GET ${url} failed: HTTP ${res.status}`);
   }
@@ -132,52 +141,11 @@ export async function fetchBlobText(sha: string): Promise<string> {
 }
 
 /** Fetch a working-tree file's live text from the uncached `/api/worktree` endpoint. */
-async function fetchWorktreeText(path: string): Promise<string> {
+export async function fetchWorktreeText(path: string): Promise<string> {
   const url = worktreeUrl(path);
   const res = await fetch(url);
   if (!res.ok) {
     throw new Error(`GET ${url} failed: HTTP ${res.status}`);
   }
   return res.text();
-}
-
-/**
- * Lazily fetch a file's base and head blobs and build its full, expandable
- * diff. Both sides (split view) resolve through the same `/api/blob/:sha`
- * endpoint; the file's own `prevObjectId`/`newObjectId` from the patch's index
- * line make each blob addressable. Callers gate this behind `isExpandable`.
- */
-export async function fetchExpandedFileDiff(
-  fileDiff: FileDiffMetadata
-): Promise<FileDiffMetadata> {
-  const { prevObjectId, newObjectId } = fileDiff;
-  if (prevObjectId === undefined || newObjectId === undefined) {
-    throw new Error(`file ${fileDiff.name} has no base/head blob to expand`);
-  }
-  const [baseText, headText] = await Promise.all([
-    fetchBlobText(prevObjectId),
-    fetchBlobText(newObjectId),
-  ]);
-  return expandedFileDiff(fileDiff, baseText, headText);
-}
-
-/**
- * Lazily build a Pending file's full, expandable diff. The base side is the
- * committed blob (cached, content-addressed `/api/blob/:sha`); the head side is
- * the live working-tree file read by path from the uncached `/api/worktree`
- * endpoint — the Pending diff's head has no stable SHA to cache against
- * (diff-review.md §6). Callers gate this behind `isPendingExpandable`.
- */
-export async function fetchPendingExpandedFileDiff(
-  fileDiff: FileDiffMetadata
-): Promise<FileDiffMetadata> {
-  const { prevObjectId } = fileDiff;
-  if (prevObjectId === undefined) {
-    throw new Error(`file ${fileDiff.name} has no base blob to expand`);
-  }
-  const [baseText, headText] = await Promise.all([
-    fetchBlobText(prevObjectId),
-    fetchWorktreeText(fileDiff.name),
-  ]);
-  return expandedFileDiff(fileDiff, baseText, headText);
 }

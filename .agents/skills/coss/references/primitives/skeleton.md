@@ -20,7 +20,7 @@ Manual deps from docs:
 ## Canonical imports
 
 ```tsx
-import { Skeleton } from "@/components/ui/skeleton"
+import { Skeleton } from "@client/components/ui/skeleton";
 ```
 
 ## Minimal pattern
@@ -46,8 +46,7 @@ Card skeleton composition (match the final layout geometry):
 </div>
 ```
 
-Shape matching: mirror final text/image/button geometry to reduce content shift.
-State handoff: remove skeleton immediately when data is ready to avoid double-render.
+Shape matching: mirror final text/image/button geometry to reduce content shift. State handoff: remove skeleton immediately when data is ready to avoid double-render.
 
 ### More examples
 

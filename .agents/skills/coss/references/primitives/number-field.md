@@ -27,7 +27,7 @@ import {
   NumberFieldIncrement,
   NumberFieldInput,
   NumberFieldScrubArea,
-} from "@/components/ui/number-field"
+} from "@client/components/ui/number-field";
 ```
 
 ## Minimal pattern

@@ -20,7 +20,7 @@ npm install @base-ui/react
 ## Canonical imports
 
 ```tsx
-import { Textarea } from "@/components/ui/textarea"
+import { Textarea } from "@client/components/ui/textarea";
 ```
 
 ## Minimal pattern
@@ -29,8 +29,7 @@ import { Textarea } from "@/components/ui/textarea"
 <Textarea aria-label="Message" placeholder="Write your message" />
 ```
 
-For form fields, prefer wrapping `Textarea` with `Field` + `FieldLabel` + `FieldError` so labels, validation, and errors stay semantically linked.
-`Textarea` already wraps Base UI `Field.Control` internally, so it works as a form control directly inside `Field` (no need to manually use `FieldControl` + `render` just to mount a textarea).
+For form fields, prefer wrapping `Textarea` with `Field` + `FieldLabel` + `FieldError` so labels, validation, and errors stay semantically linked. `Textarea` already wraps Base UI `Field.Control` internally, so it works as a form control directly inside `Field` (no need to manually use `FieldControl` + `render` just to mount a textarea).
 
 ## Patterns from coss particles
 

@@ -68,7 +68,7 @@ export function serve(entry: EntryOptions) {
         port: entry.port,
         routes: {
           "/": entry.index,
-          // The pre-bundled diff worker (scripts/bundle-worker.ts); the client's
+          // The pre-bundled diff worker (scripts/build-worker.ts); the client's
           // `workerFactory` in code-view.ts loads it from this exact path.
           "/diff-worker.js": () =>
             new Response(Bun.file(entry.workerBundle), {

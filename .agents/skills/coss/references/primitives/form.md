@@ -26,15 +26,19 @@ import {
   FieldDescription,
   FieldError,
   FieldLabel,
-} from "@/components/ui/field"
-import { Form } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
+} from "@client/components/ui/field";
+import { Form } from "@client/components/ui/form";
+import { Input } from "@client/components/ui/input";
 ```
 
 ## Minimal pattern
 
 ```tsx
-<Form onSubmit={(e) => {/* handle submit */}}>
+<Form
+  onSubmit={(e) => {
+    /* handle submit */
+  }}
+>
   <Field>
     <FieldLabel>Email</FieldLabel>
     <Input name="email" type="email" required />
@@ -76,4 +80,3 @@ import { Input } from "@/components/ui/input"
 ## Further reading
 
 - Base UI Forms handbook: `https://base-ui.com/react/handbook/forms.md`
-

@@ -20,7 +20,7 @@ npm install @base-ui/react
 ## Canonical imports
 
 ```tsx
-import { Slider, SliderValue } from "@/components/ui/slider"
+import { Slider, SliderValue } from "@client/components/ui/slider";
 ```
 
 ## Minimal pattern

@@ -39,7 +39,7 @@ import {
   AutocompleteSeparator,
   AutocompleteStatus,
   useAutocompleteFilter,
-} from "@/components/ui/autocomplete"
+} from "@client/components/ui/autocomplete";
 ```
 
 ## Minimal pattern
@@ -87,7 +87,11 @@ Autocomplete with input affordances:
   <AutocompletePopup>
     <AutocompleteEmpty>No results found.</AutocompleteEmpty>
     <AutocompleteList>
-      {(item) => <AutocompleteItem key={item.value} value={item}>{item.label}</AutocompleteItem>}
+      {(item) => (
+        <AutocompleteItem key={item.value} value={item}>
+          {item.label}
+        </AutocompleteItem>
+      )}
     </AutocompleteList>
   </AutocompletePopup>
 </Autocomplete>
@@ -100,7 +104,11 @@ Grouped lists:
   <AutocompleteGroup>
     <AutocompleteGroupLabel>Fruits</AutocompleteGroupLabel>
     <AutocompleteCollection>
-      {(item) => <AutocompleteItem key={item.value} value={item}>{item.label}</AutocompleteItem>}
+      {(item) => (
+        <AutocompleteItem key={item.value} value={item}>
+          {item.label}
+        </AutocompleteItem>
+      )}
     </AutocompleteCollection>
   </AutocompleteGroup>
 </AutocompleteList>

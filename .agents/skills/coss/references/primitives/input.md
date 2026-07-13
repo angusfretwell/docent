@@ -20,7 +20,7 @@ npm install @base-ui/react
 ## Canonical imports
 
 ```tsx
-import { Input } from "@/components/ui/input"
+import { Input } from "@client/components/ui/input";
 ```
 
 ## Minimal pattern
@@ -29,8 +29,7 @@ import { Input } from "@/components/ui/input"
 <Input aria-label="Email" type="email" placeholder="name@company.com" />
 ```
 
-Always set `type` explicitly on `Input` (`text`, `email`, `password`, `search`, `file`, etc.). Do not rely on browser defaults.
-For form fields, prefer wrapping `Input` with `Field` + `FieldLabel` + `FieldError` instead of standalone usage.
+Always set `type` explicitly on `Input` (`text`, `email`, `password`, `search`, `file`, etc.). Do not rely on browser defaults. For form fields, prefer wrapping `Input` with `Field` + `FieldLabel` + `FieldError` instead of standalone usage.
 
 ## Patterns from coss particles
 

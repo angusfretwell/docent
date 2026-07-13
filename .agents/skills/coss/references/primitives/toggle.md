@@ -25,7 +25,7 @@ npm install @base-ui/react
 ## Canonical imports
 
 ```tsx
-import { Toggle } from "@/components/ui/toggle"
+import { Toggle } from "@client/components/ui/toggle";
 ```
 
 ## Minimal pattern

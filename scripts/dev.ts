@@ -5,7 +5,7 @@
  * fixture with hot reload. It prepares, then hands off to the watching dev
  * entry — with one server process there is nothing to supervise:
  *
- *  1. ensure the pre-bundled diff worker exists (scripts/bundle-worker.ts),
+ *  1. ensure the pre-bundled diff worker exists (scripts/build-worker.ts),
  *     since `src/docent.ts` imports it and Bun's bundler can't build the worker
  *     inline;
  *  2. exec `bun --watch src/docent.ts` with its cwd set to the target repo, so
@@ -41,11 +41,17 @@ if (!fs.existsSync(workerBundle)) {
   }
 }
 
-const server = Bun.spawn(["bun", "--watch", entry], {
-  cwd: target,
-  env: { ...process.env, PORT },
-  stdio: ["inherit", "inherit", "inherit"],
-});
+// The server runs with its cwd in the target repo, where Bun would never find
+// this project's bunfig.toml — pass it explicitly so the [serve.static]
+// Tailwind plugin still registers.
+const server = Bun.spawn(
+  ["bun", `--config=${path.join(root, "bunfig.toml")}`, "--watch", entry],
+  {
+    cwd: target,
+    env: { ...process.env, PORT },
+    stdio: ["inherit", "inherit", "inherit"],
+  }
+);
 
 // The runner owns the terminal only to forward Ctrl+C and let the watcher exit
 // cleanly; it then exits with the dev server's own status.
