@@ -10,7 +10,13 @@ import type {
   ViewedEvent,
   WalkthroughEntry,
 } from "@shared/schemas/review";
-import { useRef, useState } from "react";
+import {
+  Outlet,
+  useLocation,
+  useNavigate,
+  useSearch,
+} from "@tanstack/react-router";
+import { createContext, useContext, useRef, useState } from "react";
 
 import { fetchPendingExpandedFileDiff } from "./data/blobs";
 import type { LoadState } from "./data/review";
@@ -27,8 +33,12 @@ import { useDrift } from "./lib/drift";
 import type { OpenInDiff } from "./lib/nav";
 import { Tabs, TabsList, TabsTab } from "./ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
-import type { Selection, Tab } from "./url/params";
-import { useRangeParam, useTabParam, useViewParam } from "./url/params";
+import type { Selection } from "./url/params";
+import {
+  DIFF_SEARCH_DEFAULTS,
+  useRangeParam,
+  useViewParam,
+} from "./url/params";
 
 // Append a Finding record. The write lands a file in `.docent/`, which trips the
 // server's watch → SSE push → snapshot re-fetch, so the new record renders
@@ -41,6 +51,34 @@ async function handleWrite(write: FindingWrite): Promise<void> {
 const NO_VIEWED: readonly ViewedEvent[] = [];
 const NO_FINDINGS: readonly FindingEntry[] = [];
 const NO_WALKTHROUGHS: readonly WalkthroughEntry[] = [];
+
+/**
+ * Everything the route views share from the root's single live loop: the
+ * queries, drift, the diff handle, and the deep-link primitives. Provided by
+ * `App` above the `<Outlet />` so each route reads it instead of
+ * re-instantiating the loop (one EventSource for the app's lifetime).
+ */
+interface RootData {
+  change: LoadState;
+  pending: Pending | null;
+  review: ReviewSnapshot | null;
+  drift: ReadonlyMap<string, DriftResult>;
+  diffRef: React.RefObject<DiffViewHandle | null>;
+  fileOrder: readonly string[] | undefined;
+  onExitFileOrder: () => void;
+  openInDiff: OpenInDiff;
+  patch: string;
+}
+
+const RootDataContext = createContext<RootData | null>(null);
+
+function useRootData(): RootData {
+  const data = useContext(RootDataContext);
+  if (data === null) {
+    throw new Error("useRootData requires the App shell above the route");
+  }
+  return data;
+}
 
 /**
  * A live status pill proving the watch → SSE → re-fetch loop end to end. Floats
@@ -60,16 +98,41 @@ function Notice({ children }: { children: React.ReactNode }) {
   return <p className="p-4 text-muted-foreground">{children}</p>;
 }
 
+const TAB_ROUTES = {
+  diff: "/diff",
+  product: "/product",
+  walkthrough: "/walkthrough",
+} as const;
+
+type Tab = keyof typeof TAB_ROUTES;
+
 /**
- * The view-mode tabs (walkthroughs.md §1). Each tab is its own self-contained
- * surface. Only the strip lives inside `Tabs` — the active tab's body renders
- * from `App`'s own switch, keeping the unmount-on-switch semantics rather than
- * adopting `Tabs.Panel`'s mounting model.
+ * The view-mode tabs (walkthroughs.md §1), one route each. The strip is a coss
+ * `Tabs` controlled by the current pathname — selecting a tab navigates
+ * (carrying only the Review-global params), and the route change drives the
+ * active indicator — so each view keeps the outlet's unmount-on-switch
+ * semantics rather than adopting `Tabs.Panel`'s mounting model.
  */
-function TabBar({ tab, onTab }: { tab: Tab; onTab: (tab: Tab) => void }) {
+function TabBar() {
+  const navigate = useNavigate();
+  const pathname = useLocation({ select: (location) => location.pathname });
+  const tabs = Object.keys(TAB_ROUTES) as Tab[];
+  const active = tabs.find((tab) => TAB_ROUTES[tab] === pathname) ?? "diff";
+
   return (
     <div className="border-b px-2.5">
-      <Tabs onValueChange={(value) => onTab(value as Tab)} value={tab}>
+      <Tabs
+        onValueChange={(value) => {
+          void navigate({
+            search: (prev) => ({
+              finding: prev.finding,
+              resolved: prev.resolved,
+            }),
+            to: TAB_ROUTES[value as Tab],
+          });
+        }}
+        value={active}
+      >
         <TabsList variant="underline">
           <TabsTab value="diff">Diff</TabsTab>
           <TabsTab value="walkthrough">Code walkthrough</TabsTab>
@@ -236,36 +299,24 @@ function PendingBody({
 }
 
 /**
- * The Diff tab: the Change/Pending selector over the diff surface. The global
- * Findings panel is mounted by `App` beside every tab, so it isn't rendered
- * here. Split out so `App` picks a tab without carrying the diff surface's own
- * derivations (dirty/effective/branch).
+ * The Diff view: the Change/Pending selector over the diff surface. The global
+ * Findings panel is mounted by `App` beside every view, so it isn't rendered
+ * here. The selector state (`view`, `range`) is the Diff route's own search
+ * state; the shared data comes from the root context.
  */
-function DiffTab({
-  change,
-  pending,
-  review,
-  drift,
-  diffRef,
-  selected,
-  range,
-  fileOrder,
-  onSelect,
-  onRange,
-  onExitFileOrder,
-}: {
-  change: LoadState;
-  pending: Pending | null;
-  review: ReviewSnapshot | null;
-  drift: ReadonlyMap<string, DriftResult>;
-  diffRef: React.RefObject<DiffViewHandle | null>;
-  selected: Selection;
-  range: PendingRange;
-  fileOrder: readonly string[] | undefined;
-  onSelect: (selection: Selection) => void;
-  onRange: (range: PendingRange) => void;
-  onExitFileOrder: () => void;
-}) {
+function DiffTab() {
+  const {
+    change,
+    diffRef,
+    drift,
+    fileOrder,
+    onExitFileOrder,
+    pending,
+    review,
+  } = useRootData();
+  const [selected, setSelected] = useViewParam();
+  const [range, setRange] = useRangeParam();
+
   const dirty = pending?.dirty ?? false;
   const effective: Selection =
     selected === "pending" && dirty ? "pending" : "change";
@@ -277,8 +328,8 @@ function DiffTab({
       <ChangeSelector
         branch={branch}
         dirty={dirty}
-        onRange={onRange}
-        onSelect={onSelect}
+        onRange={setRange}
+        onSelect={setSelected}
         range={range}
         selected={effective}
       />
@@ -300,16 +351,10 @@ function DiffTab({
   );
 }
 
-/** The Code walkthrough tab, or a prompt to author one when none exists. */
-function WalkthroughTab({
-  review,
-  patch,
-  onOpenInDiff,
-}: {
-  review: ReviewSnapshot | null;
-  patch: string;
-  onOpenInDiff: OpenInDiff;
-}) {
+/** The Code walkthrough view, or a prompt to author one when none exists. */
+function WalkthroughTab() {
+  const { openInDiff, patch, review } = useRootData();
+
   const walkthrough = latestCodeWalkthrough(review?.walkthroughs ?? []);
   if (!(walkthrough && review)) {
     return <Notice>No code walkthrough yet. Run /docent to author one.</Notice>;
@@ -318,7 +363,7 @@ function WalkthroughTab({
     <WalkthroughView
       changes={review.changes}
       findings={review.findings}
-      onOpenInDiff={onOpenInDiff}
+      onOpenInDiff={openInDiff}
       patch={patch}
       walkthrough={walkthrough}
       walkthroughs={review.walkthroughs}
@@ -326,8 +371,10 @@ function WalkthroughTab({
   );
 }
 
-/** The Product walkthrough tab, or a prompt to author one when none exists. */
-function ProductWalkthroughTab({ review }: { review: ReviewSnapshot | null }) {
+/** The Product walkthrough view, or a prompt to author one when none exists. */
+function ProductWalkthroughTab() {
+  const { review } = useRootData();
+
   const walkthrough = latestProductWalkthrough(review?.walkthroughs ?? []);
   if (!(walkthrough && review)) {
     return (
@@ -344,17 +391,47 @@ function ProductWalkthroughTab({ review }: { review: ReviewSnapshot | null }) {
   );
 }
 
+export function DiffRoute() {
+  return (
+    <ErrorBoundary label="Diff tab">
+      <DiffTab />
+    </ErrorBoundary>
+  );
+}
+
+export function WalkthroughRoute() {
+  return (
+    <ErrorBoundary label="Code walkthrough tab">
+      <WalkthroughTab />
+    </ErrorBoundary>
+  );
+}
+
+export function ProductRoute() {
+  return (
+    <ErrorBoundary label="Product walkthrough tab">
+      <ProductWalkthroughTab />
+    </ErrorBoundary>
+  );
+}
+
+/** The root route's shell: the one live data loop around the routed view. */
 export function App() {
-  const [selected, setSelected] = useViewParam();
-  const [range, setRange] = useRangeParam();
-  const [tab, setTab] = useTabParam();
   // The walkthrough-order override for the committed Diff surface: the tour's
   // file sequence, set by "open Diff tab in walkthrough order" and held until the
-  // reviewer picks a path/size sort (diff-review.md §2).
+  // reviewer picks a path/size sort (diff-review.md §2). Ephemeral by design —
+  // it never belongs to the URL.
   const [fileOrder, setFileOrder] = useState<readonly string[] | undefined>();
   const diffRef = useRef<DiffViewHandle>(null);
 
-  // One live loop for the whole tab: the SSE bridge (one connection for the
+  // `range` is the Diff route's search state, read loosely here because the
+  // Pending query lives at the root so every view shares one live data loop.
+  const range = useSearch({
+    select: (search) => search.range ?? DIFF_SEARCH_DEFAULTS.range,
+    strict: false,
+  });
+
+  // One live loop for the whole app: the SSE bridge (one connection for the
   // app's lifetime) invalidates the Change, Pending, and review queries on
   // every `review-changed` event (architecture.md §2), and `useReviewData`
   // reads them at the current range.
@@ -371,9 +448,9 @@ export function App() {
     walkthroughs: review?.walkthroughs ?? NO_WALKTHROUGHS,
   });
 
-  // The deep-link loop: a walkthrough range or a Findings-panel row (the panel is
-  // global, so the click can come from any tab) opens the Diff tab at its
-  // file/line (walkthroughs.md §1), via one atomic URL update.
+  // The deep-link loop: a walkthrough range or a Findings-panel row (the panel
+  // is global, so the click can come from any view) opens the Diff route at its
+  // file/line (walkthroughs.md §1), via one atomic navigation.
   const openInDiff = useDiffDeepLink({
     diffRef,
     onFileOrder: setFileOrder,
@@ -381,56 +458,10 @@ export function App() {
 
   const patch = change.kind === "loaded" ? change.change.patch : "";
 
-  let body: React.ReactNode;
-  if (tab === "walkthrough") {
-    body = (
-      <ErrorBoundary label="Code walkthrough tab">
-        <WalkthroughTab
-          review={review}
-          onOpenInDiff={openInDiff}
-          patch={patch}
-        />
-      </ErrorBoundary>
-    );
-  } else if (tab === "product") {
-    body = (
-      <ErrorBoundary label="Product walkthrough tab">
-        <ProductWalkthroughTab review={review} />
-      </ErrorBoundary>
-    );
-  } else {
-    body = (
-      <ErrorBoundary label="Diff tab">
-        <DiffTab
-          change={change}
-          diffRef={diffRef}
-          drift={drift}
-          fileOrder={fileOrder}
-          onExitFileOrder={() => setFileOrder(undefined)}
-          onRange={(next) => {
-            void setRange(next);
-          }}
-          onSelect={(next) => {
-            void setSelected(next);
-          }}
-          pending={pending}
-          range={range}
-          review={review}
-          selected={selected}
-        />
-      </ErrorBoundary>
-    );
-  }
-
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       {review ? <ReviewStatus review={review} /> : null}
-      <TabBar
-        onTab={(next) => {
-          void setTab(next);
-        }}
-        tab={tab}
-      />
+      <TabBar />
       <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
         <div
           style={{
@@ -440,14 +471,30 @@ export function App() {
             minWidth: 0,
           }}
         >
-          {body}
+          <RootDataContext.Provider
+            value={{
+              change,
+              diffRef,
+              drift,
+              fileOrder,
+              onExitFileOrder: () => setFileOrder(undefined),
+              openInDiff,
+              patch,
+              pending,
+              review,
+            }}
+          >
+            <Outlet />
+          </RootDataContext.Provider>
         </div>
         {review ? (
           <ErrorBoundary label="Findings panel">
             <FindingsPanel
               drift={drift}
               findings={review.findings}
-              onJump={(file, line) => openInDiff(file, line, "head")}
+              onJump={(file, line, finding) =>
+                openInDiff(file, line, "head", { finding })
+              }
               onWrite={handleWrite}
             />
           </ErrorBoundary>

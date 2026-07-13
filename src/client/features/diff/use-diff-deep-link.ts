@@ -1,7 +1,7 @@
 /**
- * The Diff tab's deep link, URL-backed: a walkthrough range or a Findings-panel
- * row (the panel is global, so the click can come from any tab) writes
- * `tab=diff&file=…&line=…&side=…` as one history entry, and the effect scrolls
+ * The Diff view's deep link, URL-backed: a walkthrough range or a Findings-panel
+ * row (the panel is global, so the click can come from any view) navigates to
+ * `/diff?file=…&line=…&side=…` as one history entry, and the effect scrolls
  * once `DiffView`'s imperative handle is live. The target persists in the URL —
  * that is what makes a deep link shareable — so the hook tracks the last jump
  * it actually performed: landing directly on a deep-link URL scrolls once after
@@ -11,21 +11,30 @@
  */
 
 import type { OpenInDiff } from "@client/lib/nav";
-import { useDiffJumpParams } from "@client/url/params";
+import { DIFF_SEARCH_DEFAULTS } from "@client/url/params";
+import { useMatchRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
 import type { DiffViewHandle } from "./diff-view";
 
 /**
  * @param diffRef The mounted `DiffView`'s imperative handle, or null before it mounts.
- * @param onFileOrder Set the walkthrough-order override for the Diff tab's file sequence.
+ * @param onFileOrder Set the walkthrough-order override for the Diff view's file sequence.
  */
 export function useDiffDeepLink(params: {
   diffRef: React.RefObject<DiffViewHandle | null>;
   onFileOrder: (order: readonly string[]) => void;
 }): OpenInDiff {
   const { diffRef, onFileOrder } = params;
-  const [{ tab, file, line, side }, setJump] = useDiffJumpParams();
+  const navigate = useNavigate();
+
+  const matchRoute = useMatchRoute();
+  const onDiffRoute = matchRoute({ to: "/diff" }) !== false;
+  const {
+    file,
+    line,
+    side = DIFF_SEARCH_DEFAULTS.side,
+  } = useSearch({ strict: false });
 
   const performedRef = useRef<string | null>(null);
   const [repeatNonce, setRepeatNonce] = useState(0);
@@ -34,27 +43,37 @@ export function useDiffDeepLink(params: {
     targetFile: string,
     targetLine: number,
     targetSide: "base" | "head",
-    order?: readonly string[]
+    options?: { order?: readonly string[]; finding?: string | null }
   ) {
-    if (order) {
-      onFileOrder(order);
+    if (options?.order) {
+      onFileOrder(options.order);
     }
 
     // Forget the performed jump and bump the nonce so the effect re-scrolls
-    // even when the target matches the URL (which the setter would then leave
-    // untouched).
+    // even when the target matches the URL (which the navigation would then
+    // leave untouched).
     performedRef.current = null;
     setRepeatNonce((nonce) => nonce + 1);
-    void setJump({
-      file: targetFile,
-      line: targetLine,
-      side: targetSide,
-      tab: "diff",
+    void navigate({
+      search: (prev) => ({
+        ...prev,
+        ...(options?.finding === undefined
+          ? {}
+          : { finding: options.finding ?? undefined }),
+        file: targetFile,
+        line: targetLine,
+        side: targetSide,
+      }),
+      to: "/diff",
     });
   }
 
   useEffect(() => {
-    if (tab !== "diff" || file === null || line === null) {
+    if (!onDiffRoute || file === undefined || line === undefined) {
+      // Forget the performed jump while there is no target, so returning to
+      // one — Back/Forward across routes remounts the diff at the top —
+      // scrolls again instead of treating the jump as already done.
+      performedRef.current = null;
       return;
     }
 
@@ -84,7 +103,7 @@ export function useDiffDeepLink(params: {
     frame = requestAnimationFrame(attempt);
     return () => cancelAnimationFrame(frame);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- diffRef is a stable ref object; .current is read fresh inside each frame
-  }, [tab, file, line, side, repeatNonce]);
+  }, [onDiffRoute, file, line, side, repeatNonce]);
 
   return openInDiff;
 }

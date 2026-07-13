@@ -1,10 +1,10 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { NuqsAdapter } from "nuqs/adapters/react";
+import { RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
-import { App } from "./app";
 import { queryClient } from "./data/query-client";
+import { router } from "./routes";
 import { ThemeProvider } from "./theme-provider";
 
 const container = document.querySelector("#root");
@@ -18,11 +18,9 @@ const root = (import.meta.hot.data.root ??= createRoot(container));
 root.render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <NuqsAdapter defaultOptions={{ history: "push" }}>
-        <ThemeProvider>
-          <App />
-        </ThemeProvider>
-      </NuqsAdapter>
+      <ThemeProvider>
+        <RouterProvider router={router} />
+      </ThemeProvider>
     </QueryClientProvider>
   </StrictMode>
 );

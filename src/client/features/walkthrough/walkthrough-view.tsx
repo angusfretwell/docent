@@ -476,7 +476,7 @@ export function WalkthroughView({
                     firstRange.file,
                     firstRange.lines[0],
                     firstRange.side,
-                    orderedFiles
+                    { order: orderedFiles }
                   )
                 }
                 size="xs"

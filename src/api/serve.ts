@@ -5,9 +5,10 @@
  * client's `index.html` and the pre-bundled diff worker.
  *
  * Boots one plain `Bun.serve` process for the repo containing the current
- * directory: Bun's HTML-bundle route serves the UI, the pre-bundled worker is
- * served at `/diff-worker.js`, and the Effect `/api/*` routes run one level
- * down behind `webHandler`'s `fetch`.
+ * directory: Bun's HTML-bundle route serves the UI (as an SPA catch-all, so
+ * the client router's paths survive a hard refresh), the pre-bundled worker
+ * is served at `/diff-worker.js`, and the Effect `/api/*` routes run one
+ * level down behind `webHandler`'s handler.
  */
 
 import { BunServices } from "@effect/platform-bun";
@@ -40,9 +41,10 @@ const openBrowser = Effect.fn("openBrowser")(
 );
 
 /**
- * Boot the fullstack server: Bun's HTML-bundle route serves the client, the
- * pre-bundled diff worker is served at `/diff-worker.js`, and the Effect
- * `/api/*` handler is the `fetch` fallback for everything Bun doesn't match.
+ * Boot the fullstack server: Bun's HTML-bundle route serves the client for
+ * every non-API path (the client router owns the paths), the pre-bundled diff
+ * worker is served at `/diff-worker.js`, and the Effect handler owns `/api/*`
+ * (and stays wired as the `fetch` fallback for anything the routes miss).
  */
 export function serve(entry: EntryOptions) {
   const cwd = process.cwd();
@@ -67,7 +69,12 @@ export function serve(entry: EntryOptions) {
         idleTimeout: 0,
         port: entry.port,
         routes: {
-          "/": entry.index,
+          // SPA fallback: the client router owns the paths (/diff,
+          // /walkthrough, /product), so any request the more specific routes
+          // below don't win serves the client and lets it route — Bun matches
+          // by specificity (exact > wildcard > catch-all), not key order.
+          "/*": entry.index,
+          "/api/*": (request) => handler(request),
           // The pre-bundled diff worker (scripts/build-worker.ts); the client's
           // `workerFactory` in code-view.ts loads it from this exact path.
           "/diff-worker.js": () =>

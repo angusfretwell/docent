@@ -14,15 +14,19 @@ import { fork } from "radashi";
 export type ChangeType = "A" | "M" | "D" | "R";
 
 /**
- * Deep-link into the Diff tab at a file/line/side. The optional fourth argument
- * carries the tour's file sequence, reordering the Diff surface into walkthrough
- * order rather than merely jumping to the first range (walkthroughs.md §1).
+ * Deep-link into the Diff view at a file/line/side, as one history entry.
+ *
+ * @param options.order The tour's file sequence, reordering the Diff surface
+ * into walkthrough order rather than merely jumping to the first range
+ * (walkthroughs.md §1).
+ * @param options.finding Set (`string`) or clear (`null`) the expanded Finding
+ * thread in the same history entry as the jump.
  */
 export type OpenInDiff = (
   file: string,
   line: number,
   side: "base" | "head",
-  order?: readonly string[]
+  options?: { order?: readonly string[]; finding?: string | null }
 ) => void;
 
 export interface FileEntry {

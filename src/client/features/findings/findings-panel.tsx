@@ -97,7 +97,7 @@ export function FindingsPanel({
 }: {
   drift: ReadonlyMap<string, DriftResult>;
   findings: readonly FindingEntry[];
-  onJump: (file: string, line: number) => void;
+  onJump: (file: string, line: number, finding: string | null) => void;
   onWrite: (write: FindingWrite) => Promise<void>;
 }) {
   const [showResolved, setShowResolved] = useResolvedParam();
@@ -118,13 +118,17 @@ export function FindingsPanel({
     : folded.filter((finding) => !finding.resolved);
 
   function toggle(finding: FoldedFinding) {
-    void setExpandedId((current) =>
-      current === finding.id ? null : finding.id
-    );
+    const next = expandedId === finding.id ? null : finding.id;
+
+    // A row with a diff anchor expands and jumps in one navigation (one
+    // history entry); an anchorless (detached/change-level) row just expands.
     const target = findingJumpTarget(finding.anchor);
-    if (target !== undefined) {
-      onJump(target.file, target.line);
+    if (target === undefined) {
+      setExpandedId(next);
+      return;
     }
+
+    onJump(target.file, target.line, next);
   }
 
   function submitChangeFinding(body: string) {
@@ -146,7 +150,7 @@ export function FindingsPanel({
             <Checkbox
               checked={showResolved}
               onCheckedChange={(checked) => {
-                void setShowResolved(checked);
+                setShowResolved(checked);
               }}
             />
             Show resolved
