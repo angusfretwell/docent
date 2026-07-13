@@ -16,6 +16,7 @@ import { blobSizeQuery } from "../data/blobs";
 import { blobUrl } from "../lib/blobs";
 import type { FileClass } from "../lib/edge-cases";
 import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
 
 const edgeRowClass =
   "inline-flex items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground";
@@ -151,9 +152,9 @@ function LargeToggle({
   onToggle: () => void;
 }) {
   return (
-    <button className="expand-context" onClick={onToggle} type="button">
+    <Button onClick={onToggle} size="xs" variant="outline">
       {loaded ? "Collapse" : "Load diff"}
-    </button>
+    </Button>
   );
 }
 

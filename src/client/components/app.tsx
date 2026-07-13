@@ -20,7 +20,6 @@ import { isPendingExpandable } from "../lib/blobs";
 import type { DriftResult } from "../lib/drift";
 import { useDrift } from "../lib/drift";
 import { writeFinding } from "../lib/findings-client";
-import { cn } from "../lib/utils";
 import type { Selection, Tab } from "../url/params";
 import { useRangeParam, useTabParam, useViewParam } from "../url/params";
 import type { DiffViewHandle } from "./diff-view";
@@ -28,6 +27,8 @@ import { DiffView } from "./diff-view";
 import { ErrorBoundary } from "./error-boundary";
 import { FindingsPanel } from "./findings-panel";
 import { ProductWalkthroughView } from "./product-walkthrough-view";
+import { Tabs, TabsList, TabsTab } from "./ui/tabs";
+import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 import type { OpenInDiff } from "./walkthrough-view";
 import { WalkthroughView } from "./walkthrough-view";
 
@@ -61,49 +62,23 @@ function Notice({ children }: { children: React.ReactNode }) {
   return <p className="p-4 text-muted-foreground">{children}</p>;
 }
 
-function tabClass(active: boolean): string {
-  return cn(
-    "cursor-pointer border-b-2 border-transparent px-3 py-1.5 text-[0.9rem]",
-    active ? "border-b-info" : "text-muted-foreground"
-  );
-}
-
-/** The view-mode tabs (walkthroughs.md §1). Each tab is its own self-contained surface. */
+/**
+ * The view-mode tabs (walkthroughs.md §1). Each tab is its own self-contained
+ * surface. Only the strip lives inside `Tabs` — the active tab's body renders
+ * from `App`'s own switch, keeping the unmount-on-switch semantics rather than
+ * adopting `Tabs.Panel`'s mounting model.
+ */
 function TabBar({ tab, onTab }: { tab: Tab; onTab: (tab: Tab) => void }) {
   return (
-    <div className="flex gap-1 border-b px-2.5 pt-1">
-      <button
-        aria-pressed={tab === "diff"}
-        className={tabClass(tab === "diff")}
-        onClick={() => onTab("diff")}
-        type="button"
-      >
-        Diff
-      </button>
-      <button
-        aria-pressed={tab === "walkthrough"}
-        className={tabClass(tab === "walkthrough")}
-        onClick={() => onTab("walkthrough")}
-        type="button"
-      >
-        Code walkthrough
-      </button>
-      <button
-        aria-pressed={tab === "product"}
-        className={tabClass(tab === "product")}
-        onClick={() => onTab("product")}
-        type="button"
-      >
-        Product walkthrough
-      </button>
+    <div className="border-b px-2.5">
+      <Tabs onValueChange={(value) => onTab(value as Tab)} value={tab}>
+        <TabsList variant="underline">
+          <TabsTab value="diff">Diff</TabsTab>
+          <TabsTab value="walkthrough">Code walkthrough</TabsTab>
+          <TabsTab value="product">Product walkthrough</TabsTab>
+        </TabsList>
+      </Tabs>
     </div>
-  );
-}
-
-function entryClass(active: boolean): string {
-  return cn(
-    "cursor-pointer rounded-sm border border-input px-2.5 py-0.5",
-    active && "bg-info/15"
   );
 }
 
@@ -132,46 +107,46 @@ function ChangeSelector({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2 border-b px-2.5 py-1.5 text-[0.85rem]">
-      {dirty && (
-        <button
-          aria-pressed={selected === "pending"}
-          className={entryClass(selected === "pending")}
-          onClick={() => onSelect("pending")}
-          type="button"
-        >
-          Pending
-          <span aria-hidden="true" className="ml-1.5 text-warning">
-            ●
-          </span>
-        </button>
-      )}
-      <button
-        aria-pressed={selected === "change"}
-        className={entryClass(selected === "change")}
-        onClick={() => onSelect("change")}
-        type="button"
+      <ToggleGroup
+        onValueChange={(groupValue) => {
+          const [next] = groupValue;
+          if (next !== undefined) {
+            onSelect(next as Selection);
+          }
+        }}
+        size="sm"
+        value={[selected]}
+        variant="outline"
       >
-        <code>{branch}</code>
-      </button>
+        {dirty && (
+          <ToggleGroupItem value="pending">
+            Pending
+            <span aria-hidden="true" className="text-warning">
+              ●
+            </span>
+          </ToggleGroupItem>
+        )}
+        <ToggleGroupItem value="change">
+          <code>{branch}</code>
+        </ToggleGroupItem>
+      </ToggleGroup>
       {selected === "pending" && (
         <>
           <span className="ml-1.5 text-muted-foreground">Range:</span>
-          <button
-            aria-pressed={range === "incremental"}
-            className={entryClass(range === "incremental")}
-            onClick={() => onRange("incremental")}
-            type="button"
+          <ToggleGroup
+            onValueChange={(groupValue) => {
+              const [next] = groupValue;
+              if (next !== undefined) {
+                onRange(next as PendingRange);
+              }
+            }}
+            size="sm"
+            value={[range]}
+            variant="outline"
           >
-            Incremental
-          </button>
-          <button
-            aria-pressed={range === "cumulative"}
-            className={entryClass(range === "cumulative")}
-            onClick={() => onRange("cumulative")}
-            type="button"
-          >
-            Cumulative
-          </button>
+            <ToggleGroupItem value="incremental">Incremental</ToggleGroupItem>
+            <ToggleGroupItem value="cumulative">Cumulative</ToggleGroupItem>
+          </ToggleGroup>
           <span className="ml-1.5 text-muted-foreground">
             Read-only preview
           </span>

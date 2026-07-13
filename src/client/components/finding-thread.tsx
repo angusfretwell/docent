@@ -17,6 +17,7 @@ import { useState } from "react";
 import { Composer } from "./composer";
 import { DriftPill } from "./drift-badge";
 import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
 
 const DISPOSITION_LABEL: Record<Disposition, string> = {
   actioned: "actioned",
@@ -135,30 +136,26 @@ export function FindingThread({
 
       {mode === "idle" ? (
         <div className="flex gap-1.5 px-2 py-1.5">
-          <button
-            className="expand-context"
-            onClick={() => setMode("reply")}
-            type="button"
-          >
+          <Button onClick={() => setMode("reply")} size="xs" variant="outline">
             Reply
-          </button>
+          </Button>
           {finding.resolved ? (
-            <button
-              className="expand-context"
-              disabled={busy}
+            <Button
+              loading={busy}
               onClick={() => void run({ findingId: finding.id, op: "reopen" })}
-              type="button"
+              size="xs"
+              variant="outline"
             >
               Reopen
-            </button>
+            </Button>
           ) : (
-            <button
-              className="expand-context"
+            <Button
               onClick={() => setMode("resolve")}
-              type="button"
+              size="xs"
+              variant="outline"
             >
               Resolve
-            </button>
+            </Button>
           )}
         </div>
       ) : null}

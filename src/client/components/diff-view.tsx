@@ -36,6 +36,9 @@ import { CodeViewWorkerPool } from "./code-view-worker-pool";
 import { EdgeChrome } from "./edge-chrome";
 import { FileTree } from "./file-tree";
 import type { RowState, ViewedRows } from "./file-tree";
+import { Button } from "./ui/button";
+import { Checkbox } from "./ui/checkbox";
+import { Label } from "./ui/label";
 
 /** The imperative surface the Findings panel and the walkthrough tab drive to jump into the diff. */
 export interface DiffViewHandle {
@@ -94,32 +97,27 @@ function HeaderMetadata({
         </span>
       ) : null}
       {onComment ? (
-        <button
-          className="expand-context"
-          onClick={() => onComment(item)}
-          type="button"
-        >
+        <Button onClick={() => onComment(item)} size="xs" variant="outline">
           Comment
-        </button>
+        </Button>
       ) : null}
       {canExpand ? (
-        <button
-          className="expand-context"
-          disabled={busy}
+        <Button
+          loading={busy}
           onClick={() => onExpandContext(item.id, item.fileDiff)}
-          type="button"
+          size="xs"
+          variant="outline"
         >
-          {busy ? "Expanding…" : "Expand context"}
-        </button>
+          Expand context
+        </Button>
       ) : null}
-      <label className="viewed-toggle">
-        <input
+      <Label className="gap-1.5 whitespace-nowrap font-normal">
+        <Checkbox
           checked={row?.viewed ?? false}
-          onChange={() => onToggleViewed(item.id)}
-          type="checkbox"
+          onCheckedChange={() => onToggleViewed(item.id)}
         />
         Viewed
-      </label>
+      </Label>
     </span>
   );
 }

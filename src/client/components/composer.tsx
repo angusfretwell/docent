@@ -9,6 +9,17 @@
 import type { Disposition } from "@shared/schemas/finding";
 import { useState } from "react";
 
+import { Button } from "./ui/button";
+import { Field, FieldLabel } from "./ui/field";
+import {
+  Select,
+  SelectItem,
+  SelectPopup,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+import { Textarea } from "./ui/textarea";
+
 // The dispositions a reply may carry, plus a "plain comment" no-op default that
 // leaves the reply undispositioned (needs-action). Labels track data-model.md §7.
 const DISPOSITIONS: { value: Disposition | ""; label: string }[] = [
@@ -17,20 +28,6 @@ const DISPOSITIONS: { value: Disposition | ""; label: string }[] = [
   { label: "Declined — needs decision", value: "declined" },
   { label: "Question — needs answer", value: "question" },
 ];
-
-const formStyle: React.CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  gap: "0.4rem",
-  padding: "0.5rem",
-};
-
-const actionsStyle: React.CSSProperties = {
-  alignItems: "center",
-  display: "flex",
-  gap: "0.4rem",
-  justifyContent: "flex-end",
-};
 
 export function Composer({
   autoFocus,
@@ -67,56 +64,52 @@ export function Composer({
   }
 
   return (
-    <div style={formStyle}>
-      <textarea
-        // oxlint-disable-next-line jsx-a11y/no-autofocus -- selection-driven composer wants the caret
-        autoFocus={autoFocus}
-        onChange={(event) => setBody(event.target.value)}
-        onKeyDown={(event) => {
-          if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-            event.preventDefault();
-            submit();
-          }
-        }}
-        placeholder={placeholder}
-        rows={3}
-        style={{
-          font: "inherit",
-          padding: "0.4rem",
-          resize: "vertical",
-          width: "100%",
-        }}
-        value={body}
-      />
-      <div style={actionsStyle}>
-        {withDisposition ? (
-          <select
-            onChange={(event) =>
-              setDisposition(event.target.value as Disposition | "")
+    <div className="flex flex-col gap-1.5 p-2">
+      <Field>
+        <FieldLabel className="sr-only">{placeholder}</FieldLabel>
+        <Textarea
+          // oxlint-disable-next-line jsx-a11y/no-autofocus -- selection-driven composer wants the caret
+          autoFocus={autoFocus}
+          onChange={(event) => setBody(event.target.value)}
+          onKeyDown={(event) => {
+            if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+              event.preventDefault();
+              submit();
             }
-            style={{ font: "inherit", marginRight: "auto" }}
+          }}
+          placeholder={placeholder}
+          rows={3}
+          size="sm"
+          value={body}
+        />
+      </Field>
+      <div className="flex items-center justify-end gap-1.5">
+        {withDisposition ? (
+          <Select
+            items={DISPOSITIONS}
+            onValueChange={(value) => setDisposition(value ?? "")}
             value={disposition}
           >
-            {DISPOSITIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="me-auto w-fit" size="sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectPopup>
+              {DISPOSITIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectPopup>
+          </Select>
         ) : null}
         {onCancel ? (
-          <button className="expand-context" onClick={onCancel} type="button">
+          <Button onClick={onCancel} size="sm" variant="ghost">
             Cancel
-          </button>
+          </Button>
         ) : null}
-        <button
-          className="expand-context"
-          disabled={!canSubmit}
-          onClick={submit}
-          type="button"
-        >
-          {busy ? "Saving…" : submitLabel}
-        </button>
+        <Button disabled={!canSubmit} loading={busy} onClick={submit} size="sm">
+          {submitLabel}
+        </Button>
       </div>
     </div>
   );

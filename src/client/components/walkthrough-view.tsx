@@ -46,6 +46,7 @@ import { CodeViewWorkerPool } from "./code-view-worker-pool";
 import { DetachedSection } from "./detached-section";
 import { StalenessBadge } from "./staleness-badge";
 import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
 
 /**
  * Deep-link into the Diff tab at a file/line/side. The optional fourth argument
@@ -84,16 +85,6 @@ function overlaps(
   return a[0] <= b[1] && b[0] <= a[1];
 }
 
-const buttonStyle: React.CSSProperties = {
-  background: "transparent",
-  border: "1px solid var(--color-border)",
-  borderRadius: "0.25rem",
-  color: "inherit",
-  cursor: "pointer",
-  font: "inherit",
-  fontSize: "0.75rem",
-  padding: "0.1rem 0.5rem",
-};
 const proseClass = "my-2 leading-normal whitespace-pre-wrap break-words";
 const findingClass =
   "my-1.5 border-l-2 border-l-info/50 px-2.5 py-0.5 text-sm whitespace-pre-wrap break-words";
@@ -240,30 +231,26 @@ function RangeCode({
         </code>
         <span className="opacity-60">({range.side})</span>
         <DriftTag state={state} />
-        <button
+        <Button
           onClick={() => onOpenInDiff(range.file, targetLine, range.side)}
-          style={buttonStyle}
-          type="button"
+          size="xs"
+          variant="outline"
         >
           Open in Diff
-        </button>
+        </Button>
         {canExpand ? (
-          <button
+          <Button
             onClick={() => setContext((prev) => prev + CONTEXT_STEP)}
-            style={buttonStyle}
-            type="button"
+            size="xs"
+            variant="outline"
           >
             Expand context
-          </button>
+          </Button>
         ) : null}
         {context > 0 ? (
-          <button
-            onClick={() => setContext(0)}
-            style={buttonStyle}
-            type="button"
-          >
+          <Button onClick={() => setContext(0)} size="xs" variant="outline">
             Collapse
-          </button>
+          </Button>
         ) : null}
       </div>
       <RangeBody codeWindow={codeWindow} failed={failed} range={range} />
@@ -493,7 +480,8 @@ export function WalkthroughView({
             </h1>
             <StalenessBadge staleness={staleness} />
             {firstRange ? (
-              <button
+              <Button
+                className="ml-auto"
                 onClick={() =>
                   onOpenInDiff(
                     firstRange.file,
@@ -502,11 +490,11 @@ export function WalkthroughView({
                     orderedFiles
                   )
                 }
-                style={{ ...buttonStyle, marginLeft: "auto" }}
-                type="button"
+                size="xs"
+                variant="outline"
               >
                 Open Diff in walkthrough order
-              </button>
+              </Button>
             ) : null}
           </div>
         </header>

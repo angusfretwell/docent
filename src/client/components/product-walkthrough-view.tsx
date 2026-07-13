@@ -56,21 +56,12 @@ import {
 import type { Tone } from "../lib/walkthrough-pins";
 import { DetachedSection } from "./detached-section";
 import { StalenessBadge } from "./staleness-badge";
+import { Button } from "./ui/button";
 
 const proseClass = "my-2 leading-normal whitespace-pre-wrap break-words";
 const calloutClass =
   "my-1.5 border-l-2 px-2.5 py-0.5 text-sm whitespace-pre-wrap break-words";
 const findingClass = `${calloutClass} border-l-info/50`;
-const buttonStyle: React.CSSProperties = {
-  background: "transparent",
-  border: "1px solid var(--color-border)",
-  borderRadius: "0.25rem",
-  color: "inherit",
-  cursor: "pointer",
-  font: "inherit",
-  fontSize: "0.75rem",
-  padding: "0.1rem 0.5rem",
-};
 const captionClass = "my-1 text-[0.8rem] leading-snug text-muted-foreground";
 
 // An authored annotation note (durable, blue) that has no capture to pin to —
@@ -255,27 +246,32 @@ function RecordingCapture({
         </p>
       ) : (
         <div className="my-1.5 flex flex-wrap items-center gap-1.5">
-          <button
+          <Button
             disabled={!ready}
             onClick={() => seek(0)}
-            style={buttonStyle}
-            type="button"
+            size="xs"
+            variant="outline"
           >
             ▶ Replay
-          </button>
+          </Button>
           {times.map((pin) => (
-            <button
+            <Button
               disabled={!ready}
               key={pin.label}
               onClick={() => seek(pin.atMs)}
-              style={{ ...buttonStyle, borderColor: pin.tone.border }}
-              type="button"
+              size="xs"
+              style={{ borderColor: pin.tone.border }}
+              variant="outline"
             >
-              <Chip label={pin.label} tone={pin.tone} />{" "}
-              {(pin.atMs / 1000).toFixed(1)}
-              {pin.toMs === undefined ? "" : `–${(pin.toMs / 1000).toFixed(1)}`}
-              s
-            </button>
+              <Chip label={pin.label} tone={pin.tone} />
+              <span>
+                {(pin.atMs / 1000).toFixed(1)}
+                {pin.toMs === undefined
+                  ? ""
+                  : `–${(pin.toMs / 1000).toFixed(1)}`}
+                s
+              </span>
+            </Button>
           ))}
         </div>
       )}

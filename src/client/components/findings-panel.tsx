@@ -17,6 +17,9 @@ import { useFindingParam, useResolvedParam } from "../url/params";
 import { Composer } from "./composer";
 import { DriftPill } from "./drift-badge";
 import { FindingThread } from "./finding-thread";
+import { Button } from "./ui/button";
+import { Checkbox } from "./ui/checkbox";
+import { Label } from "./ui/label";
 
 // The Review-global Findings panel (diff-review.md §7): a flat list of every
 // Finding sorted by location, with a show-resolved toggle (off by default) and a
@@ -138,24 +141,23 @@ export function FindingsPanel({
       <header className="sticky top-0 z-10 flex flex-col gap-2 border-b bg-background px-3 pt-8 pb-2">
         <div className="flex items-center justify-between">
           <strong>Findings · {visible.length}</strong>
-          <label className="flex items-center gap-1 text-muted-foreground">
-            <input
+          <Label className="gap-1.5 font-normal text-muted-foreground">
+            <Checkbox
               checked={showResolved}
-              onChange={(event) => {
-                void setShowResolved(event.target.checked);
+              onCheckedChange={(checked) => {
+                void setShowResolved(checked);
               }}
-              type="checkbox"
             />
             Show resolved
-          </label>
+          </Label>
         </div>
-        <button
-          className="expand-context"
+        <Button
           onClick={() => setChangeComposerOpen((open) => !open)}
-          type="button"
+          size="xs"
+          variant="outline"
         >
           {changeComposerOpen ? "Cancel" : "Comment on whole change"}
-        </button>
+        </Button>
         {changeComposerOpen ? (
           <Composer
             autoFocus

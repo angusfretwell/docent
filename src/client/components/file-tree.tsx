@@ -10,6 +10,18 @@ import { useEffect, useRef } from "react";
 
 import type { FileEntry, FileOrder, TreeNode } from "../lib/nav";
 import { cn } from "../lib/utils";
+import { Button } from "./ui/button";
+import { Checkbox } from "./ui/checkbox";
+import { Input } from "./ui/input";
+import {
+  Progress,
+  ProgressIndicator,
+  ProgressLabel,
+  ProgressTrack,
+  ProgressValue,
+} from "./ui/progress";
+import { Toggle } from "./ui/toggle";
+import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 
 /** Per-file viewed read-out for a tree row (folded upstream in DiffView). */
 export interface RowState {
@@ -97,12 +109,10 @@ function FileRow({
       className={cn("flex items-center gap-[0.35rem]", active && "bg-accent")}
       style={{ paddingLeft: `${0.5 + depth * 0.85}rem` }}
     >
-      <input
+      <Checkbox
         aria-label={`Mark ${entry.path} viewed`}
         checked={state?.viewed ?? false}
-        className="tree-viewed-check"
-        onChange={() => onToggleViewed(entry.id)}
-        type="checkbox"
+        onCheckedChange={() => onToggleViewed(entry.id)}
       />
       <button
         className={cn(
@@ -204,38 +214,37 @@ function QuickFilter({
   onToggle: () => void;
 }) {
   return (
-    <button
-      aria-pressed={active}
-      className={active ? "quick-filter is-active" : "quick-filter"}
-      onClick={onToggle}
-      type="button"
+    <Toggle
+      onPressedChange={onToggle}
+      pressed={active}
+      size="sm"
+      variant="outline"
     >
       {label}
-    </button>
+    </Toggle>
   );
 }
 
-/** The review-progress read-out: viewed / total files plus a thin bar. */
-function Progress({ viewed, total }: { viewed: number; total: number }) {
-  const pct = total === 0 ? 0 : Math.round((viewed / total) * 100);
+/**
+ * The review-progress read-out: viewed / total files plus a thin bar. A
+ * `Progress` (role `progressbar`), not a `Meter`: the count tracks completion
+ * of the review task, not a bounded measurement of some quantity.
+ */
+function ReviewProgress({ viewed, total }: { viewed: number; total: number }) {
   return (
-    <div className="viewed-progress">
-      <div
-        style={{
-          display: "flex",
-          fontVariantNumeric: "tabular-nums",
-          justifyContent: "space-between",
-        }}
-      >
-        <span>Review progress</span>
-        <span>
-          {viewed} / {total} viewed
-        </span>
+    <Progress className="gap-1" max={Math.max(total, 1)} value={viewed}>
+      <div className="flex justify-between text-muted-foreground tabular-nums">
+        <ProgressLabel className="font-normal text-xs">
+          Review progress
+        </ProgressLabel>
+        <ProgressValue className="text-xs">
+          {() => `${viewed} / ${total} viewed`}
+        </ProgressValue>
       </div>
-      <div className="viewed-bar">
-        <div className="viewed-bar-fill" style={{ width: `${pct}%` }} />
-      </div>
-    </div>
+      <ProgressTrack className="h-1">
+        <ProgressIndicator />
+      </ProgressTrack>
+    </Progress>
   );
 }
 
@@ -293,22 +302,15 @@ export function FileTree({
   return (
     <aside className="flex h-full w-[22rem] flex-col border-r text-[0.85rem]">
       <div className="flex flex-col gap-2 border-b p-2">
-        <Progress total={progress.total} viewed={progress.viewed} />
-        <input
+        <ReviewProgress total={progress.total} viewed={progress.viewed} />
+        <Input
           onChange={(event) => onFilterChange(event.target.value)}
           placeholder="Filter files…"
-          style={{
-            background: "transparent",
-            border: "1px solid var(--color-input)",
-            borderRadius: "0.25rem",
-            color: "inherit",
-            font: "inherit",
-            padding: "0.25rem 0.5rem",
-          }}
+          size="sm"
           type="search"
           value={filter}
         />
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem" }}>
+        <div className="flex flex-wrap gap-1.5">
           <QuickFilter
             active={unviewedOnly}
             label="Unviewed"
@@ -320,42 +322,61 @@ export function FileTree({
             onToggle={() => onFindingsOnlyChange(!findingsOnly)}
           />
         </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem" }}>
-          <button onClick={() => onOrderChange(nextOrder)} type="button">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Button
+            onClick={() => onOrderChange(nextOrder)}
+            size="sm"
+            variant="outline"
+          >
             {orderLabel}
-          </button>
-          <button onClick={() => onSplitChange(!split)} type="button">
-            {split ? "Split" : "Unified"}
-          </button>
-          <span style={{ flex: 1 }} />
-          <button
+          </Button>
+          <ToggleGroup
+            onValueChange={(groupValue) => {
+              const [next] = groupValue;
+              if (next !== undefined) {
+                onSplitChange(next === "split");
+              }
+            }}
+            size="sm"
+            value={[split ? "split" : "unified"]}
+            variant="outline"
+          >
+            <ToggleGroupItem value="unified">Unified</ToggleGroupItem>
+            <ToggleGroupItem value="split">Split</ToggleGroupItem>
+          </ToggleGroup>
+          <span className="flex-1" />
+          <Button
             aria-label="Previous file"
             onClick={() => nav.onJump("file", -1)}
-            type="button"
+            size="sm"
+            variant="outline"
           >
             ↑file
-          </button>
-          <button
+          </Button>
+          <Button
             aria-label="Next file"
             onClick={() => nav.onJump("file", 1)}
-            type="button"
+            size="sm"
+            variant="outline"
           >
             ↓file
-          </button>
-          <button
+          </Button>
+          <Button
             aria-label="Previous change"
             onClick={() => nav.onJump("change", -1)}
-            type="button"
+            size="sm"
+            variant="outline"
           >
             ↑hunk
-          </button>
-          <button
+          </Button>
+          <Button
             aria-label="Next change"
             onClick={() => nav.onJump("change", 1)}
-            type="button"
+            size="sm"
+            variant="outline"
           >
             ↓hunk
-          </button>
+          </Button>
         </div>
       </div>
       <div className="flex-1 overflow-auto py-1">
