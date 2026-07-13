@@ -13,6 +13,18 @@ import { fork } from "radashi";
 /** VS Code-style single-letter change badge. */
 export type ChangeType = "A" | "M" | "D" | "R";
 
+/**
+ * Deep-link into the Diff tab at a file/line/side. The optional fourth argument
+ * carries the tour's file sequence, reordering the Diff surface into walkthrough
+ * order rather than merely jumping to the first range (walkthroughs.md §1).
+ */
+export type OpenInDiff = (
+  file: string,
+  line: number,
+  side: "base" | "head",
+  order?: readonly string[]
+) => void;
+
 export interface FileEntry {
   /** Stable id, `${name}#${patchIndex}` — matches the CodeView item id. */
   id: string;

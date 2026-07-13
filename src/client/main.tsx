@@ -3,9 +3,9 @@ import { NuqsAdapter } from "nuqs/adapters/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
-import { App } from "./components/app";
-import { ThemeProvider } from "./components/theme-provider";
+import { App } from "./app";
 import { queryClient } from "./data/query-client";
+import { ThemeProvider } from "./theme-provider";
 
 const container = document.querySelector("#root");
 
