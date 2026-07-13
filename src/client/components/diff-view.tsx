@@ -89,7 +89,9 @@ function HeaderMetadata({
         onToggleLarge={() => onToggleLarge(item.id)}
       />
       {row?.changed ? (
-        <span className="viewed-changed">changed since viewed</span>
+        <span className="text-[0.7rem] uppercase tracking-wide text-warning-foreground">
+          changed since viewed
+        </span>
       ) : null}
       {onComment ? (
         <button

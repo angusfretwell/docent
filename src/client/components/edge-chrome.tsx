@@ -15,6 +15,20 @@ import { useQuery } from "@tanstack/react-query";
 import { blobSizeQuery } from "../data/blobs";
 import { blobUrl } from "../lib/blobs";
 import type { FileClass } from "../lib/edge-cases";
+import { Badge } from "./ui/badge";
+
+const edgeRowClass =
+  "inline-flex items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground";
+const edgeMonoClass = "font-mono text-xs";
+
+/** The uppercase chip labelling an edge-case row (`Binary`, `Renamed`, …). */
+function EdgeChip({ children }: { children: React.ReactNode }) {
+  return (
+    <Badge className="uppercase tracking-wide" size="sm" variant="outline">
+      {children}
+    </Badge>
+  );
+}
 
 // Human-readable change type for the binary row (diff-review.md §5:
 // "change type + size delta").
@@ -63,11 +77,11 @@ function BinarySizeRow({ item }: { item: FileDiffMetadata }) {
 
   const delta = sizes ? formatDelta(sizes.after - sizes.before) : "";
   return (
-    <span className="edge-row">
-      <span className="edge-chip">Binary</span>
+    <span className={edgeRowClass}>
+      <EdgeChip>Binary</EdgeChip>
       <span>{CHANGE_TYPE_LABEL[item.type]}</span>
       {sizes ? (
-        <span className="edge-mono">
+        <span className={edgeMonoClass}>
           {formatBytes(sizes.before)} → {formatBytes(sizes.after)}
           {delta === "" ? null : ` (${delta})`}
         </span>
@@ -79,14 +93,16 @@ function BinarySizeRow({ item }: { item: FileDiffMetadata }) {
 /** One before/after image cell, or a placeholder when that side has no blob. */
 function ImageCell({ label, sha }: { label: string; sha: string | undefined }) {
   return (
-    <span className="edge-image-cell">
+    <span className="flex flex-col gap-1 text-xs text-muted-foreground">
       <span>{label}</span>
       {isRealObjectId(sha) ? (
-        <img alt={label} className="edge-image" src={blobUrl(sha)} />
+        <img
+          alt={label}
+          className="max-h-[200px] max-w-[240px] rounded-sm border object-contain [background:repeating-conic-gradient(var(--color-border)_0%_25%,transparent_0%_50%)_50%/16px_16px]"
+          src={blobUrl(sha)}
+        />
       ) : (
-        <span className="edge-mono" style={{ opacity: 0.6 }}>
-          (none)
-        </span>
+        <span className={edgeMonoClass}>(none)</span>
       )}
     </span>
   );
@@ -99,7 +115,7 @@ function ImageCell({ label, sha }: { label: string; sha: string | undefined }) {
  */
 function ImageCompare({ item }: { item: FileDiffMetadata }) {
   return (
-    <span className="edge-image-compare">
+    <span className="flex flex-wrap gap-3 py-2">
       <ImageCell label="Before" sha={item.prevObjectId} />
       <ImageCell label="After" sha={item.newObjectId} />
     </span>
@@ -109,9 +125,9 @@ function ImageCompare({ item }: { item: FileDiffMetadata }) {
 /** A plain informational row: a chip label plus a monospace detail. */
 function InfoRow({ label, detail }: { label: string; detail: string }) {
   return (
-    <span className="edge-row">
-      <span className="edge-chip">{label}</span>
-      <span className="edge-mono">{detail}</span>
+    <span className={edgeRowClass}>
+      <EdgeChip>{label}</EdgeChip>
+      <span className={edgeMonoClass}>{detail}</span>
     </span>
   );
 }
@@ -181,7 +197,7 @@ export function EdgeChrome({
   }
   if (file.renamePure || file.renameModify) {
     return (
-      <span className="edge-row">
+      <span className={edgeRowClass}>
         <RenameHeader item={item} />
         {file.large ? (
           <LargeToggle loaded={largeLoaded} onToggle={onToggleLarge} />

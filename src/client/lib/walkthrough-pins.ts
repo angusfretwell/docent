@@ -26,16 +26,17 @@ export interface Tone {
   chip: string;
 }
 
-// Two visually distinct overlay tones: an authored annotation (durable, blue)
-// versus a reviewer Finding (orange), so a reader tells the two acts apart at a
-// glance (walkthroughs.md §7).
+// Two visually distinct overlay tones: an authored annotation (durable, the
+// --info blue) versus a reviewer Finding (the --signal orange), so a reader
+// tells the two acts apart at a glance (walkthroughs.md §7). CSS variable
+// references, resolved where the overlays render.
 export const ANNOTATION_TONE: Tone = {
-  border: "#4c8dff",
-  chip: "rgba(56,132,255,0.9)",
+  border: "var(--color-info)",
+  chip: "var(--color-info)",
 };
 export const FINDING_TONE: Tone = {
-  border: "#e0863c",
-  chip: "rgba(224,108,32,0.9)",
+  border: "var(--color-signal)",
+  chip: "var(--color-signal)",
 };
 
 // The capture anchor arms, named once so narrowing and filters read one token.

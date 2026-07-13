@@ -20,6 +20,7 @@ import { isPendingExpandable } from "../lib/blobs";
 import type { DriftResult } from "../lib/drift";
 import { useDrift } from "../lib/drift";
 import { writeFinding } from "../lib/findings-client";
+import { cn } from "../lib/utils";
 import type { Selection, Tab } from "../url/params";
 import { useRangeParam, useTabParam, useViewParam } from "../url/params";
 import type { DiffViewHandle } from "./diff-view";
@@ -42,26 +43,13 @@ const NO_VIEWED: readonly ViewedEvent[] = [];
 const NO_FINDINGS: readonly FindingEntry[] = [];
 const NO_WALKTHROUGHS: readonly WalkthroughEntry[] = [];
 
-// Fixed pill over the diff; hoisted so it isn't rebuilt on every render.
-const statusStyle: React.CSSProperties = {
-  background: "rgba(128,128,128,0.12)",
-  borderRadius: "0 0 0 0.5rem",
-  fontSize: "0.75rem",
-  opacity: 0.75,
-  padding: "0.3rem 0.6rem",
-  position: "fixed",
-  right: 0,
-  top: 0,
-  zIndex: 10,
-};
-
 /**
  * A live status pill proving the watch → SSE → re-fetch loop end to end. Floats
  * over the diff (fixed) so it never disturbs `CodeView`'s scroll container.
  */
 function ReviewStatus({ review }: { review: ReviewSnapshot }) {
   return (
-    <div style={statusStyle}>
+    <div className="fixed top-0 right-0 z-10 rounded-bl-lg bg-muted px-2.5 py-1 text-xs text-muted-foreground">
       <code>{review.review.branch}</code> · {review.changes.length} changes ·{" "}
       {review.findings.length} findings · {review.walkthroughs.length}{" "}
       walkthroughs
@@ -70,54 +58,40 @@ function ReviewStatus({ review }: { review: ReviewSnapshot }) {
 }
 
 function Notice({ children }: { children: React.ReactNode }) {
-  return <p style={{ opacity: 0.7, padding: "1rem" }}>{children}</p>;
+  return <p className="p-4 text-muted-foreground">{children}</p>;
 }
 
-const tabBarStyle: React.CSSProperties = {
-  borderBottom: "1px solid rgba(128,128,128,0.25)",
-  display: "flex",
-  gap: "0.25rem",
-  padding: "0.3rem 0.6rem 0",
-};
-
-function tabStyle(active: boolean): React.CSSProperties {
-  return {
-    background: "transparent",
-    border: "none",
-    borderBottom: active ? "2px solid #4c8dff" : "2px solid transparent",
-    color: "inherit",
-    cursor: "pointer",
-    font: "inherit",
-    fontSize: "0.9rem",
-    opacity: active ? 1 : 0.7,
-    padding: "0.4rem 0.7rem",
-  };
+function tabClass(active: boolean): string {
+  return cn(
+    "cursor-pointer border-b-2 border-transparent px-3 py-1.5 text-[0.9rem]",
+    active ? "border-b-info" : "text-muted-foreground"
+  );
 }
 
 /** The view-mode tabs (walkthroughs.md §1). Each tab is its own self-contained surface. */
 function TabBar({ tab, onTab }: { tab: Tab; onTab: (tab: Tab) => void }) {
   return (
-    <div style={tabBarStyle}>
+    <div className="flex gap-1 border-b px-2.5 pt-1">
       <button
         aria-pressed={tab === "diff"}
+        className={tabClass(tab === "diff")}
         onClick={() => onTab("diff")}
-        style={tabStyle(tab === "diff")}
         type="button"
       >
         Diff
       </button>
       <button
         aria-pressed={tab === "walkthrough"}
+        className={tabClass(tab === "walkthrough")}
         onClick={() => onTab("walkthrough")}
-        style={tabStyle(tab === "walkthrough")}
         type="button"
       >
         Code walkthrough
       </button>
       <button
         aria-pressed={tab === "product"}
+        className={tabClass(tab === "product")}
         onClick={() => onTab("product")}
-        style={tabStyle(tab === "product")}
         type="button"
       >
         Product walkthrough
@@ -126,26 +100,11 @@ function TabBar({ tab, onTab }: { tab: Tab; onTab: (tab: Tab) => void }) {
   );
 }
 
-const barStyle: React.CSSProperties = {
-  alignItems: "center",
-  borderBottom: "1px solid rgba(128,128,128,0.25)",
-  display: "flex",
-  flexWrap: "wrap",
-  fontSize: "0.85rem",
-  gap: "0.5rem",
-  padding: "0.4rem 0.6rem",
-};
-
-function entryStyle(active: boolean): React.CSSProperties {
-  return {
-    background: active ? "rgba(56,139,253,0.18)" : "transparent",
-    border: "1px solid rgba(128,128,128,0.35)",
-    borderRadius: "0.25rem",
-    color: "inherit",
-    cursor: "pointer",
-    font: "inherit",
-    padding: "0.2rem 0.6rem",
-  };
+function entryClass(active: boolean): string {
+  return cn(
+    "cursor-pointer rounded-sm border border-input px-2.5 py-0.5",
+    active && "bg-info/15"
+  );
 }
 
 /**
@@ -172,51 +131,48 @@ function ChangeSelector({
   onRange: (range: PendingRange) => void;
 }) {
   return (
-    <div style={barStyle}>
+    <div className="flex flex-wrap items-center gap-2 border-b px-2.5 py-1.5 text-[0.85rem]">
       {dirty && (
         <button
           aria-pressed={selected === "pending"}
+          className={entryClass(selected === "pending")}
           onClick={() => onSelect("pending")}
-          style={entryStyle(selected === "pending")}
           type="button"
         >
           Pending
-          <span
-            aria-hidden="true"
-            style={{ color: "#d29922", marginLeft: "0.4rem" }}
-          >
+          <span aria-hidden="true" className="ml-1.5 text-warning">
             ●
           </span>
         </button>
       )}
       <button
         aria-pressed={selected === "change"}
+        className={entryClass(selected === "change")}
         onClick={() => onSelect("change")}
-        style={entryStyle(selected === "change")}
         type="button"
       >
         <code>{branch}</code>
       </button>
       {selected === "pending" && (
         <>
-          <span style={{ marginLeft: "0.4rem", opacity: 0.6 }}>Range:</span>
+          <span className="ml-1.5 text-muted-foreground">Range:</span>
           <button
             aria-pressed={range === "incremental"}
+            className={entryClass(range === "incremental")}
             onClick={() => onRange("incremental")}
-            style={entryStyle(range === "incremental")}
             type="button"
           >
             Incremental
           </button>
           <button
             aria-pressed={range === "cumulative"}
+            className={entryClass(range === "cumulative")}
             onClick={() => onRange("cumulative")}
-            style={entryStyle(range === "cumulative")}
             type="button"
           >
             Cumulative
           </button>
-          <span style={{ marginLeft: "0.4rem", opacity: 0.6 }}>
+          <span className="ml-1.5 text-muted-foreground">
             Read-only preview
           </span>
         </>

@@ -9,6 +9,7 @@
 import { useEffect, useRef } from "react";
 
 import type { FileEntry, FileOrder, TreeNode } from "../lib/nav";
+import { cn } from "../lib/utils";
 
 /** Per-file viewed read-out for a tree row (folded upstream in DiffView). */
 export interface RowState {
@@ -32,11 +33,11 @@ export interface FileTreeNav {
   onJump: (kind: "file" | "change", direction: 1 | -1) => void;
 }
 
-const BADGE_COLOR: Record<FileEntry["changeType"], string> = {
-  A: "#3fb950",
-  D: "#f85149",
-  M: "#d29922",
-  R: "#a371f7",
+const BADGE_CLASS: Record<FileEntry["changeType"], string> = {
+  A: "text-success-foreground",
+  D: "text-destructive-foreground",
+  M: "text-warning-foreground",
+  R: "text-purple-600 dark:text-purple-400",
 };
 
 function basename(path: string): string {
@@ -44,15 +45,10 @@ function basename(path: string): string {
   return slash === -1 ? path : path.slice(slash + 1);
 }
 
-function Badge({ type }: { type: FileEntry["changeType"] }) {
+/** The A/M/D/R change-type letter beside a file name. */
+function ChangeTypeBadge({ type }: { type: FileEntry["changeType"] }) {
   return (
-    <span
-      style={{
-        color: BADGE_COLOR[type],
-        fontWeight: 600,
-        marginLeft: "0.5rem",
-      }}
-    >
+    <span className={cn("ml-2 font-mono font-semibold", BADGE_CLASS[type])}>
       {type}
     </span>
   );
@@ -60,12 +56,12 @@ function Badge({ type }: { type: FileEntry["changeType"] }) {
 
 function Counts({ entry }: { entry: FileEntry }) {
   return (
-    <span style={{ fontVariantNumeric: "tabular-nums", marginLeft: "0.5rem" }}>
+    <span className="ml-2 tabular-nums">
       {entry.additions > 0 && (
-        <span style={{ color: BADGE_COLOR.A }}>+{entry.additions}</span>
+        <span className="text-success-foreground">+{entry.additions}</span>
       )}
       {entry.deletions > 0 && (
-        <span style={{ color: BADGE_COLOR.D, marginLeft: "0.25rem" }}>
+        <span className="ml-1 text-destructive-foreground">
           −{entry.deletions}
         </span>
       )}
@@ -98,11 +94,8 @@ function FileRow({
   }, [active]);
   return (
     <div
-      className="tree-file-row-wrap"
-      style={{
-        background: active ? "rgba(56,139,253,0.15)" : "transparent",
-        paddingLeft: `${0.5 + depth * 0.85}rem`,
-      }}
+      className={cn("flex items-center gap-[0.35rem]", active && "bg-accent")}
+      style={{ paddingLeft: `${0.5 + depth * 0.85}rem` }}
     >
       <input
         aria-label={`Mark ${entry.path} viewed`}
@@ -112,31 +105,25 @@ function FileRow({
         type="checkbox"
       />
       <button
-        className="tree-file-row"
+        className={cn(
+          "flex min-w-0 flex-1 cursor-pointer items-center px-2 py-[0.15rem] text-left hover:bg-accent",
+          (state?.viewed || state?.generated) && "opacity-55",
+          state?.generated && "italic"
+        )}
         onClick={() => onSelect(entry.id)}
         ref={ref}
-        style={{
-          fontStyle: state?.generated ? "italic" : "normal",
-          opacity: state?.viewed || state?.generated ? 0.55 : 1,
-        }}
         type="button"
       >
-        <span
-          style={{
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {basename(entry.path)}
-        </span>
-        <Badge type={entry.changeType} />
+        <span className="truncate">{basename(entry.path)}</span>
+        <ChangeTypeBadge type={entry.changeType} />
         {state?.generated ? (
-          <span className="tree-generated">generated</span>
+          <span className="ml-1 text-[0.65rem] uppercase tracking-wide text-muted-foreground">
+            generated
+          </span>
         ) : null}
-        <span style={{ flex: 1 }} />
+        <span className="flex-1" />
         {state?.changed ? (
-          <span className="viewed-changed" style={{ marginLeft: "0.4rem" }}>
+          <span className="ml-1.5 text-[0.7rem] uppercase tracking-wide text-warning-foreground">
             changed
           </span>
         ) : null}
@@ -181,7 +168,7 @@ function Row({
   return (
     <>
       <button
-        className="tree-dir-row"
+        className="block w-full cursor-pointer px-2 py-[0.15rem] text-left text-muted-foreground hover:bg-accent"
         onClick={() => onToggle(node.path)}
         style={{ paddingLeft: `${0.5 + depth * 0.85}rem` }}
         type="button"
@@ -304,32 +291,15 @@ export function FileTree({
   }
 
   return (
-    <aside
-      style={{
-        borderRight: "1px solid rgba(128,128,128,0.25)",
-        display: "flex",
-        flexDirection: "column",
-        fontSize: "0.85rem",
-        height: "100%",
-        width: "22rem",
-      }}
-    >
-      <div
-        style={{
-          borderBottom: "1px solid rgba(128,128,128,0.25)",
-          display: "flex",
-          flexDirection: "column",
-          gap: "0.5rem",
-          padding: "0.5rem",
-        }}
-      >
+    <aside className="flex h-full w-[22rem] flex-col border-r text-[0.85rem]">
+      <div className="flex flex-col gap-2 border-b p-2">
         <Progress total={progress.total} viewed={progress.viewed} />
         <input
           onChange={(event) => onFilterChange(event.target.value)}
           placeholder="Filter files…"
           style={{
             background: "transparent",
-            border: "1px solid rgba(128,128,128,0.35)",
+            border: "1px solid var(--color-input)",
             borderRadius: "0.25rem",
             color: "inherit",
             font: "inherit",
@@ -388,9 +358,9 @@ export function FileTree({
           </button>
         </div>
       </div>
-      <div style={{ flex: 1, overflow: "auto", padding: "0.25rem 0" }}>
+      <div className="flex-1 overflow-auto py-1">
         {nodes.length === 0 ? (
-          <p style={{ opacity: 0.6, padding: "0.5rem" }}>No matching files.</p>
+          <p className="p-2 text-muted-foreground">No matching files.</p>
         ) : (
           nodes.map((node) => (
             <Row

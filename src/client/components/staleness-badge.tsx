@@ -1,13 +1,6 @@
 import type { Staleness } from "@shared/lib/walkthrough-annotations";
 
-const staleStyle: React.CSSProperties = {
-  background: "rgba(210,153,34,0.2)",
-  borderRadius: "0.35rem",
-  color: "#d29922",
-  fontSize: "0.75rem",
-  padding: "0.05rem 0.45rem",
-  whiteSpace: "nowrap",
-};
+import { Badge } from "./ui/badge";
 
 /**
  * The "N changes behind" badge (walkthroughs.md §8), shown once atop a pillar
@@ -19,8 +12,8 @@ export function StalenessBadge({ staleness }: { staleness: Staleness }) {
     return null;
   }
   return (
-    <span style={staleStyle}>
+    <Badge variant="warning">
       {staleness.behind} change{staleness.behind === 1 ? "" : "s"} behind
-    </span>
+    </Badge>
   );
 }

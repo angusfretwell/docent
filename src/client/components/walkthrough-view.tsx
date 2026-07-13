@@ -45,6 +45,7 @@ import { narrativeBySectionId } from "../lib/walkthrough-narrative";
 import { CodeViewWorkerPool } from "./code-view-worker-pool";
 import { DetachedSection } from "./detached-section";
 import { StalenessBadge } from "./staleness-badge";
+import { Badge } from "./ui/badge";
 
 /**
  * Deep-link into the Diff tab at a file/line/side. The optional fourth argument
@@ -83,19 +84,9 @@ function overlaps(
   return a[0] <= b[1] && b[0] <= a[1];
 }
 
-const TONE: Record<"info" | "signal", React.CSSProperties> = {
-  info: { background: "rgba(56,132,255,0.18)", color: "#4c8dff" },
-  signal: { background: "rgba(224,108,32,0.2)", color: "#e0863c" },
-};
-const pillStyle: React.CSSProperties = {
-  borderRadius: "0.35rem",
-  fontSize: "0.75rem",
-  padding: "0.05rem 0.45rem",
-  whiteSpace: "nowrap",
-};
 const buttonStyle: React.CSSProperties = {
   background: "transparent",
-  border: "1px solid rgba(128,128,128,0.35)",
+  border: "1px solid var(--color-border)",
   borderRadius: "0.25rem",
   color: "inherit",
   cursor: "pointer",
@@ -103,35 +94,9 @@ const buttonStyle: React.CSSProperties = {
   fontSize: "0.75rem",
   padding: "0.1rem 0.5rem",
 };
-const proseStyle: React.CSSProperties = {
-  lineHeight: 1.5,
-  margin: "0.5rem 0",
-  whiteSpace: "pre-wrap",
-  wordBreak: "break-word",
-};
-const findingStyle: React.CSSProperties = {
-  borderLeft: "2px solid rgba(56,132,255,0.5)",
-  fontSize: "0.85rem",
-  margin: "0.4rem 0",
-  opacity: 0.85,
-  padding: "0.1rem 0.6rem",
-  whiteSpace: "pre-wrap",
-  wordBreak: "break-word",
-};
-const rangeHeaderStyle: React.CSSProperties = {
-  alignItems: "center",
-  display: "flex",
-  fontSize: "0.8rem",
-  gap: "0.5rem",
-  marginBottom: "0.25rem",
-  opacity: 0.85,
-};
-const headerRowStyle: React.CSSProperties = {
-  alignItems: "center",
-  display: "flex",
-  flexWrap: "wrap",
-  gap: "0.6rem",
-};
+const proseClass = "my-2 leading-normal whitespace-pre-wrap break-words";
+const findingClass =
+  "my-1.5 border-l-2 border-l-info/50 px-2.5 py-0.5 text-sm whitespace-pre-wrap break-words";
 
 /**
  * The drift badge for a range or a section rollup (walkthroughs.md §8): `moved`
@@ -140,10 +105,10 @@ const headerRowStyle: React.CSSProperties = {
  */
 function DriftTag({ state }: { state: DriftState }) {
   if (state === "shifted") {
-    return <span style={{ ...pillStyle, ...TONE.info }}>Moved</span>;
+    return <Badge variant="info">Moved</Badge>;
   }
   if (state === "outdated") {
-    return <span style={{ ...pillStyle, ...TONE.signal }}>Changed</span>;
+    return <Badge variant="signal">Changed</Badge>;
   }
   return null;
 }
@@ -199,24 +164,24 @@ function RangeBody({
 }) {
   if (failed) {
     return (
-      <p style={{ fontSize: "0.8rem", opacity: 0.6 }}>
+      <p className="text-[0.8rem] text-muted-foreground">
         Could not load {range.file}.
       </p>
     );
   }
   if (codeWindow === null) {
     return (
-      <p style={{ fontSize: "0.8rem", opacity: 0.6 }}>Loading {range.file}…</p>
+      <p className="text-[0.8rem] text-muted-foreground">
+        Loading {range.file}…
+      </p>
     );
   }
   const id = windowId(range, codeWindow.lines);
   return (
     <div
+      className="overflow-hidden rounded-md border"
       style={{
-        border: "1px solid rgba(128,128,128,0.25)",
-        borderRadius: "0.4rem",
         height: rangeHeight(codeWindow.lines[1] - codeWindow.lines[0] + 1),
-        overflow: "hidden",
       }}
     >
       <RangeCodeView
@@ -268,12 +233,12 @@ function RangeCode({
     codeWindow !== null && (codeWindow.canExpandUp || codeWindow.canExpandDown);
 
   return (
-    <div style={{ margin: "0.6rem 0" }}>
-      <div style={rangeHeaderStyle}>
+    <div className="my-2.5">
+      <div className="mb-1 flex items-center gap-2 text-[0.8rem] text-muted-foreground">
         <code>
           {range.file}:{range.lines[0]}–{range.lines[1]}
         </code>
-        <span style={{ opacity: 0.6 }}>({range.side})</span>
+        <span className="opacity-60">({range.side})</span>
         <DriftTag state={state} />
         <button
           onClick={() => onOpenInDiff(range.file, targetLine, range.side)}
@@ -303,7 +268,7 @@ function RangeCode({
       </div>
       <RangeBody codeWindow={codeWindow} failed={failed} range={range} />
       {codeFindings.map((finding) => (
-        <div key={finding.id} style={findingStyle}>
+        <div className={findingClass} key={finding.id}>
           {finding.body}
         </div>
       ))}
@@ -349,25 +314,20 @@ function Section({
   );
 
   return (
-    <section
-      style={{
-        borderTop: "1px solid rgba(128,128,128,0.2)",
-        padding: "1rem 0",
-      }}
-    >
-      <div style={{ alignItems: "center", display: "flex", gap: "0.5rem" }}>
-        <h2 style={{ fontSize: "1.05rem", margin: 0 }}>{section.title}</h2>
+    <section className="border-t py-4">
+      <div className="flex items-center gap-2">
+        <h2 className="text-[1.05rem] font-semibold">{section.title}</h2>
         <DriftTag state={rollup} />
       </div>
       {narrative.map((finding) => (
-        <div key={finding.id} style={findingStyle}>
-          <span style={{ opacity: 0.6 }}>note: </span>
+        <div className={findingClass} key={finding.id}>
+          <span className="text-muted-foreground">note: </span>
           {finding.body}
         </div>
       ))}
       {fileFindings.map((finding) => (
-        <div key={finding.id} style={findingStyle}>
-          <span style={{ opacity: 0.6 }}>
+        <div className={findingClass} key={finding.id}>
+          <span className="text-muted-foreground">
             {findingLocation(finding.anchor)}:{" "}
           </span>
           {finding.body}
@@ -375,7 +335,7 @@ function Section({
       ))}
       {segments.map((segment) =>
         segment.kind === "prose" ? (
-          <p key={`prose:${segment.text.slice(0, 24)}`} style={proseStyle}>
+          <p className={proseClass} key={`prose:${segment.text.slice(0, 24)}`}>
             {segment.text}
           </p>
         ) : (
@@ -455,10 +415,12 @@ function DetachedNarrative({ notes }: { notes: readonly DetachedNote[] }) {
   return (
     <DetachedSection explanation="These Findings were left on a superseded walkthrough; they render against their born section prose.">
       {notes.map(({ finding, bornText }) => (
-        <div key={finding.id} style={{ margin: "0.6rem 0" }}>
-          {bornText === undefined ? null : <p style={proseStyle}>{bornText}</p>}
-          <div style={findingStyle}>
-            <span style={{ opacity: 0.6 }}>note: </span>
+        <div className="my-2.5" key={finding.id}>
+          {bornText === undefined ? null : (
+            <p className={proseClass}>{bornText}</p>
+          )}
+          <div className={findingClass}>
+            <span className="text-muted-foreground">note: </span>
             {finding.body}
           </div>
         </div>
@@ -522,11 +484,11 @@ export function WalkthroughView({
   const orderedFiles = unique(keyed.map((entry) => entry.range.file));
 
   return (
-    <div style={{ height: "100%", overflow: "auto", padding: "0 1.5rem 3rem" }}>
+    <div className="h-full overflow-auto px-6 pb-12">
       <CodeViewWorkerPool>
-        <header style={{ padding: "1rem 0" }}>
-          <div style={headerRowStyle}>
-            <h1 style={{ fontSize: "1.4rem", margin: 0 }}>
+        <header className="py-4">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="text-[1.4rem] font-semibold">
               {walkthrough.manifest?.title ?? "Code walkthrough"}
             </h1>
             <StalenessBadge staleness={staleness} />
@@ -549,7 +511,7 @@ export function WalkthroughView({
           </div>
         </header>
         {sections.length === 0 ? (
-          <p style={{ opacity: 0.7 }}>
+          <p className="text-muted-foreground">
             This walkthrough has no readable sections.
           </p>
         ) : (

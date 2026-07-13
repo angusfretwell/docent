@@ -22,7 +22,7 @@ export function DiffAnnotationView({
 }) {
   if (annotation.metadata.kind === "finding") {
     return (
-      <div className="finding-annotation">
+      <div className="mx-3 my-1 max-w-[40rem] rounded-md border bg-muted font-sans">
         <FindingThread
           drift={annotation.metadata.drift}
           finding={annotation.metadata.finding}
@@ -32,7 +32,7 @@ export function DiffAnnotationView({
     );
   }
   return (
-    <div className="finding-annotation">
+    <div className="mx-3 my-1 max-w-[40rem] rounded-md border bg-muted font-sans">
       <Composer
         autoFocus
         busy={compose.busy}

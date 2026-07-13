@@ -16,6 +16,7 @@ import { useState } from "react";
 
 import { Composer } from "./composer";
 import { DriftPill } from "./drift-badge";
+import { Badge } from "./ui/badge";
 
 const DISPOSITION_LABEL: Record<Disposition, string> = {
   actioned: "actioned",
@@ -27,37 +28,6 @@ function attribution(author: Author): string {
   return author.kind === "agent" ? `${author.display} (agent)` : author.display;
 }
 
-const badgeStyle: React.CSSProperties = {
-  background: "rgba(128,128,128,0.15)",
-  borderRadius: "0.35rem",
-  fontSize: "0.75rem",
-  padding: "0.05rem 0.4rem",
-};
-
-const recordStyle: React.CSSProperties = {
-  borderTop: "1px solid rgba(128,128,128,0.15)",
-  padding: "0.4rem 0.5rem",
-};
-
-const authorStyle: React.CSSProperties = {
-  display: "flex",
-  fontSize: "0.75rem",
-  gap: "0.4rem",
-  marginBottom: "0.15rem",
-  opacity: 0.7,
-};
-
-const bodyStyle: React.CSSProperties = {
-  whiteSpace: "pre-wrap",
-  wordBreak: "break-word",
-};
-
-const actionBarStyle: React.CSSProperties = {
-  display: "flex",
-  gap: "0.4rem",
-  padding: "0.4rem 0.5rem",
-};
-
 function Record({
   author,
   body,
@@ -68,12 +38,18 @@ function Record({
   tag?: string;
 }) {
   return (
-    <div style={recordStyle}>
-      <div style={authorStyle}>
+    <div className="border-t px-2 py-1.5">
+      <div className="mb-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
         <span>{attribution(author)}</span>
-        {tag ? <span style={badgeStyle}>{tag}</span> : null}
+        {tag ? (
+          <Badge size="sm" variant="secondary">
+            {tag}
+          </Badge>
+        ) : null}
       </div>
-      {body === "" ? null : <div style={bodyStyle}>{body}</div>}
+      {body === "" ? null : (
+        <div className="whitespace-pre-wrap break-words">{body}</div>
+      )}
     </div>
   );
 }
@@ -104,22 +80,16 @@ export function FindingThread({
 
   return (
     <div>
-      <div
-        style={{
-          ...actionBarStyle,
-          justifyContent: "space-between",
-          opacity: 0.85,
-        }}
-      >
-        <span style={{ alignItems: "center", display: "flex", gap: "0.4rem" }}>
-          <span style={badgeStyle}>
+      <div className="flex items-center justify-between gap-1.5 px-2 py-1.5">
+        <span className="flex items-center gap-1.5">
+          <Badge size="sm" variant="secondary">
             {finding.resolved ? "Resolved" : "Open"}
-          </span>
+          </Badge>
           {drift ? (
             <DriftPill resolved={finding.resolved} state={drift} />
           ) : null}
         </span>
-        <span style={{ fontSize: "0.75rem" }}>
+        <span className="text-xs text-muted-foreground">
           {WHATS_NEXT_LABEL[finding.whatsNext]}
         </span>
       </div>
@@ -164,7 +134,7 @@ export function FindingThread({
       ) : null}
 
       {mode === "idle" ? (
-        <div style={actionBarStyle}>
+        <div className="flex gap-1.5 px-2 py-1.5">
           <button
             className="expand-context"
             onClick={() => setMode("reply")}

@@ -15,7 +15,7 @@ import { useState } from "react";
 import type { DriftResult } from "../lib/drift";
 import { useFindingParam, useResolvedParam } from "../url/params";
 import { Composer } from "./composer";
-import { DRIFT_SIGNAL, DriftPill } from "./drift-badge";
+import { DriftPill } from "./drift-badge";
 import { FindingThread } from "./finding-thread";
 
 // The Review-global Findings panel (diff-review.md §7): a flat list of every
@@ -25,76 +25,16 @@ import { FindingThread } from "./finding-thread";
 // replies, resolves and reopens are authorable here as well as inline. Records
 // arrive folded here so the panel and future agent surfaces share one derivation.
 
-const panelStyle: React.CSSProperties = {
-  borderLeft: "1px solid rgba(128,128,128,0.25)",
-  display: "flex",
-  flexDirection: "column",
-  fontSize: "0.8rem",
-  height: "100%",
-  overflow: "auto",
-  width: "20rem",
-};
-
-const headerStyle: React.CSSProperties = {
-  borderBottom: "1px solid rgba(128,128,128,0.25)",
-  display: "flex",
-  flexDirection: "column",
-  gap: "0.5rem",
-  // Top padding clears the fixed ReviewStatus pill (top-right, over every tab),
-  // so the panel's controls are never covered by it.
-  padding: "2rem 0.75rem 0.5rem",
-  position: "sticky",
-  top: 0,
-};
-
-const rowStyle: React.CSSProperties = {
-  background: "none",
-  border: "none",
-  color: "inherit",
-  cursor: "pointer",
-  display: "block",
-  font: "inherit",
-  padding: "0.5rem 0.75rem",
-  textAlign: "left",
-  width: "100%",
-};
-
-const locationStyle: React.CSSProperties = {
-  fontFamily: "ui-monospace, monospace",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-};
-
-const metaStyle: React.CSSProperties = {
-  alignItems: "center",
-  display: "flex",
-  gap: "0.5rem",
-  marginTop: "0.25rem",
-  opacity: 0.7,
-};
-
 // The cross-Change timeline ("opened on chg_001 · resolved on chg_004") — labels,
 // not navigation (diff-review.md §7), from each record's own changeId.
-const historyStyle: React.CSSProperties = {
-  fontSize: "0.7rem",
-  marginTop: "0.2rem",
-  opacity: 0.55,
-};
+const historyClass = "mt-[0.2rem] text-[0.7rem] text-muted-foreground";
 
 // An outdated Finding detaches from the diff and renders against its born text
 // (data-model.md §6.1) — shown in place so the reviewer keeps the original
-// context without navigating to the birth Change.
-const bornTextStyle: React.CSSProperties = {
-  background: "rgba(128,128,128,0.08)",
-  borderLeft: `2px solid rgba(${DRIFT_SIGNAL},0.5)`,
-  fontFamily: "ui-monospace, monospace",
-  fontSize: "0.72rem",
-  margin: "0 0.5rem",
-  overflowX: "auto",
-  padding: "0.4rem 0.5rem",
-  whiteSpace: "pre",
-};
+// context without navigating to the birth Change. The signal-toned rail is the
+// same re-check accent as the drift pill's signal tone.
+const bornTextClass =
+  "mx-2 overflow-x-auto whitespace-pre border-l-2 border-l-signal/50 bg-muted px-2 py-1.5 font-mono text-[0.72rem]";
 
 function FindingRow({
   drift,
@@ -113,19 +53,25 @@ function FindingRow({
 }) {
   const state: DriftState = drift?.state ?? "live";
   return (
-    <div style={{ borderBottom: "1px solid rgba(128,128,128,0.15)" }}>
-      <button onClick={onToggle} style={rowStyle} type="button">
-        <div style={locationStyle}>{findingLocation(finding.anchor)}</div>
-        <div style={metaStyle}>
+    <div className="border-b">
+      <button
+        className="block w-full cursor-pointer px-3 py-2 text-left"
+        onClick={onToggle}
+        type="button"
+      >
+        <div className="truncate font-mono">
+          {findingLocation(finding.anchor)}
+        </div>
+        <div className="mt-1 flex items-center gap-2 text-muted-foreground">
           <span>{finding.resolved ? "Resolved" : "Open"}</span>
           <span>·</span>
           <span>{WHATS_NEXT_LABEL[finding.whatsNext]}</span>
           <DriftPill resolved={finding.resolved} state={state} />
         </div>
-        {history === "" ? null : <div style={historyStyle}>{history}</div>}
+        {history === "" ? null : <div className={historyClass}>{history}</div>}
       </button>
       {expanded && state === "outdated" && drift?.bornText ? (
-        <pre style={bornTextStyle}>{drift.bornText}</pre>
+        <pre className={bornTextClass}>{drift.bornText}</pre>
       ) : null}
       {expanded ? <FindingThread finding={finding} onWrite={onWrite} /> : null}
     </div>
@@ -185,24 +131,14 @@ export function FindingsPanel({
   }
 
   return (
-    <aside style={panelStyle}>
-      <header style={headerStyle}>
-        <div
-          style={{
-            alignItems: "center",
-            display: "flex",
-            justifyContent: "space-between",
-          }}
-        >
+    <aside className="flex h-full w-80 flex-col overflow-auto border-l text-[0.8rem]">
+      {/* Top padding clears the fixed ReviewStatus pill (top-right, over every
+          tab), so the panel's controls are never covered by it. z-10 keeps
+          positioned Badges in scrolled-away rows from painting over it. */}
+      <header className="sticky top-0 z-10 flex flex-col gap-2 border-b bg-background px-3 pt-8 pb-2">
+        <div className="flex items-center justify-between">
           <strong>Findings · {visible.length}</strong>
-          <label
-            style={{
-              alignItems: "center",
-              display: "flex",
-              gap: "0.25rem",
-              opacity: 0.8,
-            }}
-          >
+          <label className="flex items-center gap-1 text-muted-foreground">
             <input
               checked={showResolved}
               onChange={(event) => {
@@ -231,7 +167,7 @@ export function FindingsPanel({
         ) : null}
       </header>
       {visible.length === 0 ? (
-        <p style={{ opacity: 0.6, padding: "0.75rem" }}>No findings to show.</p>
+        <p className="p-3 text-muted-foreground">No findings to show.</p>
       ) : (
         visible.map((finding) => (
           <FindingRow

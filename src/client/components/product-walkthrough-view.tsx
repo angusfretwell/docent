@@ -44,7 +44,6 @@ import { captureUrl } from "../lib/blobs";
 import { highlightQuotes } from "../lib/highlight-quotes";
 import { narrativeBySectionId } from "../lib/walkthrough-narrative";
 import {
-  ANNOTATION_TONE,
   annotationsFor,
   captureAnchorId,
   captureFindingDrift,
@@ -58,24 +57,13 @@ import type { Tone } from "../lib/walkthrough-pins";
 import { DetachedSection } from "./detached-section";
 import { StalenessBadge } from "./staleness-badge";
 
-const proseStyle: React.CSSProperties = {
-  lineHeight: 1.5,
-  margin: "0.5rem 0",
-  whiteSpace: "pre-wrap",
-  wordBreak: "break-word",
-};
-const findingStyle: React.CSSProperties = {
-  borderLeft: "2px solid rgba(56,132,255,0.5)",
-  fontSize: "0.85rem",
-  margin: "0.4rem 0",
-  opacity: 0.85,
-  padding: "0.1rem 0.6rem",
-  whiteSpace: "pre-wrap",
-  wordBreak: "break-word",
-};
+const proseClass = "my-2 leading-normal whitespace-pre-wrap break-words";
+const calloutClass =
+  "my-1.5 border-l-2 px-2.5 py-0.5 text-sm whitespace-pre-wrap break-words";
+const findingClass = `${calloutClass} border-l-info/50`;
 const buttonStyle: React.CSSProperties = {
   background: "transparent",
-  border: "1px solid rgba(128,128,128,0.35)",
+  border: "1px solid var(--color-border)",
   borderRadius: "0.25rem",
   color: "inherit",
   cursor: "pointer",
@@ -83,40 +71,22 @@ const buttonStyle: React.CSSProperties = {
   fontSize: "0.75rem",
   padding: "0.1rem 0.5rem",
 };
-const captionStyle: React.CSSProperties = {
-  fontSize: "0.8rem",
-  lineHeight: 1.4,
-  margin: "0.2rem 0",
-  opacity: 0.85,
-};
+const captionClass = "my-1 text-[0.8rem] leading-snug text-muted-foreground";
 
 // An authored annotation note (durable, blue) that has no capture to pin to —
 // a file / line / change / walkthrough-section / text-span arm (walkthroughs.md
 // §7). Toned like the annotation pins so a reader tells the two acts apart.
-const annotationNoteStyle: React.CSSProperties = {
-  ...findingStyle,
-  borderLeftColor: ANNOTATION_TONE.border,
-};
+const annotationNoteClass = `${calloutClass} border-l-info`;
 
 // A highlighted text-span quote sitting inline in the section prose (§7).
-const markStyle: React.CSSProperties = {
-  background: "rgba(224,108,32,0.22)",
-  borderRadius: "0.2rem",
-  padding: "0 0.1rem",
-};
+const markClass = "rounded-xs bg-signal/25 px-0.5 text-foreground";
 
 /** A numbered chip label used both on a pin and in its caption. */
 function Chip({ label, tone }: { label: string; tone: Tone }) {
   return (
     <span
-      style={{
-        background: tone.chip,
-        borderRadius: "0.7rem",
-        color: "#fff",
-        fontSize: "0.75rem",
-        fontWeight: 600,
-        padding: "0.02rem 0.4rem",
-      }}
+      className="rounded-full px-1.5 text-xs font-semibold text-white"
+      style={{ background: tone.chip }}
     >
       {label}
     </span>
@@ -133,9 +103,9 @@ function Captions({
     return null;
   }
   return (
-    <div style={{ margin: "0.4rem 0 0.2rem" }}>
+    <div className="mt-1.5 mb-1">
       {pins.map((pin) => (
-        <p key={pin.label} style={captionStyle}>
+        <p className={captionClass} key={pin.label}>
           <Chip label={pin.label} tone={pin.tone} /> {pin.body}
         </p>
       ))}
@@ -164,47 +134,38 @@ function ScreenshotCapture({
   const [w, h] = capture.dims ?? capture.viewport;
 
   return (
-    <figure style={{ margin: "0.6rem 0" }}>
+    <figure className="my-2.5">
       <div
-        style={{
-          aspectRatio: `${w} / ${h}`,
-          border: "1px solid rgba(128,128,128,0.25)",
-          borderRadius: "0.4rem",
-          maxWidth: `${w}px`,
-          overflow: "hidden",
-          position: "relative",
-          width: "100%",
-        }}
+        className="relative w-full overflow-hidden rounded-md border"
+        style={{ aspectRatio: `${w} / ${h}`, maxWidth: `${w}px` }}
       >
         {/* A content-addressed capture blob served from the Review, not a
             build asset — a plain img is the right primitive here. */}
         {/* oxlint-disable-next-line react-doctor/nextjs-no-img-element */}
         <img
           alt={`Screenshot of ${capture.route}`}
+          className="block h-auto w-full"
           src={captureUrl(walkthroughId, capture.media, "screenshot")}
-          style={{ display: "block", height: "auto", width: "100%" }}
         />
         {regions.map((pin) => (
           <div
+            className="absolute box-border rounded-xs border-2"
             key={pin.label}
             style={{
-              border: `2px solid ${pin.tone.border}`,
-              borderRadius: "0.2rem",
-              boxSizing: "border-box",
+              borderColor: pin.tone.border,
               height: `${pin.rect[3] * 100}%`,
               left: `${pin.rect[0] * 100}%`,
-              position: "absolute",
               top: `${pin.rect[1] * 100}%`,
               width: `${pin.rect[2] * 100}%`,
             }}
           >
-            <span style={{ left: 0, position: "absolute", top: "-1.1rem" }}>
+            <span className="absolute -top-[1.1rem] left-0">
               <Chip label={pin.label} tone={pin.tone} />
             </span>
           </div>
         ))}
       </div>
-      <figcaption style={{ fontSize: "0.75rem", opacity: 0.6 }}>
+      <figcaption className="text-xs text-muted-foreground">
         <code>{capture.route}</code> · screenshot
       </figcaption>
       <Captions pins={[...regions, ...whole]} />
@@ -269,16 +230,12 @@ function RecordingCapture({
   const duration = capture.durationMs ?? 0;
 
   return (
-    <figure style={{ margin: "0.6rem 0" }}>
+    <figure className="my-2.5">
       <div
+        className="max-w-full overflow-hidden rounded-md border bg-white"
         ref={stageRef}
         style={{
-          background: "#fff",
-          border: "1px solid rgba(128,128,128,0.25)",
-          borderRadius: "0.4rem",
           height: `${vh * scale}px`,
-          maxWidth: "100%",
-          overflow: "hidden",
           width: `${Math.min(vw, RECORDING_MAX_WIDTH)}px`,
         }}
       >
@@ -293,19 +250,11 @@ function RecordingCapture({
         />
       </div>
       {failed ? (
-        <p style={{ fontSize: "0.8rem", opacity: 0.6 }}>
+        <p className="text-[0.8rem] text-muted-foreground">
           Could not load the recording.
         </p>
       ) : (
-        <div
-          style={{
-            alignItems: "center",
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "0.4rem",
-            margin: "0.35rem 0",
-          }}
-        >
+        <div className="my-1.5 flex flex-wrap items-center gap-1.5">
           <button
             disabled={!ready}
             onClick={() => seek(0)}
@@ -330,7 +279,7 @@ function RecordingCapture({
           ))}
         </div>
       )}
-      <figcaption style={{ fontSize: "0.75rem", opacity: 0.6 }}>
+      <figcaption className="text-xs text-muted-foreground">
         <code>{capture.route}</code> · recording
         {duration > 0 ? ` · ${(duration / 1000).toFixed(1)}s` : ""}
       </figcaption>
@@ -382,13 +331,13 @@ function Prose({ text, quotes }: { text: string; quotes: readonly string[] }) {
   const segments = highlightQuotes(text, quotes);
   const isPlainText = segments.length === 1 && segments[0]?.kind === "text";
   if (isPlainText) {
-    return <p style={proseStyle}>{text}</p>;
+    return <p className={proseClass}>{text}</p>;
   }
   return (
-    <p style={proseStyle}>
+    <p className={proseClass}>
       {segments.map((segment, index) =>
         segment.kind === "quote" ? (
-          <mark key={`mark:${segment.text}:${index}`} style={markStyle}>
+          <mark className={markClass} key={`mark:${segment.text}:${index}`}>
             {segment.text}
           </mark>
         ) : (
@@ -434,22 +383,17 @@ function Section({
   ];
 
   return (
-    <section
-      style={{
-        borderTop: "1px solid rgba(128,128,128,0.2)",
-        padding: "1rem 0",
-      }}
-    >
-      <h2 style={{ fontSize: "1.05rem", margin: 0 }}>{section.title}</h2>
+    <section className="border-t py-4">
+      <h2 className="text-[1.05rem] font-semibold">{section.title}</h2>
       {narrative.map((finding) => (
-        <div key={finding.id} style={findingStyle}>
-          <span style={{ opacity: 0.6 }}>note: </span>
+        <div className={findingClass} key={finding.id}>
+          <span className="text-muted-foreground">note: </span>
           {finding.body}
         </div>
       ))}
       {textSpans.map((finding) => (
-        <div key={finding.id} style={findingStyle}>
-          <span style={{ opacity: 0.6 }}>
+        <div className={findingClass} key={finding.id}>
+          <span className="text-muted-foreground">
             on “{finding.anchor?.kind === TEXT_SPAN ? finding.anchor.quote : ""}
             ”:{" "}
           </span>
@@ -458,10 +402,10 @@ function Section({
       ))}
       {annotations.notes.map((note) => (
         <div
+          className={annotationNoteClass}
           key={`annotation:${note.location}:${note.body.slice(0, 24)}`}
-          style={annotationNoteStyle}
         >
-          <span style={{ opacity: 0.6 }}>{note.location}: </span>
+          <span className="text-muted-foreground">{note.location}: </span>
           {note.body}
         </div>
       ))}
@@ -480,8 +424,8 @@ function Section({
         if (capture === undefined) {
           return (
             <p
+              className="text-[0.8rem] text-muted-foreground"
               key={`capture:${segment.index}`}
-              style={{ fontSize: "0.8rem", opacity: 0.6 }}
             >
               Missing capture <code>{captureId}</code>.
             </p>
@@ -559,7 +503,7 @@ function DetachedFindings({
         const captureId = captureAnchorId(finding.anchor) ?? "";
         const born = findBornCapture(walkthroughs, captureId);
         return (
-          <div key={finding.id} style={{ margin: "0.6rem 0" }}>
+          <div className="my-2.5" key={finding.id}>
             {born ? (
               <CaptureView
                 annotations={[]}
@@ -568,8 +512,8 @@ function DetachedFindings({
                 walkthroughId={born.walkthroughId}
               />
             ) : (
-              <div style={findingStyle}>
-                <span style={{ opacity: 0.6 }}>
+              <div className={findingClass}>
+                <span className="text-muted-foreground">
                   capture {captureId} (unavailable):{" "}
                 </span>
                 {finding.body}
@@ -626,24 +570,17 @@ export function ProductWalkthroughView({
   const staleness = walkthroughStaleness(manifest?.bornChangeId ?? "", changes);
 
   return (
-    <div style={{ height: "100%", overflow: "auto", padding: "0 1.5rem 3rem" }}>
-      <header style={{ padding: "1rem 0" }}>
-        <div
-          style={{
-            alignItems: "center",
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "0.6rem",
-          }}
-        >
-          <h1 style={{ fontSize: "1.4rem", margin: 0 }}>
+    <div className="h-full overflow-auto px-6 pb-12">
+      <header className="py-4">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <h1 className="text-[1.4rem] font-semibold">
             {manifest?.title ?? "Product walkthrough"}
           </h1>
           <StalenessBadge staleness={staleness} />
         </div>
       </header>
       {sections.length === 0 ? (
-        <p style={{ opacity: 0.7 }}>
+        <p className="text-muted-foreground">
           This walkthrough has no readable sections.
         </p>
       ) : (
