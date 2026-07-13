@@ -34,10 +34,7 @@ npm install @base-ui/react
 Add providers in app layout:
 
 ```tsx
-import {
-  AnchoredToastProvider,
-  ToastProvider,
-} from "@client/components/ui/toast";
+import { AnchoredToastProvider, ToastProvider } from "@/components/ui/toast"
 ```
 
 Wrap app content with both:
@@ -60,7 +57,7 @@ import {
   ToastProvider,
   anchoredToastManager,
   toastManager,
-} from "@client/components/ui/toast";
+} from "@/components/ui/toast"
 ```
 
 ## Minimal pattern
@@ -69,7 +66,7 @@ import {
 toastManager.add({
   title: "Saved",
   description: "Your changes have been updated.",
-});
+})
 ```
 
 ## Patterns from coss particles
@@ -86,29 +83,29 @@ toastManager.add({
   id: "autosave",
   title: "Saved",
   description: "Draft updated.",
-});
+})
 ```
 
 ## Stacked usage
 
 ```tsx
-import { toastManager } from "@client/components/ui/toast";
+import { toastManager } from "@/components/ui/toast"
 
 toastManager.add({
   title: "Event has been created",
   description: "Monday, January 3rd at 6:00pm",
-});
+})
 ```
 
 ## Anchored usage
 
 ```tsx
-import { anchoredToastManager } from "@client/components/ui/toast";
+import { anchoredToastManager } from "@/components/ui/toast"
 
 anchoredToastManager.add({
   title: "Copied!",
   positionerProps: { anchor: buttonRef.current },
-});
+})
 ```
 
 ## Common pitfalls
@@ -129,3 +126,4 @@ anchoredToastManager.add({
 - anchored tooltip-style confirmation: `p-toast-7`
 - anchored error toast with manual lifecycle handling: `p-toast-8`
 - anchored toast pattern in a non-toast primitive: `p-toggle-8`
+

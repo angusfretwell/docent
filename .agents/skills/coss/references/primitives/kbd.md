@@ -20,7 +20,7 @@ Manual deps from docs:
 ## Canonical imports
 
 ```tsx
-import { Kbd, KbdGroup } from "@client/components/ui/kbd";
+import { Kbd, KbdGroup } from "@/components/ui/kbd"
 ```
 
 ## Minimal pattern

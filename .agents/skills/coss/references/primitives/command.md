@@ -42,8 +42,8 @@ import {
   CommandPanel,
   CommandSeparator,
   CommandShortcut,
-} from "@client/components/ui/command";
-import { Button } from "@client/components/ui/button";
+} from "@/components/ui/command"
+import { Button } from "@/components/ui/button"
 ```
 
 ## Minimal pattern

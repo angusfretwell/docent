@@ -20,11 +20,7 @@ npm install @base-ui/react
 ## Canonical imports
 
 ```tsx
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@client/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 ```
 
 ## Minimal pattern

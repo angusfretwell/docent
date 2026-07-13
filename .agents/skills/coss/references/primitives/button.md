@@ -20,7 +20,7 @@ npm install @base-ui/react
 ## Canonical imports
 
 ```tsx
-import { Button } from "@client/components/ui/button";
+import { Button } from "@/components/ui/button"
 ```
 
 ## Minimal pattern
@@ -70,9 +70,7 @@ Sizes: `xs`, `sm`, `default`, `lg`, `icon-xs`, `icon-sm`, `icon`, `icon-lg`.
 Built-in `loading` prop (disables and shows spinner automatically):
 
 ```tsx
-<Button loading={isLoading} onClick={handleClick}>
-  Submit
-</Button>
+<Button loading={isLoading} onClick={handleClick}>Submit</Button>
 ```
 
 Composite approach (manual `Spinner` + `disabled`):

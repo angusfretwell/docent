@@ -38,7 +38,7 @@ import {
   SidebarSeparator,
   SidebarTrigger,
   useSidebar,
-} from "@client/components/ui/sidebar";
+} from "@/components/ui/sidebar"
 ```
 
 ## Minimal pattern
@@ -109,7 +109,6 @@ Sidebar with grouped navigation and footer:
 ```
 
 Key composition rules:
-
 - Wrap app with `SidebarProvider` at the layout level.
 - Use `SidebarContent` (not "SidebarPanel") as the scrollable body between header/footer. It uses `ScrollArea` with `fill` so flex children (e.g. `mt-auto` footers) can pin to the bottom.
 - Navigation items use `SidebarMenu` > `SidebarMenuItem` > `SidebarMenuButton`.

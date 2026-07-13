@@ -26,8 +26,8 @@ npm install @base-ui/react
 ## Canonical imports
 
 ```tsx
-import { Label } from "@client/components/ui/label";
-import { Radio, RadioGroup } from "@client/components/ui/radio-group";
+import { Label } from "@/components/ui/label"
+import { Radio, RadioGroup } from "@/components/ui/radio-group"
 ```
 
 ## Minimal pattern
@@ -60,18 +60,14 @@ Radio group with descriptions:
     <Radio value="default" />
     <div>
       <span className="font-medium">Default</span>
-      <p className="text-muted-foreground text-xs">
-        Standard spacing for most layouts.
-      </p>
+      <p className="text-muted-foreground text-xs">Standard spacing for most layouts.</p>
     </div>
   </Label>
   <Label className="flex items-start gap-3">
     <Radio value="comfortable" />
     <div>
       <span className="font-medium">Comfortable</span>
-      <p className="text-muted-foreground text-xs">
-        Extra padding for readability.
-      </p>
+      <p className="text-muted-foreground text-xs">Extra padding for readability.</p>
     </div>
   </Label>
 </RadioGroup>

@@ -27,7 +27,7 @@ import {
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
-} from "@client/components/ui/empty";
+} from "@/components/ui/empty"
 ```
 
 ## Minimal pattern
@@ -60,9 +60,7 @@ Empty state with icon and action:
       <FolderIcon aria-hidden="true" />
     </EmptyMedia>
     <EmptyTitle>No projects yet</EmptyTitle>
-    <EmptyDescription>
-      Get started by creating your first project.
-    </EmptyDescription>
+    <EmptyDescription>Get started by creating your first project.</EmptyDescription>
   </EmptyHeader>
   <EmptyContent>
     <Button>

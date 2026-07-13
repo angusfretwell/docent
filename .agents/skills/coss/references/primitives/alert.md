@@ -26,12 +26,7 @@ Manual deps from docs:
 ## Canonical imports
 
 ```tsx
-import {
-  Alert,
-  AlertAction,
-  AlertDescription,
-  AlertTitle,
-} from "@client/components/ui/alert";
+import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert"
 ```
 
 ## Minimal pattern
@@ -69,9 +64,7 @@ Alert with action buttons (use `AlertAction`):
   <AlertTitle>Heads up!</AlertTitle>
   <AlertDescription>Describe what can be done about it here.</AlertDescription>
   <AlertAction>
-    <Button size="xs" variant="ghost">
-      Dismiss
-    </Button>
+    <Button size="xs" variant="ghost">Dismiss</Button>
     <Button size="xs">Ok</Button>
   </AlertAction>
 </Alert>

@@ -20,7 +20,7 @@ npm install react-day-picker
 ## Canonical imports
 
 ```tsx
-import { Calendar } from "@client/components/ui/calendar";
+import { Calendar } from "@/components/ui/calendar"
 ```
 
 ## Minimal pattern

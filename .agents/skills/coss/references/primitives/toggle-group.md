@@ -20,10 +20,7 @@ npm install @base-ui/react
 ## Canonical imports
 
 ```tsx
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@client/components/ui/toggle-group";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 ```
 
 ## Minimal pattern

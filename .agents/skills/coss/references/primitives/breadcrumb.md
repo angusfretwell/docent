@@ -28,7 +28,7 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@client/components/ui/breadcrumb";
+} from "@/components/ui/breadcrumb"
 ```
 
 ## Minimal pattern

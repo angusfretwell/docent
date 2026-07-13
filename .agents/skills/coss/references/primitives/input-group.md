@@ -25,7 +25,7 @@ import {
   InputGroupAddon,
   InputGroupInput,
   InputGroupText,
-} from "@client/components/ui/input-group";
+} from "@/components/ui/input-group"
 ```
 
 ## Minimal pattern
@@ -101,3 +101,4 @@ See `p-input-group-1` through `p-input-group-29` for icons, text prefixes, inter
 - interactive addons (buttons/badge/kbd/menu/clear/voice): `p-input-group-7`, `p-input-group-8`, `p-input-group-9`, `p-input-group-10`, `p-input-group-11`, `p-input-group-12`, `p-input-group-18`, `p-input-group-21`, `p-input-group-22`, `p-input-group-23`
 - textarea/editor-style layouts with block-end/start addons: `p-input-group-17`, `p-input-group-19`, `p-input-group-27`, `p-input-group-28`, `p-input-group-29`
 - stateful/validation patterns (disabled/loading/password strength): `p-input-group-15`, `p-input-group-16`, `p-input-group-24`, `p-input-group-26`
+

@@ -32,7 +32,7 @@ import {
   TooltipPopup,
   TooltipProvider,
   TooltipTrigger,
-} from "@client/components/ui/tooltip";
+} from "@/components/ui/tooltip"
 ```
 
 ## Minimal pattern
@@ -56,9 +56,7 @@ Tooltip on an icon-only button:
 
 ```tsx
 <Tooltip>
-  <TooltipTrigger
-    render={<Button size="icon" variant="ghost" aria-label="Settings" />}
-  >
+  <TooltipTrigger render={<Button size="icon" variant="ghost" aria-label="Settings" />}>
     <SettingsIcon aria-hidden="true" />
   </TooltipTrigger>
   <TooltipPopup>Settings</TooltipPopup>

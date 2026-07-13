@@ -20,7 +20,7 @@ Manual deps from docs:
 ## Canonical imports
 
 ```tsx
-import { Tabs, TabsList, TabsPanel, TabsTab } from "@client/components/ui/tabs";
+import { Tabs, TabsList, TabsPanel, TabsTab } from "@/components/ui/tabs"
 ```
 
 ## Minimal pattern

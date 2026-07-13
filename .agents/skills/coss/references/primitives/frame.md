@@ -27,7 +27,7 @@ import {
   FrameHeader,
   FramePanel,
   FrameTitle,
-} from "@client/components/ui/frame";
+} from "@/components/ui/frame"
 ```
 
 ## Minimal pattern

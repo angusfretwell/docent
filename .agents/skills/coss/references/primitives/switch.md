@@ -26,7 +26,7 @@ npm install @base-ui/react
 ## Canonical imports
 
 ```tsx
-import { Switch } from "@client/components/ui/switch";
+import { Switch } from "@/components/ui/switch"
 ```
 
 ## Minimal pattern

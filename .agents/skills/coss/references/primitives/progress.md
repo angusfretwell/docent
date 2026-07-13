@@ -29,7 +29,7 @@ import {
   Progress,
   ProgressLabel,
   ProgressValue,
-} from "@client/components/ui/progress";
+} from "@/components/ui/progress"
 ```
 
 ## Minimal pattern
@@ -53,7 +53,8 @@ Progress with label and value display:
 </Progress>
 ```
 
-Determinate progress: bind a numeric `value` (0-100) for known completion states. Indeterminate loading: omit `value` or pass `null` when progress cannot be measured.
+Determinate progress: bind a numeric `value` (0-100) for known completion states.
+Indeterminate loading: omit `value` or pass `null` when progress cannot be measured.
 
 ### More examples
 

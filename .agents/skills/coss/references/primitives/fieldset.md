@@ -20,7 +20,7 @@ npm install @base-ui/react
 ## Canonical imports
 
 ```tsx
-import { Fieldset, FieldsetLegend } from "@client/components/ui/fieldset";
+import { Fieldset, FieldsetLegend } from "@/components/ui/fieldset"
 ```
 
 ## Minimal pattern
