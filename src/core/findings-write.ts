@@ -2,7 +2,7 @@
  * The Finding write path over `.docent/`: lazy Change minting and append-only
  * record drops. The mirror of `review.ts`'s read path — every write here lands
  * a file the read walk parses back, in the identical shape an agent writes
- * directly (data-model.md §4–5, architecture.md §2).
+ * directly.
  *
  * Writing any record is a minting reference: the Change for the live head mints
  * lazily and idempotently by `(baseSha, headSha)`, and every record stamps the
@@ -10,7 +10,7 @@
  * new file, never a rewrite.
  */
 
-import type { Anchor, Disposition } from "@shared/schemas/finding";
+import type { Anchor } from "@shared/schemas/finding";
 import type { FindingWrite } from "@shared/schemas/finding-write";
 import { ChangeRecord } from "@shared/schemas/review";
 import { Clock, Effect, Option } from "effect";
@@ -140,7 +140,6 @@ function frontmatter(fields: {
   changeId: string;
   createdAt: string;
   anchor?: Anchor;
-  disposition?: Disposition;
   edits?: string;
 }): string {
   const author: AuthorInput = {
@@ -157,19 +156,17 @@ function frontmatter(fields: {
     ["changeId", fields.changeId],
     ["createdAt", fields.createdAt],
     ["anchor", fields.anchor],
-    ["disposition", fields.disposition],
     ["edits", fields.edits],
   ];
   return serializeFrontmatter(ordered);
 }
 
 /**
- * Append one Finding record — the five append-only ops: `open` (mints a new
- * `fnd_*` dir with the anchored root record), `reply` (optionally dispositioned),
- * `resolve` (optional reason body), `reopen`, and `edit` (supersedes a named
- * record's body). Every record mints-or-reuses the live head's Change and stamps
- * its `changeId`; the root record's is the Finding's born Change (data-model.md
- * §5.1–5.2, §7).
+ * Append one Finding record — the six append-only ops: `open` (mints a new
+ * `fnd_*` dir with the anchored root record), `reply`, `action`, `resolve`,
+ * `reopen`, and `edit` (supersedes a named record's body). Every record
+ * mints-or-reuses the live head's Change and stamps its `changeId`; the root
+ * record's is the Finding's born Change.
  */
 export const writeFindingRecord = Effect.fn("writeFindingRecord")(
   function* writeFindingRecord(params: {
@@ -195,8 +192,7 @@ export const writeFindingRecord = Effect.fn("writeFindingRecord")(
     const { write } = params;
 
     // Resolve the target finding dir, record type, next filename, body, and the
-    // op-specific frontmatter (anchor on open, disposition on reply, the edited
-    // record's name on edit).
+    // op-specific frontmatter (anchor on open, the edited record's name on edit).
     const findingId =
       write.op === "open" ? yield* makeId("fnd") : write.findingId;
     const findingDir = path.join(findingsDir, findingId);
@@ -215,13 +211,10 @@ export const writeFindingRecord = Effect.fn("writeFindingRecord")(
       changeId: change.id,
       createdAt,
       ...(write.op === "open" ? { anchor: write.anchor } : {}),
-      ...(write.op === "reply" && write.disposition !== undefined
-        ? { disposition: write.disposition }
-        : {}),
       ...(write.op === "edit" ? { edits: write.edits } : {}),
     };
-    // reopen carries no body; resolve's body is its optional reason.
-    const body = write.op === "reopen" ? "" : (write.body ?? "");
+    // Only the prose ops carry a body; action/resolve/reopen move status alone.
+    const body = "body" in write ? write.body : "";
 
     yield* fs.makeDirectory(findingDir, { recursive: true });
     yield* fs.writeFileString(

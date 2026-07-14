@@ -38,10 +38,14 @@ export type DriftPlan =
       range: [number, number];
     };
 
-/** A drift badge — an informational note, a re-check signal, or a settled marker. */
+/**
+ * A drift badge — a re-check signal, or a settled marker. Only `outdated`
+ * badges: a `shifted` anchor still re-pins to its moved line, but that
+ * re-anchoring is silent, so it carries no badge.
+ */
 export interface DriftBadge {
   label: string;
-  tone: "info" | "signal" | "muted";
+  tone: "signal" | "muted";
 }
 
 /** What a milestone record did to the Finding. */

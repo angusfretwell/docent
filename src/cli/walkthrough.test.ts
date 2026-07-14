@@ -227,7 +227,10 @@ describe("runCapture — end to end", () => {
       ])
     );
     const walkthroughId = await currentWalkthroughId(repo);
-    writeFileSync(path.join(repo, "shot.png"), "fake-png-bytes");
+    writeFileSync(
+      path.join(repo, "shot.rrweb.json"),
+      '[{"type":4},{"type":2}]'
+    );
 
     await run(
       runCapture(repo, [
@@ -237,7 +240,7 @@ describe("runCapture — end to end", () => {
         "--kind",
         "screenshot",
         "--media",
-        "shot.png",
+        "shot.rrweb.json",
         "--route",
         "/signup",
         "--viewport",
@@ -261,9 +264,44 @@ describe("runCapture — end to end", () => {
       "product",
       walkthroughId,
       "captures",
-      `${capture?.media}.png`
+      `${capture?.media}.rrweb.json`
     );
     expect(existsSync(blob)).toBe(true);
+  });
+
+  test("--title is recorded on the capture entry", async () => {
+    const repo = featureRepo();
+    await run(
+      runWalkthrough(repo, ["create", "--kind", "product", "--title", "Tour"])
+    );
+    const walkthroughId = await currentWalkthroughId(repo);
+    writeFileSync(
+      path.join(repo, "shot.rrweb.json"),
+      '[{"type":4},{"type":2}]'
+    );
+
+    await run(
+      runCapture(repo, [
+        "add",
+        "--walkthrough",
+        walkthroughId,
+        "--kind",
+        "screenshot",
+        "--media",
+        "shot.rrweb.json",
+        "--route",
+        "/",
+        "--viewport",
+        "1280x800",
+        "--dims",
+        "1280x2400",
+        "--title",
+        "Empty signup form",
+      ])
+    );
+
+    const entry = await onlyWalkthrough(repo);
+    expect(entry?.manifest?.captures?.at(0)?.title).toBe("Empty signup form");
   });
 
   test("--duration-ms on a screenshot (or --dims on a recording) is refused", async () => {
@@ -272,7 +310,7 @@ describe("runCapture — end to end", () => {
       runWalkthrough(repo, ["create", "--kind", "product", "--title", "T"])
     );
     const walkthroughId = await currentWalkthroughId(repo);
-    writeFileSync(path.join(repo, "shot.png"), "bytes");
+    writeFileSync(path.join(repo, "shot.rrweb.json"), "bytes");
 
     const wrongDuration = await runtime.runPromiseExit(
       runCapture(repo, [
@@ -282,7 +320,7 @@ describe("runCapture — end to end", () => {
         "--kind",
         "screenshot",
         "--media",
-        "shot.png",
+        "shot.rrweb.json",
         "--route",
         "/",
         "--viewport",
@@ -299,7 +337,7 @@ describe("runCapture — end to end", () => {
         "--kind",
         "recording",
         "--media",
-        "shot.png",
+        "shot.rrweb.json",
         "--route",
         "/",
         "--viewport",
@@ -328,7 +366,7 @@ describe("runCapture — end to end", () => {
         "--kind",
         "screenshot",
         "--media",
-        "nope.png",
+        "nope.rrweb.json",
         "--route",
         "/",
         "--viewport",

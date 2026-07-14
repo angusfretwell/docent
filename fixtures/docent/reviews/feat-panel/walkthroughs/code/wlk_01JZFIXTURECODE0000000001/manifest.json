@@ -3,6 +3,15 @@
   "id": "wlk_01JZFIXTURECODE0000000001",
   "kind": "code",
   "bornChangeId": "chg_001",
-  "title": "How Palette builds a swatch",
-  "sections": ["s01-random-color.md", "s02-render.md", "s03-generate.md"]
+  "title": "How Palette mixes and paints a swatch",
+  "sections": [
+    "s01-the-preset-palettes.md",
+    "s02-hex-in-channels-out.md",
+    "s03-brightness-and-contrast.md",
+    "s04-mixing-a-random-color.md",
+    "s05-building-one-swatch.md",
+    "s06-rendering-the-row.md",
+    "s07-the-generate-loop.md",
+    "s08-filtering-by-brightness.md"
+  ]
 }

@@ -5,17 +5,18 @@
  * and the pre-bundled diff worker and passes them in here as `EntryOptions`.
  *
  * `docent serve` — the default when no subcommand is given — boots the
- * fullstack server (`../api/serve`); every non-serve subcommand routes through
+ * fullstack server (`../serve`); every non-serve subcommand routes through
  * this same binary via the dispatch table below.
  */
 
 import { BunRuntime, BunServices } from "@effect/platform-bun";
 import { Console, Effect } from "effect";
 
-import type { EntryOptions } from "../api/serve";
-import { serve } from "../api/serve";
+import type { EntryOptions } from "../serve";
+import { serve } from "../serve";
 import { runFinding } from "./finding";
 import { runInstall } from "./install";
+import { runReview } from "./review";
 import { runStatus } from "./status";
 import { runValidate } from "./validate";
 import { runCapture, runWalkthrough } from "./walkthrough";
@@ -51,13 +52,14 @@ type SubcommandRunner = (
 // The non-serve CLI subcommands, each an argv → effect the binary runs against
 // git + fs. `install` is the onboarding wizard; `finding` is the review loop's
 // I/O; `walkthrough` and `capture` the walkthrough write path — one binary, one
-// write implementation; `validate` the non-gating schema oracle over any
-// `.docent/` tree (§3); `status` reports whether a docent server is already
-// serving this repo.
+// write implementation; `review` names the change under review; `validate` the
+// non-gating schema oracle over any `.docent/` tree (§3); `status` reports
+// whether a docent server is already serving this repo.
 const CLI_SUBCOMMANDS: Record<string, SubcommandRunner> = {
   capture: runCapture,
   finding: runFinding,
   install: runInstall,
+  review: runReview,
   status: runStatus,
   validate: runValidate,
   walkthrough: runWalkthrough,
@@ -89,18 +91,21 @@ function dispatch(
 /**
  * The process entry: dispatch the subcommand and run it. `serve` — the default
  * when no subcommand is given — boots the server; every other subcommand
- * (`install` onboards; `finding`, `walkthrough`, `capture` write; `validate`
- * reports; `status` detects) runs through `dispatch` against `CLI_SUBCOMMANDS`.
+ * (`install` onboards; `finding`, `walkthrough`, `capture`, `review` write;
+ * `validate` reports; `status` detects) runs through `dispatch` against
+ * `CLI_SUBCOMMANDS`.
  * Every subcommand is served by this one binary (architecture.md §5).
  */
 export function runMain(entry: EntryOptions): void {
   const subcommand = process.argv[2] ?? "serve";
-  const argv = process.argv.slice(3);
 
   if (subcommand === "serve") {
-    BunRuntime.runMain(serve(entry).pipe(Effect.catch(crash)));
+    const target = process.argv[3] ?? process.cwd();
+    BunRuntime.runMain(serve(entry, target).pipe(Effect.catch(crash)));
     return;
   }
+
+  const argv = process.argv.slice(3);
 
   dispatch(subcommand, argv, CLI_SUBCOMMANDS);
 }

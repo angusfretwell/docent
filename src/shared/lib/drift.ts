@@ -148,21 +148,17 @@ export function planDrift(anchor: Anchor, ctx: AnchorContext): DriftPlan {
 }
 
 /**
- * The (drift × resolved) matrix as a badge (data-model.md §6.3). `live` carries
- * none; `shifted` is always an informational "moved" note; `outdated` is a
- * re-check signal while unresolved and the settled end state once resolved.
+ * The (drift × resolved) matrix as a badge. Only an `outdated` anchor badges:
+ * loudly while unresolved, muted once resolved. `live` and `shifted` carry none
+ * — a shifted anchor still re-pins to its moved line, but that re-anchoring is
+ * silent and needs no reader attention.
  */
 export function driftBadge(
   state: DriftState,
   resolved: boolean
 ): DriftBadge | undefined {
-  if (state === "shifted") {
-    return { label: "Shifted", tone: "info" };
-  }
   if (state === "outdated") {
-    return resolved
-      ? { label: "Outdated", tone: "muted" }
-      : { label: "Re-check", tone: "signal" };
+    return { label: "Outdated", tone: resolved ? "muted" : "signal" };
   }
   return undefined;
 }

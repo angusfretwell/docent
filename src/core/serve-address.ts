@@ -3,7 +3,7 @@
  * already up for this repo?" primitive `/docent` needs to reuse a running server
  * instead of starting a second one (agent-integration.md §3.1).
  *
- * `docent serve` binds an OS-picked port (`api/serve.ts`, `port: 0`), so no fixed port
+ * `docent serve` binds an OS-picked port (`serve.ts`, `port: 0`), so no fixed port
  * exists to probe. On boot it records its live URL to `.docent/serve.json` — a
  * machine-local file the `.docent/.gitignore` `*` policy already ignores — and
  * removes it on shutdown. Detection reads that address and confirms the server

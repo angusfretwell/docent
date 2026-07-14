@@ -48,6 +48,14 @@ git rev-parse HEAD                     # the current head SHA — what every wal
 git log --oneline origin/HEAD..HEAD    # what this branch adds
 ```
 
+- **Name the change.** Reading the head is also where you learn what this branch _is_, so record it as the Review's title — the headline the UI renders. Set it once you have read the log, before any authoring:
+
+  ```bash
+  docent review set --title "Palette panel"
+  ```
+
+  Keep it **short** — a few words naming the change the way a PR title does, drawn from the branch's commits, not a summary of them. Re-set it on every run: the title tracks the head, and renaming keeps the Review's id.
+
 - **Optional focus / pillar scope.** The human may scope the run — a focus ("security") that steers each regenerated tour, or a single pillar ("just the product walkthrough"). With no scope, reconcile **both** pillars. Scope is what the preflight (§1) reads to decide whether the product pillar is in play: a code-only run skips the app-drivability check entirely. A focus is passed straight through to the composed authoring skill; it does not change the staleness decision.
 
 ## 3. Decide per pillar — existence + drift

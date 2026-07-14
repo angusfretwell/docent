@@ -66,10 +66,17 @@ export class WalkthroughSection extends Schema.Class<WalkthroughSection>(
 /**
  * `docent/walkthrough`'s product-only `captures[]` registry entry
  * (walkthroughs.md §6): one atomic media artifact — a screenshot or a
- * recording. `media` is a content sha addressing the blob at
- * `captures/<sha>.png` / `captures/<sha>.rrweb.json`; `dims` rides screenshots
- * (full-page pixels) and `durationMs` rides recordings. Born against the
- * walkthrough's `bornChangeId`, so no per-capture ref.
+ * recording. Both are rrweb event streams, so `media` is a content sha
+ * addressing the blob at `captures/<sha>.rrweb.json`; a screenshot holds the
+ * `[Meta, FullSnapshot]` pair alone, a recording the whole stream. `dims` rides
+ * screenshots (full-page CSS pixels, which is the document the snapshot holds
+ * rather than the `viewport` window onto it) and `durationMs` rides recordings.
+ * Born against the walkthrough's `bornChangeId`, so no per-capture ref.
+ *
+ * `title` is a short descriptive name the driver gives the state it captured
+ * ("Empty palette on load") — the label the Review shows in place of the
+ * generic "Screenshot 1" / "Recording 1". Optional: an untitled capture falls
+ * back to its ordinal, so hand-authored and older registries still read.
  */
 export class Capture extends Schema.Class<Capture>("Capture")({
   dims: Schema.optional(Schema.Tuple([Schema.Number, Schema.Number])),
@@ -78,6 +85,7 @@ export class Capture extends Schema.Class<Capture>("Capture")({
   kind: Schema.Literals(["screenshot", "recording"]),
   media: Schema.String,
   route: Schema.String,
+  title: Schema.optional(Schema.String),
   viewport: Schema.Tuple([Schema.Number, Schema.Number]),
 }) {}
 

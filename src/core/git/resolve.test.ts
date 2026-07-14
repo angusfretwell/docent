@@ -168,6 +168,47 @@ describe("resolveChange", () => {
     ]);
   });
 
+  test("normalizes an scp-like origin remote to a browsable https URL", async () => {
+    const repo = repoWithOneCommit();
+    git(repo, "remote", "add", "origin", "git@github.com:acme/widgets.git");
+
+    const change = await resolve(repo);
+
+    expect(change.remoteUrl).toBe("https://github.com/acme/widgets");
+  });
+
+  test("normalizes an ssh:// origin remote, dropping user and port", async () => {
+    const repo = repoWithOneCommit();
+    git(
+      repo,
+      "remote",
+      "add",
+      "origin",
+      "ssh://git@github.com:2222/acme/widgets.git"
+    );
+
+    const change = await resolve(repo);
+
+    expect(change.remoteUrl).toBe("https://github.com/acme/widgets");
+  });
+
+  test("strips .git from an https origin remote", async () => {
+    const repo = repoWithOneCommit();
+    git(repo, "remote", "add", "origin", "https://github.com/acme/widgets.git");
+
+    const change = await resolve(repo);
+
+    expect(change.remoteUrl).toBe("https://github.com/acme/widgets");
+  });
+
+  test("remoteUrl is null when the repo has no origin remote", async () => {
+    const repo = repoWithOneCommit();
+
+    const change = await resolve(repo);
+
+    expect(change.remoteUrl).toBeNull();
+  });
+
   test("generated is empty when the working tree has no attributes", async () => {
     const repo = repoWithOneCommit();
     git(repo, "checkout", "-b", "feature");

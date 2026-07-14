@@ -42,7 +42,7 @@ export function attempt<A>(parse: () => A): Effect.Effect<A, CliUsageError> {
 /**
  * Assert a flag value is one of a closed set, or throw a usage error naming the
  * allowed values — the one shape shared by every enum-valued flag across the
- * subcommands (`--side`, `--disposition`, `--whats-next`, `--kind`, …). The sets
+ * subcommands (`--side`, `--status`, `--kind`, …). The sets
  * are tiny (2–5 members), so a linear membership check is fine.
  */
 export function parseEnum<T extends string>(

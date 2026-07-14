@@ -226,13 +226,12 @@ describe("addWalkthroughCapture", () => {
     const root = scratchDir("docent-wlk-");
     const { walkthroughId } = await create(root, "product", "Product tour");
 
-    const png = new TextEncoder().encode("fake-png-bytes");
     const result = await run(
       addWalkthroughCapture({
         ...base,
         dims: [1280, 2400],
         kind: "screenshot",
-        media: png,
+        media: new TextEncoder().encode('[{"type":4},{"type":2}]'),
         root,
         route: "/signup",
         viewport: [1280, 800],
@@ -249,7 +248,7 @@ describe("addWalkthroughCapture", () => {
       "product",
       walkthroughId,
       "captures",
-      `${result.media}.png`
+      `${result.media}.rrweb.json`
     );
     expect(existsSync(blob)).toBe(true);
 
@@ -300,7 +299,7 @@ describe("addWalkthroughCapture", () => {
       walkthroughId,
       "captures"
     );
-    expect(readdirSync(captureDir)).toEqual([`${first.media}.png`]);
+    expect(readdirSync(captureDir)).toEqual([`${first.media}.rrweb.json`]);
 
     const entry = await walkthrough(root, walkthroughId);
     expect(entry?.manifest?.captures?.map((capture) => capture.id)).toEqual([
@@ -309,7 +308,30 @@ describe("addWalkthroughCapture", () => {
     ]);
   });
 
-  test("a recording writes a .rrweb.json blob with durationMs", async () => {
+  test("a --title rides onto the registry entry as the capture's label", async () => {
+    const root = scratchDir("docent-wlk-");
+    const { walkthroughId } = await create(root, "product", "Product tour");
+
+    await run(
+      addWalkthroughCapture({
+        ...base,
+        kind: "screenshot",
+        media: new TextEncoder().encode("titled"),
+        root,
+        route: "/",
+        title: "Empty palette on load",
+        viewport: [1280, 800],
+        walkthroughId,
+      })
+    );
+
+    const entry = await walkthrough(root, walkthroughId);
+    expect(entry?.manifest?.captures?.at(0)?.title).toBe(
+      "Empty palette on load"
+    );
+  });
+
+  test("a recording carries durationMs instead of dims", async () => {
     const root = scratchDir("docent-wlk-");
     const { walkthroughId } = await create(root, "product", "Product tour");
 

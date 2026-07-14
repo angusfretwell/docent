@@ -1,26 +1,34 @@
-import { QueryClientProvider } from "@tanstack/react-query";
-import { RouterProvider } from "@tanstack/react-router";
+import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
-import { queryClient } from "./data/query-client";
-import { router } from "./routes";
-import { ThemeProvider } from "./theme-provider";
+import { Providers } from "./components/providers";
+import { routeTree } from "./routeTree.gen";
 
-const container = document.querySelector("#root");
+const router = createRouter({
+  defaultPreload: "intent",
+  routeTree,
+  scrollRestoration: true,
+});
 
-if (container === null) {
+declare module "@tanstack/react-router" {
+  interface Register {
+    router: typeof router;
+  }
+}
+
+const rootElement = document.querySelector("#root");
+
+if (rootElement === null) {
   throw new Error("missing #root element");
 }
 
-const root = (import.meta.hot.data.root ??= createRoot(container));
+const root = createRoot(rootElement);
 
 root.render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <RouterProvider router={router} />
-      </ThemeProvider>
-    </QueryClientProvider>
+    <Providers>
+      <RouterProvider router={router} />
+    </Providers>
   </StrictMode>
 );

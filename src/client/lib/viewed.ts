@@ -1,6 +1,6 @@
 /**
  * The mark-as-viewed read-model: a pure fold of the Review's append-only
- * viewed events against the current Change's files. Nothing here is persisted —
+ * viewed events against the current patch's files. Nothing here is persisted —
  * viewed state, the "changed since viewed" flag, and review progress are all
  * derived on every render, so a new Change recomputes them automatically
  * (diff-review.md §3, data-model.md §8). No DOM or React here.
@@ -12,7 +12,7 @@
  * **parity** of its events for the current head blob: an odd number of events
  * for `(path, headBlobSha)` means viewed. Marking appends one event; unmarking
  * appends another (flipping parity back). This honors the append-only,
- * lock-free store literally while still letting the checkbox toggle. The writer
+ * lock-free store literally while still letting the button toggle. The writer
  * only appends when the intended state actually flips, so parity stays honest.
  *
  * ## Cross-Change behavior (all three fall out of blob-keying)
@@ -28,7 +28,7 @@
 
 import type { ViewedEvent } from "@shared/schemas/review";
 
-import type { FileEntry } from "./nav";
+import type { DiffFile } from "./diff";
 
 export interface ViewedState {
   /** The file's current head content has been asserted seen. */
@@ -38,11 +38,11 @@ export interface ViewedState {
 }
 
 export interface ViewedModel {
-  /** Per-file state, keyed by `FileEntry.id`. */
+  /** Per-file state, keyed by `DiffFile.id`. */
   states: ReadonlyMap<string, ViewedState>;
   /** Viewed file count — the numerator of the progress read-model. */
   viewed: number;
-  /** Total file count in the Change — the denominator. */
+  /** Total file count in the patch — the denominator. */
   total: number;
 }
 
@@ -53,6 +53,7 @@ function countByPath(
   events: readonly ViewedEvent[]
 ): Map<string, Map<string, number>> {
   const byPath = new Map<string, Map<string, number>>();
+
   for (const event of events) {
     let counts = byPath.get(event.path);
     if (counts === undefined) {
@@ -61,6 +62,7 @@ function countByPath(
     }
     counts.set(event.blobSha, (counts.get(event.blobSha) ?? 0) + 1);
   }
+
   return byPath;
 }
 
@@ -83,10 +85,12 @@ function foldFile(
   if (autoViewed) {
     return { changedSinceViewed: false, viewed: !isOdd(counts?.get(blobSha)) };
   }
+
   const viewed = isOdd(counts?.get(blobSha));
   if (viewed || counts === undefined) {
     return { changedSinceViewed: false, viewed };
   }
+
   let changedSinceViewed = false;
   for (const [sha, count] of counts) {
     if (sha !== blobSha && sha !== "" && isOdd(count)) {
@@ -94,34 +98,37 @@ function foldFile(
       break;
     }
   }
+
   return { changedSinceViewed, viewed: false };
 }
 
 /**
- * Fold the viewed events against the Change's files into per-file state plus the
+ * Fold the viewed events against the patch's files into per-file state plus the
  * `viewed / total` progress count. `total` is the file count regardless of how
  * many carry events, so progress reflects the whole re-review owed.
  */
 export function computeViewed(
   events: readonly ViewedEvent[],
-  entries: readonly FileEntry[],
-  isAutoViewed?: (entry: FileEntry) => boolean
+  files: readonly DiffFile[],
+  isAutoViewed?: (file: DiffFile) => boolean
 ): ViewedModel {
   const byPath = countByPath(events);
   const states = new Map<string, ViewedState>();
   let viewed = 0;
-  for (const entry of entries) {
+
+  for (const file of files) {
     const state = foldFile(
-      byPath.get(entry.path),
-      entry.blobSha,
-      isAutoViewed?.(entry) ?? false
+      byPath.get(file.path),
+      file.blobSha,
+      isAutoViewed?.(file) ?? false
     );
-    states.set(entry.id, state);
+    states.set(file.id, state);
     if (state.viewed) {
       viewed += 1;
     }
   }
-  return { states, total: entries.length, viewed };
+
+  return { states, total: files.length, viewed };
 }
 
 /** Look up a file's state, defaulting to unviewed for an unknown id. */

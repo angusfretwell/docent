@@ -34,7 +34,7 @@ import { useEffect, useState } from "react";
 import { fetchBlobText } from "./blobs";
 
 /** One changed file's identity as drift reads it: its shas, its rename/delete standing. */
-export interface DiffFile {
+export interface DriftFile {
   deleted: boolean;
   name: string;
   newObjectId?: string;
@@ -44,10 +44,10 @@ export interface DiffFile {
 }
 
 /** Index the patch's files by every path they answer to (new name and, for renames, the old). */
-export function indexDiffFiles(patch: string): Map<string, DiffFile> {
-  const byPath = new Map<string, DiffFile>();
+export function indexDiffFiles(patch: string): Map<string, DriftFile> {
+  const byPath = new Map<string, DriftFile>();
   for (const file of processPatch(patch).files) {
-    const entry: DiffFile = {
+    const entry: DriftFile = {
       deleted: file.type === "deleted",
       name: file.name,
       newObjectId: file.newObjectId,
@@ -71,7 +71,7 @@ export function indexDiffFiles(patch: string): Map<string, DiffFile> {
  */
 export function anchorContext(
   anchor: Anchor,
-  files: ReadonlyMap<string, DiffFile>
+  files: ReadonlyMap<string, DriftFile>
 ): AnchorContext {
   if (anchor.kind !== "file" && anchor.kind !== "line") {
     return {};
@@ -122,13 +122,12 @@ export interface ExcerptJob {
 }
 
 /**
- * The lazy re-anchor engine shared by the Finding drift map (`useDrift`) and the
- * walkthrough range drift map (`useRangeDrift`). Given the fetch jobs a caller's
- * synchronous plan could not settle, it fetches the content-addressed blobs
- * (cached forever), runs `reanchorRange`, and folds each result in by id as it
- * lands — so the returned map only ever grows more precise, never mis-pinning a
- * still-in-flight entry. A stable `jobsKey` keeps the effect from re-firing on
- * every render.
+ * The lazy re-anchor engine behind the Finding drift map (`useDrift`). Given the
+ * fetch jobs a caller's synchronous plan could not settle, it fetches the
+ * content-addressed blobs (cached forever), runs `reanchorRange`, and folds each
+ * result in by id as it lands — so the returned map only ever grows more
+ * precise, never mis-pinning a still-in-flight entry. A stable `jobsKey` keeps
+ * the effect from re-firing on every render.
  */
 export function useReanchor(
   jobs: readonly ReanchorJob[],
@@ -213,10 +212,8 @@ export interface PlanTriage {
 }
 
 /**
- * Triage one content anchor's drift plan into the buckets a drift map fills by id
- * (data-model.md §6.1) — the shared reducer step behind both the Finding drift
- * map (`useDrift`) and the walkthrough range drift map (`useRangeDrift`), keyed by
- * an opaque `id` (a Finding id or a range key):
+ * Triage one content anchor's drift plan into the buckets the drift map fills by
+ * id (data-model.md §6.1):
  *
  * - a **settled** plan is a `base` result at `lines` — a line/range anchor's own
  *   lines, absent for a whole-`file`/`change` anchor;
@@ -260,7 +257,7 @@ export function triagePlan(
 
 function planFindings(
   findings: readonly FindingEntry[],
-  files: ReadonlyMap<string, DiffFile>,
+  files: ReadonlyMap<string, DriftFile>,
   walkthroughs: readonly WalkthroughEntry[]
 ) {
   const base = new Map<string, DriftResult>();

@@ -50,13 +50,12 @@ describe("foldFinding", () => {
     expect(folded.body).toBe("backpressure races the flush");
   });
 
-  test("a fresh finding needs action", () => {
+  test("a fresh finding is open", () => {
     const folded = foldFinding("fnd_1", [
       record({ anchor: lineAnchor, name: "001-open.md", type: "open" }),
     ]);
 
-    expect(folded.resolved).toBe(false);
-    expect(folded.whatsNext).toBe("needs-action");
+    expect(folded.status).toBe("open");
   });
 
   test("collects replies and unique participants in order", () => {
@@ -70,7 +69,6 @@ describe("foldFinding", () => {
       record({
         author: angus,
         body: "fixed",
-        disposition: "actioned",
         name: "002-reply.md",
         type: "reply",
       }),
@@ -92,27 +90,34 @@ describe("foldFinding", () => {
     ]);
   });
 
-  test.each([
-    ["actioned", "needs-verify"],
-    ["question", "needs-answer"],
-    ["declined", "needs-decision"],
-    [undefined, "needs-action"],
-  ] as const)(
-    "a reply with disposition %s folds to what's-next %s",
-    (disposition, expected) => {
-      const folded = foldFinding("fnd_1", [
-        record({ anchor: lineAnchor, name: "001-open.md", type: "open" }),
-        record({ disposition, name: "002-reply.md", type: "reply" }),
-      ]);
-
-      expect(folded.whatsNext).toBe(expected);
-    }
-  );
-
-  test("re-commenting after a resolve reopens the finding at needs-action", () => {
+  test("an action record hands the finding back", () => {
     const folded = foldFinding("fnd_1", [
       record({ anchor: lineAnchor, name: "001-open.md", type: "open" }),
-      record({ body: "done", name: "002-resolve.md", type: "resolve" }),
+      record({ body: "fixed the flush", name: "002-reply.md", type: "reply" }),
+      record({ name: "003-action.md", type: "action" }),
+    ]);
+
+    expect(folded.status).toBe("actioned");
+  });
+
+  test("a reply after an action returns the finding to open", () => {
+    const folded = foldFinding("fnd_1", [
+      record({ anchor: lineAnchor, name: "001-open.md", type: "open" }),
+      record({ name: "002-action.md", type: "action" }),
+      record({
+        body: "not quite — it still races under load",
+        name: "003-reply.md",
+        type: "reply",
+      }),
+    ]);
+
+    expect(folded.status).toBe("open");
+  });
+
+  test("re-commenting after a resolve reopens the finding", () => {
+    const folded = foldFinding("fnd_1", [
+      record({ anchor: lineAnchor, name: "001-open.md", type: "open" }),
+      record({ name: "002-resolve.md", type: "resolve" }),
       record({
         body: "actually, one more thing",
         name: "003-reply.md",
@@ -120,33 +125,41 @@ describe("foldFinding", () => {
       }),
     ]);
 
-    expect(folded.resolved).toBe(false);
-    expect(folded.whatsNext).toBe("needs-action");
+    expect(folded.status).toBe("open");
   });
 
   test("a resolve record closes the finding", () => {
     const folded = foldFinding("fnd_1", [
       record({ anchor: lineAnchor, name: "001-open.md", type: "open" }),
-      record({
-        body: "verified under load",
-        name: "002-resolve.md",
-        type: "resolve",
-      }),
+      record({ name: "002-resolve.md", type: "resolve" }),
     ]);
 
-    expect(folded.resolved).toBe(true);
-    expect(folded.whatsNext).toBe("closed");
+    expect(folded.status).toBe("resolved");
   });
 
-  test("a reopen after a resolve returns the finding to needs-action", () => {
+  test("a reopen after a resolve returns the finding to open", () => {
     const folded = foldFinding("fnd_1", [
       record({ anchor: lineAnchor, name: "001-open.md", type: "open" }),
       record({ name: "002-resolve.md", type: "resolve" }),
       record({ name: "003-reopen.md", type: "reopen" }),
     ]);
 
-    expect(folded.resolved).toBe(false);
-    expect(folded.whatsNext).toBe("needs-action");
+    expect(folded.status).toBe("open");
+  });
+
+  test("an edit leaves the status untouched", () => {
+    const folded = foldFinding("fnd_1", [
+      record({ anchor: lineAnchor, name: "001-open.md", type: "open" }),
+      record({ name: "002-resolve.md", type: "resolve" }),
+      record({
+        body: "corrected open body",
+        edits: "001-open.md",
+        name: "003-edit.md",
+        type: "edit",
+      }),
+    ]);
+
+    expect(folded.status).toBe("resolved");
   });
 
   test("an edit record supersedes the named record's body", () => {
@@ -183,7 +196,7 @@ describe("foldFinding", () => {
 
     expect(folded.anchor).toBeUndefined();
     expect(folded.body).toBe("");
-    expect(folded.whatsNext).toBe("needs-action");
+    expect(folded.status).toBe("open");
   });
 });
 

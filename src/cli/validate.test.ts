@@ -28,6 +28,7 @@ const VALID_REVIEW = JSON.stringify({
   branch: "feature",
   id: "rev_x",
   schema: "docent/review",
+  title: "A feature",
 });
 
 describe("parseValidateArgs", () => {

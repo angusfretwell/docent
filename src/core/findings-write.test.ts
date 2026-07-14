@@ -196,7 +196,7 @@ describe("writeFindingRecord", () => {
     expect(kinds).toEqual(["change", "file"]);
   });
 
-  test("reply appends the next record and transitions what's-next by disposition", async () => {
+  test("reply appends the next record and keeps the finding open", async () => {
     const root = scratchDir("docent-write-");
     const { findingId } = await write(root, {
       anchor: lineAnchor,
@@ -204,12 +204,7 @@ describe("writeFindingRecord", () => {
       op: "open",
     });
 
-    const reply = await write(root, {
-      body: "fixed",
-      disposition: "actioned",
-      findingId,
-      op: "reply",
-    });
+    const reply = await write(root, { body: "fixed", findingId, op: "reply" });
 
     expect(reply.record).toBe("002-reply.md");
     const snap = await snapshot(root);
@@ -218,11 +213,26 @@ describe("writeFindingRecord", () => {
       throw new Error("expected the finding");
     }
     const folded = foldFinding(entry.id, entry.records);
-    expect(folded.replies.at(0)).toMatchObject({
-      body: "fixed",
-      disposition: "actioned",
+    expect(folded.replies.at(0)).toMatchObject({ body: "fixed" });
+    expect(folded.status).toBe("open");
+  });
+
+  test("action hands the finding back through the append-only records", async () => {
+    const root = scratchDir("docent-write-");
+    const { findingId } = await write(root, {
+      anchor: lineAnchor,
+      body: "flagged",
+      op: "open",
     });
-    expect(folded.whatsNext).toBe("needs-verify");
+
+    const action = await write(root, { findingId, op: "action" });
+
+    expect(action.record).toBe("002-action.md");
+    const snap = await snapshot(root);
+    const entry = snap.findings.find((finding) => finding.id === findingId);
+    expect(foldFinding(findingId, entry?.records ?? []).status).toBe(
+      "actioned"
+    );
   });
 
   test("resolve then reopen fold through the append-only records", async () => {
@@ -233,17 +243,13 @@ describe("writeFindingRecord", () => {
       op: "open",
     });
 
-    await write(root, {
-      body: "verified under load",
-      findingId,
-      op: "resolve",
-    });
+    await write(root, { findingId, op: "resolve" });
     const afterResolve = await snapshot(root);
     const resolvedEntry = afterResolve.findings.find(
       (finding) => finding.id === findingId
     );
-    expect(foldFinding(findingId, resolvedEntry?.records ?? []).resolved).toBe(
-      true
+    expect(foldFinding(findingId, resolvedEntry?.records ?? []).status).toBe(
+      "resolved"
     );
 
     await write(root, { findingId, op: "reopen" });
@@ -251,9 +257,9 @@ describe("writeFindingRecord", () => {
     const reopenedEntry = afterReopen.findings.find(
       (finding) => finding.id === findingId
     );
-    const folded = foldFinding(findingId, reopenedEntry?.records ?? []);
-    expect(folded.resolved).toBe(false);
-    expect(folded.whatsNext).toBe("needs-action");
+    expect(foldFinding(findingId, reopenedEntry?.records ?? []).status).toBe(
+      "open"
+    );
   });
 
   test("edit supersedes a named record's body at fold time", async () => {
@@ -278,7 +284,7 @@ describe("writeFindingRecord", () => {
     expect(folded.body).toBe("the flush races the drain");
   });
 
-  test("edit rewrites a reply body without changing what's-next", async () => {
+  test("edit rewrites a reply body without changing status", async () => {
     const root = scratchDir("docent-write-");
     const { findingId } = await write(root, {
       anchor: lineAnchor,
@@ -287,10 +293,10 @@ describe("writeFindingRecord", () => {
     });
     const reply = await write(root, {
       body: "typo: fixed",
-      disposition: "actioned",
       findingId,
       op: "reply",
     });
+    await write(root, { findingId, op: "action" });
 
     await write(root, {
       body: "Fixed the drain race.",
@@ -303,7 +309,7 @@ describe("writeFindingRecord", () => {
     const entry = snap.findings.find((finding) => finding.id === findingId);
     const folded = foldFinding(findingId, entry?.records ?? []);
     expect(folded.replies.at(0)?.body).toBe("Fixed the drain race.");
-    expect(folded.whatsNext).toBe("needs-verify");
+    expect(folded.status).toBe("actioned");
   });
 
   test("every record stamps the changeId current at write", async () => {

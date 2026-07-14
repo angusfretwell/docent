@@ -1,8 +1,8 @@
 /**
- * The Finding record schema (`docent/finding`) and the anchor / disposition
- * vocabulary it carries (data-model.md §5 & §7). Runtime-neutral: no Bun or DOM
- * globals, so the server (which parses record files off disk) and the client
- * (which folds and renders) share one definition.
+ * The Finding record schema (`docent/finding`) and the anchor vocabulary it
+ * carries. Runtime-neutral: no Bun or DOM globals, so the server (which parses
+ * record files off disk) and the client (which folds and renders) share one
+ * definition.
  *
  * The read-time fold that turns a Finding's append-only record directory into
  * the shape the panel renders lives beside this in `lib/finding.ts`.
@@ -88,18 +88,15 @@ export const Anchor = Schema.Union([
 ]);
 export type Anchor = typeof Anchor.Type;
 
-/** How a fixer ended its turn (data-model.md §7); optional on reply records. */
-export const Disposition = Schema.Literals([
-  "actioned",
-  "declined",
-  "question",
-]);
-export type Disposition = typeof Disposition.Type;
-
-/** The record types, derived from the `NNN-<type>.md` filename (data-model.md §5.1). */
+/**
+ * The record types, derived from the `NNN-<type>.md` filename. Two kinds:
+ * `open`, `reply`, and `edit` carry prose; `action`, `resolve`, and `reopen`
+ * carry none and exist only to move the Finding's status.
+ */
 export const RECORD_TYPES = [
   "open",
   "reply",
+  "action",
   "resolve",
   "reopen",
   "edit",
@@ -109,9 +106,9 @@ export type RecordType = typeof RecordType.Type;
 
 /**
  * One parsed record: the `NNN-<type>.md` filename plus its frontmatter envelope
- * and markdown body. `anchor` rides the root (open) record; `disposition` an
- * optional reply field; `edits` names the record an edit supersedes (its
- * filename) — the append-only equivalent of an in-place body edit.
+ * and markdown body. `anchor` rides the root (open) record; `edits` names the
+ * record an edit supersedes (its filename) — the append-only equivalent of an
+ * in-place body edit.
  */
 export class FindingRecord extends Schema.Class<FindingRecord>("FindingRecord")(
   {
@@ -120,7 +117,6 @@ export class FindingRecord extends Schema.Class<FindingRecord>("FindingRecord")(
     body: Schema.String,
     changeId: Schema.String,
     createdAt: Schema.String,
-    disposition: Schema.optional(Disposition),
     edits: Schema.optional(Schema.String),
     /** The record's filename, e.g. `002-reply.md` — orders the log and is the edit target. */
     name: Schema.String,

@@ -62,23 +62,43 @@ agent-browser open <url><route>
 
 Both are recorded on the capture entity in step 7 (`viewport`, `route`); the runbook or instruction is only their source.
 
-## 4. Inject rrweb (recordings only)
+## 4. Inject rrweb
 
-Screenshots skip this step. For a recording, inject rrweb by **driver eval**, then start recording:
+**Both** kinds are rrweb event streams — a screenshot is a DOM snapshot, not a raster, so it stays sharp at any zoom when the Review renders it. Inject rrweb by **driver eval**:
 
 ```bash
-cat "$(node -e 'process.stdout.write(require.resolve("rrweb/dist/rrweb.umd.min.cjs"))')" | agent-browser eval --stdin
-agent-browser eval "window.__evt=[]; rrweb.record({emit:e=>window.__evt.push(e)}); 'recording'"
+# rrweb's exports map does not expose the UMD build, so resolve the package
+# entry and take its sibling rather than asking for the subpath directly.
+cat "$(node -e 'const p=require("node:path");process.stdout.write(p.join(p.dirname(require.resolve("rrweb")),"rrweb.umd.min.cjs"))')" | agent-browser eval --stdin
 ```
 
 rrweb takes a full snapshot on `record()`, so inject-after-load is sufficient.
+
+Record with assets inlined, so a capture stays readable after the dev server is gone:
+
+```js
+rrweb.record({ collectFonts: true, emit, inlineImages: true });
+```
+
+Stylesheets are inlined by default; images and fonts are **not** — without those two options a replay months later shows holes where the app's assets used to be. The cost is blob size, which is the right trade for an immutable artifact.
 
 ## 5. Drive and capture
 
 Drive the flow the way you already work — `snapshot -i` to read the page live (accessibility tree, element refs, disabled states visible), act on what you see, re-snapshot after any DOM change. Refs go stale on navigation; re-snapshot.
 
-- **Screenshot** — `agent-browser screenshot --full <tmp>.png` (full scroll height). Note its full-page pixel `dims`.
-- **Recording** — after the flow, pull the **raw rrweb event stream**: `agent-browser eval "JSON.stringify(window.__evt)" --json` → write the events array verbatim to a `<tmp>.rrweb.json` file. Note `durationMs` (last event ts − first).
+- **Screenshot** — once the page is in the state you want, take the snapshot pair. `record()` emits `Meta` then `FullSnapshot` synchronously and returns its own stop function, so starting and immediately stopping yields exactly the still frame:
+
+  ```bash
+  agent-browser eval "window.__evt=[]; rrweb.record({collectFonts:true,emit:e=>window.__evt.push(e),inlineImages:true})(); JSON.stringify(window.__evt.slice(0,2))" --json
+  ```
+
+  Write those two events to a `<tmp>.rrweb.json` file. Note `dims` — the **full document** size in CSS pixels, which is what the Review sizes the still to, not the viewport:
+
+  ```bash
+  agent-browser eval "[document.documentElement.scrollWidth,document.documentElement.scrollHeight]" --json
+  ```
+
+- **Recording** — start recording before driving the flow, then pull the **raw rrweb event stream**: `agent-browser eval "JSON.stringify(window.__evt)" --json` → write the events array verbatim to a `<tmp>.rrweb.json` file. Note `durationMs` (last event ts − first).
 
 ## 6. Mint the walkthrough shell
 
@@ -93,20 +113,20 @@ Omit `--title`: the shell mints with an **empty `title`** and empty `sections` �
 
 ## 7. Register the capture
 
-Register each temp media file (step 5) with `docent capture add` — the single home for content sha minting and append semantics. It **content-addresses** the bytes into `captures/<sha>.png` / `captures/<sha>.rrweb.json` (the filename **is** the sha-256 of the bytes, which dedups byte-identical screens across rounds and freezes the exact bytes an anchor points at), mints the `cap_` id, and appends the validated `captures[]` registry entry to the manifest:
+Register each temp media file (step 5) with `docent capture add` — the single home for content sha minting and append semantics. It **content-addresses** the bytes into `captures/<sha>.rrweb.json` (the filename **is** the sha-256 of the bytes, which dedups byte-identical screens across rounds and freezes the exact bytes an anchor points at), mints the `cap_` id, and appends the validated `captures[]` registry entry to the manifest:
 
 ```bash
-# screenshot: full-page pixel size rides --dims
-docent capture add --walkthrough wlk_… --kind screenshot --media <tmp>.png \
-  --route /signup --viewport 1280x800 --dims 1280x2400
+# screenshot: full-page CSS-pixel document size rides --dims
+docent capture add --walkthrough wlk_… --kind screenshot --media <tmp>.rrweb.json \
+  --route /signup --viewport 1280x800 --dims 1280x2400 --title "Empty signup form"
 
 # recording: --duration-ms rides instead of --dims
 docent capture add --walkthrough wlk_… --kind recording --media <tmp>.rrweb.json \
-  --route /signup --viewport 1280x800 --duration-ms 8200
+  --route /signup --viewport 1280x800 --duration-ms 8200 --title "Submitting the signup"
 #   → { "captureId": "cap_…", "media": "<sha>", "registry": { … }, "walkthroughId": "wlk_…" }
 ```
 
-`--route` and `--viewport` record the step-3 staging on the capture entity. All captures are born against the walkthrough's `bornChangeId` — no per-capture `capturedAgainst`. The CLI is **non-gating** (the files stay plain and hand-writable, per `/docent-cli`), but prefer it: it validates against the same schemas the server renders.
+`--route` and `--viewport` record the step-3 staging on the capture entity. `--title` is a **short descriptive name for the state you just captured** ("Empty signup form", "Submitting the signup") — the Review shows it in place of the generic "Screenshot 1" / "Recording 1", so give every capture one. This is naming what you produced, not authoring prose: it is a few words, not a sentence, and the section narrative around the capture stays `/author-product-walkthrough`'s job. `--title` is optional — an untitled capture falls back to its ordinal — but always pass one. All captures are born against the walkthrough's `bornChangeId` — no per-capture `capturedAgainst`. The CLI is **non-gating** (the files stay plain and hand-writable, per `/docent-cli`), but prefer it: it validates against the same schemas the server renders.
 
 ## 8. First-run: author the runbook
 

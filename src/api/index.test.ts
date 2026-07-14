@@ -215,36 +215,26 @@ describe("serve routes", () => {
     expect(res.status).toBe(400);
   });
 
-  test("GET /api/capture serves a screenshot blob as image/png, cached forever", async () => {
+  test("GET /api/capture serves a capture blob as application/json, cached forever", async () => {
     const repo = featureRepo();
     const client = serve(repo);
-    writeCapture(repo, "wlk_01PROD", "shaA.png", "PNGBYTES");
+    writeCapture(repo, "wlk_01PROD", "shaA.rrweb.json", '[{"type":4}]');
 
-    const res = await client.fetch("/api/capture/wlk_01PROD/shaA.png");
-
-    expect(res.status).toBe(200);
-    expect(res.headers.get("content-type")).toContain("image/png");
-    expect(await res.text()).toBe("PNGBYTES");
-    // Content-addressed → immutable → cache forever.
-    expect(res.headers.get("cache-control")).toMatch(/immutable/);
-  });
-
-  test("GET /api/capture serves a recording blob as application/json", async () => {
-    const repo = featureRepo();
-    const client = serve(repo);
-    writeCapture(repo, "wlk_01PROD", "shaB.rrweb.json", '[{"type":4}]');
-
-    const res = await client.fetch("/api/capture/wlk_01PROD/shaB.rrweb.json");
+    const res = await client.fetch("/api/capture/wlk_01PROD/shaA.rrweb.json");
 
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("application/json");
     expect(await res.json()).toEqual([{ type: 4 }]);
+    // Content-addressed → immutable → cache forever.
+    expect(res.headers.get("cache-control")).toMatch(/immutable/);
   });
 
   test("GET /api/capture 404s an absent capture file", async () => {
     const client = serve(featureRepo());
 
-    const res = await client.fetch("/api/capture/wlk_01PROD/missing.png");
+    const res = await client.fetch(
+      "/api/capture/wlk_01PROD/missing.rrweb.json"
+    );
 
     expect(res.status).toBe(404);
   });
@@ -252,7 +242,7 @@ describe("serve routes", () => {
   test("GET /api/capture 400s a walkthrough id or filename that could traverse", async () => {
     const client = serve(featureRepo());
 
-    const badWlk = await client.fetch("/api/capture/not-a-wlk/shaA.png");
+    const badWlk = await client.fetch("/api/capture/not-a-wlk/shaA.rrweb.json");
     const badFile = await client.fetch(
       "/api/capture/wlk_01PROD/%2e%2e%2fsecret"
     );
@@ -438,7 +428,6 @@ describe("serve routes", () => {
 
     const res = await postFinding(client, {
       body: "fixed",
-      disposition: "actioned",
       findingId: opened.findingId,
       op: "reply",
     });
@@ -449,9 +438,34 @@ describe("serve routes", () => {
     const finding = snap.findings.find(
       (entry) => entry.id === opened.findingId
     );
-    expect(
-      foldFinding(opened.findingId, finding?.records ?? []).whatsNext
-    ).toBe("needs-verify");
+    expect(foldFinding(opened.findingId, finding?.records ?? []).status).toBe(
+      "open"
+    );
+  });
+
+  test("POST /api/findings appends an action that hands the Finding back", async () => {
+    const client = serve(featureRepo());
+    const openRes = await postFinding(client, {
+      anchor: lineAnchor,
+      body: "flagged",
+      op: "open",
+    });
+    const opened = decodeWriteResult(await openRes.json());
+
+    const res = await postFinding(client, {
+      findingId: opened.findingId,
+      op: "action",
+    });
+
+    expect(res.status).toBe(200);
+    expect(decodeWriteResult(await res.json()).record).toBe("002-action.md");
+    const snap = await fetchReview(client);
+    const finding = snap.findings.find(
+      (entry) => entry.id === opened.findingId
+    );
+    expect(foldFinding(opened.findingId, finding?.records ?? []).status).toBe(
+      "actioned"
+    );
   });
 
   test("POST /api/findings 400s a malformed body", async () => {

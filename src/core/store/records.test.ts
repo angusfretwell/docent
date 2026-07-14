@@ -15,7 +15,7 @@ describe("serializeFrontmatter + recordFile + splitEnvelope", () => {
       ["schema", "docent/finding"],
       ["changeId", "chg_001"],
       ["anchor", { file: "src/x.ts", kind: "line", lines: [42, 47] }],
-      ["disposition", undefined],
+      ["edits", undefined],
     ]);
     const file = recordFile(frontmatter, "  the flush races the mark  \n");
 

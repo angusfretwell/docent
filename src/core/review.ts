@@ -38,6 +38,7 @@ import { readRecord, writeJsonRecord } from "./store/io";
 import {
   branchSlug,
   ensureStateRootGitignore,
+  reviewDirPath,
   STATE_ROOT,
 } from "./store/layout";
 import { FRONTMATTER } from "./store/records";
@@ -80,9 +81,45 @@ export const ensureReview = Effect.fn("ensureReview")(
       branch: params.branch,
       id,
       schema: "docent/review",
+      title: "",
     });
     yield* fs.makeDirectory(params.reviewDir, { recursive: true });
     yield* writeJsonRecord(file, review);
+    return review;
+  }
+);
+
+/**
+ * Name the change under review, keeping the Review's identity. Unlike every
+ * other record under `.docent/`, `review.json` is a singleton identity record
+ * rather than an append-only log — so a rename rewrites it in place, preserving
+ * the `id` the branch was minted with.
+ */
+export const setReviewTitle = Effect.fn("setReviewTitle")(
+  function* setReviewTitle(params: {
+    root: string;
+    branch: string;
+    base: string;
+    title: string;
+  }) {
+    const path = yield* Path;
+    const reviewDir = reviewDirPath(params.root, params.branch);
+
+    const existing = yield* ensureReview({
+      base: params.base,
+      branch: params.branch,
+      reviewDir,
+      root: params.root,
+    });
+    const review = Review.make({
+      base: existing.base,
+      branch: existing.branch,
+      id: existing.id,
+      schema: "docent/review",
+      title: params.title,
+    });
+
+    yield* writeJsonRecord(path.join(reviewDir, "review.json"), review);
     return review;
   }
 );

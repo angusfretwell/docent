@@ -9,6 +9,7 @@ import { Effect, ManagedRuntime } from "effect";
 import { cleanupScratchDirs, git, scratchRepo } from "../core/test-fixtures";
 import { CliUsageError, parseArgs } from "./args";
 import {
+  actionFinding,
   addFinding,
   applyFindingFilter,
   buildAuthor,
@@ -59,27 +60,25 @@ function folded(overrides: Partial<FoldedFinding>): FoldedFinding {
     id: "fnd_x",
     participants: [],
     replies: [],
-    resolved: false,
-    whatsNext: "needs-action",
+    status: "open",
     ...overrides,
   };
 }
 
 describe("parseListArgs", () => {
-  test("--open and --resolved together clear the status filter", () => {
-    expect(parseListArgs(["--open", "--resolved"]).status).toBeUndefined();
-    expect(parseListArgs(["--open"]).status).toBe("open");
-    expect(parseListArgs(["--resolved"]).status).toBe("resolved");
+  test("splits comma and repeated --status", () => {
+    expect(parseListArgs(["--status", "open,resolved"]).status).toEqual([
+      "open",
+      "resolved",
+    ]);
   });
 
-  test("splits comma and repeated --whats-next", () => {
-    expect(
-      parseListArgs(["--whats-next", "needs-action,closed"]).whatsNext
-    ).toEqual(["needs-action", "closed"]);
+  test("no --status keeps every status", () => {
+    expect(parseListArgs([]).status).toEqual([]);
   });
 
-  test("rejects an unknown what's-next value", () => {
-    expect(() => parseListArgs(["--whats-next", "nonsense"])).toThrow(
+  test("rejects an unknown status value", () => {
+    expect(() => parseListArgs(["--status", "nonsense"])).toThrow(
       CliUsageError
     );
   });
@@ -98,12 +97,9 @@ describe("parseListArgs", () => {
 });
 
 describe("applyFindingFilter", () => {
-  const open = folded({
-    id: "open",
-    resolved: false,
-    whatsNext: "needs-action",
-  });
-  const closed = folded({ id: "closed", resolved: true, whatsNext: "closed" });
+  const open = folded({ id: "open", status: "open" });
+  const actioned = folded({ id: "actioned", status: "actioned" });
+  const closed = folded({ id: "closed", status: "resolved" });
   const onFile = folded({
     anchor: {
       blobSha: "s",
@@ -118,32 +114,31 @@ describe("applyFindingFilter", () => {
     id: "byAgent",
     participants: [{ display: "Claude", id: "claude", kind: "agent" }],
   });
-  const all = [open, closed, onFile, byAgent];
+  const all = [open, actioned, closed, onFile, byAgent];
 
-  test("status open/resolved narrows", () => {
+  test("status any-of narrows", () => {
     expect(
-      applyFindingFilter(all, { status: "open", whatsNext: [] }).map(
-        (finding) => finding.id
-      )
-    ).toEqual(["open", "onFile", "byAgent"]);
-    expect(
-      applyFindingFilter(all, { status: "resolved", whatsNext: [] }).map(
+      applyFindingFilter(all, { status: ["resolved"] }).map(
         (finding) => finding.id
       )
     ).toEqual(["closed"]);
   });
 
-  test("what's-next any-of narrows", () => {
+  test("an empty status keeps every finding", () => {
+    expect(applyFindingFilter(all, { status: [] })).toHaveLength(all.length);
+  });
+
+  test("the unresolved queue is open plus actioned", () => {
     expect(
-      applyFindingFilter(all, { whatsNext: ["closed"] }).map(
+      applyFindingFilter(all, { status: ["open", "actioned"] }).map(
         (finding) => finding.id
       )
-    ).toEqual(["closed"]);
+    ).toEqual(["open", "actioned", "onFile", "byAgent"]);
   });
 
   test("anchor-file narrows to the code arm's file", () => {
     expect(
-      applyFindingFilter(all, { anchorFile: "src/a.ts", whatsNext: [] }).map(
+      applyFindingFilter(all, { anchorFile: "src/a.ts", status: [] }).map(
         (finding) => finding.id
       )
     ).toEqual(["onFile"]);
@@ -151,7 +146,7 @@ describe("applyFindingFilter", () => {
 
   test("author narrows to a participant id", () => {
     expect(
-      applyFindingFilter(all, { author: "claude", whatsNext: [] }).map(
+      applyFindingFilter(all, { author: "claude", status: [] }).map(
         (finding) => finding.id
       )
     ).toEqual(["byAgent"]);
@@ -249,7 +244,7 @@ describe("write + fetch round-trip (shared write path)", () => {
     expect(result.record).toBe("001-open.md");
     expect(result.changeId).toBe("chg_001");
 
-    const findings = await run(listFindings(repo, { whatsNext: [] }));
+    const findings = await run(listFindings(repo, { status: [] }));
     const finding = findings.at(0);
     expect(finding?.anchor?.kind).toBe("line");
     if (finding?.anchor?.kind === "line") {
@@ -261,7 +256,7 @@ describe("write + fetch round-trip (shared write path)", () => {
     });
   });
 
-  test("reply with a disposition drives what's-next; resolve closes it", async () => {
+  test("action hands the finding back; resolve closes it", async () => {
     const repo = featureRepo();
     const { findingId } = await run(
       addFinding(repo, {
@@ -275,25 +270,23 @@ describe("write + fetch round-trip (shared write path)", () => {
       replyFinding(repo, {
         author: { agent: "fixer" },
         body: "done",
-        disposition: "actioned",
         findingId,
       })
     );
-    const afterReply = await run(listFindings(repo, { whatsNext: [] }));
+    await run(actionFinding(repo, { author: { agent: "fixer" }, findingId }));
+    const afterAction = await run(listFindings(repo, { status: [] }));
     expect(
-      afterReply.find((finding) => finding.id === findingId)?.whatsNext
-    ).toBe("needs-verify");
+      afterAction.find((finding) => finding.id === findingId)?.status
+    ).toBe("actioned");
 
-    await run(
-      resolveFinding(repo, { author: {}, body: "verified", findingId })
-    );
-    const afterResolve = await run(listFindings(repo, { whatsNext: [] }));
-    const closed = afterResolve.find((finding) => finding.id === findingId);
-    expect(closed?.resolved).toBe(true);
-    expect(closed?.whatsNext).toBe("closed");
+    await run(resolveFinding(repo, { author: {}, findingId }));
+    const afterResolve = await run(listFindings(repo, { status: [] }));
+    expect(
+      afterResolve.find((finding) => finding.id === findingId)?.status
+    ).toBe("resolved");
   });
 
-  test("list filters on status, what's-next, anchor-file, and author", async () => {
+  test("list filters on status, anchor-file, and author", async () => {
     const repo = featureRepo();
     await run(
       addFinding(repo, {
@@ -316,25 +309,19 @@ describe("write + fetch round-trip (shared write path)", () => {
     );
     await run(resolveFinding(repo, { author: {}, findingId }));
 
-    const open = await run(
-      listFindings(repo, { status: "open", whatsNext: [] })
-    );
-    const resolved = await run(
-      listFindings(repo, { status: "resolved", whatsNext: [] })
-    );
+    const open = await run(listFindings(repo, { status: ["open"] }));
+    const resolved = await run(listFindings(repo, { status: ["resolved"] }));
     const onFile = await run(
-      listFindings(repo, { anchorFile: "feature.ts", whatsNext: [] })
+      listFindings(repo, { anchorFile: "feature.ts", status: [] })
     );
     const byReviewer = await run(
-      listFindings(repo, { author: "reviewer", whatsNext: [] })
+      listFindings(repo, { author: "reviewer", status: [] })
     );
-    const closed = await run(listFindings(repo, { whatsNext: ["closed"] }));
 
     expect(open).toHaveLength(1);
     expect(resolved).toHaveLength(1);
     expect(onFile).toHaveLength(1);
     expect(byReviewer).toHaveLength(1);
-    expect(closed).toHaveLength(1);
   });
 
   test("reopen returns a resolved finding to open", async () => {
@@ -350,10 +337,9 @@ describe("write + fetch round-trip (shared write path)", () => {
 
     await run(reopenFinding(repo, { author: {}, findingId }));
 
-    const findings = await run(listFindings(repo, { whatsNext: [] }));
+    const findings = await run(listFindings(repo, { status: [] }));
     const reopened = findings.find((finding) => finding.id === findingId);
-    expect(reopened?.resolved).toBe(false);
-    expect(reopened?.whatsNext).toBe("needs-action");
+    expect(reopened?.status).toBe("open");
   });
 
   test("edit supersedes the named record's body", async () => {
@@ -375,7 +361,7 @@ describe("write + fetch round-trip (shared write path)", () => {
       })
     );
 
-    const findings = await run(listFindings(repo, { whatsNext: [] }));
+    const findings = await run(listFindings(repo, { status: [] }));
     const edited = findings.find((finding) => finding.id === findingId);
     expect(edited?.body).toBe("the flush races the drain");
   });
@@ -405,7 +391,7 @@ describe("write + fetch round-trip (shared write path)", () => {
       runFinding(repo, ["edit", "--finding", findingId, "--body", "x"])
     );
 
-    const findings = await run(listFindings(repo, { whatsNext: [] }));
+    const findings = await run(listFindings(repo, { status: [] }));
     expect(findings.find((finding) => finding.id === findingId)?.body).toBe(
       "revised"
     );

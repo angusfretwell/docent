@@ -1,116 +1,121 @@
 import { describe, expect, test } from "bun:test";
 
 import {
-  interleaveCaptureSegments,
-  interleaveSegments,
+  foldCaptureSection,
+  foldRangeSection,
+  targetChipHref,
+  targetChipIndex,
 } from "./walkthrough-segments";
 
-describe("interleaveSegments", () => {
-  test("no markers renders prose then every range in order", () => {
-    expect(interleaveSegments("The request enters here.", 2)).toEqual([
-      { kind: "prose", text: "The request enters here." },
-      { index: 0, kind: "range" },
-      { index: 1, kind: "range" },
-    ]);
+describe("targetChipIndex", () => {
+  test("reads back the index a chip href carries", () => {
+    expect(targetChipIndex(targetChipHref(3))).toBe(3);
   });
 
-  test("markers interleave prose and ranges in document order", () => {
-    expect(
-      interleaveSegments(
-        "The request enters {{range:0}} and is parsed {{range:1}}.",
-        2
-      )
-    ).toEqual([
-      { kind: "prose", text: "The request enters" },
-      { index: 0, kind: "range" },
-      { kind: "prose", text: "and is parsed" },
-      { index: 1, kind: "range" },
-      { kind: "prose", text: "." },
-    ]);
+  test("ignores an ordinary link", () => {
+    expect(targetChipIndex("https://example.com")).toBeUndefined();
   });
 
-  test("drops empty prose runs between adjacent markers", () => {
-    expect(interleaveSegments("{{range:0}}{{range:1}}", 2)).toEqual([
-      { index: 0, kind: "range" },
-      { index: 1, kind: "range" },
-    ]);
-  });
-
-  test("an out-of-range marker index stays literal prose", () => {
-    expect(interleaveSegments("see {{range:5}}", 1)).toEqual([
-      { kind: "prose", text: "see {{range:5}}" },
-      { index: 0, kind: "range" },
-    ]);
-  });
-
-  test("ranges left unreferenced by markers append after the prose in index order", () => {
-    expect(interleaveSegments("only {{range:1}} here", 3)).toEqual([
-      { kind: "prose", text: "only" },
-      { index: 1, kind: "range" },
-      { kind: "prose", text: "here" },
-      { index: 0, kind: "range" },
-      { index: 2, kind: "range" },
-    ]);
-  });
-
-  test("no ranges yields the prose alone", () => {
-    expect(interleaveSegments("just words", 0)).toEqual([
-      { kind: "prose", text: "just words" },
-    ]);
+  test("ignores a fragment that only looks like a chip", () => {
+    expect(targetChipIndex("#walkthrough-target-")).toBeUndefined();
   });
 });
 
-describe("interleaveCaptureSegments", () => {
-  test("no markers renders prose then every capture in order", () => {
-    expect(
-      interleaveCaptureSegments("Drag a file onto the dropzone.", 2)
-    ).toEqual([
-      { kind: "prose", text: "Drag a file onto the dropzone." },
-      { index: 0, kind: "capture" },
-      { index: 1, kind: "capture" },
-    ]);
+describe("foldRangeSection", () => {
+  test("no markers leaves every range trailing the prose", () => {
+    expect(foldRangeSection("The request enters here.", 2)).toEqual({
+      placed: [],
+      prose: "The request enters here.",
+      trailing: [0, 1],
+    });
   });
 
-  test("markers interleave prose and captures in document order", () => {
-    expect(
-      interleaveCaptureSegments(
-        "Drag {{capture:0}} and the upload begins {{capture:1}}.",
-        2
-      )
-    ).toEqual([
-      { kind: "prose", text: "Drag" },
-      { index: 0, kind: "capture" },
-      { kind: "prose", text: "and the upload begins" },
-      { index: 1, kind: "capture" },
-      { kind: "prose", text: "." },
-    ]);
+  test("rewrites a marker to its chip link in place", () => {
+    const fold = foldRangeSection("Parsed here {{range:0}} then routed.", 1);
+
+    expect(fold.prose).toBe(
+      `Parsed here [](${targetChipHref(0)}) then routed.`
+    );
+    expect(fold.placed).toEqual([0]);
+    expect(fold.trailing).toEqual([]);
   });
 
-  test("an out-of-range marker index stays literal prose", () => {
-    expect(interleaveCaptureSegments("see {{capture:5}}", 1)).toEqual([
-      { kind: "prose", text: "see {{capture:5}}" },
-      { index: 0, kind: "capture" },
-    ]);
+  test("keeps a marked paragraph whole", () => {
+    const fold = foldRangeSection(
+      "Opens here.\n\nThen {{range:0}} — rebuilt.",
+      1
+    );
+
+    expect(fold.prose).toBe(
+      `Opens here.\n\nThen [](${targetChipHref(0)}) — rebuilt.`
+    );
   });
 
-  test("captures left unreferenced append after the prose in index order", () => {
-    expect(interleaveCaptureSegments("only {{capture:1}} here", 3)).toEqual([
-      { kind: "prose", text: "only" },
-      { index: 1, kind: "capture" },
-      { kind: "prose", text: "here" },
-      { index: 0, kind: "capture" },
-      { index: 2, kind: "capture" },
-    ]);
+  test("leaves an out-of-range marker as literal prose", () => {
+    expect(foldRangeSection("see {{range:5}}", 1)).toEqual({
+      placed: [],
+      prose: "see {{range:5}}",
+      trailing: [0],
+    });
   });
 
-  test("range and capture markers do not cross-fire", () => {
-    // A `{{range:0}}` marker is inert in a product body — it stays literal prose,
-    // and the lone capture still appends after (the flat fallback).
-    expect(
-      interleaveCaptureSegments("uses {{range:0}} not captures", 1)
-    ).toEqual([
-      { kind: "prose", text: "uses {{range:0}} not captures" },
-      { index: 0, kind: "capture" },
-    ]);
+  test("trails the ranges no marker placed", () => {
+    const fold = foldRangeSection("only {{range:1}} here", 3);
+
+    expect(fold.placed).toEqual([1]);
+    expect(fold.trailing).toEqual([0, 2]);
+  });
+
+  test("chips a range each time it is marked but places it once", () => {
+    const fold = foldRangeSection("{{range:0}} and again {{range:0}}", 1);
+
+    expect(fold.prose).toBe(
+      `[](${targetChipHref(0)}) and again [](${targetChipHref(0)})`
+    );
+    expect(fold.placed).toEqual([0]);
+  });
+
+  test("a section with no ranges keeps its prose and trails nothing", () => {
+    expect(foldRangeSection("just words", 0)).toEqual({
+      placed: [],
+      prose: "just words",
+      trailing: [],
+    });
+  });
+});
+
+describe("foldCaptureSection", () => {
+  test("rewrites a capture marker to its chip link in place", () => {
+    const fold = foldCaptureSection(
+      "Drag a file onto the dropzone {{capture:0}}.",
+      1
+    );
+
+    expect(fold.prose).toBe(
+      `Drag a file onto the dropzone [](${targetChipHref(0)}).`
+    );
+    expect(fold.placed).toEqual([0]);
+  });
+
+  test("leaves an out-of-range marker as literal prose", () => {
+    expect(foldCaptureSection("see {{capture:5}}", 1)).toEqual({
+      placed: [],
+      prose: "see {{capture:5}}",
+      trailing: [0],
+    });
+  });
+
+  test("trails the captures no marker placed", () => {
+    const fold = foldCaptureSection("only {{capture:1}} here", 3);
+
+    expect(fold.placed).toEqual([1]);
+    expect(fold.trailing).toEqual([0, 2]);
+  });
+
+  test("leaves the other kind's marker as prose", () => {
+    const fold = foldCaptureSection("uses {{range:0}} not captures", 1);
+
+    expect(fold.prose).toBe("uses {{range:0}} not captures");
+    expect(fold.trailing).toEqual([0]);
   });
 });

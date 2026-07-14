@@ -6,7 +6,12 @@ import { BunServices } from "@effect/platform-bun";
 import { ViewedRequest } from "@shared/schemas/review";
 import { ManagedRuntime } from "effect";
 
-import { appendViewedEvent, parseAnchor, readReviewSnapshot } from "./review";
+import {
+  appendViewedEvent,
+  parseAnchor,
+  readReviewSnapshot,
+  setReviewTitle,
+} from "./review";
 import { cleanupScratchDirs, scratchDir } from "./test-fixtures";
 
 const runtime = ManagedRuntime.make(BunServices.layer);
@@ -53,6 +58,14 @@ describe("readReviewSnapshot", () => {
         path.join(root, ".docent", "reviews", "feat-stream", "review.json")
       )
     ).toBe(true);
+  });
+
+  test("auto-creates without a title", async () => {
+    const root = scratchDir("docent-review-");
+
+    const snap = await snapshot(root, "feature");
+
+    expect(snap.review.title).toBe("");
   });
 
   test("keeps the id stable across reads (no regenerate)", async () => {
@@ -158,7 +171,6 @@ describe("readReviewSnapshot", () => {
         'author: { kind: human, id: angusfretwell@me.com, display: "Angus" }',
         "changeId: chg_002",
         "createdAt: 2026-07-10T03:02:11Z",
-        "disposition: actioned",
         "---",
         "",
         "fixed",
@@ -180,7 +192,7 @@ describe("readReviewSnapshot", () => {
         body: "the flush races the mark",
         type: "open",
       },
-      { body: "fixed", disposition: "actioned", type: "reply" },
+      { body: "fixed", type: "reply" },
     ]);
   });
 
@@ -615,5 +627,32 @@ describe("appendViewedEvent", () => {
     expect(
       existsSync(path.join(root, ".docent", "reviews", "fresh", "review.json"))
     ).toBe(true);
+  });
+});
+
+describe("setReviewTitle", () => {
+  function setTitle(root: string, branch: string, title: string) {
+    return runtime.runPromise(
+      setReviewTitle({ base: "main", branch, root, title })
+    );
+  }
+
+  test("names the change under review", async () => {
+    const root = scratchDir("docent-review-");
+
+    await setTitle(root, "feature", "Palette panel");
+
+    const snap = await snapshot(root, "feature");
+    expect(snap.review.title).toBe("Palette panel");
+  });
+
+  test("renaming keeps the Review's id", async () => {
+    const root = scratchDir("docent-review-");
+    const before = await snapshot(root, "feature");
+
+    await setTitle(root, "feature", "Palette panel");
+
+    const after = await snapshot(root, "feature");
+    expect(after.review.id).toBe(before.review.id);
   });
 });

@@ -24,6 +24,12 @@ export class Review extends Schema.Class<Review>("Review")({
   /** Stable opaque id (ULID-based). */
   id: Schema.String,
   schema: Schema.Literal("docent/review"),
+  /**
+   * A short human name for the change under review — the header's headline.
+   * Empty is absent (the same convention as a walkthrough's title): a Review
+   * auto-creates title-less, and the authoring run fills it in.
+   */
+  title: Schema.String,
 }) {}
 
 /** `docent/change` — one immutable minted-Change record (data-model.md §4). */

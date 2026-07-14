@@ -1,5 +1,5 @@
 /**
- * The prose/target interleave for the Code and Product walkthrough tabs
+ * The prose/target fold for the Code and Product walkthrough tabs
  * (walkthroughs.md §5). Runtime-neutral and drift-free: no Bun or DOM globals and
  * no anchor/drift dependency, so the server and the client share one definition
  * and each fold below is a plain unit-tested function. The walkthrough schemas
@@ -7,108 +7,101 @@
  * `identity-drift`/`walkthrough-annotations` folds.
  */
 
-/**
- * One placed piece of a section body: a run of prose, or a target by index — a
- * code `range` or a product `capture`. The target kind mirrors the section kind;
- * a section only ever emits one target kind.
- */
-export type Segment =
-  | { kind: "prose"; text: string }
-  | { kind: "range"; index: number }
-  | { kind: "capture"; index: number };
+/** One section body prepared for rendering, against one marker kind. */
+export interface SectionFold {
+  /** Target indices a marker placed in the prose, in document order. */
+  placed: number[];
+  /** The body, with each placed marker rewritten to its chip link. */
+  prose: string;
+  /** Target indices no marker placed, in index order. */
+  trailing: number[];
+}
 
 // The literate `{{range:i}}` / `{{capture:i}}` markers; `i` is a position in the
-// frontmatter target list. Global so `exec` walks every occurrence.
+// frontmatter target list. Global so `replaceAll` walks every occurrence.
 const RANGE_MARKER = /\{\{range:(?<index>\d+)\}\}/g;
 const CAPTURE_MARKER = /\{\{capture:(?<index>\d+)\}\}/g;
 
-/**
- * Fold a section body into its rendered segments against one marker kind
- * (walkthroughs.md §5):
- *
- * - **No valid markers ⇒** the prose, then every target in index order (the flat
- *   fallback).
- * - **Markers present ⇒** prose and targets interleave in document order; a
- *   marker whose index is out of range stays literal prose; any target left
- *   unreferenced appends after, in index order, so no target is silently
- *   dropped.
- *
- * Prose runs are trimmed and empty runs elided, so adjacent markers don't emit
- * blank prose between them. The other kind's marker is inert here — it isn't
- * matched, so it survives as literal prose (a `{{capture:i}}` in a code body, or
- * vice versa, is never a target).
- */
-function interleave(
-  body: string,
-  count: number,
-  marker: RegExp,
-  targetKind: "range" | "capture"
-): Segment[] {
-  const segments: Segment[] = [];
-  const referenced = new Set<number>();
-  let cursor = 0;
+const CHIP_HREF = /^#walkthrough-target-(?<index>\d+)$/;
 
-  function pushProse(raw: string) {
-    const text = raw.trim();
-    if (text !== "") {
-      segments.push({ kind: "prose", text });
-    }
-  }
-  function pushTarget(index: number) {
-    segments.push(
-      targetKind === "range"
-        ? { index, kind: "range" }
-        : { index, kind: "capture" }
-    );
-  }
+/**
+ * The href a placed marker is rewritten to, read back by `targetChipIndex`.
+ *
+ * A fragment rather than a custom scheme because react-markdown's
+ * `defaultUrlTransform` blanks any URL whose protocol is outside its safe list,
+ * and a `docent:0` would be read as exactly that. A URL with no colon is treated
+ * as relative and passed through untouched.
+ */
+export function targetChipHref(index: number): string {
+  return `#walkthrough-target-${index}`;
+}
+
+/** The target index a chip href carries, or `undefined` for an ordinary link. */
+export function targetChipIndex(href: string): number | undefined {
+  const match = CHIP_HREF.exec(href);
+
+  return match === null ? undefined : Number(match.groups?.index);
+}
+
+/**
+ * Fold a section body against one marker kind, rewriting each marker that names
+ * a real target into an inline chip link and reporting which targets that left
+ * unplaced.
+ *
+ * The marker is rewritten rather than split on. Splitting the body at the marker
+ * offset is right when the target renders inline — the author put it
+ * mid-sentence deliberately — but these targets render in a panel beside the
+ * prose, so each fragment becomes its own markdown block and the sentence is
+ * torn in half with whatever punctuation followed the marker dangling at the
+ * start of the next. Rewriting keeps the body one block, so the paragraph
+ * survives intact *and* the marker keeps a real position for its chip to occupy
+ * and for the active-target reading to key off.
+ *
+ * A marker naming a target the section doesn't have stays literal prose, and a
+ * target no marker placed comes back in `trailing` so nothing is silently
+ * dropped. The other kind's marker is inert here — it isn't matched, so a
+ * `{{capture:i}}` in a code body survives as prose, and vice versa.
+ */
+function foldSection(body: string, count: number, marker: RegExp): SectionFold {
+  const placed: number[] = [];
 
   marker.lastIndex = 0;
-  for (
-    let match = marker.exec(body);
-    match !== null;
-    match = marker.exec(body)
-  ) {
-    const index = Number(match.groups?.index);
+  const prose = body.replaceAll(marker, (match, digits: string) => {
+    const index = Number(digits);
+
     if (index >= count) {
-      // Out of range: leave the marker text in place as literal prose.
-      continue;
+      return match;
     }
-    pushProse(body.slice(cursor, match.index));
-    pushTarget(index);
-    referenced.add(index);
-    cursor = match.index + match[0].length;
-  }
-  pushProse(body.slice(cursor));
 
-  // No marker placed any target: prose already pushed, append every target.
-  if (referenced.size === 0) {
-    for (let index = 0; index < count; index += 1) {
-      pushTarget(index);
+    if (!placed.includes(index)) {
+      placed.push(index);
     }
-    return segments;
-  }
 
-  // Some targets went unreferenced: append them after, in index order.
+    return `[](${targetChipHref(index)})`;
+  });
+
+  const trailing: number[] = [];
   for (let index = 0; index < count; index += 1) {
-    if (!referenced.has(index)) {
-      pushTarget(index);
+    if (!placed.includes(index)) {
+      trailing.push(index);
     }
   }
-  return segments;
+
+  return { placed, prose: prose.trim(), trailing };
 }
 
 /** Fold a code section body over its `{{range:i}}` markers (walkthroughs.md §5). */
-export function interleaveSegments(
+export function foldRangeSection(
   body: string,
   rangeCount: number
-): Segment[] {
-  return interleave(body, rangeCount, RANGE_MARKER, "range");
+): SectionFold {
+  return foldSection(body, rangeCount, RANGE_MARKER);
 }
 
 /** Fold a product section body over its `{{capture:i}}` markers (walkthroughs.md §5). */
-export function interleaveCaptureSegments(
+export function foldCaptureSection(
   body: string,
   captureCount: number
-): Segment[] {
-  return interleave(body, captureCount, CAPTURE_MARKER, "capture");
+): SectionFold {
+  return foldSection(body, captureCount, CAPTURE_MARKER);
 }

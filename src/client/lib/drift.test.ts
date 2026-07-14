@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import type { DriftPlan } from "@shared/schemas/drift";
 import type { Anchor } from "@shared/schemas/finding";
 
-import type { DiffFile } from "./drift";
+import type { DriftFile } from "./drift";
 import { anchorContext, indexDiffFiles, triagePlan } from "./drift";
 
 const HEAD = "bbbb222";
@@ -21,7 +21,7 @@ const modifyPatch = [
   "",
 ].join("\n");
 
-function file(overrides: Partial<DiffFile> = {}): DiffFile {
+function file(overrides: Partial<DriftFile> = {}): DriftFile {
   return {
     deleted: false,
     name: "src/a.ts",

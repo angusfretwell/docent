@@ -192,20 +192,14 @@ describe("driftBadge", () => {
     expect(driftBadge("live", true)).toBeUndefined();
   });
 
-  test("shifted is an informational badge regardless of resolution", () => {
-    expect(driftBadge("shifted", false)).toEqual({
-      label: "Shifted",
-      tone: "info",
-    });
-    expect(driftBadge("shifted", true)).toEqual({
-      label: "Shifted",
-      tone: "info",
-    });
+  test("shifted re-anchors silently, carrying no badge", () => {
+    expect(driftBadge("shifted", false)).toBeUndefined();
+    expect(driftBadge("shifted", true)).toBeUndefined();
   });
 
-  test("outdated + unresolved is a re-check signal", () => {
+  test("outdated + unresolved is a loud signal", () => {
     expect(driftBadge("outdated", false)).toEqual({
-      label: "Re-check",
+      label: "Outdated",
       tone: "signal",
     });
   });

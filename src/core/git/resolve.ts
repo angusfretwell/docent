@@ -182,12 +182,54 @@ export const resolveChangeRefs = Effect.fn("resolveChangeRefs")(
   }
 );
 
+/**
+ * Normalize a git remote URL to a browsable https URL: `ssh://`/`git://`
+ * schemes and scp-like `git@host:path` forms become `https://host/path`,
+ * credentials and ports drop, and a trailing `.git` strips. A remote that is
+ * not URL-shaped (e.g. a local path) passes through unchanged.
+ */
+function normalizeRemoteUrl(remote: string): string {
+  const stripped = remote
+    .trim()
+    .replace(/\.git$/, "")
+    .replace(/\/+$/, "");
+
+  const schemed =
+    /^(?:git\+)?(?:ssh|git|https?):\/\/(?:[^@/]+@)?(?<host>[^/:]+)(?::\d+)?\/(?<path>.+)$/.exec(
+      stripped
+    );
+  if (schemed?.groups) {
+    return `https://${schemed.groups.host}/${schemed.groups.path}`;
+  }
+
+  const scpLike = /^(?:[^@/]+@)?(?<host>[^/:]+):(?<path>.+)$/.exec(stripped);
+  if (scpLike?.groups) {
+    return `https://${scpLike.groups.host}/${scpLike.groups.path}`;
+  }
+
+  return stripped;
+}
+
+/**
+ * The `origin` remote as a normalized https URL, or null when the repo has no
+ * origin — the client renders a plain (non-linked) branch label then.
+ */
+const resolveRemoteUrl = Effect.fn("resolveRemoteUrl")(
+  function* resolveRemoteUrl(root: string) {
+    const remote = yield* git(root, ["remote", "get-url", "origin"]).pipe(
+      Effect.catchTag("GitCommandFailed", () => Effect.succeed(null))
+    );
+    return remote === null ? null : normalizeRemoteUrl(remote);
+  }
+);
+
 /** Resolve the checked-out branch's live Change against the default branch. */
 export const resolveChange = Effect.fn("resolveChange")(function* resolveChange(
   cwd: string
 ) {
   const { root, branch, baseSha, headSha, defaultBranch } =
     yield* resolveChangeRefs(cwd);
+  const remoteUrl = yield* resolveRemoteUrl(root);
   // `--full-index` emits the full blob object ids on each index line. The Diff
   // tab keys mark-as-viewed on the head-blob SHA (diff-review.md §3); an
   // abbreviated id's length grows with the repo, so a full id is what stays
@@ -216,6 +258,7 @@ export const resolveChange = Effect.fn("resolveChange")(function* resolveChange(
     generated,
     headSha,
     patch,
+    remoteUrl,
     root,
   });
 });

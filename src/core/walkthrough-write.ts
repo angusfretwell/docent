@@ -219,10 +219,15 @@ export const addWalkthroughSection = Effect.fn("addWalkthroughSection")(
 
 /**
  * Register a capture on a product walkthrough: content-address the media into
- * `captures/<sha>.png` (screenshot) or `captures/<sha>.rrweb.json` (recording) —
- * byte-identical media dedups to one blob — mint a `cap_` id, and append the
- * validated `captures[]` registry entry to the manifest (walkthroughs.md §6). A
- * code walkthrough has no capture arm, so it is refused.
+ * `captures/<sha>.rrweb.json` — byte-identical media dedups to one blob — mint a
+ * `cap_` id, and append the validated `captures[]` registry entry to the
+ * manifest (walkthroughs.md §6). A code walkthrough has no capture arm, so it is
+ * refused.
+ *
+ * Both kinds are rrweb event streams: a recording is the whole stream, a
+ * screenshot the `[Meta, FullSnapshot]` pair `takeFullSnapshot` opens one with.
+ * A still frame is therefore reconstructed DOM rather than a raster, which is
+ * what lets it stay sharp at any zoom.
  */
 export const addWalkthroughCapture = Effect.fn("addWalkthroughCapture")(
   function* addWalkthroughCapture(
@@ -231,6 +236,7 @@ export const addWalkthroughCapture = Effect.fn("addWalkthroughCapture")(
       kind: "screenshot" | "recording";
       media: Uint8Array;
       route: string;
+      title?: string;
       viewport: readonly [number, number];
       dims?: readonly [number, number];
       durationMs?: number;
@@ -255,11 +261,10 @@ export const addWalkthroughCapture = Effect.fn("addWalkthroughCapture")(
     }
 
     const sha = contentSha(params.media);
-    const extension = params.kind === "screenshot" ? "png" : "rrweb.json";
     const captureDir = path.join(dir, "captures");
     yield* fs.makeDirectory(captureDir, { recursive: true });
     yield* fs.writeFile(
-      path.join(captureDir, `${sha}.${extension}`),
+      path.join(captureDir, `${sha}.rrweb.json`),
       params.media
     );
 
@@ -270,6 +275,7 @@ export const addWalkthroughCapture = Effect.fn("addWalkthroughCapture")(
       media: sha,
       route: params.route,
       viewport: params.viewport,
+      ...(params.title === undefined ? {} : { title: params.title }),
       ...(params.dims === undefined ? {} : { dims: params.dims }),
       ...(params.durationMs === undefined
         ? {}

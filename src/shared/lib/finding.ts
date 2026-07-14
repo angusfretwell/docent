@@ -1,13 +1,13 @@
 /**
  * The read-time fold that turns a Finding's append-only record directory into
- * the shape the Findings panel renders (data-model.md §5 & §7). Runtime-neutral:
- * no Bun or DOM globals, so the server (which parses record files off disk) and
- * the client (which folds and renders) share one definition. The record schema
- * itself lives in `schemas/finding.ts`.
+ * the shape the Findings panel renders. Runtime-neutral: no Bun or DOM globals,
+ * so the server (which parses record files off disk) and the client (which
+ * folds and renders) share one definition. The record schema itself lives in
+ * `schemas/finding.ts`.
  *
  * A Finding is never a single file: it is a directory of records, one per
- * mutation, folded here. State — resolved, what's-next, the current body of an
- * edited record — is derived, never persisted (data-model.md §5.1).
+ * mutation, folded here. State — its status, the current body of an edited
+ * record — is derived, never persisted.
  */
 
 import { unique } from "radashi";
@@ -16,25 +16,37 @@ import { ANCHOR_KIND } from "../schemas/finding";
 import type {
   Anchor,
   Author,
-  Disposition,
   FindingRecord,
+  RecordType,
 } from "../schemas/finding";
 
-/** The actor-blind queue read derived from a Finding's records (data-model.md §7). */
-export type WhatsNext =
-  | "needs-action"
-  | "needs-verify"
-  | "needs-answer"
-  | "needs-decision"
-  | "closed";
+/**
+ * A Finding's lifecycle, actor-blind: `open` needs someone's work, `actioned`
+ * means whoever held the turn handed it back — fixed, declined, or asking a
+ * question alike — and `resolved` is closed.
+ */
+export const STATUSES = ["open", "actioned", "resolved"] as const;
+export type Status = (typeof STATUSES)[number];
 
-/** Human labels for each what's-next state — one source for every surface. */
-export const WHATS_NEXT_LABEL: Record<WhatsNext, string> = {
-  closed: "Closed",
-  "needs-action": "Needs action",
-  "needs-answer": "Needs answer",
-  "needs-decision": "Needs decision",
-  "needs-verify": "Needs verify",
+/** Human labels for each status — one source for every surface. */
+export const STATUS_LABEL: Record<Status, string> = {
+  actioned: "Actioned",
+  open: "Open",
+  resolved: "Resolved",
+};
+
+/**
+ * The status each record type moves a Finding to. A Finding's status is simply
+ * the latest non-`edit` record's type read through this table, so re-commenting
+ * on a resolved Finding reopens it, and a reply after an `action` hands the
+ * turn back without anyone having to undo the action.
+ */
+const RECORD_STATUS: Record<Exclude<RecordType, "edit">, Status> = {
+  action: "actioned",
+  open: "open",
+  reopen: "open",
+  reply: "open",
+  resolve: "resolved",
 };
 
 export interface Reply {
@@ -42,7 +54,6 @@ export interface Reply {
   body: string;
   changeId: string;
   createdAt: string;
-  disposition?: Disposition;
 }
 
 /** A Finding folded from its records — the shape the Findings panel renders. */
@@ -50,31 +61,18 @@ export interface FoldedFinding {
   anchor?: Anchor;
   body: string;
   id: string;
+  openedAt?: string;
+  openedBy?: Author;
   participants: Author[];
   replies: Reply[];
-  resolved: boolean;
-  whatsNext: WhatsNext;
-}
-
-/** Map a reply's disposition onto its what's-next (data-model.md §7). */
-function dispositionNext(disposition: Disposition | undefined): WhatsNext {
-  if (disposition === "actioned") {
-    return "needs-verify";
-  }
-  if (disposition === "question") {
-    return "needs-answer";
-  }
-  if (disposition === "declined") {
-    return "needs-decision";
-  }
-  return "needs-action";
+  status: Status;
 }
 
 /**
  * Fold a Finding's records into its rendered shape. State is derived here, not
- * stored: `resolved` folds from the latest resolve/reopen, `whatsNext` from the
- * latest content record's disposition (blind to who authored it), and each
- * record's body is superseded by the latest edit that names it.
+ * stored: `status` reads off the latest non-`edit` record's type (blind to who
+ * authored it), and each record's body is superseded by the latest edit that
+ * names it.
  */
 export function foldFinding(
   id: string,
@@ -106,19 +104,7 @@ export function foldFinding(
         body: bodyOf(record),
         changeId: record.changeId,
         createdAt: record.createdAt,
-        disposition: record.disposition,
       });
-    }
-  }
-
-  // Open/resolved folds from resolve/reopen — and re-commenting reopens: a reply
-  // appended after a resolve returns the Finding to open (data-model.md §7).
-  let resolved = false;
-  for (const record of ordered) {
-    if (record.type === "resolve") {
-      resolved = true;
-    } else if (record.type === "reopen" || record.type === "reply") {
-      resolved = false;
     }
   }
 
@@ -128,21 +114,20 @@ export function foldFinding(
   );
 
   const latest = ordered.findLast((record) => record.type !== "edit");
-  let whatsNext: WhatsNext = "needs-action";
-  if (resolved) {
-    whatsNext = "closed";
-  } else if (latest?.type === "reply") {
-    whatsNext = dispositionNext(latest.disposition);
-  }
+  const status =
+    latest !== undefined && latest.type !== "edit"
+      ? RECORD_STATUS[latest.type]
+      : "open";
 
   return {
     anchor: root?.anchor,
     body: root ? bodyOf(root) : "",
     id,
+    openedAt: root?.createdAt,
+    openedBy: root?.author,
     participants,
     replies,
-    resolved,
-    whatsNext,
+    status,
   };
 }
 

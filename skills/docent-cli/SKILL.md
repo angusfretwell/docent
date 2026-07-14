@@ -5,21 +5,21 @@ description: Reference for the `docent` binary's non-`serve` subcommands — the
 
 # docent-cli
 
-The `docent` binary has **two faces** (agent-integration.md §3.3):
+The `docent` binary has **two faces**:
 
 - **`docent serve`** — the server + UI. Watches `.docent/`, renders the Review, streams updates over SSE. Not covered here.
-- **Non-`serve` subcommands** — `docent finding list / add / reply / resolve / reopen / edit`, plus the `docent walkthrough` / `docent capture` write path. This skill documents them.
+- **Non-`serve` subcommands** — `docent finding list / add / reply / action / resolve / reopen / edit`, plus the `docent walkthrough` / `docent capture` write path and `docent review set`. This skill documents them.
 
-The finding subcommands are the CLI half of the review loop's **two I/O primitives** (agent-integration.md §2.2):
+The finding subcommands are the CLI half of the review loop's **two I/O primitives**:
 
 | Primitive | Subcommand | Does |
 | --- | --- | --- |
-| **fetch-findings** | `docent finding list --filter …` | Read the queue (any author), filtered |
-| **write-findings** | `docent finding add / reply / resolve / reopen / edit` | Append a finding / reply / resolve / reopen / edit record |
+| **fetch-findings** | `docent finding list --status …` | Read the queue (any author), filtered |
+| **write-findings** | `docent finding add / reply / action / resolve / reopen / edit` | Append one append-only record |
 
 ## Non-gating — the CLI is convenience, never a lock
 
-The files under `.docent/` stay **plain and directly writable**. The CLI is the _canonical, convenient_ path — it is the single home for ULID minting, anchor construction (resolving a code arm's content-addressed `blobSha` from git), append semantics, and what's-next / Disposition derivation — but it never gates. An agent could hand-author the identical `docent/finding` record file, and a running `docent serve` fs-watches every write, CLI-made or direct, and re-renders over SSE (agent-integration.md §1, §3.3). Both the UI's write path and the CLI share **one** `writeFindingRecord` implementation — no divergence.
+The files under `.docent/` stay **plain and directly writable**. The CLI is the _canonical, convenient_ path — it is the single home for ULID minting, anchor construction (resolving a code arm's content-addressed `blobSha` from git), append semantics, and Status derivation — but it never gates. An agent could hand-author the identical `docent/finding` record file, and a running `docent serve` fs-watches every write, CLI-made or direct, and re-renders over SSE. Both the UI's write path and the CLI share **one** `writeFindingRecord` implementation — no divergence.
 
 Prefer the CLI: it validates the record against the same schema the server uses and resolves anchors for you. Hand-authoring is the fallback when the CLI isn't available.
 
@@ -35,10 +35,10 @@ Walks the active Review, folds every Finding, applies the filter, and prints `{ 
 
 ```bash
 docent finding list                              # the whole queue
-docent finding list --open                       # unresolved only
-docent finding list --resolved                   # resolved only
-docent finding list --whats-next needs-action    # only findings needing action
-docent finding list --whats-next needs-verify,needs-answer   # any-of (comma or repeat)
+docent finding list --status open                # only findings someone owes work on
+docent finding list --status open,actioned       # everything unresolved (any-of: comma or repeat)
+docent finding list --status actioned            # handed back — awaiting verification
+docent finding list --status resolved            # closed only
 docent finding list --anchor-file src/app.ts     # anchored on this file
 docent finding list --author claude-code         # this author participated
 ```
@@ -47,27 +47,25 @@ Filters (all optional, all AND-combined):
 
 | Flag | Keeps |
 | --- | --- |
-| `--open` | Unresolved findings. `--open` and `--resolved` together (or neither) keep all. |
-| `--resolved` | Resolved findings. |
-| `--whats-next` | Only these what's-next states — any-of; repeat the flag or comma-join the values. |
+| `--status` | Only these statuses — any-of; repeat the flag or comma-join the values. Omitted keeps all. |
 | `--anchor-file` | Only findings whose `line`/`file` code anchor is this path. |
 | `--author` | Only findings this author id participated in. |
 
-**what's-next values** — `needs-action`, `needs-verify`, `needs-answer`, `needs-decision`, `closed`. Derived actor-blind from each Finding's latest record (agent-integration.md §2.3):
+**Status values** — `open`, `actioned`, `resolved`. Derived actor-blind from the type of each Finding's latest non-`edit` record:
 
-| Latest record                                 | what's-next        |
-| --------------------------------------------- | ------------------ |
-| fresh Finding · plain comment · "do it again" | **needs-action**   |
-| reply with Disposition `actioned`             | **needs-verify**   |
-| reply with Disposition `question`             | **needs-answer**   |
-| reply with Disposition `declined`             | **needs-decision** |
-| resolve                                       | **closed**         |
+| Latest record | Status | Means |
+| --- | --- | --- |
+| `open` · `reply` · `reopen` | **open** | Someone owes this work. |
+| `action` | **actioned** | The turn was handed back — verify it. |
+| `resolve` | **resolved** | Closed. |
 
-Each folded finding carries `id`, `anchor`, `body`, `participants[]`, `replies[]`, `resolved`, and `whatsNext` — enough to route it without a second read.
+`edit` records are skipped, so editing a body never moves Status.
+
+Each folded finding carries `id`, `anchor`, `body`, `participants[]`, `replies[]`, and `status` — enough to route it without a second read.
 
 ## `docent finding add` — write a fresh Finding
 
-Mints an anchored Finding (record `001-open.md`), born **needs-action**. Requires an anchor and a body.
+Mints an anchored Finding (record `001-open.md`), born **open**. Requires an anchor and a body.
 
 ```bash
 # whole-change note
@@ -101,40 +99,53 @@ The CLI resolves the code arm's content-addressed `blobSha` from git at write ti
 
 **Body** — `--body <text>`, or **omit `--body` and pipe it on stdin** (heredoc / pipe). A body is required for `add`; if neither a flag nor piped stdin gives one, it is a usage error.
 
-## `docent finding reply` — write a reply, carrying a Disposition
+## `docent finding reply` — write prose on a Finding
 
-Appends a reply record to an open Finding. A reply may carry a **Disposition** — the kind of turn-hand-back — from which what's-next derives:
+Appends a reply record. **Prose only** — a reply is the one place an outcome gets explained, and being the latest record it leaves the Finding **open**. That is deliberate: any comment reclaims the turn, so a reply on an `actioned` or `resolved` Finding returns it to the queue.
 
 ```bash
-docent finding reply --finding fnd_… --disposition actioned  --body "Fixed: added the missing guard."
-docent finding reply --finding fnd_… --disposition declined  --body "Intentional — see the ADR on locking."
-docent finding reply --finding fnd_… --disposition question  --body "Do you mean the read lock or the write lock?"
-docent finding reply --finding fnd_… --body "Bumping this — still reproduces."   # no disposition → needs-action again
+docent finding reply --finding fnd_… --body "Fixed: added the missing guard."
+docent finding reply --finding fnd_… --body "Intentional — see the ADR on locking."
+docent finding reply --finding fnd_… --body "Bumping this — still reproduces."
 ```
-
-| `--disposition` | what's-next        | Means                              |
-| --------------- | ------------------ | ---------------------------------- |
-| `actioned`      | **needs-verify**   | Fixed — a resolver should verify.  |
-| `declined`      | **needs-decision** | Won't fix — a human should decide. |
-| `question`      | **needs-answer**   | Blocked on an answer.              |
-| _(omitted)_     | **needs-action**   | Plain comment / "do it again".     |
 
 `--finding <id>` is required (a missing or empty id is a usage error — never a stray write). Body required.
 
-## `docent finding resolve` — close a Finding
+## `docent finding action` — hand the turn back
 
-Appends a resolve record → **closed**. The body (an optional reason) may be omitted.
+Appends an action record → **actioned**. It carries **no body**: write the `reply` that explains the outcome first, then `action` to move the Finding.
 
 ```bash
-docent finding resolve --finding fnd_…                          # close, no reason
-docent finding resolve --finding fnd_… --body "Verified against head — the guard holds."
+docent finding reply  --finding fnd_… --body "Fixed: added the missing guard."
+docent finding action --finding fnd_…
 ```
 
-Resolution is **unconstrained**: any actor may resolve any Finding, including an agent resolving another agent's. It is safe because a resolve is an append-only, attributed, **reopenable** event — a later reply reopens the Finding (agent-integration.md §2.6). Whether a given actor _should_ resolve is a role question, not a mechanism one: a verify pass resolves; a fixer never resolves what it just fixed (§3.1, §2.6).
+`actioned` is deliberately **broad** — it means _"I took my turn, over to you"_, whether you fixed it, declined it, or asked a question. The distinction lives in the reply prose, not in an enum. Use it for all three:
+
+| You…                 | Write                                     |
+| -------------------- | ----------------------------------------- |
+| Fixed it             | `reply` explaining the fix, then `action` |
+| Won't fix it         | `reply` explaining why, then `action`     |
+| Need an answer first | `reply` asking, then `action`             |
+
+Handing back matters: without the `action`, the Finding stays `open` and the next fetch picks it up again, so a decline you never handed back gets re-attempted forever.
+
+`--finding <id>` is required. No body.
+
+## `docent finding resolve` — close a Finding
+
+Appends a resolve record → **resolved**. It carries **no body**; if the close needs a reason, `reply` it first.
+
+```bash
+docent finding reply   --finding fnd_… --body "Verified against head — the guard holds."
+docent finding resolve --finding fnd_…
+```
+
+Resolution is **unconstrained**: any actor may resolve any Finding, including an agent resolving another agent's. It is safe because a resolve is an append-only, attributed, **reopenable** event — a later reply reopens the Finding. Whether a given actor _should_ resolve is a role question, not a mechanism one: a verify pass resolves; a fixer never resolves what it just fixed.
 
 ## `docent finding reopen` — return a resolved Finding to open
 
-Appends a reopen record → back to **needs-action**. A later reply reopens a Finding implicitly; `reopen` is the explicit gesture when you want to reopen without adding a comment.
+Appends a reopen record → back to **open**. A later reply reopens a Finding implicitly; `reopen` is the explicit gesture when you want to reopen without adding a comment.
 
 ```bash
 docent finding reopen --finding fnd_…
@@ -144,7 +155,7 @@ docent finding reopen --finding fnd_…
 
 ## `docent finding edit` — supersede a record's body
 
-Appends an edit record that supersedes an earlier record's body at fold time (data-model.md §5.1) — the append-only equivalent of an in-place body edit. `--record` names the target record's filename (as returned by `add` / `reply` / `resolve`, e.g. `002-reply.md`); the new body replaces the target's when the Finding is folded. The original file is never rewritten.
+Appends an edit record that supersedes an earlier record's body at fold time — the append-only equivalent of an in-place body edit. `--record` names the target record's filename (as returned by `add` / `reply`, e.g. `002-reply.md`); the new body replaces the target's when the Finding is folded. The original file is never rewritten.
 
 ```bash
 docent finding edit --finding fnd_… --record 001-open.md --body "Revised: the flush races the drain, not the mark."
@@ -153,7 +164,7 @@ Multi-line revised body…
 EOF
 ```
 
-`--finding <id>` and `--record <name>` are both required (a missing or empty flag is a usage error). Body required — `--body <text>` or piped stdin. Editing only supersedes the target's **body**; it never changes its anchor, disposition, or resolved-state, so what's-next is unaffected.
+`--finding <id>` and `--record <name>` are both required (a missing or empty flag is a usage error). Body required — `--body <text>` or piped stdin. Editing only supersedes the target's **body**; it never changes its anchor, and `edit` records are skipped when Status is derived, so Status is unaffected.
 
 ## `docent walkthrough` — the walkthrough write path
 
@@ -194,25 +205,36 @@ docent walkthrough add-section --walkthrough wlk_… --title "…" [targets] [--
 
 ## `docent capture` — content-address a capture blob
 
-Registers one media file on a **product** walkthrough (walkthroughs.md §6) — content-addresses the bytes into `captures/<sha>.{png,rrweb.json}` (byte-identical media dedups to one blob) and appends the `captures[]` registry entry. A code walkthrough has no capture arm, so it is refused.
+Registers one media file on a **product** walkthrough (walkthroughs.md §6) — content-addresses the bytes into `captures/<sha>.rrweb.json` (byte-identical media dedups to one blob) and appends the `captures[]` registry entry. A code walkthrough has no capture arm, so it is refused.
 
 ```bash
-docent capture add --walkthrough wlk_… --kind screenshot --media shot.png \
-  --route /signup --viewport 1280x800 --dims 1280x2400          # screenshot: --dims WxH
+docent capture add --walkthrough wlk_… --kind screenshot --media shot.rrweb.json \
+  --route /signup --viewport 1280x800 --dims 1280x2400 --title "Empty signup form"   # screenshot: --dims WxH
 docent capture add --walkthrough wlk_… --kind recording --media rec.rrweb.json \
-  --route /signup --viewport 1280x800 --duration-ms 8200        # recording: --duration-ms
+  --route /signup --viewport 1280x800 --duration-ms 8200 --title "Submitting the signup"   # recording: --duration-ms
 #   → { "captureId": "cap_…", "media": "<sha>", "registry": { … }, "walkthroughId": "wlk_…" }
 ```
 
-`--dims` is for screenshots and `--duration-ms` for recordings; the mismatch is refused. `--media` is a file path read relative to the cwd. This is the CLI half of `/capture-product-walkthrough`, which drives the browser to produce the media.
+`--dims` is for screenshots and `--duration-ms` for recordings; the mismatch is refused. `--media` is a file path read relative to the cwd. `--title` is **optional** — a short descriptive name for the captured state that the Review shows in place of the generic "Screenshot 1" / "Recording 1"; an untitled capture falls back to its ordinal. This is the CLI half of `/capture-product-walkthrough`, which drives the browser to produce the media.
+
+## `docent review set` — name the change under review
+
+The Review auto-creates with everything git can resolve (its branch, its base). Its **title** — a short human name for the change, which the UI renders as the header's headline — is the one field git cannot infer, so an authoring run captures it:
+
+```bash
+docent review set --title "Palette panel"
+#   → { "base": "main", "branch": "feat/panel", "id": "rev_…", "schema": "docent/review", "title": "Palette panel" }
+```
+
+`--title <text>` is required (a missing or empty value is a usage error). Titles are **short** — a few words naming the change, the way a PR title does, not a summary of it. Re-running `set` renames in place, keeping the Review's `id`: unlike every other record under `.docent/`, `review.json` is a singleton identity record, not an append-only log.
 
 ## Attribution — metadata, never permission
 
-Every write records **who** did it; it never gates **who may** (agent-integration.md §2.1). By default the write is attributed to the git-config human (matching the UI's write path). Override to attribute to an agent:
+Every write records **who** did it; it never gates **who may**. By default the write is attributed to the git-config human (matching the UI's write path). Override to attribute to an agent:
 
 ```bash
 docent finding add --change --body "…" --agent claude-code --model claude-fable-5
-docent finding reply --finding fnd_… --disposition actioned --body "…" --agent claude-code
+docent finding action --finding fnd_… --agent claude-code
 ```
 
 | Flag        | Effect                                                     |
@@ -225,8 +247,8 @@ When you run one of these subcommands **as an agent inside a skill**, pass `--ag
 
 ## Output shape
 
-- `finding list` → `{ "findings": [ { "id", "anchor", "body", "participants", "replies", "resolved", "whatsNext" }, … ] }`
-- `finding add` / `reply` / `resolve` / `reopen` / `edit` → `{ "changeId": "chg_…", "findingId": "fnd_…", "record": "NNN-<type>.md" }`
+- `finding list` → `{ "findings": [ { "id", "anchor", "body", "participants", "replies", "status" }, … ] }`
+- `finding add` / `reply` / `action` / `resolve` / `reopen` / `edit` → `{ "changeId": "chg_…", "findingId": "fnd_…", "record": "NNN-<type>.md" }`
 - `walkthrough create` → `{ "changeId", "walkthroughId" }`; `walkthrough add-section` → `{ "section", "sectionId", "walkthroughId" }`
 - `capture add` → `{ "captureId", "media", "registry", "walkthroughId" }`
 

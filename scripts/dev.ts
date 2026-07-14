@@ -31,8 +31,10 @@ const fixture = path.join(root, ".dev");
 
 // An optional path argument targets a real repo; without it we boot the fixture.
 const pathArgument = process.argv.at(2);
+
 const target = pathArgument ? path.resolve(pathArgument) : fixture;
 
+console.log("target", target);
 if (!fs.existsSync(workerBundle)) {
   const result = Bun.spawnSync(["bun", "build:worker"]);
 
@@ -41,17 +43,10 @@ if (!fs.existsSync(workerBundle)) {
   }
 }
 
-// The server runs with its cwd in the target repo, where Bun would never find
-// this project's bunfig.toml — pass it explicitly so the [serve.static]
-// Tailwind plugin still registers.
-const server = Bun.spawn(
-  ["bun", `--config=${path.join(root, "bunfig.toml")}`, "--watch", entry],
-  {
-    cwd: target,
-    env: { ...process.env, PORT },
-    stdio: ["inherit", "inherit", "inherit"],
-  }
-);
+const server = Bun.spawn(["bun", "--watch", entry, "serve", target], {
+  env: { ...process.env, PORT },
+  stdio: ["inherit", "inherit", "inherit"],
+});
 
 // The runner owns the terminal only to forward Ctrl+C and let the watcher exit
 // cleanly; it then exits with the dev server's own status.

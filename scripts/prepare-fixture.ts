@@ -155,8 +155,8 @@ function resolveTemplate(
  * A content-addressed product-walkthrough capture blob, living under a
  * walkthrough's `captures/` dir (walkthroughs.md §6). Its filename **is** the
  * sha-256 of its bytes, so it is copied verbatim — never templated: a single
- * altered byte (a resolved token, a re-encoded PNG) would break the hash the
- * manifest references and the server serves it under.
+ * altered byte (a resolved token, a re-serialized event stream) would break the
+ * hash the manifest references and the server serves it under.
  */
 function isCaptureBlob(relativePath: string): boolean {
   return relativePath.split(path.sep).includes("captures");

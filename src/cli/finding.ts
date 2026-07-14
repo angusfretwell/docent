@@ -1,28 +1,27 @@
 /**
  * The `docent finding` subcommands — the non-`serve` face of the binary, and
- * the CLI half of the review loop's two I/O primitives (agent-integration.md
- * §2.2, §3.3):
+ * the CLI half of the review loop's two I/O primitives:
  *
- * - **fetch-findings** → `docent finding list --filter …`: walks the active
- *   Review, folds each Finding, and filters the queue on open/resolved +
- *   what's-next (+ anchor / author scope), emitting machine-readable JSON.
- * - **write-findings** → `docent finding add / reply / resolve / reopen / edit`:
- *   appends the same validated `docent/finding` records as `POST
- *   /api/findings`, through the *same* `writeFindingRecord` implementation — no
- *   divergence. Anchor construction (resolving a code arm's content-addressed
- *   `blobSha` from git) is operation logic, so it lives in core
- *   (`core/git/anchor`); this file only parses the flags into an `AnchorSpec`.
+ * - **fetch-findings** → `docent finding list --status …`: walks the active
+ *   Review, folds each Finding, and filters the queue on status (+ anchor /
+ *   author scope), emitting machine-readable JSON.
+ * - **write-findings** → `docent finding add / reply / action / resolve /
+ *   reopen / edit`: appends the same validated `docent/finding` records as
+ *   `POST /api/findings`, through the *same* `writeFindingRecord`
+ *   implementation — no divergence. Anchor construction (resolving a code arm's
+ *   content-addressed `blobSha` from git) is operation logic, so it lives in
+ *   core (`core/git/anchor`); this file only parses the flags into an
+ *   `AnchorSpec`.
  *
- * The CLI is non-gating (architecture.md §3): it writes the identical file an
- * agent could hand-author, and a running `docent serve` turns that file drop
- * into an SSE refresh via the `.docent/` watch. Parsing and filtering are pure
- * (unit-tested directly); the effectful compute layer resolves git + fs.
+ * The CLI is non-gating: it writes the identical file an agent could
+ * hand-author, and a running `docent serve` turns that file drop into an SSE
+ * refresh via the `.docent/` watch. Parsing and filtering are pure (unit-tested
+ * directly); the effectful compute layer resolves git + fs.
  */
 
-import { foldFinding, sortFoldedFindings } from "@shared/lib/finding";
-import type { FoldedFinding, WhatsNext } from "@shared/lib/finding";
+import { foldFinding, sortFoldedFindings, STATUSES } from "@shared/lib/finding";
+import type { FoldedFinding, Status } from "@shared/lib/finding";
 import { Anchor } from "@shared/schemas/finding";
-import type { Disposition } from "@shared/schemas/finding";
 import { FindingWrite } from "@shared/schemas/finding-write";
 import { Effect, Schema } from "effect";
 
@@ -50,27 +49,12 @@ import {
 } from "./args";
 import type { ParsedArgs } from "./args";
 
-const WHATS_NEXT_VALUES: readonly WhatsNext[] = [
-  "needs-action",
-  "needs-verify",
-  "needs-answer",
-  "needs-decision",
-  "closed",
-];
-const DISPOSITION_VALUES: readonly Disposition[] = [
-  "actioned",
-  "declined",
-  "question",
-];
-
 // ── list — fetch-findings ────────────────────────────────────────────────────
 
-/** The queue filter (agent-integration.md §2.2): status × what's-next × scope. */
+/** The queue filter: status × scope. */
 export interface FindingFilter {
-  /** `open` keeps unresolved, `resolved` keeps resolved, `undefined` keeps all. */
-  status?: "open" | "resolved";
-  /** Keep only these what's-next states (any-of); empty keeps all. */
-  whatsNext: readonly WhatsNext[];
+  /** Keep only Findings in these statuses (any-of); empty keeps all. */
+  status: readonly Status[];
   /** Keep only findings anchored on this file (the `line`/`file` code arms). */
   anchorFile?: string;
   /** Keep only findings this author id participated in. */
@@ -79,26 +63,16 @@ export interface FindingFilter {
 
 /** Parse `finding list` flags into a queue filter, rejecting bad enum values. */
 export function parseListArgs(args: readonly string[]): FindingFilter {
-  const parsed = parseArgs(args, new Set(["open", "resolved"]));
+  const parsed = parseArgs(args, new Set());
 
-  // --open and --resolved are complements; asking for both (or neither) keeps
-  // all — so a status filter applies only when exactly one is given.
-  const wantsOpen = parsed.bools.has("open");
-  const wantsResolved = parsed.bools.has("resolved");
-  let status: FindingFilter["status"];
-  if (wantsOpen !== wantsResolved) {
-    status = wantsOpen ? "open" : "resolved";
-  }
-
-  const whatsNext = many(parsed, "whats-next").map((value) =>
-    parseEnum("whats-next", value, WHATS_NEXT_VALUES)
+  const status = many(parsed, "status").map((value) =>
+    parseEnum("status", value, STATUSES)
   );
 
   return {
     anchorFile: one(parsed, "anchor-file"),
     author: one(parsed, "author"),
     status,
-    whatsNext,
   };
 }
 
@@ -116,15 +90,9 @@ export function applyFindingFilter(
   findings: readonly FoldedFinding[],
   filter: FindingFilter
 ): FoldedFinding[] {
-  const whatsNext = new Set(filter.whatsNext);
+  const status = new Set(filter.status);
   return findings.filter((finding) => {
-    if (filter.status === "open" && finding.resolved) {
-      return false;
-    }
-    if (filter.status === "resolved" && !finding.resolved) {
-      return false;
-    }
-    if (whatsNext.size > 0 && !whatsNext.has(finding.whatsNext)) {
+    if (status.size > 0 && !status.has(finding.status)) {
       return false;
     }
     if (
@@ -148,7 +116,7 @@ export function applyFindingFilter(
 /**
  * fetch-findings: walk the active Review, fold every Finding, filter the queue,
  * and return it in reading order. The identical fold the Findings panel renders
- * (`foldFinding`) — one derivation of resolved / what's-next / participants.
+ * (`foldFinding`) — one derivation of status / participants.
  */
 export const listFindings = Effect.fn("listFindings")(function* listFindings(
   cwd: string,
@@ -166,7 +134,7 @@ export const listFindings = Effect.fn("listFindings")(function* listFindings(
   return sortFoldedFindings(applyFindingFilter(folded, filter));
 });
 
-// ── add / reply / resolve / reopen / edit — write-findings ───────────────────
+// ── add / reply / action / resolve / reopen / edit — write-findings ──────────
 
 /** The author-attribution overrides shared by every write subcommand. */
 export interface AuthorOpts {
@@ -352,15 +320,10 @@ export const addFinding = Effect.fn("addFinding")(function* addFinding(
   });
 });
 
-/** write-findings `reply`, optionally closing the turn with a disposition. */
+/** write-findings `reply`: prose on a Finding, returning it to open. */
 export const replyFinding = Effect.fn("replyFinding")(function* replyFinding(
   cwd: string,
-  params: {
-    author: AuthorOpts;
-    body: string;
-    disposition?: Disposition;
-    findingId: string;
-  }
+  params: { author: AuthorOpts; body: string; findingId: string }
 ) {
   const context = yield* writeContext(cwd);
   const author = yield* buildAuthor(context.root, params.author);
@@ -368,24 +331,33 @@ export const replyFinding = Effect.fn("replyFinding")(function* replyFinding(
     body: params.body,
     findingId: params.findingId,
     op: "reply",
-    ...(params.disposition === undefined
-      ? {}
-      : { disposition: params.disposition }),
   });
 });
 
-/** write-findings `resolve`, with an optional reason body. */
+/** write-findings `action`: hand the turn back, whatever the outcome. */
+export const actionFinding = Effect.fn("actionFinding")(function* actionFinding(
+  cwd: string,
+  params: { author: AuthorOpts; findingId: string }
+) {
+  const context = yield* writeContext(cwd);
+  const author = yield* buildAuthor(context.root, params.author);
+  return yield* commitWrite(context, author, {
+    findingId: params.findingId,
+    op: "action",
+  });
+});
+
+/** write-findings `resolve`: close a Finding. */
 export const resolveFinding = Effect.fn("resolveFinding")(
   function* resolveFinding(
     cwd: string,
-    params: { author: AuthorOpts; body?: string; findingId: string }
+    params: { author: AuthorOpts; findingId: string }
   ) {
     const context = yield* writeContext(cwd);
     const author = yield* buildAuthor(context.root, params.author);
     return yield* commitWrite(context, author, {
       findingId: params.findingId,
       op: "resolve",
-      ...(params.body === undefined ? {} : { body: params.body }),
     });
   }
 );
@@ -420,12 +392,6 @@ export const editFinding = Effect.fn("editFinding")(function* editFinding(
 
 // ── argv dispatch ────────────────────────────────────────────────────────────
 
-function parseDisposition(value: string | undefined): Disposition | undefined {
-  return value === undefined
-    ? undefined
-    : parseEnum("disposition", value, DISPOSITION_VALUES);
-}
-
 /**
  * Run one `docent finding <op> …` invocation: parse, execute against git + fs,
  * and print the result as JSON (a `list` array, or the write's `{ changeId,
@@ -453,29 +419,27 @@ export const runFinding = Effect.fn("runFinding")(function* runFinding(
   if (op === "reply") {
     const args = yield* attempt(() => parseArgs(rest, new Set()));
     const findingId = yield* attempt(() => requireFlag(args, "finding"));
-    const disposition = yield* attempt(() =>
-      parseDisposition(one(args, "disposition"))
-    );
     const body = yield* resolveBody(args, true);
     return yield* printJson(
       yield* replyFinding(cwd, {
         author: parseAuthorOpts(args),
         body,
         findingId,
-        ...(disposition === undefined ? {} : { disposition }),
       })
+    );
+  }
+  if (op === "action") {
+    const args = yield* attempt(() => parseArgs(rest, new Set()));
+    const findingId = yield* attempt(() => requireFlag(args, "finding"));
+    return yield* printJson(
+      yield* actionFinding(cwd, { author: parseAuthorOpts(args), findingId })
     );
   }
   if (op === "resolve") {
     const args = yield* attempt(() => parseArgs(rest, new Set()));
     const findingId = yield* attempt(() => requireFlag(args, "finding"));
-    const body = yield* resolveBody(args, false);
     return yield* printJson(
-      yield* resolveFinding(cwd, {
-        author: parseAuthorOpts(args),
-        findingId,
-        ...(body === "" ? {} : { body }),
-      })
+      yield* resolveFinding(cwd, { author: parseAuthorOpts(args), findingId })
     );
   }
   if (op === "reopen") {
@@ -502,7 +466,7 @@ export const runFinding = Effect.fn("runFinding")(function* runFinding(
 
   return yield* Effect.fail(
     new CliUsageError({
-      reason: `unknown finding subcommand: ${op ?? "(none)"} (list | add | reply | resolve | reopen | edit)`,
+      reason: `unknown finding subcommand: ${op ?? "(none)"} (list | add | reply | action | resolve | reopen | edit)`,
     })
   );
 });

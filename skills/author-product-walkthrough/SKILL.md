@@ -17,7 +17,7 @@ Capture runs **first** and mints the product walkthrough shell: `walkthroughs/pr
 cat .docent/reviews/<branch-slug>/walkthroughs/product/wlk_*/manifest.json
 ```
 
-Take the latest product `wlk_` that has `captures[]` and empty `sections` (or the `--walkthrough` id an orchestrator handed you). Each registry entry is `{ id: cap_…, kind, media, route, viewport, … }`; the `media` sha addresses the blob at `captures/<sha>.{png,rrweb.json}`. Inspect a screenshot blob if you need to see what it shows before narrating it. If no such shell exists, capture has not run — see Stop conditions.
+Take the latest product `wlk_` that has `captures[]` and empty `sections` (or the `--walkthrough` id an orchestrator handed you). Each registry entry is `{ id: cap_…, kind, media, route, viewport, … }`; the `media` sha addresses the blob at `captures/<sha>.rrweb.json` — a screenshot holds the `[Meta, FullSnapshot]` pair, a recording the whole stream. Replay a screenshot blob, or read its serialized DOM, if you need to see what it shows before narrating it. If no such shell exists, capture has not run — see Stop conditions.
 
 ## 2. Read the Change and intent
 

@@ -26,6 +26,7 @@ const VALID_REVIEW = JSON.stringify({
   branch: "feature",
   id: "rev_x",
   schema: "docent/review",
+  title: "A feature",
 });
 const VALID_CHANGE = JSON.stringify({
   baseRef: "main",

@@ -3,17 +3,16 @@
  * client (producer) and the Bun server (consumer). Runtime-neutral: no Bun or
  * DOM globals here.
  *
- * A write is one append-only record drop — a new Finding (`open`), a `reply`
- * (with optional disposition), a `resolve`, a `reopen`, or an `edit` (which
- * supersedes an earlier record's body) — the identical shape an agent writes
- * directly into `.docent/` (data-model.md §5, §7; architecture.md §2). The
- * request never carries attribution: the UI is definitionally the human, so the
- * server stamps the author from git config.
+ * A write is one append-only record drop — a new Finding (`open`), a `reply`,
+ * an `action`, a `resolve`, a `reopen`, or an `edit` (which supersedes an
+ * earlier record's body) — the identical shape an agent writes directly into
+ * `.docent/`. The request never carries attribution: the UI is definitionally
+ * the human, so the server stamps the author from git config.
  */
 
 import { Schema } from "effect";
 
-import { Anchor, Disposition } from "./finding";
+import { Anchor } from "./finding";
 
 /** Open a new Finding: the root record carries the content-addressed anchor. */
 const OpenWrite = Schema.Struct({
@@ -22,17 +21,21 @@ const OpenWrite = Schema.Struct({
   op: Schema.Literal("open"),
 });
 
-/** Reply on an existing Finding, optionally closing the turn with a disposition. */
+/** Reply on an existing Finding; being the latest record, it returns it to open. */
 const ReplyWrite = Schema.Struct({
   body: Schema.String,
-  disposition: Schema.optional(Disposition),
   findingId: Schema.String,
   op: Schema.Literal("reply"),
 });
 
-/** Resolve a Finding; the optional body is the resolve reason. */
+/** Hand a Finding back: the turn is taken, whatever its outcome. */
+const ActionWrite = Schema.Struct({
+  findingId: Schema.String,
+  op: Schema.Literal("action"),
+});
+
+/** Resolve a Finding. */
 const ResolveWrite = Schema.Struct({
-  body: Schema.optional(Schema.String),
   findingId: Schema.String,
   op: Schema.Literal("resolve"),
 });
@@ -46,8 +49,7 @@ const ReopenWrite = Schema.Struct({
 /**
  * Edit an earlier record's body: `edits` names the target record's filename
  * (e.g. `002-reply.md`), and `body` is the superseding text the fold applies at
- * read time (data-model.md §5.1). Append-only — the original record is never
- * rewritten.
+ * read time. Append-only — the original record is never rewritten.
  */
 const EditWrite = Schema.Struct({
   body: Schema.String,
@@ -60,6 +62,7 @@ const EditWrite = Schema.Struct({
 export const FindingWrite = Schema.Union([
   OpenWrite,
   ReplyWrite,
+  ActionWrite,
   ResolveWrite,
   ReopenWrite,
   EditWrite,

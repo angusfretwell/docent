@@ -26,6 +26,13 @@ export class Change extends Schema.Class<Change>("Change")({
   headSha: Schema.String,
   /** `git diff baseSha..headSha`; empty when head is the default branch. */
   patch: Schema.String,
+  /**
+   * The `origin` remote as a browsable https URL (SSH/scp forms normalized,
+   * `.git` stripped), or null when the repo has no origin. The client links
+   * the branch to `${remoteUrl}/pull/${branch}` — GitHub redirects that to
+   * the branch's PR; other hosts may 404, which is accepted.
+   */
+  remoteUrl: Schema.NullOr(Schema.String),
   /** Absolute repo root (git rev-parse --show-toplevel). */
   root: Schema.String,
 }) {}

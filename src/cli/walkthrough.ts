@@ -256,6 +256,7 @@ const runCaptureAdd = Effect.fn("runCaptureAdd")(function* runCaptureAdd(
   );
   const mediaPath = yield* attempt(() => requireFlag(args, "media"));
   const route = yield* attempt(() => requireFlag(args, "route"));
+  const title = one(args, "title")?.trim();
   const viewport = yield* attempt(() =>
     parseDimensions("viewport", requireFlag(args, "viewport"))
   );
@@ -305,6 +306,7 @@ const runCaptureAdd = Effect.fn("runCaptureAdd")(function* runCaptureAdd(
     route,
     viewport,
     walkthroughId,
+    ...(title === undefined || title === "" ? {} : { title }),
     ...(dims === undefined ? {} : { dims }),
     ...(durationMs === undefined ? {} : { durationMs }),
   });

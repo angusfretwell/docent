@@ -4,10 +4,10 @@
  * captures/<file>` (walkthroughs.md §3, §6). Unlike code ranges, capture media
  * is **not a git blob** — it lives in the gitignored Review, born with its
  * immutable walkthrough — so `git cat-file` (`/api/blob/:sha`) cannot serve it.
- * The `<file>` is `<media-sha>.png` (screenshots, served `image/png` for a bare
- * `<img src>`) or `<media-sha>.rrweb.json` (recordings, served `application/json`
- * for the rrweb replayer). Content-addressed, so responses cache forever. A
- * malformed id/filename 400s; an absent file 404s.
+ * The `<file>` is `<media-sha>.rrweb.json` for either capture kind — a still
+ * frame is an rrweb `[Meta, FullSnapshot]` pair and a recording the whole stream
+ * — served `application/json` for the rrweb replayer. Content-addressed, so
+ * responses cache forever. A malformed id/filename 400s; an absent file 404s.
  */
 
 import { Effect } from "effect";
@@ -26,9 +26,6 @@ const CAPTURE_FILE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
 /** The content-type for a capture media file, keyed off its extension. */
 function captureContentType(file: string): string {
-  if (file.endsWith(".png")) {
-    return "image/png";
-  }
   if (file.endsWith(".json")) {
     return "application/json";
   }

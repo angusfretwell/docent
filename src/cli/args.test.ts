@@ -23,11 +23,11 @@ describe("parseArgs", () => {
 
   test("accumulates a repeated flag", () => {
     const parsed = parseArgs(
-      ["--whats-next", "needs-action", "--whats-next", "closed"],
+      ["--status", "open", "--status", "resolved"],
       new Set()
     );
 
-    expect(parsed.values.get("whats-next")).toEqual(["needs-action", "closed"]);
+    expect(parsed.values.get("status")).toEqual(["open", "resolved"]);
   });
 
   test("rejects a stray positional", () => {
