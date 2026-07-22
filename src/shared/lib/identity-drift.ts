@@ -13,7 +13,8 @@
  * and identity drift reads against.
  */
 
-import type { DriftState } from "../schemas/drift";
+import type { DriftState } from "../enums/drift-state";
+import type { WalkthroughKind } from "../enums/walkthrough-kind";
 import type { Anchor } from "../schemas/finding";
 
 /**
@@ -33,9 +34,9 @@ export function identityDrift(present: boolean): DriftState {
  * ULID-shaped, so the lexically-greatest id is the most recently minted — the
  * "one walkthrough per Change per pillar" a tab renders (walkthroughs.md §2).
  */
-function latestWalkthrough<T extends { id: string; kind: "code" | "product" }>(
+function latestWalkthrough<T extends { id: string; kind: WalkthroughKind }>(
   entries: readonly T[],
-  kind: "code" | "product"
+  kind: WalkthroughKind
 ): T | undefined {
   let latest: T | undefined;
   for (const entry of entries) {
@@ -48,14 +49,14 @@ function latestWalkthrough<T extends { id: string; kind: "code" | "product" }>(
 
 /** The newest **code** walkthrough — the one the Code walkthrough tab renders. */
 export function latestCodeWalkthrough<
-  T extends { id: string; kind: "code" | "product" },
+  T extends { id: string; kind: WalkthroughKind },
 >(entries: readonly T[]): T | undefined {
   return latestWalkthrough(entries, "code");
 }
 
 /** The newest **product** walkthrough — the one the Product walkthrough tab renders. */
 export function latestProductWalkthrough<
-  T extends { id: string; kind: "code" | "product" },
+  T extends { id: string; kind: WalkthroughKind },
 >(entries: readonly T[]): T | undefined {
   return latestWalkthrough(entries, "product");
 }
@@ -68,7 +69,7 @@ export function latestProductWalkthrough<
  */
 interface WalkthroughLike {
   id: string;
-  kind: "code" | "product";
+  kind: WalkthroughKind;
   sections: readonly {
     body: string;
     captures?: readonly string[];

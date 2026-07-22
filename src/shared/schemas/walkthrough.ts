@@ -14,6 +14,9 @@
 
 import { Schema } from "effect";
 
+import { captureKinds } from "../enums/capture-kind";
+import { sides } from "../enums/side";
+import { walkthroughKinds } from "../enums/walkthrough-kind";
 import { Anchor } from "./finding";
 
 /** A code range: the same coordinate as the `line` anchor arm (walkthroughs.md §5). */
@@ -24,7 +27,7 @@ export class WalkthroughRange extends Schema.Class<WalkthroughRange>(
   file: Schema.String,
   /** 1-based inclusive `[start, end]`, matching the `line` arm. */
   lines: Schema.Tuple([Schema.Number, Schema.Number]),
-  side: Schema.Literals(["base", "head"]),
+  side: Schema.Literals(sides),
 }) {}
 
 /**
@@ -82,7 +85,7 @@ export class Capture extends Schema.Class<Capture>("Capture")({
   dims: Schema.optional(Schema.Tuple([Schema.Number, Schema.Number])),
   durationMs: Schema.optional(Schema.Number),
   id: Schema.String,
-  kind: Schema.Literals(["screenshot", "recording"]),
+  kind: Schema.Literals(captureKinds),
   media: Schema.String,
   route: Schema.String,
   title: Schema.optional(Schema.String),
@@ -99,7 +102,7 @@ export class Walkthrough extends Schema.Class<Walkthrough>("Walkthrough")({
   bornChangeId: Schema.String,
   captures: Schema.optional(Schema.Array(Capture)),
   id: Schema.String,
-  kind: Schema.Literals(["code", "product"]),
+  kind: Schema.Literals(walkthroughKinds),
   schema: Schema.Literal("docent/walkthrough"),
   sections: Schema.Array(Schema.String),
   title: Schema.String,

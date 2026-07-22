@@ -7,13 +7,11 @@
  * future surface minting anchors shares this one implementation.
  */
 
+import type { Side } from "@shared/enums/side";
 import type { Anchor } from "@shared/schemas/finding";
 import { Effect } from "effect";
 
 import { resolveBlobShaAt } from "./resolve";
-
-export const SIDES = ["base", "head"] as const;
-export type Side = (typeof SIDES)[number];
 
 /** How a write names the anchor before git resolves any `blobSha`. */
 export type AnchorSpec =

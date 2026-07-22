@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { Schema } from "effect";
 
-import type { DriftState } from "../schemas/drift";
+import type { DriftState } from "../enums/drift-state";
 import {
   Capture,
   Walkthrough,

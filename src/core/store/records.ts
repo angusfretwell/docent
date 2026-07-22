@@ -9,7 +9,7 @@
  * is spelled in exactly one place.
  */
 
-import { RECORD_TYPES } from "@shared/schemas/finding";
+import { recordTypes } from "@shared/enums/record-type";
 import { Effect } from "effect";
 
 /**
@@ -65,10 +65,8 @@ export const splitEnvelope = Effect.fn("splitEnvelope")(function* splitEnvelope(
 
 // A Finding record filename is `NNN-<type>.md`; the type suffix is the record
 // type (the frontmatter carries no type field — data-model.md §5.1). The
-// vocabulary is owned by the schema, so the pattern is derived from it.
-const RECORD_NAME = new RegExp(
-  `^\\d+-(?<type>${RECORD_TYPES.join("|")})\\.md$`
-);
+// vocabulary is owned by `enums/record-type.ts`, so the pattern is derived from it.
+const RECORD_NAME = new RegExp(`^\\d+-(?<type>${recordTypes.join("|")})\\.md$`);
 
 /**
  * The record type a Finding record filename encodes (`002-reply.md` → `reply`),

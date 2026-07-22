@@ -5,8 +5,8 @@
  * Every consumer outside `core/git/` imports from here.
  */
 
-export { buildAnchor, SIDES } from "./anchor";
-export type { AnchorSpec, Side } from "./anchor";
+export { buildAnchor } from "./anchor";
+export type { AnchorSpec } from "./anchor";
 export { GitCommandFailed } from "./exec";
 export { makeMatcher, parseGitignore } from "./gitignore";
 export type { IgnoreMatcher } from "./gitignore";

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
+import type { CaptureKind } from "@shared/enums/capture-kind";
 import type { Capture, WalkthroughSection } from "@shared/schemas/walkthrough";
 
 import {
@@ -89,7 +90,7 @@ describe("stepLayout", () => {
   });
 });
 
-function capture(id: string, kind: "screenshot" | "recording", title?: string) {
+function capture(id: string, kind: CaptureKind, title?: string) {
   return {
     id,
     kind,

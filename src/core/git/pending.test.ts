@@ -2,6 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
+import type { PendingRange } from "@shared/enums/pending-range";
 import { makeTestRuntime } from "@test-support/runtime";
 
 import {
@@ -27,7 +28,7 @@ function repoWithOneCommit() {
 describe("resolvePending", () => {
   function pending(
     cwd: string,
-    range: "incremental" | "cumulative" = "incremental"
+    range: PendingRange = "incremental"
   ) {
     return runtime.runPromise(resolvePending(cwd, range));
   }

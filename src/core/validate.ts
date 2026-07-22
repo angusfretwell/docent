@@ -14,6 +14,8 @@
  * `.docent/` tree — a checked-out repo, a fixture, or a bare state root.
  */
 
+import { walkthroughKinds } from "@shared/enums/walkthrough-kind";
+import type { WalkthroughKind } from "@shared/enums/walkthrough-kind";
 import { ChangeRecord, Review, ViewedEvent } from "@shared/schemas/review";
 import { Walkthrough } from "@shared/schemas/walkthrough";
 import { Effect } from "effect";
@@ -27,9 +29,7 @@ import {
   listJsonRecordNames,
   listMarkdownRecordNames,
   listWalkthroughIds,
-  WALKTHROUGH_KINDS,
 } from "./store/enumerate";
-import type { WalkthroughKind } from "./store/enumerate";
 import { decodeJsonRecord, listDir } from "./store/io";
 import { STATE_ROOT } from "./store/layout";
 
@@ -204,7 +204,7 @@ const reviewTasks = Effect.fn("reviewTasks")(function* reviewTasks(
     }
   }
 
-  for (const kind of WALKTHROUGH_KINDS) {
+  for (const kind of walkthroughKinds) {
     tasks.push(...(yield* walkthroughTasks(reviewDir, kind, toTask)));
   }
 

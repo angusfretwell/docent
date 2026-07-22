@@ -4,8 +4,8 @@
  * whole finding set. Pure — no React or DOM here.
  */
 
+import { ANCHOR_KIND } from "@shared/enums/anchor-kind";
 import type { FoldedFinding } from "@shared/lib/finding";
-import { ANCHOR_KIND } from "@shared/schemas/finding";
 
 /** The key a `walkthrough-section` anchor buckets under. */
 export function sectionKey(walkthroughId: string, sectionId: string): string {

@@ -19,21 +19,24 @@
  * directly); the effectful compute layer resolves git + fs.
  */
 
-import { foldFinding, sortFoldedFindings, STATUSES } from "@shared/lib/finding";
-import type { FoldedFinding, Status } from "@shared/lib/finding";
+import { findingStatuses } from "@shared/enums/finding-status";
+import type { FindingStatus } from "@shared/enums/finding-status";
+import { sides } from "@shared/enums/side";
+import type { Side } from "@shared/enums/side";
+import { foldFinding, sortFoldedFindings } from "@shared/lib/finding";
+import type { FoldedFinding } from "@shared/lib/finding";
 import { Anchor } from "@shared/schemas/finding";
 import { FindingWrite } from "@shared/schemas/finding-write";
 import { Effect, Schema } from "effect";
 
 import type { AuthorInput } from "../core/findings-write";
 import { writeFindingRecord } from "../core/findings-write";
-import type { AnchorSpec, Side } from "../core/git";
+import type { AnchorSpec } from "../core/git";
 import {
   buildAnchor,
   resolveAuthor,
   resolveChangeRefs,
   resolveRepo,
-  SIDES,
 } from "../core/git";
 import { readReviewSnapshot } from "../core/review";
 import {
@@ -54,7 +57,7 @@ import type { ParsedArgs } from "./args";
 /** The queue filter: status × scope. */
 export interface FindingFilter {
   /** Keep only Findings in these statuses (any-of); empty keeps all. */
-  status: readonly Status[];
+  status: readonly FindingStatus[];
   /** Keep only findings anchored on this file (the `line`/`file` code arms). */
   anchorFile?: string;
   /** Keep only findings this author id participated in. */
@@ -66,7 +69,7 @@ export function parseListArgs(args: readonly string[]): FindingFilter {
   const parsed = parseArgs(args, new Set());
 
   const status = many(parsed, "status").map((value) =>
-    parseEnum("status", value, STATUSES)
+    parseEnum("status", value, findingStatuses)
   );
 
   return {
@@ -147,7 +150,7 @@ export interface AuthorOpts {
 }
 
 function parseSide(value: string | undefined): Side {
-  return value === undefined ? "head" : parseEnum("side", value, SIDES);
+  return value === undefined ? "head" : parseEnum("side", value, sides);
 }
 
 // A line spec is `N`, `N:M`, or `N-M` (1-based, inclusive) — a single line

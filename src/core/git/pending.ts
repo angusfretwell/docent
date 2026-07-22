@@ -4,7 +4,7 @@
  * worktree rather than a committed git object.
  */
 
-import type { PendingRange } from "@shared/schemas/pending";
+import type { PendingRange } from "@shared/enums/pending-range";
 import { Pending } from "@shared/schemas/pending";
 import { Effect, Schema } from "effect";
 import { FileSystem } from "effect/FileSystem";

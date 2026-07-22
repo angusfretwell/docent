@@ -24,10 +24,6 @@ import { FileSystem } from "effect/FileSystem";
 import { listDir } from "./io";
 import { recordType, splitEnvelope } from "./records";
 
-/** The two walkthrough kinds a Review tracks (walkthroughs.md §4). */
-export const WALKTHROUGH_KINDS = ["code", "product"] as const;
-export type WalkthroughKind = (typeof WALKTHROUGH_KINDS)[number];
-
 function endingWith(names: readonly string[], suffix: string): string[] {
   return names.filter((name) => name.endsWith(suffix)).toSorted();
 }

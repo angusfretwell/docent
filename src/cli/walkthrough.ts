@@ -13,6 +13,10 @@
  * parsers are pure (unit-tested directly); the effectful layer resolves git + fs.
  */
 
+import { captureKinds } from "@shared/enums/capture-kind";
+import { sides } from "@shared/enums/side";
+import type { Side } from "@shared/enums/side";
+import { walkthroughKinds } from "@shared/enums/walkthrough-kind";
 import {
   WalkthroughAnnotation,
   WalkthroughRange,
@@ -22,8 +26,7 @@ import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 
 import type { ChangeRefs } from "../core/findings-write";
-import type { Side } from "../core/git";
-import { resolveBlobShaAt, SIDES } from "../core/git";
+import { resolveBlobShaAt } from "../core/git";
 import {
   addWalkthroughCapture,
   addWalkthroughSection,
@@ -42,9 +45,6 @@ import {
 } from "./args";
 import type { ParsedArgs } from "./args";
 import { writeContext } from "./finding";
-
-const WALKTHROUGH_KINDS = ["code", "product"] as const;
-const CAPTURE_KINDS = ["screenshot", "recording"] as const;
 
 // A `--range` token: `<file>:<start>[-<end>][@<side>]`, e.g.
 // `src/index.ts:10-24@head` or `src/parser.ts:40` (side defaults to head).
@@ -68,7 +68,7 @@ export function parseRangeSpec(spec: string): RangeSpec {
   let side: Side = "head";
   const at = rest.lastIndexOf("@");
   if (at !== -1) {
-    side = parseEnum("side", rest.slice(at + 1), SIDES);
+    side = parseEnum("side", rest.slice(at + 1), sides);
     rest = rest.slice(0, at);
   }
   const colon = rest.lastIndexOf(":");
@@ -175,7 +175,7 @@ const runCreate = Effect.fn("runCreate")(function* runCreate(
   args: ParsedArgs
 ) {
   const kind = yield* attempt(() =>
-    parseEnum("kind", requireFlag(args, "kind"), WALKTHROUGH_KINDS)
+    parseEnum("kind", requireFlag(args, "kind"), walkthroughKinds)
   );
   const title = one(args, "title")?.trim() ?? "";
   const context = yield* writeContext(cwd);
@@ -252,7 +252,7 @@ const runCaptureAdd = Effect.fn("runCaptureAdd")(function* runCaptureAdd(
 
   const walkthroughId = yield* attempt(() => requireFlag(args, "walkthrough"));
   const kind = yield* attempt(() =>
-    parseEnum("kind", requireFlag(args, "kind"), CAPTURE_KINDS)
+    parseEnum("kind", requireFlag(args, "kind"), captureKinds)
   );
   const mediaPath = yield* attempt(() => requireFlag(args, "media"));
   const route = yield* attempt(() => requireFlag(args, "route"));

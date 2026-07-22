@@ -12,28 +12,10 @@
 
 import { unique } from "radashi";
 
-import { ANCHOR_KIND } from "../schemas/finding";
-import type {
-  Anchor,
-  Author,
-  FindingRecord,
-  RecordType,
-} from "../schemas/finding";
-
-/**
- * A Finding's lifecycle, actor-blind: `open` needs someone's work, `actioned`
- * means whoever held the turn handed it back — fixed, declined, or asking a
- * question alike — and `resolved` is closed.
- */
-export const STATUSES = ["open", "actioned", "resolved"] as const;
-export type Status = (typeof STATUSES)[number];
-
-/** Human labels for each status — one source for every surface. */
-export const STATUS_LABEL: Record<Status, string> = {
-  actioned: "Actioned",
-  open: "Open",
-  resolved: "Resolved",
-};
+import { ANCHOR_KIND } from "../enums/anchor-kind";
+import type { FindingStatus } from "../enums/finding-status";
+import type { RecordType } from "../enums/record-type";
+import type { Anchor, Author, FindingRecord } from "../schemas/finding";
 
 /**
  * The status each record type moves a Finding to. A Finding's status is simply
@@ -41,7 +23,7 @@ export const STATUS_LABEL: Record<Status, string> = {
  * on a resolved Finding reopens it, and a reply after an `action` hands the
  * turn back without anyone having to undo the action.
  */
-const RECORD_STATUS: Record<Exclude<RecordType, "edit">, Status> = {
+const RECORD_STATUS: Record<Exclude<RecordType, "edit">, FindingStatus> = {
   action: "actioned",
   open: "open",
   reopen: "open",
@@ -65,7 +47,7 @@ export interface FoldedFinding {
   openedBy?: Author;
   participants: Author[];
   replies: Reply[];
-  status: Status;
+  status: FindingStatus;
 }
 
 /**

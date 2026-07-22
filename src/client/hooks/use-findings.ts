@@ -27,8 +27,9 @@ import {
   latestCodeWalkthrough,
   latestProductWalkthrough,
 } from "@shared/lib/identity-drift";
-import type { DriftState } from "@shared/schemas/drift";
-import { ANCHOR_KIND } from "@shared/schemas/finding";
+import { ANCHOR_KIND } from "@shared/enums/anchor-kind";
+import type { DriftState } from "@shared/enums/drift-state";
+import { WalkthroughKind } from "@shared/enums/walkthrough-kind";
 import { useQuery } from "@tanstack/react-query";
 import { useAtomValue } from "jotai/react";
 import { useMemo } from "react";
@@ -94,11 +95,11 @@ export function useFindings(): { visible: FindingListItem[] } {
     // walkthrough the Review has ever held.
     const shownTours = [
       {
-        pillar: "code",
+        pillar: WalkthroughKind.Code,
         walkthrough: latestCodeWalkthrough(walkthroughs ?? []),
       },
       {
-        pillar: "product",
+        pillar: WalkthroughKind.Product,
         walkthrough: latestProductWalkthrough(walkthroughs ?? []),
       },
     ] as const;

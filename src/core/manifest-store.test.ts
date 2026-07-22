@@ -2,6 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
+import type { WalkthroughKind } from "@shared/enums/walkthrough-kind";
 import { Walkthrough } from "@shared/schemas/walkthrough";
 import { Effect } from "effect";
 import { FileSystem } from "effect/FileSystem";
@@ -38,7 +39,7 @@ function manifest(overrides: Partial<typeof Walkthrough.Type> = {}) {
 }
 
 /** Write a manifest directly at its on-disk location, bypassing any higher API. */
-function seed(root: string, kind: "code" | "product", initial: Walkthrough) {
+function seed(root: string, kind: WalkthroughKind, initial: Walkthrough) {
   return run(
     Effect.gen(function* seedManifest() {
       const fs = yield* FileSystem;

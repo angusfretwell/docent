@@ -1,7 +1,8 @@
 import { cn } from "@client/lib/utils";
-import { STATUS_LABEL } from "@shared/lib/finding";
-import type { FoldedFinding, Status } from "@shared/lib/finding";
-import type { DriftState } from "@shared/schemas/drift";
+import type { DriftState } from "@shared/enums/drift-state";
+import { STATUS_LABEL } from "@shared/enums/finding-status";
+import type { FindingStatus } from "@shared/enums/finding-status";
+import type { FoldedFinding } from "@shared/lib/finding";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";
 
@@ -17,7 +18,7 @@ import type { FindingSection } from "./section-link";
 import { FindingSectionLink } from "./section-link";
 import { FindingThread } from "./thread";
 
-export const STATUS_VARIANT: Record<Status, BadgeProps["variant"]> = {
+export const STATUS_VARIANT: Record<FindingStatus, BadgeProps["variant"]> = {
   actioned: "warning",
   open: "info",
   resolved: "success",

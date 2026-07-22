@@ -17,6 +17,8 @@ import {
   WalkthroughEntry,
 } from "@shared/schemas/review";
 import type { ViewedRequest } from "@shared/schemas/review";
+import { walkthroughKinds } from "@shared/enums/walkthrough-kind";
+import type { WalkthroughKind } from "@shared/enums/walkthrough-kind";
 import { Walkthrough } from "@shared/schemas/walkthrough";
 import type { Schema } from "effect";
 import { Clock, Effect, Option } from "effect";
@@ -30,9 +32,7 @@ import {
   listWalkthroughIds,
   readFindingRecord,
   readWalkthroughSection,
-  WALKTHROUGH_KINDS,
 } from "./store/enumerate";
-import type { WalkthroughKind } from "./store/enumerate";
 import { makeId } from "./store/id";
 import { readRecord, writeJsonRecord } from "./store/io";
 import {
@@ -261,7 +261,7 @@ const readWalkthroughs = Effect.fn("readWalkthroughs")(
     const path = yield* Path;
     const root = path.join(reviewDir, "walkthroughs");
     const entries = yield* Effect.forEach(
-      WALKTHROUGH_KINDS,
+      walkthroughKinds,
       (kind) => readWalkthroughKind(root, kind),
       { concurrency: "unbounded" }
     );

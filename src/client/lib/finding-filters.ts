@@ -8,7 +8,8 @@
  * the two groups AND together.
  */
 
-import type { Status } from "@shared/lib/finding";
+import type { FindingStatus } from "@shared/enums/finding-status";
+import { WALKTHROUGH_KIND_LABEL } from "@shared/enums/walkthrough-kind";
 import { atomWithStorage } from "jotai/utils";
 
 /** Where a Finding is read — the surface its anchor puts it on. */
@@ -16,15 +17,16 @@ export const FINDING_SURFACES = ["diff", "code", "product"] as const;
 
 export type FindingSurface = (typeof FINDING_SURFACES)[number];
 
+// The `code`/`product` halves come from the shared walkthrough-kind labels; the
+// `diff` surface is a client-only concept the pillars don't share.
 export const SURFACE_LABEL: Record<FindingSurface, string> = {
-  code: "Code",
   diff: "Diff",
-  product: "Product",
+  ...WALKTHROUGH_KIND_LABEL,
 };
 
 export interface FindingFilters {
   /** Statuses to show; empty shows every status. */
-  statuses: readonly Status[];
+  statuses: readonly FindingStatus[];
   /** Surfaces to show; empty shows every surface. */
   surfaces: readonly FindingSurface[];
 }
@@ -51,7 +53,7 @@ function toggled<Value>(values: readonly Value[], value: Value): Value[] {
 
 export function toggleStatus(
   filters: FindingFilters,
-  status: Status
+  status: FindingStatus
 ): FindingFilters {
   return { ...filters, statuses: toggled(filters.statuses, status) };
 }
@@ -81,7 +83,7 @@ export function isDefaultFilters(filters: FindingFilters): boolean {
  */
 export function matchesFindingFilters(
   filters: FindingFilters,
-  finding: { status: Status; surface?: FindingSurface }
+  finding: { status: FindingStatus; surface?: FindingSurface }
 ): boolean {
   if (
     filters.statuses.length > 0 &&

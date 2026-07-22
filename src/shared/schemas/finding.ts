@@ -10,6 +10,10 @@
 
 import { Schema } from "effect";
 
+import { ANCHOR_KIND } from "../enums/anchor-kind";
+import { recordTypes } from "../enums/record-type";
+import { sides } from "../enums/side";
+
 /** Attribution carried by every record (data-model.md §5.4). */
 export class Author extends Schema.Class<Author>("Author")({
   display: Schema.String,
@@ -22,19 +26,10 @@ export class Author extends Schema.Class<Author>("Author")({
 }) {}
 
 // The anchor union (data-model.md §5.3): seven arms across the three pillars,
-// discriminated by `kind`. Carried on the root (open) record only. The kind
-// values are named once here so the schema and every fold read the same token.
-export const ANCHOR_KIND = {
-  change: "change",
-  file: "file",
-  line: "line",
-  recordingTimestamp: "recording-timestamp",
-  screenshotRegion: "screenshot-region",
-  textSpan: "text-span",
-  walkthroughSection: "walkthrough-section",
-} as const;
-
-const Side = Schema.Literals(["base", "head"]);
+// discriminated by `kind`. Carried on the root (open) record only. The `kind`
+// value set is named once in `enums/anchor-kind.ts` so the schema and every fold
+// read the same token.
+const Side = Schema.Literals(sides);
 const ChangeAnchor = Schema.Struct({
   kind: Schema.Literal(ANCHOR_KIND.change),
 });
@@ -88,21 +83,8 @@ export const Anchor = Schema.Union([
 ]);
 export type Anchor = typeof Anchor.Type;
 
-/**
- * The record types, derived from the `NNN-<type>.md` filename. Two kinds:
- * `open`, `reply`, and `edit` carry prose; `action`, `resolve`, and `reopen`
- * carry none and exist only to move the Finding's status.
- */
-export const RECORD_TYPES = [
-  "open",
-  "reply",
-  "action",
-  "resolve",
-  "reopen",
-  "edit",
-] as const;
-export const RecordType = Schema.Literals(RECORD_TYPES);
-export type RecordType = typeof RecordType.Type;
+// The record-type value set is named once in `enums/record-type.ts`.
+const RecordType = Schema.Literals(recordTypes);
 
 /**
  * One parsed record: the `NNN-<type>.md` filename plus its frontmatter envelope

@@ -9,8 +9,8 @@ import {
   toggleStatus,
   toggleSurface,
 } from "@client/lib/finding-filters";
-import type { Status } from "@shared/lib/finding";
-import { STATUS_LABEL, STATUSES } from "@shared/lib/finding";
+import { findingStatuses, STATUS_LABEL } from "@shared/enums/finding-status";
+import type { FindingStatus } from "@shared/enums/finding-status";
 import { useAtom } from "jotai/react";
 import { MessagesSquare } from "lucide-react";
 
@@ -56,7 +56,7 @@ export function FindingsFilter() {
         <MenuGroup>
           <MenuGroupLabel>Status</MenuGroupLabel>
 
-          {STATUSES.map((status: Status) => (
+          {findingStatuses.map((status: FindingStatus) => (
             <MenuCheckboxItem
               checked={filters.statuses.includes(status)}
               key={status}

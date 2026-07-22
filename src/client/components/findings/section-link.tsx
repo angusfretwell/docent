@@ -1,4 +1,5 @@
 import { useRevealSection } from "@client/lib/walkthrough-target";
+import type { WalkthroughKind } from "@shared/enums/walkthrough-kind";
 import { Link } from "@tanstack/react-router";
 import { Code2, Pointer } from "lucide-react";
 
@@ -8,7 +9,7 @@ import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 /** Where a section finding is read, and how to get there. */
 export interface FindingSection {
   key: string;
-  pillar: "code" | "product";
+  pillar: WalkthroughKind;
 }
 
 /**

@@ -5,6 +5,7 @@ import { useRrwebReplayer } from "@client/hooks/use-rrweb-replayer";
 import { useRrwebSnapshot } from "@client/hooks/use-rrweb-snapshot";
 import { captureUrl } from "@client/lib/captures";
 import { cn } from "@client/lib/utils";
+import type { CaptureKind } from "@shared/enums/capture-kind";
 import type { RegionPin, TimePin } from "@client/lib/walkthrough-pins";
 import { recordingPins, screenshotPins } from "@client/lib/walkthrough-pins";
 import type { FoldedFinding } from "@shared/lib/finding";
@@ -192,7 +193,7 @@ function CaptureStage({
   zoom,
 }: {
   children: React.ReactNode;
-  kind: "recording" | "screenshot";
+  kind: CaptureKind;
   overlay?: React.ReactNode;
   zoom: InnerZoom;
 }) {

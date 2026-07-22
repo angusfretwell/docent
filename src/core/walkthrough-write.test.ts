@@ -2,6 +2,8 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 
+import type { WalkthroughKind } from "@shared/enums/walkthrough-kind";
+
 import { makeTestRuntime } from "../test-support/runtime";
 import { readReviewSnapshot } from "./review";
 import { cleanupScratchDirs, scratchDir } from "./test-fixtures";
@@ -31,7 +33,7 @@ function reviewDir(root: string) {
   return path.join(root, ".docent", "reviews", "feature");
 }
 
-function create(root: string, kind: "code" | "product", title: string) {
+function create(root: string, kind: WalkthroughKind, title: string) {
   return run(writeWalkthrough({ ...base, kind, refs: REFS, root, title }));
 }
 

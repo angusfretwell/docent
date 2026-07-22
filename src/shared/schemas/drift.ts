@@ -1,12 +1,13 @@
 /**
  * The drift data shapes — a Finding anchor's standing against the newest Change
  * (data-model.md §6). Runtime-neutral type declarations only: no Bun or DOM
- * globals. The pure folds that compute drift (`reanchorRange`, `planDrift`,
- * `driftBadge`, `changeHistory`) live beside this in `lib/drift.ts`.
+ * globals. The `DriftState` and `ChangeVerb` value sets live in `enums/`; the
+ * pure folds that compute drift (`reanchorRange`, `planDrift`, `driftBadge`,
+ * `changeHistory`) live beside this in `lib/drift.ts`.
  */
 
-/** A content-addressed anchor's standing against the newest Change (§6.1). */
-export type DriftState = "live" | "shifted" | "outdated";
+import type { ChangeVerb } from "../enums/change-verb";
+import type { DriftState } from "../enums/drift-state";
 
 /** A re-anchored line range plus the state that placed it there. */
 export interface Reanchor {
@@ -47,9 +48,6 @@ export interface DriftBadge {
   label: string;
   tone: "signal" | "muted";
 }
-
-/** What a milestone record did to the Finding. */
-export type ChangeVerb = "opened" | "replied" | "resolved" | "reopened";
 
 /** One cross-Change milestone: what happened and the Change it was authored on. */
 export interface ChangeEvent {

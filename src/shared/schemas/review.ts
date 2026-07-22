@@ -12,6 +12,7 @@
 
 import { Schema } from "effect";
 
+import { walkthroughKinds } from "../enums/walkthrough-kind";
 import { FindingRecord } from "./finding";
 import { Walkthrough, WalkthroughSection } from "./walkthrough";
 
@@ -93,7 +94,7 @@ export class WalkthroughEntry extends Schema.Class<WalkthroughEntry>(
   "WalkthroughEntry"
 )({
   id: Schema.String,
-  kind: Schema.Literals(["code", "product"]),
+  kind: Schema.Literals(walkthroughKinds),
   manifest: Schema.optional(Walkthrough),
   sections: Schema.Array(WalkthroughSection),
 }) {}

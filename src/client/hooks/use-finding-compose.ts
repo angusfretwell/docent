@@ -7,6 +7,7 @@
 
 import type { Annotation, Composing } from "@client/lib/diff-annotations";
 import { annotationSide } from "@client/lib/diff-annotations";
+import type { Side } from "@shared/enums/side";
 import type { CodeViewLineSelection, FileDiffMetadata } from "@pierre/diffs";
 import type { CodeViewHandle } from "@pierre/diffs/react";
 import type { RefObject } from "react";
@@ -17,7 +18,7 @@ import { useFindingWrite } from "./use-finding-write";
 // The content-addressed anchor target on one side of a file: the born blob and
 // the path to freeze into the anchor. A side with no blob (e.g. an add's base
 // side) can't be anchored, so it yields nothing.
-function anchorTarget(fileDiff: FileDiffMetadata, side: "base" | "head") {
+function anchorTarget(fileDiff: FileDiffMetadata, side: Side) {
   const blobSha =
     side === "head" ? fileDiff.newObjectId : fileDiff.prevObjectId;
   if (blobSha === undefined) {

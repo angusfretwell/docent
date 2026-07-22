@@ -22,6 +22,7 @@
  * building one tour).
  */
 
+import type { CaptureKind } from "@shared/enums/capture-kind";
 import type {
   WalkthroughAnnotation,
   WalkthroughRange,
@@ -233,7 +234,7 @@ export const addWalkthroughCapture = Effect.fn("addWalkthroughCapture")(
   function* addWalkthroughCapture(
     params: WriteBase & {
       walkthroughId: string;
-      kind: "screenshot" | "recording";
+      kind: CaptureKind;
       media: Uint8Array;
       route: string;
       title?: string;

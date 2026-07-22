@@ -6,7 +6,7 @@
  * primary `incremental` view. A git failure 500s with the message.
  */
 
-import type { PendingRange } from "@shared/schemas/pending";
+import type { PendingRange } from "@shared/enums/pending-range";
 import { Effect } from "effect";
 import { HttpServerResponse } from "effect/unstable/http";
 

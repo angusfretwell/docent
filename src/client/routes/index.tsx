@@ -2,6 +2,7 @@ import { DiffView } from "@client/components/diff/view";
 import { ErrorComponent } from "@client/components/error";
 import { queryClient } from "@client/lib/query-client";
 import { diffQueryOptions } from "@client/queries/diff";
+import { pendingRanges } from "@shared/enums/pending-range";
 import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 import { z } from "zod";
 
@@ -12,7 +13,7 @@ const SEARCH_DEFAULTS = {
 
 const searchSchema = z.object({
   range: z
-    .enum(["incremental", "cumulative"])
+    .enum(pendingRanges)
     .default(SEARCH_DEFAULTS.range)
     .catch(SEARCH_DEFAULTS.range),
   view: z

@@ -15,9 +15,10 @@
  * this computes.
  */
 
+import { ANCHOR_KIND } from "@shared/enums/anchor-kind";
+import type { DriftState } from "@shared/enums/drift-state";
 import type { FoldedFinding } from "@shared/lib/finding";
 import { identityDrift } from "@shared/lib/identity-drift";
-import type { DriftState } from "@shared/schemas/drift";
 import type { Anchor } from "@shared/schemas/finding";
 import type {
   Capture,
@@ -25,9 +26,6 @@ import type {
   WalkthroughSection,
 } from "@shared/schemas/walkthrough";
 
-// The capture anchor arms, named once so narrowing and filters read one token.
-export const SCREENSHOT_REGION = "screenshot-region";
-export const RECORDING_TIMESTAMP = "recording-timestamp";
 export const TEXT_SPAN = "text-span";
 
 /** A screenshot-region rect an overlay can position, plus its callout body. */
@@ -73,8 +71,8 @@ export function captureAnchorId(
   anchor?: FoldedFinding["anchor"]
 ): string | undefined {
   if (
-    anchor?.kind === SCREENSHOT_REGION ||
-    anchor?.kind === RECORDING_TIMESTAMP
+    anchor?.kind === ANCHOR_KIND.screenshotRegion ||
+    anchor?.kind === ANCHOR_KIND.recordingTimestamp
   ) {
     return anchor.capture;
   }
@@ -138,7 +136,7 @@ function rawPins(
 
 /** The arm a capture's pins are anchored through, by the kind of capture it is. */
 function captureArm(capture: Capture) {
-  return capture.kind === "recording" ? RECORDING_TIMESTAMP : SCREENSHOT_REGION;
+  return capture.kind === "recording" ? ANCHOR_KIND.recordingTimestamp : ANCHOR_KIND.screenshotRegion;
 }
 
 /** A capture's screenshot pins that carry a rect, as overlay rectangles. */
@@ -153,10 +151,10 @@ export function screenshotPins(
     annotations,
     findings,
     capture.id,
-    SCREENSHOT_REGION
+    ANCHOR_KIND.screenshotRegion
   )) {
     const rect =
-      pin.anchor.kind === SCREENSHOT_REGION ? pin.anchor.rect : undefined;
+      pin.anchor.kind === ANCHOR_KIND.screenshotRegion ? pin.anchor.rect : undefined;
 
     if (rect) {
       regions.push({ body: pin.body, label: pin.label, rect });
@@ -178,9 +176,9 @@ export function recordingPins(
     annotations,
     findings,
     capture.id,
-    RECORDING_TIMESTAMP
+    ANCHOR_KIND.recordingTimestamp
   )) {
-    if (pin.anchor.kind !== RECORDING_TIMESTAMP) {
+    if (pin.anchor.kind !== ANCHOR_KIND.recordingTimestamp) {
       continue;
     }
 

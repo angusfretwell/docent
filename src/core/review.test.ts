@@ -2,6 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
+import type { WalkthroughKind } from "@shared/enums/walkthrough-kind";
 import { ViewedRequest } from "@shared/schemas/review";
 
 import { makeTestRuntime } from "../test-support/runtime";
@@ -321,7 +322,7 @@ function writeWalkthrough(
   id: string,
   manifest: string,
   sections: Record<string, string>,
-  kind: "code" | "product" = "code"
+  kind: WalkthroughKind = "code"
 ) {
   const dir = path.join(
     root,

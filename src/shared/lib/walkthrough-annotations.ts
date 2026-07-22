@@ -13,7 +13,8 @@
  * annotations into the surfaces that render them (`foldSectionAnnotations`).
  */
 
-import type { DriftState } from "../schemas/drift";
+import { ANCHOR_KIND } from "../enums/anchor-kind";
+import type { DriftState } from "../enums/drift-state";
 import type { Anchor } from "../schemas/finding";
 import type {
   Capture,
@@ -115,8 +116,8 @@ export interface FoldedAnnotations {
 
 // The two arms that pin to a capture; every other arm falls through to a note.
 const CAPTURE_ANCHOR_KINDS: ReadonlySet<Anchor["kind"]> = new Set([
-  "screenshot-region",
-  "recording-timestamp",
+  ANCHOR_KIND.screenshotRegion,
+  ANCHOR_KIND.recordingTimestamp,
 ]);
 
 /**

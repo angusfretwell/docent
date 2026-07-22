@@ -12,13 +12,12 @@
  * makes Findings append-only does not apply to one agent building one tour).
  */
 
+import { walkthroughKinds } from "@shared/enums/walkthrough-kind";
 import { Walkthrough } from "@shared/schemas/walkthrough";
 import { Effect, Option, Schema } from "effect";
 import { Path } from "effect/Path";
 
 import { readRecord, writeJsonRecord } from "./store/io";
-
-const KINDS = ["code", "product"] as const;
 
 /** A referenced walkthrough was not found under `walkthroughs/{code,product}/`. */
 export class WalkthroughNotFound extends Schema.TaggedErrorClass<WalkthroughNotFound>()(
@@ -96,7 +95,7 @@ export interface LoadedWalkthrough {
 export const loadWalkthrough = Effect.fn("loadWalkthrough")(
   function* loadWalkthrough(reviewDir: string, id: string) {
     const path = yield* Path;
-    for (const kind of KINDS) {
+    for (const kind of walkthroughKinds) {
       const dir = walkthroughDir(path, reviewDir, kind, id);
       const manifest = yield* readRecord(
         path.join(dir, "manifest.json"),

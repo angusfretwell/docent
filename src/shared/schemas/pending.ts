@@ -11,15 +11,10 @@
 
 import { Schema } from "effect";
 
-/**
- * The two selectable ranges of the Pending preview:
- * - `incremental` — `git diff HEAD`: just the pending edit since the last
- *   commit (the surgical view; empties the moment HEAD moves).
- * - `cumulative` — `base..worktree`: the whole current Change plus uncommitted
- *   edits, previewing the next Change's full diff.
- */
-export const PendingRange = Schema.Literals(["incremental", "cumulative"]);
-export type PendingRange = typeof PendingRange.Type;
+import { pendingRanges } from "../enums/pending-range";
+
+// The range value set is named once in `enums/pending-range.ts`.
+const PendingRange = Schema.Literals(pendingRanges);
 
 export class Pending extends Schema.Class<Pending>("Pending")({
   /** Merge-base of the default branch and head — the `cumulative` base side. */

@@ -1,4 +1,4 @@
-import type { PendingRange } from "@shared/schemas/pending";
+import type { PendingRange } from "@shared/enums/pending-range";
 import { Pending } from "@shared/schemas/pending";
 import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 import { Schema } from "effect";

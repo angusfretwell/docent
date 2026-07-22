@@ -11,8 +11,9 @@ import type {
   DiffLineAnnotation,
   FileDiffMetadata,
 } from "@pierre/diffs";
+import type { DriftState } from "@shared/enums/drift-state";
+import type { Side } from "@shared/enums/side";
 import type { FoldedFinding } from "@shared/lib/finding";
-import type { DriftState } from "@shared/schemas/drift";
 import type { Anchor } from "@shared/schemas/finding";
 
 import type { DriftResult } from "./drift";
@@ -37,7 +38,7 @@ export interface Composing {
 
 // The diff-side an anchor's own side maps onto (data-model.md §5.3: base lines
 // live on the deletions side, head lines on the additions side).
-export function annotationSide(side: "base" | "head"): AnnotationSide {
+export function annotationSide(side: Side): AnnotationSide {
   return side === "head" ? "additions" : "deletions";
 }
 

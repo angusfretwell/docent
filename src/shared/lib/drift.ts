@@ -19,13 +19,13 @@
  * `formatBytes` (human-readable byte sizes).
  */
 
+import type { ChangeVerb } from "../enums/change-verb";
+import type { DriftState } from "../enums/drift-state";
 import type {
   AnchorContext,
   ChangeEvent,
-  ChangeVerb,
   DriftBadge,
   DriftPlan,
-  DriftState,
   Reanchor,
 } from "../schemas/drift";
 import type { Anchor, FindingRecord } from "../schemas/finding";

@@ -1,8 +1,9 @@
+import type { WalkthroughKind } from "@shared/enums/walkthrough-kind";
 import { Code2, Pointer } from "lucide-react";
 
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from "../ui/empty";
 
-export function WalkthroughEmpty({ pillar }: { pillar: "code" | "product" }) {
+export function WalkthroughEmpty({ pillar }: { pillar: WalkthroughKind }) {
   return (
     <Empty>
       <EmptyHeader>
