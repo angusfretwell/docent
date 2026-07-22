@@ -29,6 +29,11 @@ Record-only output artifact for the `src/client` improvement run (see `PLAN.md`)
 
 - `components/theme-provider.tsx` — the theme toggle moved from a hand-rolled `keydown` handler to `useHotkeys("d", …, { enableOnFormTags: false })` per plan. The old handler explicitly guarded `event.repeat` and `event.metaKey/ctrlKey/altKey`; the QA pass should confirm `useHotkeys` preserves that (no toggle on held-key repeat, no fire under modifier combos). Behavior-adjacent, flagged for verification.
 
+## Phase 2 (browser QA)
+
+- `features/product-walkthrough/capture-recording.tsx:109` — the recording scrubber renders `<Slider min={0} max={durationMs}>`, but `durationMs` is `0` until the rrweb replayer reports the recording's duration, so on first mount `max === min` and Base UI logs `Slider: max must be greater than min`. **Pre-existing** — byte-identical at `d590a5a`, before Phase 1 — surfaced during the QA pass, not introduced by the capture split. Fix candidate: guard the slider (or default `max` to `Math.max(durationMs, 1)`) until the duration is known. Recorded, not fixed (behavior-adjacent, out of the refactor's scope).
+- Verified live on the dev fixture (`/`, `/code`, `/product`): file tree + virtualization, diff finding links, findings panel/filters, walkthrough section reveals (the `createRevealTarget` factory), product screenshot + recording captures (the `capture-frame`/`capture-screenshot`/`capture-recording` split), pin callouts, and the `d` theme toggle (the `useHotkeys` migration) all work; console is otherwise clean; a11y labels (Search files, Filter files, Toggle file tree, Diff settings, Comment on file, Previous/Next capture, Zoom/Fit) render as accessible names.
+
 ## Seed (record-only)
 
 - Migrate the server to Effect `HttpApi` and derive the typed client via `HttpApiClient` — would replace the hand-written `api/` SDK wholesale.
