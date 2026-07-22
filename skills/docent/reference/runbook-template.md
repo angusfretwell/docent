@@ -1,6 +1,6 @@
 # The `.docent/capture.md` serving runbook
 
-The runbook is the **fallback brief** the capture skill both reads (step 1, precedence rung 2) and authors (step 8, first run). It is **markdown, not a config schema** — prose setup instructions carried across capture sessions so later captures don't re-ask the human. It is **not the source of truth**: it is consulted only when the knowledge isn't discoverable from codebase context.
+The runbook is the **fallback brief** the capture flow ([capture.md](capture.md)) both reads (§1, precedence rung 2) and authors (§8, first run). It is **markdown, not a config schema** — prose setup instructions carried across capture sessions so later captures don't re-ask the human. It is **not the source of truth**: it is consulted only when the knowledge isn't discoverable from codebase context.
 
 It lives at repo root: `.docent/capture.md` (an app-level property, not per-review — one app, one serving story).
 
