@@ -1,44 +1,33 @@
 import { sectionKey } from "@client/lib/finding-sections";
-import { atom } from "jotai";
-import { useAtomValue, useSetAtom } from "jotai/react";
+import { createRevealTarget } from "@client/lib/reveal-target";
+import { useAtomValue } from "jotai/react";
 import type { RefObject } from "react";
-import { useCallback, useEffect } from "react";
+import { useEffect } from "react";
 
 /** How far below the top of the prose a revealed section is brought to rest. */
 const HEADROOM = 24;
 
 const SECTION_ATTRIBUTE = "data-walkthrough-section";
 
+const sectionReveal = createRevealTarget("key");
+
 /**
- * A scroll request, not selection state: `token` distinguishes two requests for
- * the same section so asking again scrolls to it again.
+ * A section's standing reveal request. Set from any route so the Findings panel
+ * can target a tour from anywhere, and answered by `useRevealedSection` when the
+ * addressed tour mounts; re-requesting the same section scrolls to it again.
  */
-interface WalkthroughTarget {
-  key: string;
-  token: number;
-}
-
-export const walkthroughTargetAtom = atom<WalkthroughTarget | null>(null);
-
-/** The attribute a section carries so a reveal request can find it. */
-export function sectionAnchorProps(walkthroughId: string, sectionId: string) {
-  return { [SECTION_ATTRIBUTE]: sectionKey(walkthroughId, sectionId) };
-}
+export const walkthroughTargetAtom = sectionReveal.targetAtom;
 
 /**
  * Reveals a walkthrough section in its pillar's prose. Survives the navigation
  * to `/code` or `/product`, so the Findings panel can target a tour from any
  * route — the request is set here and answered when the tour mounts.
  */
-export function useRevealSection() {
-  const setTarget = useSetAtom(walkthroughTargetAtom);
+export const useRevealSection = sectionReveal.useReveal;
 
-  return useCallback(
-    (key: string) => {
-      setTarget((previous) => ({ key, token: (previous?.token ?? 0) + 1 }));
-    },
-    [setTarget]
-  );
+/** The attribute a section carries so a reveal request can find it. */
+export function sectionAnchorProps(walkthroughId: string, sectionId: string) {
+  return { [SECTION_ATTRIBUTE]: sectionKey(walkthroughId, sectionId) };
 }
 
 /**
