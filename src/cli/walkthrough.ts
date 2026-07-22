@@ -25,13 +25,13 @@ import { Effect, Schema } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 
-import type { ChangeRefs } from "../core/findings-write";
 import { resolveBlobShaAt } from "../core/git";
 import {
   addWalkthroughCapture,
   addWalkthroughSection,
   writeWalkthrough,
 } from "../core/walkthrough-write";
+import type { ChangeRefs } from "../core/write-context";
 import {
   attempt,
   CliUsageError,

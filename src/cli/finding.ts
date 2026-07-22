@@ -29,7 +29,6 @@ import { Anchor } from "@shared/schemas/finding";
 import { FindingWrite } from "@shared/schemas/finding-write";
 import { Effect, Schema } from "effect";
 
-import type { AuthorInput } from "../core/findings-write";
 import { writeFindingRecord } from "../core/findings-write";
 import type { AnchorSpec } from "../core/git";
 import {
@@ -39,6 +38,7 @@ import {
   resolveRepo,
 } from "../core/git";
 import { readReviewSnapshot } from "../core/review";
+import type { AuthorInput } from "../core/write-context";
 import {
   attempt,
   CliUsageError,

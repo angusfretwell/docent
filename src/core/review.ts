@@ -8,6 +8,9 @@
  * is skipped, never fatal (architecture.md §3).
  */
 
+import { walkthroughKinds } from "@shared/enums/walkthrough-kind";
+import type { WalkthroughKind } from "@shared/enums/walkthrough-kind";
+import type { FindingId, WalkthroughId } from "@shared/schemas/ids";
 import {
   ChangeRecord,
   FindingEntry,
@@ -17,12 +20,9 @@ import {
   WalkthroughEntry,
 } from "@shared/schemas/review";
 import type { ViewedRequest } from "@shared/schemas/review";
-import type { FindingId, WalkthroughId } from "@shared/schemas/ids";
-import { walkthroughKinds } from "@shared/enums/walkthrough-kind";
-import type { WalkthroughKind } from "@shared/enums/walkthrough-kind";
 import { Walkthrough } from "@shared/schemas/walkthrough";
 import type { Schema } from "effect";
-import { Clock, Effect, Option } from "effect";
+import { Array, Clock, Effect, Option } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 
@@ -43,17 +43,6 @@ import {
   STATE_ROOT,
 } from "./store/layout";
 import { FRONTMATTER } from "./store/records";
-
-/** Unwrap the `Some` values of an Options array (best-effort walk survivors). */
-function somes<A>(options: readonly Option.Option<A>[]): A[] {
-  const values: A[] = [];
-  for (const option of options) {
-    if (Option.isSome(option)) {
-      values.push(option.value);
-    }
-  }
-  return values;
-}
 
 /** Read `review.json`, creating it (auto-create on first use) when absent. */
 export const ensureReview = Effect.fn("ensureReview")(
@@ -139,7 +128,7 @@ const readJsonRecords = Effect.fn("readJsonRecords")(function* readJsonRecords<
       concurrency: "unbounded",
     }
   );
-  return somes(records);
+  return Array.getSomes(records);
 });
 
 const ANCHOR_FILE = /\bfile:\s*(?<file>[^,}\n]+)/;
@@ -202,7 +191,7 @@ const readFinding = Effect.fn("readFinding")(function* readFinding(
   // path trusts the on-disk structure, so brand it rather than re-validate.
   return FindingEntry.make({
     id: id as FindingId,
-    records: somes(parsed),
+    records: Array.getSomes(parsed),
     ...anchor,
   });
 });
@@ -246,7 +235,7 @@ const readWalkthrough = Effect.fn("readWalkthrough")(function* readWalkthrough(
   return WalkthroughEntry.make({
     id: id as WalkthroughId,
     kind: manifestValue?.kind ?? kind,
-    sections: somes(parsed),
+    sections: Array.getSomes(parsed),
     ...(manifestValue === undefined ? {} : { manifest: manifestValue }),
   });
 });

@@ -5,8 +5,8 @@
  * lands the exact plain files the walk parses back, in the shape an agent could
  * hand-author (walkthroughs.md §10; non-gating).
  *
- * It shares the finding write path's minting primitives verbatim —
- * `resolveWriteContext` for the lazy `bornChangeId` (via `mintChange`),
+ * It shares the write primitives in `write-context.ts` verbatim —
+ * `resolveWriteContext` for the lazy `bornChangeId` (via `mintChange`) — plus
  * `makeId` for the ULID ids, `ensureReview`, and the `records.ts` frontmatter
  * envelope — so there is one implementation of ULID/Change/anchor minting and
  * validation, never a second (issue #44).
@@ -36,8 +36,6 @@ import { Effect, Schema } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 
-import type { ChangeRefs } from "./findings-write";
-import { resolveWriteContext } from "./findings-write";
 import { ensureReview } from "./review";
 import { makeId } from "./store/id";
 import { reviewDirPath } from "./store/layout";
@@ -49,6 +47,8 @@ import {
   writeManifest,
 } from "./store/manifest";
 import { recordFile, serializeFrontmatter } from "./store/records";
+import type { ChangeRefs } from "./write-context";
+import { resolveWriteContext } from "./write-context";
 
 export { SectionArmMismatch, WalkthroughNotFound } from "./store/manifest";
 

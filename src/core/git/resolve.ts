@@ -7,6 +7,7 @@
 
 import { Change } from "@shared/schemas/change";
 import { Effect, Schema } from "effect";
+import { unique } from "radashi";
 
 import {
   DIFF,
@@ -156,13 +157,13 @@ const resolveGeneratedPaths = Effect.fn("resolveGeneratedPaths")(
     // `check-attr -z` emits NUL-separated (path, attr, value) triples. Collect any
     // path whose generated/vendored value is set — de-duplicated across attrs.
     const records = output.split(NUL);
-    const generated = new Set<string>();
+    const generated: string[] = [];
     for (let i = 0; i + 2 < records.length; i += 3) {
       if (isGeneratedValue(records[i + 2] ?? "")) {
-        generated.add(records[i] ?? "");
+        generated.push(records[i] ?? "");
       }
     }
-    return [...generated];
+    return unique(generated);
   }
 );
 

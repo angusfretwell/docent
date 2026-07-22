@@ -7,12 +7,9 @@ import type { FindingWrite } from "@shared/schemas/finding-write";
 
 import { cleanupScratchDirs, scratchDir } from "../test-support/fixtures";
 import { makeTestRuntime } from "../test-support/runtime";
-import {
-  mintChange,
-  resolveWriteContext,
-  writeFindingRecord,
-} from "./findings-write";
+import { writeFindingRecord } from "./findings-write";
 import { readReviewSnapshot } from "./review";
+import { mintChange, resolveWriteContext } from "./write-context";
 
 const runtime = makeTestRuntime();
 

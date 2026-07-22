@@ -13,16 +13,16 @@
  */
 
 import { processPatch } from "@pierre/diffs";
+import type { DriftState } from "@shared/enums/drift-state";
 import {
   excerptLines,
-  isRealObjectId,
   planDrift,
   reanchorRange,
   splitLines,
 } from "@shared/lib/drift";
 import { foldFinding } from "@shared/lib/finding";
 import { identityAnchorDrift } from "@shared/lib/identity-drift";
-import type { DriftState } from "@shared/enums/drift-state";
+import { isRealObjectId } from "@shared/lib/patch";
 import type { AnchorContext, DriftPlan } from "@shared/schemas/drift";
 import type { Anchor } from "@shared/schemas/finding";
 import type { FindingEntry, WalkthroughEntry } from "@shared/schemas/review";
