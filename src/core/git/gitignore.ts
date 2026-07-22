@@ -1,6 +1,6 @@
 /**
  * A small, pure `.gitignore` matcher used only to keep the repo-rooted
- * working-tree watch (watch.ts) from drowning in ignored churn like
+ * working-tree watch (serve/watch.ts) from drowning in ignored churn like
  * `node_modules/` and `dist/` (architecture.md §2). It is deliberately a **perf
  * guard, not the source of truth**: what the Pending diff actually shows comes
  * from git itself (`git status`/`git diff` already honor `.gitignore` fully), so

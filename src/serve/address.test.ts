@@ -1,13 +1,13 @@
 import { afterAll, describe, expect, test } from "bun:test";
 
 import { webHandler } from "../api";
+import { cleanupScratchDirs, scratchRepo } from "../test-support/fixtures";
 import { makeTestRuntime } from "../test-support/runtime";
 import {
   removeServeAddress,
   resolveServeStatus,
   writeServeAddress,
-} from "./serve-address";
-import { cleanupScratchDirs, scratchRepo } from "./test-fixtures";
+} from "./address";
 
 const runtime = makeTestRuntime();
 const servers: { stop: (closeActiveConnections?: boolean) => void }[] = [];

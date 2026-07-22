@@ -77,7 +77,7 @@ const SNAPSHOTS: readonly Snapshot[] = [
 /**
  * Run a git command in `cwd`, throwing on a non-zero exit and succeeding with
  * trimmed stdout — the `git()` helper pattern from the server test fixtures
- * (src/core/test-fixtures.ts), extended with an optional `env` overlay so
+ * (src/test-support/fixtures.ts), extended with an optional `env` overlay so
  * a commit can pin its author/committer identity and dates.
  */
 function git(

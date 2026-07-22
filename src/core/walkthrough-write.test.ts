@@ -4,9 +4,9 @@ import path from "node:path";
 
 import type { WalkthroughKind } from "@shared/enums/walkthrough-kind";
 
+import { cleanupScratchDirs, scratchDir } from "../test-support/fixtures";
 import { makeTestRuntime } from "../test-support/runtime";
 import { readReviewSnapshot } from "./review";
-import { cleanupScratchDirs, scratchDir } from "./test-fixtures";
 import {
   addWalkthroughCapture,
   addWalkthroughSection,

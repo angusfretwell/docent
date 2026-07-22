@@ -15,7 +15,7 @@
  * is assembled incrementally: `create` writes the shell, then `add-section` /
  * `add-capture` read-modify-write the manifest to append. The read-modify-write
  * itself — locating a walkthrough, writing a manifest canonically, and the
- * shared load-mutate-persist append shape — lives in `manifest-store.ts`. This
+ * shared load-mutate-persist append shape — lives in `store/manifest.ts`. This
  * is safe here — docent is single-user and local, and these are sequential CLI
  * invocations, so there is no concurrent writer to race (the multi-writer
  * rationale that makes Findings append-only does not apply to one agent
@@ -38,19 +38,19 @@ import { Path } from "effect/Path";
 
 import type { ChangeRefs } from "./findings-write";
 import { resolveWriteContext } from "./findings-write";
+import { ensureReview } from "./review";
+import { makeId } from "./store/id";
+import { reviewDirPath } from "./store/layout";
 import {
   appendToManifest,
   assertSectionArms,
   loadWalkthrough,
   walkthroughDir,
   writeManifest,
-} from "./manifest-store";
-import { ensureReview } from "./review";
-import { makeId } from "./store/id";
-import { reviewDirPath } from "./store/layout";
+} from "./store/manifest";
 import { recordFile, serializeFrontmatter } from "./store/records";
 
-export { SectionArmMismatch, WalkthroughNotFound } from "./manifest-store";
+export { SectionArmMismatch, WalkthroughNotFound } from "./store/manifest";
 
 type WalkthroughKind = Walkthrough["kind"];
 

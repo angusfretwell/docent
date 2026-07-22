@@ -4,19 +4,19 @@ import path from "node:path";
 
 import type { WalkthroughKind } from "@shared/enums/walkthrough-kind";
 import { Walkthrough } from "@shared/schemas/walkthrough";
+import { cleanupScratchDirs, scratchDir } from "@test-support/fixtures";
+import { makeTestRuntime } from "@test-support/runtime";
 import { Effect } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 
-import { makeTestRuntime } from "../test-support/runtime";
 import {
   appendToManifest,
   assertSectionArms,
   loadWalkthrough,
   walkthroughDir,
   writeManifest,
-} from "./manifest-store";
-import { cleanupScratchDirs, scratchDir } from "./test-fixtures";
+} from "./manifest";
 
 const runtime = makeTestRuntime();
 const run = runtime.runPromise;

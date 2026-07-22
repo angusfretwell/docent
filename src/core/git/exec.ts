@@ -4,7 +4,7 @@
  * and turn a rejected exit code into `GitCommandFailed`. Every read runs
  * inert (`GIT_OPTIONAL_LOCKS=0`): git never takes the index lock to refresh
  * cached stat info, so a `git status`/`git diff` never writes `.git/index` —
- * the repo-rooted watch (lib/watch.ts) would otherwise see its own recompute
+ * the repo-rooted watch (serve/watch.ts) would otherwise see its own recompute
  * rewrite the index and feed itself into a loop.
  *
  * Exposed as the `GitRunner` interface (not bare functions), so a resolver
@@ -18,7 +18,7 @@ const TRAILING_NEWLINE = /\n$/;
 
 // Keep every git read inert: `GIT_OPTIONAL_LOCKS=0` stops git from taking the
 // index lock to refresh cached stat info, so a `git status`/`git diff` never
-// writes `.git/index`. The repo-rooted watch (watch.ts) would otherwise see its
+// writes `.git/index`. The repo-rooted watch (serve/watch.ts) would otherwise see its
 // own recompute rewrite the index and feed itself into a loop.
 const GIT_ENV = { GIT_OPTIONAL_LOCKS: "0" } as const;
 

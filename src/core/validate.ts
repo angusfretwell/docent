@@ -5,7 +5,7 @@
  * is **non-gating** (data-model.md §1): a report, never a lock — a caller runs
  * it to learn what is malformed, not to be stopped from writing.
  *
- * Where the snapshot reader (`services/review.ts`) is best-effort — it silently
+ * Where the snapshot reader (`core/review.ts`) is best-effort — it silently
  * drops a record it cannot parse so the UI degrades gracefully (architecture.md
  * §3) — validate is its strict mirror: the same envelope split and the same
  * schemas, but every decode failure is surfaced with the offending file. That

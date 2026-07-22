@@ -3,7 +3,7 @@ import { existsSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import { readReviewSnapshot } from "../core/review";
-import { cleanupScratchDirs, git, scratchRepo } from "../core/test-fixtures";
+import { cleanupScratchDirs, git, scratchRepo } from "../test-support/fixtures";
 import { makeTestRuntime } from "../test-support/runtime";
 import { CliUsageError } from "./args";
 import {

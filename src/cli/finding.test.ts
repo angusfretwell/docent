@@ -5,7 +5,7 @@ import path from "node:path";
 import type { FoldedFinding } from "@shared/lib/finding";
 import { Effect } from "effect";
 
-import { cleanupScratchDirs, git, scratchRepo } from "../core/test-fixtures";
+import { cleanupScratchDirs, git, scratchRepo } from "../test-support/fixtures";
 import { makeTestRuntime } from "../test-support/runtime";
 import { CliUsageError, parseArgs } from "./args";
 import {

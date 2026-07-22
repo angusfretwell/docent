@@ -3,7 +3,7 @@
  * already up for this repo?" primitive `/docent` needs to reuse a running server
  * instead of starting a second one (agent-integration.md §3.1).
  *
- * `docent serve` binds an OS-picked port (`serve.ts`, `port: 0`), so no fixed port
+ * `docent serve` binds an OS-picked port (`index.ts`, `port: 0`), so no fixed port
  * exists to probe. On boot it records its live URL to `.docent/serve.json` — a
  * machine-local file the `.docent/.gitignore` `*` policy already ignores — and
  * removes it on shutdown. Detection reads that address and confirms the server
@@ -16,10 +16,10 @@ import { Effect, Option, Schema } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 
-import { resolveRepo } from "./git";
-import { readRecord, writeJsonRecord } from "./store/io";
+import { resolveRepo } from "../core/git";
+import { readRecord, writeJsonRecord } from "../core/store/io";
+import { STATE_ROOT } from "../core/store/layout";
 
-const STATE_ROOT = ".docent";
 const ADDRESS_FILENAME = "serve.json";
 
 // A slow-but-alive server should still read as serving, and a dead port should

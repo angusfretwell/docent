@@ -4,11 +4,11 @@ import path from "node:path";
 
 import { readReviewSnapshot } from "@core/review";
 import { reviewDirPath } from "@core/store/layout";
-import { cleanupScratchDirs, scratchDir } from "@core/test-fixtures";
 import { BunServices } from "@effect/platform-bun";
 import { ManagedRuntime } from "effect";
 import { sum } from "radashi";
 
+import { cleanupScratchDirs, scratchDir } from "../src/test-support/fixtures";
 import { materializeFixture } from "./prepare-fixture.ts";
 
 const runtime = ManagedRuntime.make(BunServices.layer);

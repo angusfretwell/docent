@@ -5,8 +5,8 @@
  * get their decoder paired with their schema exactly once here; JSON records
  * pair with their schema via `store/io.ts`'s `decodeJsonRecord`/`readRecord`.
  *
- * Both the best-effort snapshot reader (`services/review.ts`) and the strict
- * schema oracle (`services/validate.ts`) walk the same directory shape
+ * Both the best-effort snapshot reader (`core/review.ts`) and the strict
+ * schema oracle (`core/validate.ts`) walk the same directory shape
  * through these listers and decoders. Only how a decode failure is handled
  * differs — skipped versus reported — never which files are visited or what
  * decodes them (architecture.md §3, testing.md). Each envelope decoder has

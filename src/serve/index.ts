@@ -16,9 +16,9 @@ import type { HTMLBundle } from "bun";
 import { Console, Effect } from "effect";
 import open from "open";
 
-import { webHandler } from "./api/index";
-import { resolveChange } from "./core/git";
-import { removeServeAddress, writeServeAddress } from "./core/serve-address";
+import { webHandler } from "../api/index";
+import { resolveChange } from "../core/git";
+import { removeServeAddress, writeServeAddress } from "./address";
 
 /** What the entry point hands `runMain`: the bundled client and dev/prod knobs. */
 export interface EntryOptions {

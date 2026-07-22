@@ -14,7 +14,7 @@
  *     incremental Pending diff, so the entry auto-hides without any polling.
  *
  * The channel carries `void`: the event says only *that* something changed, not
- * *what*. Every git read runs with `GIT_OPTIONAL_LOCKS=0` (services/git/exec.ts),
+ * *what*. Every git read runs with `GIT_OPTIONAL_LOCKS=0` (core/git/exec.ts),
  * so a recompute can't rewrite `.git/index` and feed surface 3 into a loop.
  */
 

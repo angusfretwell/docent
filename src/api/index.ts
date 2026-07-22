@@ -7,7 +7,7 @@
  * file per route, sharing the `apiRoute()` error tail (`./api-route`).
  *
  * The browser UI itself is served by Bun's fullstack bundler at the serve
- * boot (`./serve`), not by these routes: Bun's HTML-bundle route owns `/` and
+ * boot (`../serve`), not by these routes: Bun's HTML-bundle route owns `/` and
  * the client assets, while these routes run one level down behind
  * `HttpRouter.toWebHandler` and see only the `/api/*` requests Bun falls
  * through. `webHandler` builds that handler with the watch and Bun services
@@ -18,6 +18,7 @@ import { BunServices } from "@effect/platform-bun";
 import { Layer } from "effect";
 import { HttpRouter } from "effect/unstable/http";
 
+import { layer as watchLayer } from "../serve/watch";
 import { blobRoute, blobSizeRoute } from "./blob";
 import { captureRoute } from "./capture";
 import { diffRoute } from "./diff";
@@ -27,7 +28,6 @@ import { healthRoute } from "./health";
 import { pendingRoute } from "./pending";
 import { reviewRoute } from "./review";
 import { viewedRoute } from "./viewed";
-import { layer as watchLayer } from "./watch";
 import { worktreeRoute } from "./worktree";
 
 export interface ServeOptions {

@@ -8,7 +8,7 @@
 import { Effect, Stream } from "effect";
 import { HttpRouter, HttpServerResponse } from "effect/unstable/http";
 
-import { DocentWatch } from "./watch";
+import { DocentWatch } from "../serve/watch";
 
 // SSE frames: an opening comment on connect, then a coarse change event per push.
 const encoder = new TextEncoder();

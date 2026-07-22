@@ -14,7 +14,7 @@ import {
   git,
   scratchDir,
   scratchRepo,
-} from "../core/test-fixtures";
+} from "../test-support/fixtures";
 import { webHandler } from "./index";
 
 const disposers: (() => Promise<void>)[] = [];

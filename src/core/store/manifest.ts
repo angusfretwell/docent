@@ -17,7 +17,7 @@ import { Walkthrough } from "@shared/schemas/walkthrough";
 import { Effect, Option, Schema } from "effect";
 import { Path } from "effect/Path";
 
-import { readRecord, writeJsonRecord } from "./store/io";
+import { readRecord, writeJsonRecord } from "./io";
 
 /** A referenced walkthrough was not found under `walkthroughs/{code,product}/`. */
 export class WalkthroughNotFound extends Schema.TaggedErrorClass<WalkthroughNotFound>()(

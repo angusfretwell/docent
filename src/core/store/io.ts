@@ -7,7 +7,7 @@
  * record to its canonical on-disk bytes.
  *
  * `decodeJsonRecord` is the strict half `readRecord` wraps in `Effect.option`
- * — `docent validate`'s oracle (`services/validate.ts`) consumes it directly,
+ * — `docent validate`'s oracle (`core/validate.ts`) consumes it directly,
  * unwrapped, so a JSON record type is paired with its decoder exactly once
  * regardless of which caller's failure-handling it runs under.
  */
