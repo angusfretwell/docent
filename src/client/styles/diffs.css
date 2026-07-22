@@ -1,3 +1,11 @@
+/*
+ * This stylesheet is one of two places that theme the @pierre diffs DOM. It
+ * owns the global rules: the scroll-container class, its scrollbar, and the
+ * light/dark colour scheme. The other place is an inline block passed through
+ * the vendored unsafeCSS option in @client/components/code-view.tsx, which
+ * styles the sticky file header. The split shares no import, so change one and
+ * check the other.
+ */
 :root {
   --diffs-font-family: var(--font-mono);
 }

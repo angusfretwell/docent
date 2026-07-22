@@ -4,7 +4,7 @@ import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
 
 import { Button } from "./ui/button";
 
-export function HeaderPrefix({
+export function CodeViewHeaderPrefix({
   onToggleItemCollapsed,
   item,
 }: {
@@ -18,14 +18,17 @@ export function HeaderPrefix({
   const disabled =
     item.fileDiff.splitLineCount === 0 && item.fileDiff.unifiedLineCount === 0;
 
+  const collapsed = item.collapsed || disabled;
+
   return (
     <Button
       variant="ghost"
       size="icon-xs"
       onClick={() => onToggleItemCollapsed(item.id)}
       disabled={disabled}
+      aria-label={collapsed ? "Expand file" : "Collapse file"}
     >
-      {item.collapsed || disabled ? (
+      {collapsed ? (
         <ChevronRightIcon className="size-4" />
       ) : (
         <ChevronDownIcon className="size-4" />

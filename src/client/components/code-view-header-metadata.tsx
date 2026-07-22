@@ -3,7 +3,7 @@ import { MessageCircleCode } from "lucide-react";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
 
-export function HeaderMetadata({
+export function CodeViewHeaderMetadata({
   onComment,
   onToggleViewed,
   viewed = false,
@@ -17,7 +17,12 @@ export function HeaderMetadata({
   return (
     <div className="flex items-center gap-1">
       {onComment && (
-        <Button size="icon-xs" variant="outline" onClick={onComment}>
+        <Button
+          size="icon-xs"
+          variant="outline"
+          onClick={onComment}
+          aria-label="Comment on file"
+        >
           <MessageCircleCode />
         </Button>
       )}
