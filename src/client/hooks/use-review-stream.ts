@@ -1,10 +1,9 @@
 import { api } from "@client/api";
 import { pendingQueryKey } from "@client/features/diff/pending";
+import { queryClient } from "@client/lib/query-client";
 import { diffQueryOptions } from "@client/queries/diff";
 import { reviewQueryOptions } from "@client/queries/review";
 import { useEffect } from "react";
-
-import { queryClient } from "../lib/query-client";
 
 // `pendingQueryKey` is a prefix, so both ranges invalidate at once.
 const LIVE_KEYS = [

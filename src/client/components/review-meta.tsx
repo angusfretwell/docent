@@ -34,7 +34,7 @@ export function ReviewMeta() {
   return (
     <div className="flex items-center gap-1 ml-auto pr-1.5">
       {title === "" ? null : (
-        <span className="text-[13px] truncate">{title}</span>
+        <span className="text-[13px] truncate min-w-0">{title}</span>
       )}
 
       {change.remoteUrl === null ? (
@@ -67,11 +67,17 @@ export function ReviewMeta() {
       )}
 
       <div className="flex items-center gap-2">
-        <span className="text-[13px] font-mono" style={{ color: deletedColor }}>
+        <span
+          className="text-[13px] font-mono tabular-nums"
+          style={{ color: deletedColor }}
+        >
           -{deletions}
         </span>
 
-        <span className="text-[13px] font-mono" style={{ color: addedColor }}>
+        <span
+          className="text-[13px] font-mono tabular-nums"
+          style={{ color: addedColor }}
+        >
           +{additions}
         </span>
       </div>
