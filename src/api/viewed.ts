@@ -8,27 +8,15 @@
 
 import { ViewedRequest } from "@shared/schemas/review";
 import { Effect } from "effect";
-import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
 
-import { resolveRepo } from "../core/git";
 import { appendViewedEvent } from "../core/review";
-import { apiRoute } from "./api-route";
+import { postWriteRoute, readScope } from "./api-route";
 
 export function viewedRoute(cwd: string) {
-  return apiRoute(
-    "POST",
-    "/api/viewed",
+  return postWriteRoute("/api/viewed", ViewedRequest, (request) =>
     Effect.gen(function* postViewed() {
-      const request = yield* HttpServerRequest.schemaBodyJson(ViewedRequest);
-      const repo = yield* resolveRepo(cwd);
-      const event = yield* appendViewedEvent({
-        base: repo.defaultBranch.name,
-        branch: repo.branch,
-        request,
-        root: repo.root,
-      });
-      return yield* HttpServerResponse.json(event);
-    }),
-    { badRequest: "SchemaError" }
+      const scope = yield* readScope(cwd);
+      return yield* appendViewedEvent({ ...scope, request });
+    })
   );
 }

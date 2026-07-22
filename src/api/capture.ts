@@ -12,12 +12,18 @@
 
 import { Effect } from "effect";
 import { FileSystem } from "effect/FileSystem";
-import { HttpRouter, HttpServerResponse } from "effect/unstable/http";
+import { HttpRouter } from "effect/unstable/http";
 
 import { resolveRepo } from "../core/git";
 import { safeJoin } from "../core/safe-join";
 import { reviewDirPath } from "../core/store/layout";
-import { apiRoute, immutableBytes, OCTET_STREAM } from "./api-route";
+import {
+  apiRoute,
+  badRequest,
+  immutableBytes,
+  OCTET_STREAM,
+  requiredParam,
+} from "./api-route";
 
 // A walkthrough id and a capture filename must be plain, single-segment names —
 // no slashes — before either reaches the `safeJoin` containment check below.
@@ -38,13 +44,10 @@ export function captureRoute(cwd: string) {
     "/api/capture/:walkthrough/:file",
     Effect.gen(function* serveCapture() {
       const params = yield* HttpRouter.params;
-      const walkthrough = params.walkthrough ?? "";
-      const file = params.file ?? "";
+      const walkthrough = requiredParam(params.walkthrough);
+      const file = requiredParam(params.file);
       if (!(WALKTHROUGH_ID.test(walkthrough) && CAPTURE_FILE.test(file))) {
-        return HttpServerResponse.jsonUnsafe(
-          { error: "invalid capture path" },
-          { status: 400 }
-        );
+        return badRequest("invalid capture path");
       }
       const repo = yield* resolveRepo(cwd);
       const fs = yield* FileSystem;
@@ -57,10 +60,7 @@ export function captureRoute(cwd: string) {
         file
       );
       if (filePath === null) {
-        return HttpServerResponse.jsonUnsafe(
-          { error: "invalid capture path" },
-          { status: 400 }
-        );
+        return badRequest("invalid capture path");
       }
       const bytes = yield* fs.readFile(filePath);
       return immutableBytes(bytes, captureContentType(file));

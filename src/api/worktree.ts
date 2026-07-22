@@ -11,6 +11,7 @@ import { resolveWorktreeFile } from "../core/git";
 import {
   apiRoute,
   OCTET_STREAM,
+  requiredParam,
   searchParams,
   uncachedBytes,
 } from "./api-route";
@@ -23,7 +24,7 @@ export function worktreeRoute(cwd: string) {
       Effect.gen(function* serveWorktree() {
         const bytes = yield* resolveWorktreeFile(
           cwd,
-          searchParams(request).get("path") ?? ""
+          requiredParam(searchParams(request).get("path"))
         );
         return uncachedBytes(bytes, OCTET_STREAM);
       }),

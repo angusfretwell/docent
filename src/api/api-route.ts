@@ -2,14 +2,23 @@
  * The seam every `/api/*` route builder is defined through: `apiRoute()` wraps
  * `HttpRouter.add` with the error-response tail repeated across the routes
  * (data-model.md §1, architecture.md §2) — a typed `_tag` answered as 400,
- * everything else as 404 or 500, always `{ error: message }` JSON — plus the
- * small byte/response helpers the raw-bytes routes (blob, capture, worktree)
- * share.
+ * everything else as 404 or 500, always `{ error: message }` JSON — with
+ * `postWriteRoute()` folding the append-write variant (parse body, write,
+ * answer JSON) on top. Plus the small route-facing helpers the routes share:
+ * the git-scope readers (`readScope`, `readChangeScope`), the raw-bytes
+ * responses (blob, capture, worktree), the `badRequest` guard, and the
+ * `requiredParam`/`searchParams` accessors.
  */
 
 import { Effect } from "effect";
-import type { HttpServerRequest } from "effect/unstable/http";
-import { HttpRouter, HttpServerResponse } from "effect/unstable/http";
+import type { Schema } from "effect";
+import {
+  HttpRouter,
+  HttpServerRequest,
+  HttpServerResponse,
+} from "effect/unstable/http";
+
+import { resolveChangeRefs, resolveRepo } from "../core/git";
 
 // The method/path types `HttpRouter.add` itself accepts — derived so this
 // seam can never drift from the router it wraps.
@@ -100,6 +109,79 @@ export function apiRoute<E extends TaggedMessage, R>(
   return HttpRouter.add(method, path, tailed);
 }
 
+/**
+ * Build a `POST /api/*` append-write route: decode the JSON body against
+ * `schema`, hand the decoded value to `write`, and answer its result as JSON —
+ * under the shared `SchemaError → 400` tail (a malformed body 400s; a git/write
+ * failure 500s). The two append-write routes (`viewed`, `findings`) differ only
+ * in the schema and what `write` resolves-then-writes, so that is all this
+ * takes.
+ */
+export function postWriteRoute<
+  A,
+  RD,
+  Result,
+  WriteError extends TaggedMessage,
+  WriteContext,
+>(
+  path: ApiPath,
+  schema: Schema.ConstraintDecoder<A, RD>,
+  write: (body: A) => Effect.Effect<Result, WriteError, WriteContext>
+) {
+  // Widen the composed error channel to `TaggedMessage` for `apiRoute`: a free
+  // `WriteError` in the inferred union makes its indexed `E["_tag"]` collapse to
+  // `never`, which the tail's runtime `_tag` compare doesn't need anyway.
+  const handler: Effect.Effect<
+    HttpServerResponse.HttpServerResponse,
+    TaggedMessage,
+    HttpServerRequest.HttpServerRequest | RD | WriteContext
+  > = Effect.gen(function* postWrite() {
+    const body = yield* HttpServerRequest.schemaBodyJson(schema);
+    const result = yield* write(body);
+    return yield* HttpServerResponse.json(result);
+  });
+
+  return apiRoute("POST", path, handler, { badRequest: "SchemaError" });
+}
+
+/**
+ * The light Review scope a read/append route keys on — repo root, checked-out
+ * branch, and the default-branch `base` name — resolved from local git. `review`
+ * walks its snapshot from this and `viewed` appends against it; both rebuilt
+ * this same `{ base, branch, root }` off `resolveRepo` inline before.
+ */
+export const readScope = Effect.fn("readScope")(function* readScope(
+  cwd: string
+) {
+  const { branch, defaultBranch, root } = yield* resolveRepo(cwd);
+  return { base: defaultBranch.name, branch, root };
+});
+
+/**
+ * The fuller write scope a Change-scoped write keys on: the same identity
+ * `readScope` resolves, plus the `(baseSha, headSha)` refs the live head's
+ * Change mints against (data-model.md §4). `findings` assembles
+ * `writeFindingRecord`'s context by spreading this — the same shape rebuilt off
+ * `resolveChangeRefs` inline before.
+ */
+export const readChangeScope = Effect.fn("readChangeScope")(
+  function* readChangeScope(cwd: string) {
+    const { baseSha, branch, defaultBranch, headSha, root } =
+      yield* resolveChangeRefs(cwd);
+    return {
+      base: defaultBranch.name,
+      branch,
+      refs: {
+        baseRef: defaultBranch.name,
+        baseSha,
+        headRef: branch,
+        headSha,
+      },
+      root,
+    };
+  }
+);
+
 // Base for parsing a request's relative URL; only the path/query is read from
 // it (pending, worktree).
 const REQUEST_URL_BASE = "http://localhost";
@@ -109,6 +191,27 @@ export function searchParams(
   request: HttpServerRequest.HttpServerRequest
 ): URLSearchParams {
   return new URL(request.url, REQUEST_URL_BASE).searchParams;
+}
+
+/**
+ * A route (`params.x`) or query (`searchParams(request).get(x)`) parameter
+ * coalesced to `""` when absent. The empty string is never a valid id/path, so
+ * it flows into the route's own validator — the git object-id check, `safeJoin`,
+ * the worktree-path guard — and surfaces as that route's error, never a
+ * `TypeError` on `undefined`/`null`.
+ */
+export function requiredParam(value: string | null | undefined): string {
+  return value ?? "";
+}
+
+/**
+ * A `{ error }` 400 a route returns directly from its own pre-flight guard (a
+ * malformed path/id it rejects before any resolve) — the identical body and
+ * status the `apiRoute` error tail emits for a typed `badRequest` failure, for
+ * the routes that guard with a plain return instead.
+ */
+export function badRequest(message: string) {
+  return HttpServerResponse.jsonUnsafe({ error: message }, { status: 400 });
 }
 
 /** The opaque byte-stream content-type for raw blobs and worktree files. */

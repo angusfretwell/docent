@@ -9,35 +9,17 @@
 
 import { FindingWrite } from "@shared/schemas/finding-write";
 import { Effect } from "effect";
-import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
 
 import { writeFindingRecord } from "../core/findings-write";
-import { resolveAuthor, resolveChangeRefs } from "../core/git";
-import { apiRoute } from "./api-route";
+import { resolveAuthor } from "../core/git";
+import { postWriteRoute, readChangeScope } from "./api-route";
 
 export function findingsRoute(cwd: string) {
-  return apiRoute(
-    "POST",
-    "/api/findings",
+  return postWriteRoute("/api/findings", FindingWrite, (write) =>
     Effect.gen(function* postFinding() {
-      const write = yield* HttpServerRequest.schemaBodyJson(FindingWrite);
-      const refs = yield* resolveChangeRefs(cwd);
-      const author = yield* resolveAuthor(refs.root);
-      const result = yield* writeFindingRecord({
-        author,
-        base: refs.defaultBranch.name,
-        branch: refs.branch,
-        refs: {
-          baseRef: refs.defaultBranch.name,
-          baseSha: refs.baseSha,
-          headRef: refs.branch,
-          headSha: refs.headSha,
-        },
-        root: refs.root,
-        write,
-      });
-      return yield* HttpServerResponse.json(result);
-    }),
-    { badRequest: "SchemaError" }
+      const scope = yield* readChangeScope(cwd);
+      const author = yield* resolveAuthor(scope.root);
+      return yield* writeFindingRecord({ ...scope, author, write });
+    })
   );
 }
