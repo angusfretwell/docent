@@ -9,14 +9,11 @@ import {
   MenuCheckboxItem,
   MenuItem,
 } from "@client/components/ui/menu";
-import {
-  EMPTY_FILTERS,
-  diffFiltersAtom,
-  toggleStatusFilter,
-} from "@client/features/diff/filters";
 import type { GitStatus } from "@pierre/trees";
 import { useAtom } from "jotai/react";
 import { ListFilter } from "lucide-react";
+
+import { diffFiltersAtom, EMPTY_FILTERS, toggleStatusFilter } from "./filters";
 
 const STATUS_FILTERS: { label: string; status: GitStatus }[] = [
   { label: "Added", status: "added" },
@@ -32,7 +29,7 @@ export function FileTreeFilter() {
     <Menu>
       <MenuTrigger
         render={
-          <Button variant="outline" size="icon-sm">
+          <Button variant="outline" size="icon-sm" aria-label="Filter files">
             <ListFilter />
           </Button>
         }
