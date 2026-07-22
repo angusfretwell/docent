@@ -2,11 +2,10 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { BunServices } from "@effect/platform-bun";
 import { foldFinding } from "@shared/lib/finding";
 import type { FindingWrite } from "@shared/schemas/finding-write";
-import { ManagedRuntime } from "effect";
 
+import { makeTestRuntime } from "../test-support/runtime";
 import {
   mintChange,
   resolveWriteContext,
@@ -15,7 +14,7 @@ import {
 import { readReviewSnapshot } from "./review";
 import { cleanupScratchDirs, scratchDir } from "./test-fixtures";
 
-const runtime = ManagedRuntime.make(BunServices.layer);
+const runtime = makeTestRuntime();
 
 afterAll(async () => {
   await runtime.dispose();

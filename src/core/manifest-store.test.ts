@@ -2,12 +2,12 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { BunServices } from "@effect/platform-bun";
 import { Walkthrough } from "@shared/schemas/walkthrough";
-import { Effect, ManagedRuntime } from "effect";
+import { Effect } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 
+import { makeTestRuntime } from "../test-support/runtime";
 import {
   appendToManifest,
   assertSectionArms,
@@ -17,7 +17,7 @@ import {
 } from "./manifest-store";
 import { cleanupScratchDirs, scratchDir } from "./test-fixtures";
 
-const runtime = ManagedRuntime.make(BunServices.layer);
+const runtime = makeTestRuntime();
 const run = runtime.runPromise;
 
 afterAll(async () => {

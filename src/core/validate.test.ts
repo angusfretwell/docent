@@ -2,15 +2,15 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
-import { BunServices } from "@effect/platform-bun";
-import { ManagedRuntime } from "effect";
+import type { BunServices } from "@effect/platform-bun";
 import type { Effect } from "effect";
 
 import { materializeFixture } from "../../scripts/prepare-fixture.ts";
+import { makeTestRuntime } from "../test-support/runtime";
 import { cleanupScratchDirs, scratchDir } from "./test-fixtures";
 import { resolveStateRoot, validateStateRoot } from "./validate";
 
-const runtime = ManagedRuntime.make(BunServices.layer);
+const runtime = makeTestRuntime();
 
 afterAll(async () => {
   await runtime.dispose();

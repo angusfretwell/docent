@@ -34,7 +34,8 @@
       "@cli/*": ["./src/cli/*"],
       "@client/*": ["./src/client/*"],
       "@core/*": ["./src/core/*"],
-      "@shared/*": ["./src/shared/*"]
+      "@shared/*": ["./src/shared/*"],
+      "@test-support/*": ["./src/test-support/*"]
     }
   },
 

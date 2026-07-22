@@ -1,9 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 
-import { BunServices } from "@effect/platform-bun";
-import { ManagedRuntime } from "effect";
-
 import { webHandler } from "../api";
+import { makeTestRuntime } from "../test-support/runtime";
 import {
   removeServeAddress,
   resolveServeStatus,
@@ -11,7 +9,7 @@ import {
 } from "./serve-address";
 import { cleanupScratchDirs, scratchRepo } from "./test-fixtures";
 
-const runtime = ManagedRuntime.make(BunServices.layer);
+const runtime = makeTestRuntime();
 const servers: { stop: (closeActiveConnections?: boolean) => void }[] = [];
 const disposers: (() => Promise<void>)[] = [];
 

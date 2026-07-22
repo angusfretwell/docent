@@ -2,8 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
-import { BunServices } from "@effect/platform-bun";
-import { ManagedRuntime } from "effect";
+import { makeTestRuntime } from "@test-support/runtime";
 
 import {
   cleanupScratchDirs,
@@ -14,7 +13,7 @@ import {
 import { resolvePending, resolveWorktreeFile } from "./pending";
 import { resolveChange } from "./resolve";
 
-const runtime = ManagedRuntime.make(BunServices.layer);
+const runtime = makeTestRuntime();
 
 afterAll(async () => {
   await runtime.dispose();

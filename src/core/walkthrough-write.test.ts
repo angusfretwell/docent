@@ -2,9 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 
-import { BunServices } from "@effect/platform-bun";
-import { ManagedRuntime } from "effect";
-
+import { makeTestRuntime } from "../test-support/runtime";
 import { readReviewSnapshot } from "./review";
 import { cleanupScratchDirs, scratchDir } from "./test-fixtures";
 import {
@@ -13,7 +11,7 @@ import {
   writeWalkthrough,
 } from "./walkthrough-write";
 
-const runtime = ManagedRuntime.make(BunServices.layer);
+const runtime = makeTestRuntime();
 const run = runtime.runPromise;
 
 afterAll(async () => {
