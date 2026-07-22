@@ -44,7 +44,6 @@ export function WalkthroughLayout({
         id="prose"
         className="overflow-visible!"
       >
-        {/* <Pane> */}
         <ScrollArea viewportRef={proseRef} scrollFade>
           {/* The trailing space lets the last section's anchor scroll up to
                 the read line; without it the final target could never become
@@ -55,7 +54,6 @@ export function WalkthroughLayout({
             </div>
           </div>
         </ScrollArea>
-        {/* </Pane> */}
       </ResizablePanel>
 
       <ResizableHandle withHandle className="w-1.5" />

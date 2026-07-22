@@ -1,6 +1,7 @@
 import { Badge } from "@client/components/ui/badge";
 import type { Staleness } from "@shared/lib/walkthrough-annotations";
 import { ClockFading } from "lucide-react";
+import plur from "plur";
 
 /**
  * How far behind head the tour was authored (walkthroughs.md §8) — surfaced,
@@ -15,7 +16,7 @@ export function StalenessBadge({ staleness }: { staleness: Staleness }) {
   return (
     <Badge variant="secondary" size="lg">
       <ClockFading />
-      {staleness.behind} change{staleness.behind === 1 ? "" : "s"} behind
+      {staleness.behind} {plur("change", staleness.behind)} behind
     </Badge>
   );
 }

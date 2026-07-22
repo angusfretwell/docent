@@ -11,7 +11,7 @@ import type { FoldedFinding } from "@shared/lib/finding";
 import { targetChipIndex } from "@shared/lib/walkthrough-segments";
 import type { ElementContent } from "hast";
 import type { ComponentProps, ReactNode } from "react";
-import { createContext, useContext } from "react";
+import { createContext, use } from "react";
 import type { Components, ExtraProps } from "react-markdown";
 import Markdown from "react-markdown";
 
@@ -98,12 +98,12 @@ function ProseLink({
   node: _node,
   ...props
 }: ComponentProps<"a"> & ExtraProps) {
-  const scope = useContext(ChipScopeContext);
+  const scope = use(ChipScopeContext);
   const index = href === undefined ? undefined : targetChipIndex(href);
 
   if (scope === undefined || index === undefined) {
     return (
-      <a href={href} {...props}>
+      <a href={href} rel="noreferrer" {...props}>
         {children}
       </a>
     );
@@ -149,7 +149,7 @@ function ProseParagraph({
   node,
   ...props
 }: ComponentProps<"p"> & ExtraProps) {
-  const scope = useContext(ChipScopeContext);
+  const scope = use(ChipScopeContext);
 
   if (scope === undefined) {
     return <p {...props}>{children}</p>;
