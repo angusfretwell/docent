@@ -38,6 +38,7 @@
     "lucide-react": "^1.24.0",
     "open": "^11.0.0",
     "plur": "^6.0.0",
+    "pretty-ms": "^9.3.0",
     "radashi": "^12.9.1",
     "react-hotkeys-hook": "^5.3.3",
     "react-markdown": "^10.1.0",

@@ -25,7 +25,8 @@ import { WalkthroughEmpty } from "../walkthrough/empty";
 import { WalkthroughLayout } from "../walkthrough/layout";
 import { StepProse } from "../walkthrough/prose";
 import { StalenessBadge } from "../walkthrough/staleness";
-import { CaptureFrame, CaptureView } from "./capture";
+import { CaptureView } from "./capture";
+import { CaptureFrame } from "./capture-frame";
 import { ProductEmpty } from "./empty";
 import { PinHoverProvider } from "./pin-hover";
 
