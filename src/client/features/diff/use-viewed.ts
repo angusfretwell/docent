@@ -10,12 +10,13 @@
  */
 
 import { api } from "@client/api";
-import type { ViewedModel } from "@client/features/diff/viewed";
-import { viewedStateFor } from "@client/features/diff/viewed";
 import type { DiffFile } from "@client/lib/diff";
 import type { ViewedEvent } from "@shared/schemas/review";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
+
+import type { ViewedModel } from "./viewed";
+import { viewedStateFor } from "./viewed";
 
 interface ViewedToggle {
   blobSha: string;

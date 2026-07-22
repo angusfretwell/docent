@@ -16,11 +16,6 @@ import {
   ResizablePanelGroup,
 } from "@client/components/ui/resizable";
 import { Separator } from "@client/components/ui/separator";
-import { diffFiltersAtom, matchesFilters } from "@client/features/diff/filters";
-import { isGeneratedPath } from "@client/features/diff/generated";
-import { pendingQueryOptions } from "@client/features/diff/pending";
-import { useViewedState } from "@client/features/diff/use-viewed";
-import { computeViewed } from "@client/features/diff/viewed";
 import { useKeyPressed } from "@client/hooks/use-key-pressed";
 import { parsePatchFiles, statusForChange } from "@client/lib/diff";
 import { useDrift } from "@client/lib/drift";
@@ -30,14 +25,19 @@ import { reviewQueryOptions } from "@client/queries/review";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { useAtom, useAtomValue } from "jotai/react";
-import { Settings, ListTree } from "lucide-react";
+import { ListTree, Settings } from "lucide-react";
 import { useMemo } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useDefaultLayout } from "react-resizable-panels";
 
+import { ChangeRangePicker } from "./change-picker";
 import { DiffCodeView } from "./code-view";
-import { DiffFilter } from "./filter";
+import { diffFiltersAtom, matchesFilters } from "./filters";
+import { isGeneratedPath } from "./generated";
+import { pendingQueryOptions } from "./pending";
 import { DiffTree } from "./tree";
+import { useViewedState } from "./use-viewed";
+import { computeViewed } from "./viewed";
 
 export function DiffView() {
   const { data: change } = useSuspenseQuery(diffQueryOptions);
@@ -147,6 +147,7 @@ export function DiffView() {
             <Button
               size="icon-sm"
               variant="ghost"
+              aria-label="Toggle file tree"
               onClick={() => setDiffTreeOpen(!diffTreeOpen)}
             >
               <KbdHint active={isAltPressed} shortcut="[">
@@ -154,13 +155,21 @@ export function DiffView() {
               </KbdHint>
             </Button>
             <Separator orientation="vertical" className="h-4" />
-            <DiffFilter />
+            <ChangeRangePicker />
             <div className="flex items-center gap-2 ml-auto">
               <span className="text-[13px] text-muted-foreground truncate tabular-nums">
                 {viewedCount} / {files.length} viewed
               </span>
               <Menu>
-                <MenuTrigger render={<Button variant="ghost" size="icon-sm" />}>
+                <MenuTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Diff settings"
+                    />
+                  }
+                >
                   <Settings />
                 </MenuTrigger>
                 <MenuPopup align="end">

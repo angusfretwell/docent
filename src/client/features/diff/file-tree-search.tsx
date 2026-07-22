@@ -53,8 +53,8 @@ export function FileTreeSearch({ model }: { model: FileTree }) {
     <InputGroup className="isolate">
       <InputGroupInput
         ref={ref}
-        aria-label="Search"
-        placeholder="Search"
+        aria-label="Search files"
+        placeholder="Search files…"
         type="search"
         size="sm"
         value={search.value}

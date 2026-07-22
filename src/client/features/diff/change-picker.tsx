@@ -9,13 +9,14 @@ import {
   MenuSeparator,
   MenuTrigger,
 } from "@client/components/ui/menu";
-import { pendingQueryOptions } from "@client/features/diff/pending";
 import type { PendingRange } from "@shared/schemas/pending";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { GalleryHorizontalEnd } from "lucide-react";
 
-export function DiffFilter() {
+import { pendingQueryOptions } from "./pending";
+
+export function ChangeRangePicker() {
   const navigate = useNavigate();
   const { range, view } = useSearch({ from: "/" });
   const { data: pending } = useQuery(pendingQueryOptions(range));
