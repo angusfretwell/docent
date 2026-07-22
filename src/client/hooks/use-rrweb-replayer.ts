@@ -58,8 +58,11 @@ function clamp(ms: number, durationMs: number) {
   return Math.max(0, Math.min(ms, durationMs));
 }
 
-/** Fetch `url`'s rrweb event stream and drive a `Replayer` on the returned ref. */
-export function useRrwebReplayer(url: string): RrwebReplayer {
+/** Fetch a capture's rrweb event stream and drive a `Replayer` on the returned ref. */
+export function useRrwebReplayer(
+  walkthroughId: string,
+  media: string
+): RrwebReplayer {
   const rootRef = useRef<HTMLDivElement>(null);
   const replayerRef = useRef<Replayer | null>(null);
 
@@ -186,7 +189,7 @@ export function useRrwebReplayer(url: string): RrwebReplayer {
     [setPosition]
   );
 
-  const events = useQuery(captureEventsQuery(url));
+  const events = useQuery(captureEventsQuery(walkthroughId, media));
   const eventStream = events.data;
 
   useEffect(() => {

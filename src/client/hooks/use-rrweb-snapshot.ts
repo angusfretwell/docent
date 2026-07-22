@@ -28,19 +28,20 @@ export interface RrwebSnapshot {
 }
 
 /**
- * Fetch `url`'s rrweb snapshot and rebuild it on the returned ref.
+ * Fetch a capture's rrweb snapshot and rebuild it on the returned ref.
  *
  * @param dims - the captured page's full size in CSS pixels, `[width, height]`.
  */
 export function useRrwebSnapshot(
-  url: string,
+  walkthroughId: string,
+  media: string,
   dims: readonly [number, number]
 ): RrwebSnapshot {
   const rootRef = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
   const [width, height] = dims;
 
-  const events = useQuery(captureEventsQuery(url));
+  const events = useQuery(captureEventsQuery(walkthroughId, media));
   const eventStream = events.data;
 
   useEffect(() => {

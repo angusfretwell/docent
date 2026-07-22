@@ -9,9 +9,11 @@
  * (`computeViewed`/`viewedStateFor`) stays in `lib/viewed.ts`.
  */
 
+import { api } from "@client/api";
 import type { DiffFile } from "@client/lib/diff";
 import type { ViewedModel } from "@client/lib/viewed";
 import { viewedStateFor } from "@client/lib/viewed";
+import type { ViewedEvent } from "@shared/schemas/review";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 
@@ -22,17 +24,13 @@ interface ViewedToggle {
   viewed: boolean;
 }
 
-/** Post a mark-as-viewed toggle, throwing on a non-2xx so `onError` rolls back. */
-async function postViewed(toggle: ViewedToggle): Promise<void> {
-  const res = await fetch("/api/viewed", {
-    body: JSON.stringify({ blobSha: toggle.blobSha, path: toggle.path }),
-    headers: { "content-type": "application/json" },
-    method: "POST",
-  });
-
-  if (!res.ok) {
-    throw new Error(`POST /api/viewed failed: HTTP ${res.status}`);
-  }
+/**
+ * Post a mark-as-viewed toggle. The decoded event validates the response (and a
+ * non-2xx throws so `onError` rolls back); the overlay drives the button, so the
+ * event itself is not consumed.
+ */
+function postViewed(toggle: ViewedToggle): Promise<ViewedEvent> {
+  return api.viewed.toggle({ blobSha: toggle.blobSha, path: toggle.path });
 }
 
 export interface Viewed {

@@ -1,30 +1,26 @@
+import { api } from "@client/api";
 import { diffQueryOptions } from "@client/queries/diff";
+import { pendingQueryKey } from "@client/queries/pending";
 import { reviewQueryOptions } from "@client/queries/review";
 import { useEffect } from "react";
 
 import { queryClient } from "../lib/query-client";
 
-// `["pending"]` is a prefix key, so both ranges invalidate at once.
+// `pendingQueryKey` is a prefix, so both ranges invalidate at once.
 const LIVE_KEYS = [
   diffQueryOptions.queryKey,
-  ["pending"] as const,
+  pendingQueryKey,
   reviewQueryOptions.queryKey,
 ];
 
 export function useReviewStream(): void {
-  useEffect(() => {
-    const events = new EventSource("/api/events");
-
-    function invalidateLiveQueries() {
-      for (const queryKey of LIVE_KEYS) {
-        void queryClient.invalidateQueries({ queryKey });
-      }
-    }
-
-    events.addEventListener("review-changed", invalidateLiveQueries);
-
-    return () => {
-      events.close();
-    };
-  }, []);
+  useEffect(
+    () =>
+      api.events.subscribe(() => {
+        for (const queryKey of LIVE_KEYS) {
+          void queryClient.invalidateQueries({ queryKey });
+        }
+      }),
+    []
+  );
 }

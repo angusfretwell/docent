@@ -3,7 +3,6 @@ import { useInnerZoom } from "@client/hooks/use-inner-zoom";
 import type { RrwebReplayer } from "@client/hooks/use-rrweb-replayer";
 import { useRrwebReplayer } from "@client/hooks/use-rrweb-replayer";
 import { useRrwebSnapshot } from "@client/hooks/use-rrweb-snapshot";
-import { captureUrl } from "@client/lib/captures";
 import { cn } from "@client/lib/utils";
 import type { RegionPin, TimePin } from "@client/lib/walkthrough-pins";
 import { recordingPins, screenshotPins } from "@client/lib/walkthrough-pins";
@@ -310,7 +309,8 @@ function ScreenshotCapture({
   useRefit(zoom, refitted);
 
   const { failed, rootRef } = useRrwebSnapshot(
-    captureUrl(walkthroughId, capture.media),
+    walkthroughId,
+    capture.media,
     natural
   );
   const [naturalWidth, naturalHeight] = natural;
@@ -677,7 +677,7 @@ function RecordingCapture({
   target,
   walkthroughId,
 }: CaptureProps) {
-  const replay = useRrwebReplayer(captureUrl(walkthroughId, capture.media));
+  const replay = useRrwebReplayer(walkthroughId, capture.media);
   const { rootRef } = replay;
   const pins = recordingPins(annotations, findings, capture);
 

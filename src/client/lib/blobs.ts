@@ -1,27 +1,11 @@
 /**
- * Lazy, content-addressed blob text sourcing from `GET /api/blob/:sha`. The
- * blobs are git objects, so a sha's content never changes — fetches are
- * deduplicated and cached for the page's lifetime. No DOM or React here.
+ * Lazy, content-addressed blob text sourcing. The blobs are git objects, so a
+ * sha's content never changes — fetches are deduplicated and cached for the
+ * page's lifetime. Transport lives in `api.blob.text`; this module owns only the
+ * in-flight dedup above it. No DOM or React here.
  */
 
-/** The content-addressed blob endpoint for a git object id. */
-export function blobUrl(sha: string): string {
-  return `/api/blob/${sha}`;
-}
-
-async function loadBlobText(
-  sha: string,
-  signal?: AbortSignal
-): Promise<string> {
-  const url = blobUrl(sha);
-  const res = await fetch(url, { signal });
-
-  if (!res.ok) {
-    throw new Error(`GET ${url} failed: HTTP ${res.status}`);
-  }
-
-  return res.text();
-}
+import { api } from "@client/api";
 
 const inFlight = new Map<string, Promise<string>>();
 
@@ -41,7 +25,7 @@ export function fetchBlobText(
     return cached;
   }
 
-  const pending = loadBlobText(sha, signal).catch((error: unknown) => {
+  const pending = api.blob.text(sha, signal).catch((error: unknown) => {
     inFlight.delete(sha);
     throw error;
   });
