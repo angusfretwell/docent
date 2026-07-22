@@ -1,4 +1,8 @@
-import type { Annotation } from "@client/lib/diff-annotations";
+import type { DiffFile } from "@client/lib/diff";
+import { diffItemVersion } from "@client/lib/diff";
+import type { Annotation, Composing } from "@client/lib/diff-annotations";
+import { annotationsKey, itemAnnotations } from "@client/lib/diff-annotations";
+import type { DriftResult } from "@client/lib/drift";
 import { diffLayoutAtom } from "@client/lib/preferences";
 import { workerFactory, themes } from "@client/lib/worker-factory";
 import type {
@@ -15,12 +19,19 @@ import {
   WorkerPoolContextProvider,
 } from "@pierre/diffs/react";
 import type { CodeViewHandle } from "@pierre/diffs/react";
+import type { FoldedFinding } from "@shared/lib/finding";
 import { useAtomValue } from "jotai/react";
 import type { ReactNode, RefObject } from "react";
 import { useMemo } from "react";
 
-import { HeaderPrefix } from "./code-view-header-prefix";
+import { CodeViewHeaderPrefix } from "./code-view-header-prefix";
 
+// The @pierre diffs DOM is themed in two places that share no import, so the
+// split is otherwise undiscoverable: this inline block, injected through the
+// vendored `unsafeCSS` option to style the sticky file-header attribute the
+// library stamps, and the global stylesheet at `@client/styles/diffs.css`,
+// which styles the scroll container class and the light/dark colour scheme.
+// Change one, check the other.
 const DIFFS_CSS = `
   [data-diffs-header] {
     padding-inline: calc(var(--spacing) * 3);
@@ -51,7 +62,48 @@ const DIFFS_CSS = `
   }
 `;
 
-interface CodeViewProps {
+/**
+ * The @pierre code view item list shared by the Diff tab and the Code
+ * walkthrough panel: one item per file, its annotations folded from the visible
+ * findings and any in-progress composer, its `version` bumped whenever the
+ * render would change. Callers own only the divergent collapse wiring —
+ * `isCollapsed` defaults to always-expanded for surfaces without a control.
+ */
+export function useDiffItems({
+  composing,
+  driftFor,
+  files,
+  findings,
+  isCollapsed = () => false,
+}: {
+  composing: Composing | null;
+  driftFor?: (id: string) => DriftResult | undefined;
+  files: DiffFile[];
+  findings: readonly FoldedFinding[];
+  isCollapsed?: (itemId: string) => boolean;
+}): CodeViewItem<Annotation>[] {
+  return files.map((entry) => {
+    const collapsed = isCollapsed(entry.id);
+    const annotations = itemAnnotations({
+      composing,
+      driftFor,
+      fileDiff: entry.file,
+      findings,
+      itemId: entry.id,
+    });
+
+    return {
+      annotations,
+      collapsed,
+      fileDiff: entry.file,
+      id: entry.id,
+      type: "diff",
+      version: diffItemVersion(entry, collapsed, annotationsKey(annotations)),
+    };
+  });
+}
+
+interface AnnotatedCodeViewProps {
   items: CodeViewItem<Annotation>[];
   onGutterUtilityClick?: (
     range: SelectedLineRange,
@@ -70,7 +122,7 @@ interface CodeViewProps {
   renderHeaderMetadata?: (item: CodeViewItem<Annotation>) => ReactNode;
 }
 
-export function CodeView({
+export function AnnotatedCodeView({
   items,
   onGutterUtilityClick,
   enableLineSelection,
@@ -79,7 +131,7 @@ export function CodeView({
   ref,
   renderAnnotation,
   renderHeaderMetadata,
-}: CodeViewProps) {
+}: AnnotatedCodeViewProps) {
   const diffLayout = useAtomValue(diffLayoutAtom);
 
   const options = useMemo<CodeViewOptions<Annotation>>(
@@ -117,7 +169,7 @@ export function CodeView({
           onToggleItemCollapsed === undefined
             ? undefined
             : (item) => (
-                <HeaderPrefix
+                <CodeViewHeaderPrefix
                   item={item}
                   onToggleItemCollapsed={onToggleItemCollapsed}
                 />

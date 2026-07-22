@@ -1,16 +1,13 @@
-import { CodeView } from "@client/components/code-view";
+import { AnnotatedCodeView, useDiffItems } from "@client/components/code-view";
 import { DiffAnnotation } from "@client/components/code-view-annotation";
-import { HeaderMetadata } from "@client/components/code-view-header-metadata";
+import { CodeViewHeaderMetadata } from "@client/components/code-view-header-metadata";
 import { IconEmpty } from "@client/components/icon-empty";
 import { Pane } from "@client/components/pane";
 import { useFindingCompose } from "@client/features/findings/use-finding-compose";
 import { useFindings } from "@client/features/findings/use-findings";
 import type { DiffFile } from "@client/lib/diff";
-import { diffItemVersion } from "@client/lib/diff";
 import type { Annotation } from "@client/lib/diff-annotations";
-import { annotationsKey, itemAnnotations } from "@client/lib/diff-annotations";
 import type { DriftResult } from "@client/lib/drift";
-import type { CodeViewItem } from "@pierre/diffs";
 import type { CodeViewHandle } from "@pierre/diffs/react";
 import type { WalkthroughRange } from "@shared/schemas/walkthrough";
 import { GitCompare } from "lucide-react";
@@ -69,23 +66,11 @@ export function WalkthroughDiffPanel({
     fileDiffById: (id) => files.find((entry) => entry.id === id)?.file,
   });
 
-  const items = files.map<CodeViewItem<Annotation>>((entry) => {
-    const annotations = itemAnnotations({
-      composing: compose.composing,
-      driftFor,
-      fileDiff: entry.file,
-      findings,
-      itemId: entry.id,
-    });
-
-    return {
-      annotations,
-      collapsed: false,
-      fileDiff: entry.file,
-      id: entry.id,
-      type: "diff",
-      version: diffItemVersion(entry, false, annotationsKey(annotations)),
-    };
+  const items = useDiffItems({
+    composing: compose.composing,
+    driftFor,
+    files,
+    findings,
   });
 
   const targetFile =
@@ -142,7 +127,7 @@ export function WalkthroughDiffPanel({
 
   return (
     <Pane>
-      <CodeView
+      <AnnotatedCodeView
         // enableGutterUtility={!compose.composing}
         enableLineSelection={!compose.composing}
         items={items}
@@ -154,7 +139,7 @@ export function WalkthroughDiffPanel({
           <DiffAnnotation annotation={annotation} compose={compose} />
         )}
         renderHeaderMetadata={(codeViewItem) => (
-          <HeaderMetadata
+          <CodeViewHeaderMetadata
             onComment={
               codeViewItem.type === "diff"
                 ? () =>

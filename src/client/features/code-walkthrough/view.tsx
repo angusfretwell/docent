@@ -1,4 +1,8 @@
 import { useFindings } from "@client/features/findings/use-findings";
+import { WalkthroughEmpty } from "@client/features/walkthrough/empty";
+import { WalkthroughLayout } from "@client/features/walkthrough/layout";
+import { StepProse } from "@client/features/walkthrough/prose";
+import { StalenessBadge } from "@client/features/walkthrough/staleness";
 import { useRevealedSection } from "@client/features/walkthrough/target";
 import { useActiveTarget } from "@client/features/walkthrough/use-active-target";
 import {
@@ -18,10 +22,6 @@ import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { FileCode } from "lucide-react";
 import { useRef, useState } from "react";
 
-import { WalkthroughEmpty } from "../walkthrough/empty";
-import { WalkthroughLayout } from "../walkthrough/layout";
-import { StepProse } from "../walkthrough/prose";
-import { StalenessBadge } from "../walkthrough/staleness";
 import { WalkthroughDiffPanel } from "./diff-panel";
 
 export function CodeWalkthroughView() {

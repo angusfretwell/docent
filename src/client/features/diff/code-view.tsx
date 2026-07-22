@@ -1,17 +1,15 @@
-import { CodeView } from "@client/components/code-view";
+import { AnnotatedCodeView, useDiffItems } from "@client/components/code-view";
 import { DiffAnnotation } from "@client/components/code-view-annotation";
-import { HeaderMetadata } from "@client/components/code-view-header-metadata";
+import { CodeViewHeaderMetadata } from "@client/components/code-view-header-metadata";
 import { IconEmpty } from "@client/components/icon-empty";
 import type { Viewed } from "@client/features/diff/use-viewed";
 import { useFindingCompose } from "@client/features/findings/use-finding-compose";
 import { useFindings } from "@client/features/findings/use-findings";
 import type { DiffFile } from "@client/lib/diff";
-import { diffItemVersion } from "@client/lib/diff";
 import type { Annotation } from "@client/lib/diff-annotations";
-import { annotationsKey, itemAnnotations } from "@client/lib/diff-annotations";
 import { diffTargetAtom } from "@client/lib/diff-target";
 import type { DriftResult } from "@client/lib/drift";
-import type { CodeViewItem, FileDiffMetadata } from "@pierre/diffs";
+import type { FileDiffMetadata } from "@pierre/diffs";
 import type { CodeViewHandle } from "@pierre/diffs/react";
 import { useAtomValue } from "jotai/react";
 import { GitCompare } from "lucide-react";
@@ -51,24 +49,12 @@ export function DiffCodeView({
     return collapsedOverrides.get(id) ?? viewed.isViewed(id);
   }
 
-  const items = files.map<CodeViewItem<Annotation>>((entry) => {
-    const collapsed = isCollapsed(entry.id);
-    const annotations = itemAnnotations({
-      composing: canAuthor ? compose.composing : null,
-      driftFor,
-      fileDiff: entry.file,
-      findings,
-      itemId: entry.id,
-    });
-
-    return {
-      annotations,
-      collapsed,
-      fileDiff: entry.file,
-      id: entry.id,
-      type: "diff",
-      version: diffItemVersion(entry, collapsed, annotationsKey(annotations)),
-    };
+  const items = useDiffItems({
+    composing: canAuthor ? compose.composing : null,
+    driftFor,
+    files,
+    findings,
+    isCollapsed,
   });
 
   function handleToggleItemCollapsed(itemId: string) {
@@ -121,7 +107,10 @@ export function DiffCodeView({
     }
 
     ref.current?.scrollTo({ behavior: "smooth", id: target.id, type: "item" });
-    // oxlint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed to `target` only; see FINDINGS.md P0-foundation
+    // Keyed to `target` only: `isCollapsed` derives from `collapsedOverrides`,
+    // so listing it would re-run this reveal on every collapse toggle rather
+    // than only when the reader jumps to a new target.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [target]);
 
   if (items.length === 0) {
@@ -129,7 +118,7 @@ export function DiffCodeView({
   }
 
   return (
-    <CodeView
+    <AnnotatedCodeView
       enableLineSelection={!compose.composing}
       enableGutterUtility={!compose.composing}
       items={items}
@@ -142,7 +131,7 @@ export function DiffCodeView({
         <DiffAnnotation annotation={annotation} compose={compose} />
       )}
       renderHeaderMetadata={(codeViewItem) => (
-        <HeaderMetadata
+        <CodeViewHeaderMetadata
           onComment={
             canAuthor && codeViewItem.type === "diff"
               ? () =>
