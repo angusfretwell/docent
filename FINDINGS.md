@@ -5,6 +5,7 @@ Record-only output artifact for the `src/client` improvement run (see `PLAN.md`)
 ## P0-foundation
 
 - `components/diff/code-view.tsx:125` (deps array) — the reveal `useEffect` is intentionally keyed to `target` only but reads `isCollapsed`, tripping `react-hooks/exhaustive-deps`. This was **pre-existing red on the baseline** (`bun run check` fails on the base commit) and blocks the per-package preflight gate, so it was suppressed with an `oxlint-disable-next-line` to unblock all packages. Whether `isCollapsed` should be a dependency (it is derived from `collapsedOverrides`, so adding it would re-run the reveal on every collapse toggle) is a behavior question for P1-codeview, which owns this file after the 0.4 move — not fixed here.
+- Phase 0.4 move-map gap: `lib/walkthrough.test.ts` is not listed in the move map (neither under a destination nor under "stays put"), yet it tests `lib/walkthrough.ts`, which the map moves to `features/walkthrough/walkthrough.ts`. To keep the test resolving its subject via a same-dir `./walkthrough` import (mirroring the explicit `walkthrough-pins.test.ts` → `features/product-walkthrough/pins.test.ts` move), it was `git mv`'d to `features/walkthrough/walkthrough.test.ts`. Behavior-preserving; recorded because it is not spelled out in the map.
 
 ## Seed (record-only)
 

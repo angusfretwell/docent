@@ -1,4 +1,5 @@
-import { FindingsToggle } from "./findings/toggle";
+import { FindingsToggle } from "@client/features/findings/toggle";
+
 import { Navigation } from "./navigation";
 import { ReviewMeta } from "./review-meta";
 import { Separator } from "./ui/separator";
