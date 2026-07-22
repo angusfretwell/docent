@@ -19,6 +19,7 @@
    backtick strings that Tailwind's content scanner would otherwise compile. */
 @source not "../../../PLAN.md";
 @source not "../../../FINDINGS.md";
+@source not "../../../HANDOFF.md";
 
 @custom-variant dark (&:is(.dark *));
 
