@@ -55,6 +55,7 @@ export function Composer({
     <InputGroup>
       <InputGroupTextarea
         ref={ref}
+        aria-label={placeholder}
         autoFocus={true}
         placeholder={placeholder}
         className="*:data-[slot=textarea]:min-h-0! *:data-[slot=textarea]:scroll-my-13"

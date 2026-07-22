@@ -1,10 +1,10 @@
 import { Button } from "@client/components/ui/button";
-import { Composer } from "@client/features/findings/composer";
-import { useFindingWrite } from "@client/features/findings/use-finding-write";
 import { MessageCirclePlus } from "lucide-react";
 import { useState } from "react";
 
+import { Composer } from "./composer";
 import { FindingsFilter } from "./filter";
+import { useFindingWrite } from "./use-finding-write";
 
 export function FindingsHeader() {
   const [commentOpen, setCommentOpen] = useState(false);

@@ -1,8 +1,8 @@
-import { Comment } from "@client/features/findings/comment";
 import type { FoldedFinding } from "@shared/lib/finding";
 import { Fragment } from "react";
 
 import { FindingActions } from "./actions";
+import { Comment } from "./comment";
 
 export function FindingThread({ finding }: { finding: FoldedFinding }) {
   return (
