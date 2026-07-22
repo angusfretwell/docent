@@ -168,7 +168,7 @@ const parseAnnotations = Effect.fn("parseAnnotations")(
 /**
  * `walkthrough create` — mint a walkthrough shell bound to the live head.
  * `--title` is optional: the capture flow mints a title-less product shell
- * (a title is editorial, filled in by `/author-product-walkthrough` later).
+ * (a title is editorial, filled in by the product authoring flow later).
  */
 const runCreate = Effect.fn("runCreate")(function* runCreate(
   cwd: string,
