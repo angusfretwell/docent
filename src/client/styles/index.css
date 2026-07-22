@@ -15,6 +15,11 @@
 @import "./diffs.css";
 @import "./replay.css";
 
+/* Refactor process docs live at the repo root; their prose contains class-like
+   backtick strings that Tailwind's content scanner would otherwise compile. */
+@source not "../../../PLAN.md";
+@source not "../../../FINDINGS.md";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -295,10 +300,6 @@
 
   body {
     @apply bg-sidebar text-foreground relative;
-  }
-
-  .root {
-    @apply isolate relative;
   }
 
   code,

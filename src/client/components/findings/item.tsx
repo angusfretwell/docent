@@ -57,7 +57,7 @@ export function FindingsItem({
 
         <span className="truncate text-[13px]">{location}</span>
 
-        {/* TODO: merge these two into a single FindingLink component */}
+        {/* Merge these two into a single FindingLink component (P1-findings). */}
         <FindingDiffLink diffItemId={diffItemId} />
         <FindingSectionLink section={section} />
 

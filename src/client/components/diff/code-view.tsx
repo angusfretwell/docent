@@ -122,6 +122,7 @@ export function DiffCodeView({
     }
 
     ref.current?.scrollTo({ behavior: "smooth", id: target.id, type: "item" });
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed to `target` only; see FINDINGS.md P0-foundation
   }, [target]);
 
   if (items.length === 0) {
