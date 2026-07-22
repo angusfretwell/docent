@@ -5,8 +5,8 @@ import { useState } from "react";
 
 import { Composer } from "../composer";
 import { FindingThread } from "../findings/thread";
+import { Surface } from "../surface";
 import { Button } from "../ui/button";
-import { Card } from "../ui/card";
 
 /**
  * The threads anchored to one step of a tour, read beneath the prose they
@@ -43,12 +43,9 @@ export function SectionFindings({
   return (
     <div className="mt-6 grid gap-4 font-sans" data-not-typeset>
       {findings.map((finding) => (
-        <Card
-          className="p-4 font-sans rounded-lg before:rounded-[calc(var(--radius-lg)-1px)]"
-          key={finding.id}
-        >
+        <Surface className="p-4 font-sans" key={finding.id} radius="lg">
           <FindingThread finding={finding} />
-        </Card>
+        </Surface>
       ))}
 
       {composing ? (

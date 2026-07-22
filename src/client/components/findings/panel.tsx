@@ -2,7 +2,7 @@ import { useFindings } from "@client/hooks/use-findings";
 import { cn } from "@client/lib/utils";
 import { MessagesSquare } from "lucide-react";
 
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from "../ui/empty";
+import { IconEmpty } from "../icon-empty";
 import { ScrollArea } from "../ui/scroll-area";
 import { FindingsHeader } from "./header";
 import { FindingsItem } from "./item";
@@ -15,14 +15,7 @@ export function FindingsPanel({ popover }: { popover?: boolean }) {
       <FindingsHeader />
 
       {visible.length === 0 ? (
-        <Empty>
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <MessagesSquare />
-            </EmptyMedia>
-            <EmptyDescription>No findings yet.</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
+        <IconEmpty icon={<MessagesSquare />}>No findings yet.</IconEmpty>
       ) : (
         <ScrollArea
           className={cn(

@@ -16,7 +16,7 @@ import { flushSync } from "react-dom";
 
 import { CodeView } from "../code-view";
 import { HeaderMetadata } from "../code-view-header-metadata";
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from "../ui/empty";
+import { IconEmpty } from "../icon-empty";
 import { DiffAnnotation } from "./annotation";
 
 export function DiffCodeView({
@@ -126,16 +126,7 @@ export function DiffCodeView({
   }, [target]);
 
   if (items.length === 0) {
-    return (
-      <Empty>
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <GitCompare />
-          </EmptyMedia>
-          <EmptyDescription>No changes to review.</EmptyDescription>
-        </EmptyHeader>
-      </Empty>
-    );
+    return <IconEmpty icon={<GitCompare />}>No changes to review.</IconEmpty>;
   }
 
   return (

@@ -10,7 +10,7 @@ import { useAtom } from "jotai/react";
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
 
-import { Kbd } from "../ui/kbd";
+import { KbdHint } from "../kbd-hint";
 import { FindingsPanel } from "./panel";
 
 export function FindingsToggle() {
@@ -33,7 +33,9 @@ export function FindingsToggle() {
               size="icon"
               onClick={() => setFindingsOpen(true)}
             >
-              {isAltPressed ? <Kbd>]</Kbd> : <PanelRightOpen />}
+              <KbdHint active={isAltPressed} shortcut="]">
+                <PanelRightOpen />
+              </KbdHint>
             </Button>
           }
         />
@@ -46,7 +48,9 @@ export function FindingsToggle() {
 
   return (
     <Button variant="ghost" size="icon" onClick={() => setFindingsOpen(false)}>
-      {isAltPressed ? <Kbd>]</Kbd> : <PanelRightClose />}
+      <KbdHint active={isAltPressed} shortcut="]">
+        <PanelRightClose />
+      </KbdHint>
     </Button>
   );
 }

@@ -3,7 +3,7 @@ import type { Annotation } from "@client/lib/diff-annotations";
 
 import { Composer } from "../composer";
 import { FindingThread } from "../findings/thread";
-import { Card } from "../ui/card";
+import { Surface } from "../surface";
 
 export function DiffAnnotation({
   annotation,
@@ -15,9 +15,9 @@ export function DiffAnnotation({
   if (annotation.metadata.kind === "finding") {
     return (
       <div className="my-4 mx-3 w-full max-w-xl">
-        <Card className="p-4 font-sans rounded-lg before:rounded-[calc(var(--radius-lg)-1px)]">
+        <Surface className="p-4 font-sans" radius="lg">
           <FindingThread finding={annotation.metadata.finding} />
-        </Card>
+        </Surface>
       </div>
     );
   }

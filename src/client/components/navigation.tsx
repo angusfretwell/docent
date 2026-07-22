@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { Code2, GitCompare, Pointer } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
 
-import { Kbd } from "./ui/kbd";
+import { KbdHint } from "./kbd-hint";
 import { Tabs, TabsList, TabsTab } from "./ui/tabs";
 
 export function Navigation() {
@@ -36,7 +36,9 @@ export function Navigation() {
           render={<Link to="/" />}
           className="w-8"
         >
-          {isAltPressed ? <Kbd>1</Kbd> : <GitCompare />}
+          <KbdHint active={isAltPressed} shortcut="1">
+            <GitCompare />
+          </KbdHint>
         </TabsTab>
         <TabsTab
           className="w-8"
@@ -44,7 +46,9 @@ export function Navigation() {
           value="/code"
           render={<Link to="/code" />}
         >
-          {isAltPressed ? <Kbd>2</Kbd> : <Code2 />}
+          <KbdHint active={isAltPressed} shortcut="2">
+            <Code2 />
+          </KbdHint>
         </TabsTab>
         <TabsTab
           className="w-8"
@@ -52,7 +56,9 @@ export function Navigation() {
           value="/product"
           render={<Link to="/product" />}
         >
-          {isAltPressed ? <Kbd>3</Kbd> : <Pointer />}
+          <KbdHint active={isAltPressed} shortcut="3">
+            <Pointer />
+          </KbdHint>
         </TabsTab>
       </TabsList>
     </Tabs>

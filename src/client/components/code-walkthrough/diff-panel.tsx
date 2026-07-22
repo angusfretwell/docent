@@ -14,8 +14,8 @@ import { useEffect, useRef } from "react";
 import { CodeView } from "../code-view";
 import { HeaderMetadata } from "../code-view-header-metadata";
 import { DiffAnnotation } from "../diff/annotation";
+import { IconEmpty } from "../icon-empty";
 import { Pane } from "../pane";
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from "../ui/empty";
 
 /**
  * The Code walkthrough's target panel: the branch diff narrowed to the files the
@@ -136,14 +136,7 @@ export function WalkthroughDiffPanel({
   if (items.length === 0) {
     return (
       <Pane>
-        <Empty>
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <GitCompare />
-            </EmptyMedia>
-            <EmptyDescription>No changes to review.</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
+        <IconEmpty icon={<GitCompare />}>No changes to review.</IconEmpty>
       </Pane>
     );
   }

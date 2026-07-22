@@ -17,9 +17,9 @@ import { useMemo } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useDefaultLayout } from "react-resizable-panels";
 
+import { KbdHint } from "../kbd-hint";
 import { Pane } from "../pane";
 import { Button } from "../ui/button";
-import { Kbd } from "../ui/kbd";
 import {
   Menu,
   MenuGroup,
@@ -149,7 +149,9 @@ export function DiffView() {
               variant="ghost"
               onClick={() => setDiffTreeOpen(!diffTreeOpen)}
             >
-              {isAltPressed ? <Kbd>[</Kbd> : <ListTree />}
+              <KbdHint active={isAltPressed} shortcut="[">
+                <ListTree />
+              </KbdHint>
             </Button>
             <Separator orientation="vertical" className="h-4" />
             <DiffFilter />
