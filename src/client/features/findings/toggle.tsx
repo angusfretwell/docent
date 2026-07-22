@@ -29,6 +29,7 @@ export function FindingsToggle() {
           openOnHover={true}
           render={
             <Button
+              aria-label="Open findings"
               variant="ghost"
               size="icon"
               onClick={() => setFindingsOpen(true)}
@@ -47,7 +48,12 @@ export function FindingsToggle() {
   }
 
   return (
-    <Button variant="ghost" size="icon" onClick={() => setFindingsOpen(false)}>
+    <Button
+      aria-label="Close findings"
+      variant="ghost"
+      size="icon"
+      onClick={() => setFindingsOpen(false)}
+    >
       <KbdHint active={isAltPressed} shortcut="]">
         <PanelRightClose />
       </KbdHint>

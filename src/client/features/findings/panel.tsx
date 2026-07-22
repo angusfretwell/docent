@@ -1,11 +1,11 @@
 import { IconEmpty } from "@client/components/icon-empty";
 import { ScrollArea } from "@client/components/ui/scroll-area";
-import { useFindings } from "@client/features/findings/use-findings";
 import { cn } from "@client/lib/utils";
 import { MessagesSquare } from "lucide-react";
 
 import { FindingsHeader } from "./header";
 import { FindingsItem } from "./item";
+import { useFindings } from "./use-findings";
 
 export function FindingsPanel({ popover }: { popover?: boolean }) {
   const { visible } = useFindings();

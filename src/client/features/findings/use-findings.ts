@@ -6,12 +6,6 @@
  * panel, filter label, and collapsed-toggle popover.
  */
 
-import type { FindingSurface } from "@client/features/findings/filters";
-import {
-  findingFiltersAtom,
-  matchesFindingFilters,
-} from "@client/features/findings/filters";
-import type { FindingSection } from "@client/features/findings/types";
 import { parsePatchFiles } from "@client/lib/diff";
 import { useDrift } from "@client/lib/drift";
 import { sectionKey } from "@client/lib/finding-sections";
@@ -32,6 +26,10 @@ import { ANCHOR_KIND } from "@shared/schemas/finding";
 import { useQuery } from "@tanstack/react-query";
 import { useAtomValue } from "jotai/react";
 import { useMemo } from "react";
+
+import type { FindingSurface } from "./filters";
+import { findingFiltersAtom, matchesFindingFilters } from "./filters";
+import type { FindingSection } from "./types";
 
 export interface FindingListItem {
   finding: FoldedFinding;

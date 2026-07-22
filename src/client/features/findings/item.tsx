@@ -5,15 +5,22 @@ import {
   CollapsiblePanel,
   CollapsibleTrigger,
 } from "@client/components/ui/collapsible";
+import { useRevealSection } from "@client/features/walkthrough/target";
+import { useRevealDiffItem } from "@client/lib/diff-target";
 import { cn } from "@client/lib/utils";
 import { STATUS_LABEL } from "@shared/lib/finding";
 import type { FoldedFinding, Status } from "@shared/lib/finding";
 import type { DriftState } from "@shared/schemas/drift";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Code2,
+  GitCompare,
+  Pointer,
+} from "lucide-react";
 import { useState } from "react";
 
-import { FindingDiffLink } from "./diff-link";
-import { FindingSectionLink } from "./section-link";
+import { FindingLink } from "./link";
 import { FindingThread } from "./thread";
 import type { FindingSection } from "./types";
 
@@ -38,6 +45,11 @@ export function FindingsItem({
 }) {
   const [open, setOpen] = useState(true);
 
+  const revealDiffItem = useRevealDiffItem();
+  const revealSection = useRevealSection();
+
+  const isCodeSection = section?.pillar === "code";
+
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="-mt-px">
       <CollapsibleTrigger
@@ -55,11 +67,31 @@ export function FindingsItem({
           <ChevronRight className="size-4" />
         )}
 
-        <span className="truncate text-[13px]">{location}</span>
+        <span className="min-w-0 truncate text-[13px]">{location}</span>
 
-        {/* Merge these two into a single FindingLink component (P1-findings). */}
-        <FindingDiffLink diffItemId={diffItemId} />
-        <FindingSectionLink section={section} />
+        {diffItemId === undefined ? null : (
+          <FindingLink
+            icon={<GitCompare />}
+            label="Show in diff"
+            onReveal={() => revealDiffItem(diffItemId)}
+            to="/"
+          />
+        )}
+
+        {/*
+          The section link wears the pillar's own icon and lands on that pillar's
+          surface, since where it goes is the thing that differs — a finding on a
+          code tour and one on a product tour are the same thread read in two
+          different places.
+        */}
+        {section === undefined ? null : (
+          <FindingLink
+            icon={isCodeSection ? <Code2 /> : <Pointer />}
+            label={`Show in ${isCodeSection ? "code" : "product"} walkthrough`}
+            onReveal={() => revealSection(section.key)}
+            to={isCodeSection ? "/code" : "/product"}
+          />
+        )}
 
         <div className="flex items-center gap-1 ml-auto">
           {finding.status !== "open" && (

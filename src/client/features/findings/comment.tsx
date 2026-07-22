@@ -18,7 +18,7 @@ export function Comment({
         {author?.kind === "agent" && <Bot className="size-3.5" />}{" "}
         {author && <span className="font-medium">{author.display}</span>}{" "}
         {createdAt && (
-          <span className="text-muted-foreground ">
+          <span className="text-muted-foreground">
             {formatDistanceToNow(new Date(createdAt), {
               addSuffix: true,
             })}

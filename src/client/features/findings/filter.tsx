@@ -9,7 +9,13 @@ import {
   MenuSeparator,
   MenuTrigger,
 } from "@client/components/ui/menu";
-import type { FindingSurface } from "@client/features/findings/filters";
+import type { Status } from "@shared/lib/finding";
+import { STATUS_LABEL, STATUSES } from "@shared/lib/finding";
+import { useAtom } from "jotai/react";
+import { MessagesSquare } from "lucide-react";
+import plur from "plur";
+
+import type { FindingSurface } from "./filters";
 import {
   DEFAULT_FILTERS,
   FINDING_SURFACES,
@@ -18,12 +24,8 @@ import {
   SURFACE_LABEL,
   toggleStatus,
   toggleSurface,
-} from "@client/features/findings/filters";
-import { useFindings } from "@client/features/findings/use-findings";
-import type { Status } from "@shared/lib/finding";
-import { STATUS_LABEL, STATUSES } from "@shared/lib/finding";
-import { useAtom } from "jotai/react";
-import { MessagesSquare } from "lucide-react";
+} from "./filters";
+import { useFindings } from "./use-findings";
 
 /**
  * The panel's headline and its filter in one control, so the count names what
@@ -48,7 +50,7 @@ export function FindingsFilter() {
         }
       >
         <MessagesSquare />
-        {count} {count === 1 ? "comment" : "comments"}
+        {count} {plur("comment", count)}
       </MenuTrigger>
 
       <MenuPopup align="start">

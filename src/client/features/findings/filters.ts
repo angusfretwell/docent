@@ -10,6 +10,7 @@
 
 import type { Status } from "@shared/lib/finding";
 import { atomWithStorage } from "jotai/utils";
+import { toggle } from "radashi";
 
 /** Where a Finding is read — the surface its anchor puts it on. */
 export const FINDING_SURFACES = ["diff", "code", "product"] as const;
@@ -43,24 +44,18 @@ export const findingFiltersAtom = atomWithStorage<FindingFilters>(
   DEFAULT_FILTERS
 );
 
-function toggled<Value>(values: readonly Value[], value: Value): Value[] {
-  return values.includes(value)
-    ? values.filter((candidate) => candidate !== value)
-    : [...values, value];
-}
-
 export function toggleStatus(
   filters: FindingFilters,
   status: Status
 ): FindingFilters {
-  return { ...filters, statuses: toggled(filters.statuses, status) };
+  return { ...filters, statuses: toggle(filters.statuses, status) };
 }
 
 export function toggleSurface(
   filters: FindingFilters,
   surface: FindingSurface
 ): FindingFilters {
-  return { ...filters, surfaces: toggled(filters.surfaces, surface) };
+  return { ...filters, surfaces: toggle(filters.surfaces, surface) };
 }
 
 /** Whether the panel is showing what it shows when nobody has touched it. */
