@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, use, useMemo, useState } from "react";
 
 /**
  * Which pin the reader is dwelling on, shared across the two columns. A label is
@@ -83,7 +83,7 @@ export function PinHoverProvider({
  * belongs to — so it reports inactive and its handlers are inert.
  */
 export function usePinHover(target: string | undefined, label: string) {
-  const context = useContext(PinHoverContext);
+  const context = use(PinHoverContext);
   const pairable = context !== undefined && target !== undefined;
 
   return {
@@ -111,7 +111,7 @@ export function usePinHover(target: string | undefined, label: string) {
 
 /** The standing request to frame a pin, for the capture that has to satisfy it. */
 export function usePinFocus() {
-  return useContext(PinHoverContext)?.focused;
+  return use(PinHoverContext)?.focused;
 }
 
 /**
@@ -120,5 +120,5 @@ export function usePinFocus() {
  * a panel which pin that is, so a replay can go and demonstrate it.
  */
 export function usePinHovered() {
-  return useContext(PinHoverContext)?.hovered;
+  return use(PinHoverContext)?.hovered;
 }
