@@ -17,10 +17,10 @@
  * *what*. Every git read runs with `GIT_OPTIONAL_LOCKS=0` (core/git/exec.ts),
  * so a recompute can't rewrite `.git/index` and feed surface 3 into a loop.
  *
- * Surfaces 1 and 2 use Effect's `FileSystem.watch` (a `Stream<WatchEvent>`);
- * surface 3 stays on `node:fs.watch` — see `watchGitDir` for why. All three
- * merge into one `Stream.debounce`d pipeline whose only output is the coarse
- * push, so a burst of writes coalesces into a single event.
+ * All three surfaces use `node:fs.watch`, acquired **eagerly** in the build
+ * fiber (see `watchEager`), and merge into one `Stream.debounce`d pipeline whose
+ * only output is the coarse push, so a burst of writes coalesces into a single
+ * event.
  */
 
 import { watch } from "node:fs";
@@ -36,7 +36,6 @@ import {
   Stream,
 } from "effect";
 import { FileSystem } from "effect/FileSystem";
-import type { WatchEvent } from "effect/FileSystem";
 import { Path } from "effect/Path";
 
 import {
@@ -80,45 +79,42 @@ const buildMatcher = Effect.fn("buildMatcher")(function* buildMatcher(
 });
 
 /**
- * A recursive `FileSystem.watch` on `dir`, as a `Stream` of change events. A
- * missing directory yields an empty stream — so a not-yet-existing state dir
- * never stops the server booting — and a watcher error ends that one surface
- * rather than tearing the whole pipeline down.
+ * Watch `dir` with `node:fs.watch`, acquired **eagerly** in the build fiber and
+ * bridged to the pipeline through an unbounded queue. A missing directory yields
+ * an empty stream, so a not-yet-existing dir never stops the server booting.
+ *
+ * Eager acquisition is the whole point. `Stream.debounce`/`Stream.mergeAll`
+ * subscribe lazily on a forked fiber, so folding the watch into that stream
+ * would defer its creation past the layer build — and a loop-blocking write (a
+ * `git commit`'s `execFileSync`, or an agent's `writeFileSync`) can then fire
+ * and finish before the watch exists. On Linux inotify never replays that
+ * missed event (macOS FSEvents is lenient, hiding the bug), so the change is
+ * lost. Creating the watch synchronously here guarantees it is live before the
+ * server serves a request; the unbounded queue buffers until the debounce fiber
+ * drains it.
+ *
+ * `node:fs.watch` over Effect's `FileSystem.watch`: the latter is lazy (no way
+ * to force eager subscription) and hardcodes `{ recursive: true }`, while the
+ * git-dir surface needs a **flat** watch — a recursive watch on `.git/` floods
+ * events from `objects/`, and a flat one still catches git's atomic-rename
+ * replacement of top-level `HEAD`/`index`/`COMMIT_EDITMSG` that per-file watches
+ * miss once the inode is swapped. `ignore` drops changes to gitignored paths in
+ * the watcher callback, before they ever enqueue; `filename` is relative to
+ * `dir` (any OS separator — the matcher normalizes).
  */
-const watchDir = Effect.fn("watchDir")(function* watchDir(dir: string) {
+const watchEager = Effect.fn("watchEager")(function* watchEager(
+  dir: string,
+  options: {
+    readonly recursive: boolean;
+    readonly ignore?: (relPath: string) => boolean;
+  }
+) {
   const fs = yield* FileSystem;
   const exists = yield* fs.exists(dir).pipe(Effect.orElseSucceed(() => false));
   if (!exists) {
     return Stream.empty;
   }
 
-  return fs.watch(dir).pipe(Stream.catchCause(() => Stream.empty));
-});
-
-/**
- * Surface 3: a **flat** `node:fs.watch` on the git dir, acquired **eagerly** in
- * the build fiber and bridged to the pipeline through an unbounded queue.
- *
- * Kept on `node:fs.watch` deliberately. Effect's `FileSystem.watch` takes no
- * options and its Node/Bun backend hardcodes `fs.watch(path, { recursive: true
- * })` (NodeFileSystem `watchNode`), so it cannot express a flat watch — a
- * recursive watch on `.git/` would flood events from `objects/`. The git-dir
- * watch must stay flat: a non-recursive directory watch catches git's
- * atomic-rename replacement of the top-level `HEAD`/`index`/`COMMIT_EDITMSG` on
- * commit/checkout (which per-file watches miss once the inode is swapped)
- * without descending into `objects/`.
- *
- * Eager acquisition matters: `Stream.debounce`/`Stream.mergeAll` subscribe
- * lazily on a forked fiber, so folding the watch into that stream would defer
- * its creation past the layer build — and a `git commit` (a loop-blocking
- * `execFileSync`) can then fire and finish before the watch exists, dropping
- * the event. Creating the watch synchronously here (in `makeWatch`'s fiber)
- * guarantees it is live before the server serves a request; the unbounded queue
- * buffers anything it captures until the debounce fiber drains it.
- */
-const watchGitDir = Effect.fn("watchGitDir")(function* watchGitDir(
-  gitDir: string
-) {
   // The queue carries `void` by design (see the module comment); the `void`
   // generic argument is valid here despite the rule flagging it.
   // oxlint-disable-next-line no-invalid-void-type
@@ -126,7 +122,10 @@ const watchGitDir = Effect.fn("watchGitDir")(function* watchGitDir(
 
   yield* Effect.acquireRelease(
     Effect.sync(() =>
-      watch(gitDir, { recursive: false }, () => {
+      watch(dir, { recursive: options.recursive }, (_event, filename) => {
+        if (options.ignore && filename !== null && options.ignore(filename)) {
+          return;
+        }
         // The `undefined` is the void payload the queue carries; it selects
         // `offerUnsafe`'s data-first overload, so the signal actually enqueues.
         // oxlint-disable-next-line no-useless-undefined
@@ -172,28 +171,19 @@ const makeWatch = Effect.fn("makeWatch")(function* makeWatch(cwd: string) {
 
   // Surface 1: `.docent/` — review writes (external agents and the UI alike);
   // every event counts, so no filter.
-  const stateChanges = (yield* watchDir(stateRoot)).pipe(
-    Stream.map((): void => undefined)
-  );
+  const stateChanges = yield* watchEager(stateRoot, { recursive: true });
   // Surface 2: repo root — working-tree edits, minus gitignored/`.git`/`.docent`
-  // churn, so the Pending diff recomputes live as an agent edits. `event.path`
-  // is repo-relative (any OS separator); the matcher normalizes separators.
-  const rootChanges = (yield* watchDir(root)).pipe(
-    Stream.filter((event: WatchEvent) => !matcher.ignores(event.path)),
-    Stream.map((): void => undefined)
-  );
+  // churn, so the Pending diff recomputes live as an agent edits.
+  const rootChanges = yield* watchEager(root, {
+    ignore: (relPath) => matcher.ignores(relPath),
+    recursive: true,
+  });
   // Surface 3: the git dir — flat HEAD/index/COMMIT_EDITMSG moves (commit,
   // checkout) so the incremental Pending diff empties and the entry auto-hides.
-  // Acquired eagerly here (see `watchGitDir`) so a commit right after boot is
-  // never missed.
-  const gitExists =
-    gitDir === undefined
-      ? false
-      : yield* fs.exists(gitDir).pipe(Effect.orElseSucceed(() => false));
   const gitChanges =
-    gitDir !== undefined && gitExists
-      ? yield* watchGitDir(gitDir)
-      : Stream.empty;
+    gitDir === undefined
+      ? Stream.empty
+      : yield* watchEager(gitDir, { recursive: false });
 
   // One shared debounce across all three surfaces: any burst coalesces into a
   // single coarse push.
@@ -201,8 +191,8 @@ const makeWatch = Effect.fn("makeWatch")(function* makeWatch(cwd: string) {
     concurrency: "unbounded",
   }).pipe(Stream.debounce(Duration.millis(DEBOUNCE_MS)));
 
-  // Drive the pipeline in a scoped fiber: the fs watches (and surface 3's
-  // `node:fs.watch`) tear down when the layer's scope ends.
+  // Drive the pipeline in a scoped fiber: the `node:fs.watch` handles tear down
+  // when the layer's scope ends.
   yield* Stream.runForEach(changes, () =>
     // The `undefined` value is the void payload the SSE route fans out; the
     // event carries no data, so an explicit `undefined` is required here.
