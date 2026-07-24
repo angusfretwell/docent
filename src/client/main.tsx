@@ -14,7 +14,6 @@ const router = createRouter({
   ),
   defaultPreload: "intent",
   routeTree,
-  scrollRestoration: true,
 });
 
 declare module "@tanstack/react-router" {
