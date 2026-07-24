@@ -1,6 +1,6 @@
 import { Skeleton } from "@client/components/ui/skeleton";
 import { FindingsPanel } from "@client/features/findings/panel";
-import { useIsMobile, useMediaQuery } from "@client/hooks/use-media-query";
+import { useMediaQuery } from "@client/hooks/use-media-query";
 import { findingsOpenAtom } from "@client/lib/preferences";
 import { useAtomValue } from "jotai/react";
 import { Suspense } from "react";

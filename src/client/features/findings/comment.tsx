@@ -1,5 +1,5 @@
 import type { Author } from "@shared/schemas/finding";
-import { differenceInMilliseconds, formatDistanceToNow } from "date-fns";
+import { differenceInMilliseconds } from "date-fns";
 import { Bot } from "lucide-react";
 import prettyMilliseconds from "pretty-ms";
 import Markdown from "react-markdown";

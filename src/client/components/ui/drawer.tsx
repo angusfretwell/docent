@@ -55,6 +55,9 @@ export function Drawer({
 export const DrawerPortal: typeof DrawerPrimitive.Portal =
   DrawerPrimitive.Portal;
 
+export const DrawerContent: typeof DrawerPrimitive.Content =
+  DrawerPrimitive.Content;
+
 export function DrawerTrigger(
   props: DrawerPrimitive.Trigger.Props
 ): React.ReactElement {
@@ -136,6 +139,40 @@ export function DrawerViewport({
       {...props}
     />
   );
+}
+
+export function DrawerBar({
+  className,
+  position: positionProp,
+  render,
+  ...props
+}: useRender.ComponentProps<"div"> & {
+  position?: DrawerPosition;
+}): React.ReactElement {
+  const { position: contextPosition } = useContext(DrawerContext);
+  const position = positionProp ?? contextPosition;
+  const horizontal = position === "left" || position === "right";
+  const defaultProps = {
+    "aria-hidden": true as const,
+    className: cn(
+      "absolute flex touch-none items-center justify-center p-3 before:rounded-full before:bg-input",
+      horizontal
+        ? "inset-y-0 before:h-12 before:w-1"
+        : "inset-x-0 before:h-1 before:w-12",
+      position === "top" && "bottom-0",
+      position === "bottom" && "top-0",
+      position === "left" && "right-0",
+      position === "right" && "left-0",
+      className
+    ),
+    "data-slot": "drawer-bar",
+  };
+
+  return useRender({
+    defaultTagName: "div",
+    props: mergeProps<"div">(defaultProps, props),
+    render,
+  });
 }
 
 // oxlint-disable-next-line complexity
@@ -350,43 +387,6 @@ export function DrawerPanel({
 
   return content;
 }
-
-export function DrawerBar({
-  className,
-  position: positionProp,
-  render,
-  ...props
-}: useRender.ComponentProps<"div"> & {
-  position?: DrawerPosition;
-}): React.ReactElement {
-  const { position: contextPosition } = useContext(DrawerContext);
-  const position = positionProp ?? contextPosition;
-  const horizontal = position === "left" || position === "right";
-  const defaultProps = {
-    "aria-hidden": true as const,
-    className: cn(
-      "absolute flex touch-none items-center justify-center p-3 before:rounded-full before:bg-input",
-      horizontal
-        ? "inset-y-0 before:h-12 before:w-1"
-        : "inset-x-0 before:h-1 before:w-12",
-      position === "top" && "bottom-0",
-      position === "bottom" && "top-0",
-      position === "left" && "right-0",
-      position === "right" && "left-0",
-      className
-    ),
-    "data-slot": "drawer-bar",
-  };
-
-  return useRender({
-    defaultTagName: "div",
-    props: mergeProps<"div">(defaultProps, props),
-    render,
-  });
-}
-
-export const DrawerContent: typeof DrawerPrimitive.Content =
-  DrawerPrimitive.Content;
 
 export function DrawerMenu({
   className,

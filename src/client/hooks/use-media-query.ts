@@ -17,7 +17,8 @@ type Breakpoint = keyof typeof BREAKPOINTS;
 type BreakpointQuery =
   | Breakpoint
   | `max-${Breakpoint}`
-  | `${Breakpoint}:max-${Breakpoint}`;
+  | `${Breakpoint}:max-${Breakpoint}`
+  | `(${string})`;
 
 function resolveMin(value: Breakpoint | number): string {
   const px = typeof value === "number" ? value : BREAKPOINTS[value];
@@ -29,32 +30,7 @@ function resolveMax(value: Breakpoint | number): string {
   return `(max-width: ${px - 1}px)`;
 }
 
-function parseQuery(
-  query: BreakpointQuery | MediaQueryInput | (string & {})
-): string {
-  if (typeof query !== "string") {
-    const parts: string[] = [];
-
-    if (query.min != null) {
-      parts.push(resolveMin(query.min));
-    }
-    if (query.max != null) {
-      parts.push(resolveMax(query.max));
-    }
-    if (query.pointer === "coarse") {
-      parts.push("(pointer: coarse)");
-    }
-    if (query.pointer === "fine") {
-      parts.push("(pointer: fine)");
-    }
-
-    if (parts.length === 0) {
-      return "(min-width: 0px)";
-    }
-
-    return parts.join(" and ");
-  }
-
+function parseQuery(query: BreakpointQuery): string {
   if (query.startsWith("(")) {
     return query;
   }
@@ -80,22 +56,15 @@ function getServerSnapshot(): boolean {
   return false;
 }
 
-export interface MediaQueryInput {
-  min?: Breakpoint | number;
-  max?: Breakpoint | number;
-  /** Touch-like input (finger). Use "fine" for mouse/trackpad. */
-  pointer?: "coarse" | "fine";
-}
-
-export function useMediaQuery(
-  query: BreakpointQuery | MediaQueryInput | (string & {})
-): boolean {
+export function useMediaQuery(query: BreakpointQuery): boolean {
   const mediaQuery = parseQuery(query);
 
   const subscribe = useCallback(
     (callback: () => void) => {
       if (typeof window === "undefined") {
-        return () => {};
+        return () => {
+          // no-op
+        };
       }
 
       const mql = window.matchMedia(mediaQuery);
