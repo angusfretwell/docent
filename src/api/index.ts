@@ -3,7 +3,7 @@ import { Layer } from "effect";
 import { HttpRouter } from "effect/unstable/http";
 
 import { layer as watchLayer } from "../serve/watch";
-import { blobRoute, blobSizeRoute } from "./blob";
+import { blobRoute } from "./blob";
 import { captureRoute } from "./capture";
 import { diffRoute } from "./diff";
 import { eventsRoute } from "./events";
@@ -12,7 +12,6 @@ import { healthRoute } from "./health";
 import { pendingRoute } from "./pending";
 import { reviewRoute } from "./review";
 import { viewedRoute } from "./viewed";
-import { worktreeRoute } from "./worktree";
 
 export interface ServeOptions {
   /** Any path inside the repo; the git root is resolved from it. */
@@ -22,11 +21,9 @@ export interface ServeOptions {
 export function routes(options: ServeOptions) {
   return Layer.mergeAll(
     diffRoute(options.cwd),
-    blobSizeRoute(options.cwd),
     blobRoute(options.cwd),
     captureRoute(options.cwd),
     pendingRoute(options.cwd),
-    worktreeRoute(options.cwd),
     healthRoute(options.cwd),
     reviewRoute(options.cwd),
     viewedRoute(options.cwd),

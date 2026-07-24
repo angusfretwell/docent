@@ -1,9 +1,7 @@
 import type { PendingRange } from "@shared/enums/pending-range";
 import { Pending } from "@shared/schemas/pending";
-import { Effect, Schema } from "effect";
-import { FileSystem } from "effect/FileSystem";
+import { Effect } from "effect";
 
-import { isContained, safeJoin } from "../safe-join";
 import {
   DIFF,
   FIND_RENAMES,
@@ -17,15 +15,6 @@ import { resolveRepo } from "./resolve";
 
 // A `git status --porcelain -z` untracked entry: `??` then a space.
 const UNTRACKED = "?? ";
-
-export class InvalidWorktreePath extends Schema.TaggedErrorClass<InvalidWorktreePath>()(
-  "InvalidWorktreePath",
-  { path: Schema.String }
-) {
-  override get message(): string {
-    return `not a valid working-tree path: ${this.path}`;
-  }
-}
 
 function untrackedPaths(status: string): string[] {
   return status
@@ -99,31 +88,5 @@ export const resolvePending = Effect.fn("resolvePending")(
       range,
       root,
     });
-  }
-);
-
-/**
- * Read a working-tree file's live bytes by its repo-relative path. Path-safety
- * is enforced against the resolved repo root: absolute paths and any `..` escape
- * are rejected before a byte is read.
- */
-export const resolveWorktreeFile = Effect.fn("resolveWorktreeFile")(
-  function* resolveWorktreeFile(cwd: string, relPath: string) {
-    const fs = yield* FileSystem;
-    const { root } = yield* resolveRepo(cwd);
-
-    const resolved = safeJoin(root, relPath);
-    if (resolved === null) {
-      return yield* Effect.fail(InvalidWorktreePath.make({ path: relPath }));
-    }
-    // Follow symlinks before trusting containment: a symlink inside the repo can
-    // point outside it, which the lexical check above cannot catch.
-    const real = yield* fs
-      .realPath(resolved)
-      .pipe(Effect.orElseSucceed(() => resolved));
-    if (!isContained(root, real)) {
-      return yield* Effect.fail(InvalidWorktreePath.make({ path: relPath }));
-    }
-    return yield* fs.readFile(resolved);
   }
 );

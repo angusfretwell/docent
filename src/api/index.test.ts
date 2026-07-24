@@ -180,26 +180,6 @@ describe("serve routes", () => {
     expect(res.status).toBe(400);
   });
 
-  test("GET /api/blob/:sha/size returns the blob byte size as JSON, cached forever", async () => {
-    const repo = featureRepo();
-    const client = serve(repo);
-    const sha = git(repo, "rev-parse", "HEAD:feature.txt");
-
-    const res = await client.fetch(`/api/blob/${sha}/size`);
-
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ size: "new file\n".length });
-    expect(res.headers.get("cache-control")).toMatch(/immutable/);
-  });
-
-  test("GET /api/blob/:sha/size 400s a malformed object id", async () => {
-    const client = serve(featureRepo());
-
-    const res = await client.fetch("/api/blob/not-a-sha/size");
-
-    expect(res.status).toBe(400);
-  });
-
   test("GET /api/capture serves a capture blob as application/json, cached forever", async () => {
     const repo = featureRepo();
     const client = serve(repo);
@@ -295,34 +275,6 @@ describe("serve routes", () => {
     expect(body.range).toBe("cumulative");
     expect(body.patch).toContain("feature.txt");
     expect(body.patch).toContain("working.txt");
-  });
-
-  test("GET /api/worktree reads live working-tree bytes, explicitly uncached", async () => {
-    const repo = featureRepo();
-    const client = serve(repo);
-    writeFileSync(path.join(repo, "feature.txt"), "edited live on disk\n");
-
-    const res = await client.fetch("/api/worktree?path=feature.txt");
-
-    expect(res.status).toBe(200);
-    expect(await res.text()).toBe("edited live on disk\n");
-    expect(res.headers.get("cache-control")).toMatch(/no-store/);
-  });
-
-  test("GET /api/worktree 400s a path that escapes the repo root", async () => {
-    const client = serve(featureRepo());
-
-    const res = await client.fetch("/api/worktree?path=../../../etc/passwd");
-
-    expect(res.status).toBe(400);
-  });
-
-  test("GET /api/worktree 404s a path that does not exist", async () => {
-    const client = serve(featureRepo());
-
-    const res = await client.fetch("/api/worktree?path=nope.txt");
-
-    expect(res.status).toBe(404);
   });
 
   test("GET /api/health returns the repo root for liveness detection", async () => {
