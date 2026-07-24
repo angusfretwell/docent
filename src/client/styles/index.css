@@ -216,7 +216,7 @@
   }
 
   body {
-    @apply bg-sidebar text-foreground relative;
+    @apply relative bg-sidebar text-foreground;
   }
 
   code,

@@ -8,7 +8,7 @@ import { routeTree } from "./routeTree.gen";
 
 const router = createRouter({
   defaultPendingComponent: () => (
-    <div className="flex items-center justify-center h-full">
+    <div className="flex h-full items-center justify-center">
       <Spinner className="size-4" />
     </div>
   ),

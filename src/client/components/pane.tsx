@@ -12,12 +12,12 @@ export function Pane({
   unstyled?: boolean;
 }) {
   if (unstyled) {
-    return <div className="flex flex-col h-full overflow-clip" {...props} />;
+    return <div className="flex h-full flex-col overflow-clip" {...props} />;
   }
 
   return (
     <Surface
-      className={cn("flex flex-col h-full overflow-clip", className)}
+      className={cn("flex h-full flex-col overflow-clip", className)}
       {...props}
     />
   );

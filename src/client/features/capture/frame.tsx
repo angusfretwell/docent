@@ -45,14 +45,14 @@ function CaptureCaption({
         </Button>
       </Group>
 
-      <span className="shrink-0 flex items-center gap-1.5 text-sm tabular-nums">
+      <span className="flex shrink-0 items-center gap-1.5 text-sm tabular-nums">
         <span>{label}</span>
         {capture.kind === "recording" && duration > 0
           ? ` · ${prettyMilliseconds(duration, { secondsDecimalDigits: 1 })}`
           : ""}
       </span>
 
-      <Badge variant="secondary" className="font-mono ml-auto">
+      <Badge variant="secondary" className="ml-auto font-mono">
         <Globe />
         {capture.route}
       </Badge>
@@ -69,7 +69,7 @@ export function CaptureFrame({
     <Pane>
       <CaptureCaption capture={capture} {...caption} />
 
-      <div className="bg-size-[16px_16px] bg-[radial-gradient(--alpha(var(--color-foreground)/16%)_1px,transparent_1px)] relative min-h-0 flex-1">
+      <div className="relative min-h-0 flex-1 bg-[radial-gradient(--alpha(var(--color-foreground)/16%)_1px,transparent_1px)] bg-size-[16px_16px]">
         {children}
       </div>
     </Pane>

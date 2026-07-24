@@ -99,7 +99,7 @@ export function ProductWalkthroughCapturePanel({
         <div
           className={cn(
             "absolute inset-0 flex flex-col transition-opacity duration-200 motion-reduce:transition-none",
-            fading ? "z-10 pointer-events-none opacity-0" : "z-0 opacity-100"
+            fading ? "pointer-events-none z-10 opacity-0" : "z-0 opacity-100"
           )}
           key={key}
         >

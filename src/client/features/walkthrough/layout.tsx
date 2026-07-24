@@ -53,15 +53,15 @@ export function WalkthroughLayout({
 
   if (isMobile) {
     return (
-      <div className="flex flex-col h-[calc(100svh-(--spacing(12.5)))]">
+      <div className="flex h-[calc(100svh-(--spacing(12.5)))] flex-col">
         {/* Both panes stay mounted with layout geometry: the active-target
             observer measures the prose container, so hiding it with `display`
             would zero its anchors and scramble the reading. */}
-        <div className="relative flex-1 min-h-0">
+        <div className="relative min-h-0 flex-1">
           <div
             className={cn(
               "absolute inset-0",
-              pane !== "prose" && "invisible pointer-events-none"
+              pane !== "prose" && "pointer-events-none invisible"
             )}
           >
             {prose}
@@ -70,7 +70,7 @@ export function WalkthroughLayout({
           <div
             className={cn(
               "absolute inset-0",
-              pane !== "target" && "invisible pointer-events-none"
+              pane !== "target" && "pointer-events-none invisible"
             )}
           >
             {target}
@@ -103,7 +103,7 @@ export function WalkthroughLayout({
       orientation="horizontal"
       defaultLayout={defaultLayout}
       onLayoutChanged={onLayoutChanged}
-      className="overflow-visible! h-[calc(100svh-(--spacing(12.5)))]!"
+      className="h-[calc(100svh-(--spacing(12.5)))]! overflow-visible!"
     >
       <ResizablePanel
         defaultSize="37em"

@@ -14,7 +14,7 @@ export function FindingThread({ finding }: { finding: FoldedFinding }) {
       />
 
       {finding.replies.length > 0 && (
-        <div className="grid gap-4 ml-1 pl-3 border-l">
+        <div className="ml-1 grid gap-4 border-l pl-3">
           {finding.replies.map((reply) => (
             <Fragment key={`${reply.createdAt}:${reply.author.id}`}>
               <Comment

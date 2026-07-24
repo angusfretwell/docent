@@ -4,7 +4,7 @@ import type { VariantProps } from "class-variance-authority";
 import type React from "react";
 
 const surfaceVariants = cva(
-  "relative flex flex-col border bg-card not-dark:bg-clip-padding text-card-foreground shadow-xs/5 before:pointer-events-none before:absolute before:inset-0 before:shadow-[0_1px_--theme(--color-black/4%)] dark:before:shadow-[0_-1px_--theme(--color-white/6%)]",
+  "relative flex flex-col border bg-card text-card-foreground shadow-xs/5 not-dark:bg-clip-padding before:pointer-events-none before:absolute before:inset-0 before:shadow-[0_1px_--theme(--color-black/4%)] dark:before:shadow-[0_-1px_--theme(--color-white/6%)]",
   {
     defaultVariants: {
       radius: "2xl",

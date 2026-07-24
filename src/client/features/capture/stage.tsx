@@ -36,7 +36,7 @@ export function CaptureStage({
         aria-label={`${zoomed ? "Fit" : "Zoom"} ${kind}`}
         aria-pressed={zoomed}
         className={cn(
-          "absolute inset-0 overflow-hidden touch-none select-none",
+          "absolute inset-0 touch-none overflow-hidden select-none",
           dragging && "cursor-move"
         )}
         onKeyDown={handleKeyDown}

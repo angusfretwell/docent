@@ -8,7 +8,7 @@ import { Separator } from "./ui/separator";
 
 function Logo() {
   return (
-    <span className="shrink-0 size-7 bg-yellow-400 rounded-md font-heading font-bold flex items-center justify-center text-black">
+    <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-yellow-400 font-heading font-bold text-black">
       D.
     </span>
   );
@@ -16,11 +16,11 @@ function Logo() {
 
 export function Header() {
   return (
-    <div className="shrink-0 px-1.5 flex items-center gap-1.5 h-11">
+    <div className="flex h-11 shrink-0 items-center gap-1.5 px-1.5">
       <Logo />
       <Navigation />
-      <div className="flex items-center gap-1.5 ml-auto min-w-0">
-        <Suspense fallback={<Skeleton className="w-60 h-5" />}>
+      <div className="ml-auto flex min-w-0 items-center gap-1.5">
+        <Suspense fallback={<Skeleton className="h-5 w-60" />}>
           <ReviewMeta />
         </Suspense>
         <Separator orientation="vertical" className="ml-1.5 h-4" />

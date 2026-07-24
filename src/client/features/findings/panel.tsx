@@ -19,7 +19,7 @@ export function FindingsPanel({ popover }: { popover?: boolean }) {
       ) : (
         <ScrollArea
           className={cn(
-            "*:data-[slot=scroll-area-viewport]:isolate ",
+            "*:data-[slot=scroll-area-viewport]:isolate",
             popover &&
               "*:data-[slot=scroll-area-viewport]:max-h-[calc(var(--available-height)-(--spacing(11)))]"
           )}

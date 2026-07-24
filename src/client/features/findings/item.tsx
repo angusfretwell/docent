@@ -57,10 +57,10 @@ export function FindingsItem({
     <Collapsible open={open} onOpenChange={setOpen} className="-mt-px">
       <CollapsibleTrigger
         className={cn(
-          "sticky -top-px w-full gap-1 flex cursor-pointer px-2 h-10 items-center group hover:bg-sidebar z-10",
-          "before:absolute before:top-0 before:left-0 before:w-full before:h-px before:content-[''] before:bg-border",
+          "group sticky -top-px z-10 flex h-10 w-full cursor-pointer items-center gap-1 px-2 hover:bg-sidebar",
+          "before:absolute before:top-0 before:left-0 before:h-px before:w-full before:bg-border before:content-['']",
           open &&
-            "after:absolute after:-bottom-px after:left-0 after:w-full after:h-px after:content-[''] after:bg-border",
+            "after:absolute after:-bottom-px after:left-0 after:h-px after:w-full after:bg-border after:content-['']",
           open && "bg-sidebar"
         )}
       >
@@ -96,7 +96,7 @@ export function FindingsItem({
           />
         )}
 
-        <div className="flex items-center gap-1 ml-auto">
+        <div className="ml-auto flex items-center gap-1">
           {finding.status !== "open" && (
             <Badge variant={STATUS_VARIANT[finding.status]} size="sm">
               {STATUS_LABEL[finding.status]}

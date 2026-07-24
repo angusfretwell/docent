@@ -12,7 +12,7 @@ export function FindingsHeader() {
 
   return (
     <>
-      <div className="px-2 h-11 shrink-0 flex items-center border-b gap-1.5">
+      <div className="flex h-11 shrink-0 items-center gap-1.5 border-b px-2">
         <FindingsFilter />
 
         <Button
@@ -26,7 +26,7 @@ export function FindingsHeader() {
       </div>
 
       {commentOpen && (
-        <div className="p-2 border-b">
+        <div className="border-b p-2">
           <Composer
             busy={write.isPending}
             cancelOnBlur={false}

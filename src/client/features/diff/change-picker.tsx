@@ -44,7 +44,7 @@ export function ChangeRangePicker() {
       <MenuTrigger
         render={
           <Button
-            className="font-normal text-[13px]!"
+            className="text-[13px]! font-normal"
             size="sm"
             variant="ghost"
           />

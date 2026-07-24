@@ -70,7 +70,7 @@ export function FindingsToggle() {
             </Button>
           }
         />
-        <PopoverPopup className="*:data-[slot=popover-viewport]:p-0 w-[350px] *:data-[slot=popover-viewport]:overflow-initial overflow-clip">
+        <PopoverPopup className="*:data-[slot=popover-viewport]:overflow-initial w-[350px] overflow-clip *:data-[slot=popover-viewport]:p-0">
           <FindingsPanel popover />
         </PopoverPopup>
       </Popover>

@@ -54,7 +54,7 @@ export function WalkthroughCallouts({
   }
 
   return (
-    <ul className="list-none ps-[0.25em] small text-[0.875em]">
+    <ul className="small list-none ps-[0.25em] text-[0.875em]">
       {callouts.map((callout) => (
         <CalloutItem callout={callout} key={callout.label} target={target} />
       ))}

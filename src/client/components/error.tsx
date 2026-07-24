@@ -21,7 +21,7 @@ export function ErrorComponent({ error }: ErrorComponentProps) {
   }, [queryErrorResetBoundary]);
 
   return (
-    <Empty className="h-full bg-muted/50 rounded-2xl">
+    <Empty className="h-full rounded-2xl bg-muted/50">
       <EmptyHeader>
         <EmptyTitle>Something went wrong</EmptyTitle>
         <EmptyDescription>{error.message}</EmptyDescription>

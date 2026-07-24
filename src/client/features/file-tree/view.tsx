@@ -99,7 +99,7 @@ export function FileTreeView({
   } as React.CSSProperties;
 
   return (
-    <div className="grow h-full flex flex-col" ref={containerRef}>
+    <div className="flex h-full grow flex-col" ref={containerRef}>
       <div className="flex items-center gap-1 p-2">
         <FileTreeSearch model={model} />
         <FileTreeFilter />

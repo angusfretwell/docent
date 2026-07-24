@@ -24,14 +24,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
   });
 
   return (
-    <div className="h-svh flex flex-col">
+    <div className="flex h-svh flex-col">
       <Header />
 
       <ResizablePanelGroup
         orientation="horizontal"
         defaultLayout={defaultLayout}
         onLayoutChanged={onLayoutChanged}
-        className="p-1.5 pt-0 overflow-visible! h-[calc(100svh-(--spacing(11)))]!"
+        className="h-[calc(100svh-(--spacing(11)))]! overflow-visible! p-1.5 pt-0"
       >
         <ResizablePanel minSize="50%" id="main" className="overflow-visible!">
           {children}
@@ -50,7 +50,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <Suspense
                 fallback={
                   <Pane>
-                    <Skeleton className="w-full h-full rounded-none" />
+                    <Skeleton className="h-full w-full rounded-none" />
                   </Pane>
                 }
               >

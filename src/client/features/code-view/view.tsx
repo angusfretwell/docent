@@ -137,7 +137,7 @@ export function AnnotatedCodeView({
     <BaseCodeView
       ref={ref}
       items={items}
-      className="overscroll-contain overflow-auto diffs "
+      className="diffs overflow-auto overscroll-contain"
       options={options}
       renderAnnotation={renderAnnotation}
       renderHeaderMetadata={renderHeaderMetadata}

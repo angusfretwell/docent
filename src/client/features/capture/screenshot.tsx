@@ -27,7 +27,7 @@ function RegionOverlay({
     <button
       aria-label={`Frame ${pin.label}: ${pin.body}`}
       className={cn(
-        "absolute block rounded-xs outline-2 outline-offset-2 cursor-pointer",
+        "absolute block cursor-pointer rounded-xs outline-2 outline-offset-2",
         active ? "rounded-bl-none outline-primary" : "outline-primary/50"
       )}
       onClick={onClick}
@@ -43,7 +43,7 @@ function RegionOverlay({
     >
       <PinChip
         className={cn(
-          "absolute -bottom-4.5 -left-1 rounded-tl-none ",
+          "absolute -bottom-4.5 -left-1 rounded-tl-none",
           active ? "opacity-100" : "opacity-0"
         )}
         label={pin.label}

@@ -22,9 +22,9 @@ export function ReviewMeta() {
   );
 
   return (
-    <div className="flex items-center gap-1 min-w-0 shrink">
+    <div className="flex min-w-0 shrink items-center gap-1">
       {snapshot.review.title && (
-        <span className="text-[13px] truncate min-w-0 max-sm:sr-only">
+        <span className="min-w-0 truncate text-[13px] max-sm:sr-only">
           {snapshot.review.title}
         </span>
       )}
@@ -60,14 +60,14 @@ export function ReviewMeta() {
 
       <div className="flex items-center gap-2">
         <span
-          className="text-[13px] font-mono tabular-nums"
+          className="font-mono text-[13px] tabular-nums"
           style={{ color: deletedColor }}
         >
           -{deletions}
         </span>
 
         <span
-          className="text-[13px] font-mono tabular-nums"
+          className="font-mono text-[13px] tabular-nums"
           style={{ color: addedColor }}
         >
           +{additions}

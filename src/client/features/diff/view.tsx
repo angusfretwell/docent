@@ -139,7 +139,7 @@ export function DiffView() {
       orientation="horizontal"
       defaultLayout={defaultLayout}
       onLayoutChanged={onLayoutChanged}
-      className="overflow-visible! h-[calc(100svh-(--spacing(12.5)))]!"
+      className="h-[calc(100svh-(--spacing(12.5)))]! overflow-visible!"
     >
       {diffTreeOpen && !isMobile && (
         <>
@@ -160,14 +160,14 @@ export function DiffView() {
 
       <ResizablePanel minSize={300} id="content" className="overflow-visible!">
         <Pane>
-          <div className="px-2 shrink-0 h-11 flex items-center border-b gap-1.5 @container">
+          <div className="@container flex h-11 shrink-0 items-center gap-1.5 border-b px-2">
             {isMobile ? (
               <Drawer open={treeDrawerOpen} onOpenChange={setTreeDrawerOpen}>
                 <DrawerTrigger render={<Button {...treeToggleButtonProps} />}>
                   <ListTree />
                 </DrawerTrigger>
                 <DrawerPopup showBar>
-                  <div className="h-svh py-2 relative">
+                  <div className="relative h-svh py-2">
                     <DrawerDismissProvider
                       dismiss={() => setTreeDrawerOpen(false)}
                     >
@@ -188,8 +188,8 @@ export function DiffView() {
             )}
             <Separator orientation="vertical" className="h-4" />
             <ChangeRangePicker />
-            <div className="flex items-center gap-2 ml-auto">
-              <span className="text-[13px] text-muted-foreground truncate tabular-nums">
+            <div className="ml-auto flex items-center gap-2">
+              <span className="truncate text-[13px] text-muted-foreground tabular-nums">
                 {viewedCount} / {files.length}{" "}
                 <span className="@max-xs:sr-only">viewed</span>
               </span>
