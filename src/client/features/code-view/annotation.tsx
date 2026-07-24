@@ -2,13 +2,13 @@ import { Surface } from "@client/components/surface";
 import { Composer } from "@client/features/comments/composer";
 import type { CommentCompose } from "@client/features/comments/hooks/use-comment-compose";
 import { CommentThread } from "@client/features/comments/thread";
-import type { Annotation } from "@client/lib/diff-annotations";
+import type { LineDecoration } from "@client/lib/diff-annotations";
 
 export function CodeViewAnnotation({
   annotation,
   compose,
 }: {
-  annotation: { metadata: Annotation };
+  annotation: { metadata: LineDecoration };
   compose: CommentCompose;
 }) {
   if (annotation.metadata.kind === "comment") {

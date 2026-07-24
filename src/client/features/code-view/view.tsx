@@ -1,4 +1,4 @@
-import type { Annotation } from "@client/lib/diff-annotations";
+import type { LineDecoration } from "@client/lib/diff-annotations";
 import { diffLayoutAtom } from "@client/lib/preferences";
 import type {
   CodeViewDiffItem,
@@ -50,21 +50,23 @@ const DIFFS_CSS = `
 `;
 
 interface AnnotatedCodeViewProps {
-  items: CodeViewItem<Annotation>[];
+  items: CodeViewItem<LineDecoration>[];
   onGutterUtilityClick?: (
     range: SelectedLineRange,
     context: {
-      item: CodeViewFileItem<Annotation> | CodeViewDiffItem<Annotation>;
+      item: CodeViewFileItem<LineDecoration> | CodeViewDiffItem<LineDecoration>;
     }
   ) => void;
   enableGutterUtility?: boolean;
   enableLineSelection?: boolean;
   onToggleItemCollapsed?: (itemId: string) => void;
-  ref: RefObject<CodeViewHandle<Annotation> | null>;
+  ref: RefObject<CodeViewHandle<LineDecoration> | null>;
   renderAnnotation?: (
-    annotation: LineAnnotation<Annotation> | DiffLineAnnotation<Annotation>
+    annotation:
+      | LineAnnotation<LineDecoration>
+      | DiffLineAnnotation<LineDecoration>
   ) => ReactNode;
-  renderHeaderMetadata?: (item: CodeViewItem<Annotation>) => ReactNode;
+  renderHeaderMetadata?: (item: CodeViewItem<LineDecoration>) => ReactNode;
 }
 
 export function AnnotatedCodeView({
@@ -79,7 +81,7 @@ export function AnnotatedCodeView({
 }: AnnotatedCodeViewProps) {
   const diffLayout = useAtomValue(diffLayoutAtom);
 
-  const options = useMemo<CodeViewOptions<Annotation>>(
+  const options = useMemo<CodeViewOptions<LineDecoration>>(
     () => ({
       diffStyle: diffLayout,
       disableVirtualizationBuffers: true,

@@ -10,7 +10,7 @@ import type { Anchor } from "@shared/schemas/comment";
 
 import type { DriftResult } from "./drift";
 
-export type Annotation =
+export type LineDecoration =
   | { drift?: DriftState; comment: FoldedComment; kind: "comment" }
   | { kind: "composer" };
 
@@ -60,8 +60,8 @@ function commentAnnotations(
   comments: readonly FoldedComment[],
   fileDiff: FileDiffMetadata,
   driftFor: ((id: string) => DriftResult | undefined) | undefined
-): DiffLineAnnotation<Annotation>[] {
-  return comments.flatMap((comment): DiffLineAnnotation<Annotation>[] => {
+): DiffLineAnnotation<LineDecoration>[] {
+  return comments.flatMap((comment): DiffLineAnnotation<LineDecoration>[] => {
     const { anchor } = comment;
     if (
       anchor === undefined ||
@@ -99,7 +99,7 @@ export function itemAnnotations(params: {
   fileDiff: FileDiffMetadata;
   comments: readonly FoldedComment[];
   itemId: string;
-}): DiffLineAnnotation<Annotation>[] {
+}): DiffLineAnnotation<LineDecoration>[] {
   const annotations = commentAnnotations(
     params.comments,
     params.fileDiff,
@@ -119,7 +119,7 @@ export function itemAnnotations(params: {
 
 // Folded into the item's CodeView `version` so it re-renders exactly when its annotations change.
 export function annotationsKey(
-  annotations: readonly DiffLineAnnotation<Annotation>[]
+  annotations: readonly DiffLineAnnotation<LineDecoration>[]
 ): string {
   return annotations
     .map((annotation) =>

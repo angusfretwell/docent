@@ -1,4 +1,4 @@
-import type { Annotation, Composing } from "@client/lib/diff-annotations";
+import type { LineDecoration, Composing } from "@client/lib/diff-annotations";
 import { annotationSide } from "@client/lib/diff-annotations";
 import type { CodeViewLineSelection, FileDiffMetadata } from "@pierre/diffs";
 import type { CodeViewHandle } from "@pierre/diffs/react";
@@ -30,7 +30,7 @@ export interface CommentCompose {
 }
 
 export function useCommentCompose(params: {
-  codeRef: RefObject<CodeViewHandle<Annotation> | null>;
+  codeRef: RefObject<CodeViewHandle<LineDecoration> | null>;
   fileDiffById: (id: string) => FileDiffMetadata | undefined;
 }): CommentCompose {
   const { codeRef, fileDiffById } = params;

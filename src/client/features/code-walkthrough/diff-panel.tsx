@@ -7,7 +7,7 @@ import { AnnotatedCodeView } from "@client/features/code-view/view";
 import { useCommentCompose } from "@client/features/comments/hooks/use-comment-compose";
 import { useComments } from "@client/features/comments/hooks/use-comments";
 import type { DiffFile } from "@client/lib/diff";
-import type { Annotation } from "@client/lib/diff-annotations";
+import type { LineDecoration } from "@client/lib/diff-annotations";
 import type { DriftResult } from "@client/lib/drift";
 import type { CodeViewHandle } from "@pierre/diffs/react";
 import type { WalkthroughRange } from "@shared/schemas/walkthrough";
@@ -25,7 +25,7 @@ export function CodeWalkthroughDiffPanel({
   files: DiffFile[];
   reasserted: number;
 }) {
-  const ref = useRef<CodeViewHandle<Annotation>>(null);
+  const ref = useRef<CodeViewHandle<LineDecoration>>(null);
 
   const { visible } = useComments();
   const comments = visible.map((entry) => entry.comment);

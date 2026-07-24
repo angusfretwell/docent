@@ -7,7 +7,7 @@ import { useCommentCompose } from "@client/features/comments/hooks/use-comment-c
 import { useComments } from "@client/features/comments/hooks/use-comments";
 import type { Viewed } from "@client/features/diff/hooks/use-viewed";
 import type { DiffFile } from "@client/lib/diff";
-import type { Annotation } from "@client/lib/diff-annotations";
+import type { LineDecoration } from "@client/lib/diff-annotations";
 import { diffTargetAtom } from "@client/lib/diff-target";
 import type { DriftResult } from "@client/lib/drift";
 import type { FileDiffMetadata } from "@pierre/diffs";
@@ -30,7 +30,7 @@ export function DiffCodeView({
   files: DiffFile[];
   viewed: Viewed;
 }) {
-  const ref = useRef<CodeViewHandle<Annotation>>(null);
+  const ref = useRef<CodeViewHandle<LineDecoration>>(null);
 
   const { visible } = useComments();
   const comments = visible.map((entry) => entry.comment);
