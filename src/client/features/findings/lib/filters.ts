@@ -1,0 +1,97 @@
+/**
+ * The Findings panel's filter state and matching rule. Persisted rather than
+ * ephemeral (unlike the Diff's file filters) because it subsumes the standing
+ * show-resolved preference it replaced: a reader who has put resolved threads
+ * away expects them to stay away across a reload.
+ *
+ * Semantics for both groups: none checked = show all, OR within the group, and
+ * the two groups AND together.
+ */
+
+import type { FindingStatus } from "@shared/enums/finding-status";
+import { WALKTHROUGH_KIND_LABEL } from "@shared/enums/walkthrough-kind";
+import { atomWithStorage } from "jotai/utils";
+import { toggle } from "radashi";
+
+/** Where a Finding is read — the surface its anchor puts it on. */
+export const FINDING_SURFACES = ["diff", "code", "product"] as const;
+
+export type FindingSurface = (typeof FINDING_SURFACES)[number];
+
+// The `code`/`product` halves come from the shared walkthrough-kind labels; the
+// `diff` surface is a client-only concept the pillars don't share.
+export const SURFACE_LABEL: Record<FindingSurface, string> = {
+  diff: "Diff",
+  ...WALKTHROUGH_KIND_LABEL,
+};
+
+export interface FindingFilters {
+  /** Statuses to show; empty shows every status. */
+  statuses: readonly FindingStatus[];
+  /** Surfaces to show; empty shows every surface. */
+  surfaces: readonly FindingSurface[];
+}
+
+/**
+ * Resolved threads stay out of the way until they are asked for, which is how
+ * the panel has always opened.
+ */
+export const DEFAULT_FILTERS: FindingFilters = {
+  statuses: ["open", "actioned"],
+  surfaces: [],
+};
+
+export const findingFiltersAtom = atomWithStorage<FindingFilters>(
+  "findingFilters",
+  DEFAULT_FILTERS
+);
+
+export function toggleStatus(
+  filters: FindingFilters,
+  status: FindingStatus
+): FindingFilters {
+  return { ...filters, statuses: toggle(filters.statuses, status) };
+}
+
+export function toggleSurface(
+  filters: FindingFilters,
+  surface: FindingSurface
+): FindingFilters {
+  return { ...filters, surfaces: toggle(filters.surfaces, surface) };
+}
+
+/** Whether the panel is showing what it shows when nobody has touched it. */
+export function isDefaultFilters(filters: FindingFilters): boolean {
+  return (
+    filters.surfaces.length === 0 &&
+    filters.statuses.length === DEFAULT_FILTERS.statuses.length &&
+    DEFAULT_FILTERS.statuses.every((status) =>
+      filters.statuses.includes(status)
+    )
+  );
+}
+
+/**
+ * A Finding with no surface — a detached anchor, or one on a kind of anchor no
+ * pillar renders — is not on any of the surfaces a filter can name, so naming
+ * any of them excludes it.
+ */
+export function matchesFindingFilters(
+  filters: FindingFilters,
+  finding: { status: FindingStatus; surface?: FindingSurface }
+): boolean {
+  if (
+    filters.statuses.length > 0 &&
+    !filters.statuses.includes(finding.status)
+  ) {
+    return false;
+  }
+
+  if (filters.surfaces.length === 0) {
+    return true;
+  }
+
+  return (
+    finding.surface !== undefined && filters.surfaces.includes(finding.surface)
+  );
+}

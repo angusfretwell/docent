@@ -1,5 +1,5 @@
-import { DiffView } from "@client/components/diff/view";
 import { ErrorComponent } from "@client/components/error";
+import { DiffView } from "@client/features/diff/view";
 import { queryClient } from "@client/lib/query-client";
 import { diffQueryOptions } from "@client/queries/diff";
 import { pendingRanges } from "@shared/enums/pending-range";

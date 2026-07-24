@@ -4,18 +4,8 @@
   "groupings": [
     {
       "title": "Review loop",
-      "description": "The skills you invoke in your own agent session to review, fix, and reconcile a branch under review.",
-      "skills": ["docent", "to-docent", "from-docent"]
-    },
-    {
-      "title": "Walkthrough authoring",
-      "description": "Reference skills the review loop composes to author and capture code and product walkthroughs, plus the guide to the docent CLI.",
-      "skills": [
-        "author-code-walkthrough",
-        "author-product-walkthrough",
-        "capture-product-walkthrough",
-        "docent-cli"
-      ]
+      "description": "The skill you invoke in your own agent session to review, fix, and reconcile a branch under review — walkthrough reconciliation (`/docent`), pulling Findings (`/docent --read`), and recording outcomes (`/docent --write`).",
+      "skills": ["docent"]
     }
   ]
 }

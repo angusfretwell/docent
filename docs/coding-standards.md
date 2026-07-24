@@ -22,13 +22,6 @@
 
 - Prefer inline prop types on the component signature over a standalone `Props` interface: `function Foo({ name }: { name: string })`. Only extract a named interface when the props are reused or the inline shape becomes unwieldy.
 
-## Comments
-
-- **Default to none:** let names, types, and structure carry the meaning. Comment only when something stays non-obvious after the code is as clear as you can make it — and try renaming or extracting first.
-- **Comment the why, not the what.** A comment earns its place when it explains something the code can't: a workaround for an external quirk, a domain rule the types don't show, a non-obvious security/performance constraint, or a deliberate trade-off that looks wrong without context.
-- **Don't restate or duplicate.** Don't restate the code. Don't re-explain what an ADR or doc already records — reference it (e.g. `@see docs/adr/0007-...`) so it stays in sync. Avoid references that go stale: PR numbers, issue IDs, "new" or "temporary."
-- **Format comments as JSDoc.** Use @param/@returns/@throws/@example/@deprecated where they add information beyond the signature; skip tags that just echo the types. Reference an ADR or doc with @see <path|url>, never prose.
-
 ## Libraries
 
 - Reach for an installed utility before hand-rolling one. Don't reimplement array, object, string, or date logic by hand when a helper already exists.
