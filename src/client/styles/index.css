@@ -90,12 +90,6 @@
 
 :root {
   color-scheme: light;
-
-  /* `<meta name="theme-color">` can't reference a custom property, so the
-     literal is mirrored here beside the theme it belongs to and read back by
-     the theme provider. Track `--sidebar`, which paints the body. */
-  --theme-color: #fafafa;
-
   --destructive-foreground: var(--color-red-700);
   --info: var(--color-blue-500);
   --info-foreground: var(--color-blue-700);
@@ -150,8 +144,6 @@
 
 .dark {
   color-scheme: dark;
-  --theme-color: #111111;
-
   --destructive-foreground: var(--color-red-400);
   --info: var(--color-blue-500);
   --info-foreground: var(--color-blue-400);

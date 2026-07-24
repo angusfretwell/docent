@@ -53,25 +53,6 @@ function getNextTheme(currentTheme: Theme): Theme {
   return getSystemTheme() === "dark" ? "light" : "dark";
 }
 
-function applyThemeColorMeta() {
-  const meta = document.querySelector<HTMLMetaElement>(
-    'meta[name="theme-color"]'
-  );
-
-  if (meta === null) {
-    return;
-  }
-
-  const themeColor = window
-    .getComputedStyle(document.documentElement)
-    .getPropertyValue("--theme-color")
-    .trim();
-
-  if (themeColor !== "") {
-    meta.content = themeColor;
-  }
-}
-
 function disableTransitionsTemporarily() {
   const style = document.createElement("style");
   style.append(
@@ -131,7 +112,6 @@ export function ThemeProvider({
 
       root.classList.remove("light", "dark");
       root.classList.add(resolvedTheme);
-      applyThemeColorMeta();
 
       if (restoreTransitions) {
         restoreTransitions();
