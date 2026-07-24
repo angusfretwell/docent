@@ -15,10 +15,17 @@ import tailwind from "bun-plugin-tailwind";
 
 const root = path.join(import.meta.dir, "..");
 
+const { version } = await Bun.file(
+  path.join(root, "npm", "package.json")
+).json();
+
 try {
   const result = await Bun.build({
     compile: { outfile: path.join(root, "dist", "docent") },
-    define: { "process.env.NODE_ENV": JSON.stringify("production") },
+    define: {
+      "process.env.DOCENT_VERSION": JSON.stringify(version),
+      "process.env.NODE_ENV": JSON.stringify("production"),
+    },
     entrypoints: [path.join(root, "src", "docent.ts")],
     minify: true,
     plugins: [tailwind],

@@ -14,8 +14,8 @@ import { WorkingDirectory } from "./usage";
 import { validateCommand } from "./validate";
 import { walkthroughCommand } from "./walkthrough";
 
-/** The released binary is versioned by `npm/package.json`. */
-const VERSION = "0.0.0";
+/** Compiled in from `npm/package.json` by `build-docent`; the un-compiled dev binary has no version. */
+const VERSION = process.env.DOCENT_VERSION ?? "0.0.0";
 
 /** A failure whose human message has already reached stderr. */
 class Reported extends Data.TaggedError("Reported") {

@@ -30,6 +30,6 @@ const set = Command.make(
 ).pipe(Command.withDescription("Name the change under review, keeping its id"));
 
 export const reviewCommand = Command.make("review").pipe(
-  Command.withDescription("Read and write the Review's own identity record"),
+  Command.withDescription("Write the Review's own identity record"),
   Command.withSubcommands([set])
 );
