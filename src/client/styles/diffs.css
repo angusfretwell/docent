@@ -23,7 +23,6 @@
 
   .diffs {
     overscroll-behavior: contain;
-    /* scrollbar-gutter: stable; */
     overflow: auto;
     scrollbar-color: --alpha(var(--color-foreground) / 20%) transparent;
     scrollbar-width: thin;
