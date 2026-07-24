@@ -1,6 +1,6 @@
 # Comment Standards
 
-Default to zero comments. Names, types, and structure carry the meaning; when something is unclear, rename or extract before reaching for a comment. A comment earns its place only by stating something the code *cannot* say.
+Default to zero comments. Names, types, and structure carry the meaning; when something is unclear, rename or extract before reaching for a comment. A comment earns its place only by stating something the code _cannot_ say.
 
 **The deletion test:** imagine the comment gone. If the code loses nothing, don't write it. If something is lost, first try moving it into a name or type; comment only what's left over.
 
