@@ -19,7 +19,6 @@ import {
   Stream,
 } from "effect";
 import { FileSystem } from "effect/FileSystem";
-import type { WatchEvent } from "effect/FileSystem";
 import { Path } from "effect/Path";
 
 import {
@@ -59,41 +58,41 @@ const buildMatcher = Effect.fn("buildMatcher")(function* buildMatcher(
 });
 
 /**
- * A missing directory yields an empty stream (a not-yet-existing state dir must
- * not stop the server booting); a watcher error ends only that surface rather
- * than tearing down the whole pipeline.
+ * Watch `dir` with `node:fs.watch`, bridged to the pipeline through an unbounded
+ * queue. Acquired eagerly, not folded into the debounce/mergeAll pipeline: those
+ * subscribe lazily on a forked fiber, so a deferred watch can miss a
+ * loop-blocking write (a `git commit`'s `execFileSync`) that fires before it
+ * exists — Linux inotify never replays that missed event (macOS FSEvents hides
+ * the bug).
+ *
+ * `node:fs.watch`, not Effect's `FileSystem.watch`: the latter is lazy and
+ * hardcodes `recursive: true`, but the git-dir surface needs a flat watch — a
+ * recursive watch on `.git/` floods events from `objects/`, while a flat one
+ * still catches git's atomic-rename of top-level `HEAD`/`index`/`COMMIT_EDITMSG`
+ * that per-file watches miss once the inode is swapped.
  */
-const watchDir = Effect.fn("watchDir")(function* watchDir(dir: string) {
+const watchEager = Effect.fn("watchEager")(function* watchEager(
+  dir: string,
+  options: {
+    readonly recursive: boolean;
+    readonly ignore?: (relPath: string) => boolean;
+  }
+) {
   const fs = yield* FileSystem;
   const exists = yield* fs.exists(dir).pipe(Effect.orElseSucceed(() => false));
   if (!exists) {
     return Stream.empty;
   }
 
-  return fs.watch(dir).pipe(Stream.catchCause(() => Stream.empty));
-});
-
-/**
- * Flat and on `node:fs.watch` deliberately: Effect's `FileSystem.watch`
- * hardcodes `recursive: true`, which on `.git/` floods events from `objects/`.
- * A non-recursive watch catches git's atomic-rename of the top-level
- * `HEAD`/`index`/`COMMIT_EDITMSG` (which per-file watches miss once the inode is
- * swapped) without descending into `objects/`.
- *
- * Eager, because `Stream.debounce`/`mergeAll` subscribe lazily on a forked
- * fiber: deferring the watch's creation past the layer build lets a `git commit`
- * fire and finish before the watch exists, dropping the event. Creating it
- * synchronously here guarantees it is live before the first request.
- */
-const watchGitDir = Effect.fn("watchGitDir")(function* watchGitDir(
-  gitDir: string
-) {
   // oxlint-disable-next-line no-invalid-void-type
   const events = yield* Queue.unbounded<void>();
 
   yield* Effect.acquireRelease(
     Effect.sync(() =>
-      watch(gitDir, { recursive: false }, () => {
+      watch(dir, { recursive: options.recursive }, (_event, filename) => {
+        if (options.ignore && filename !== null && options.ignore(filename)) {
+          return;
+        }
         // The `undefined` selects `offerUnsafe`'s data-first overload, so the
         // signal actually enqueues.
         // oxlint-disable-next-line no-useless-undefined
@@ -131,21 +130,15 @@ const makeWatch = Effect.fn("makeWatch")(function* makeWatch(cwd: string) {
   // oxlint-disable-next-line no-invalid-void-type
   const events = yield* PubSub.unbounded<void>();
 
-  const stateChanges = (yield* watchDir(stateRoot)).pipe(
-    Stream.map((): void => undefined)
-  );
-  const rootChanges = (yield* watchDir(root)).pipe(
-    Stream.filter((event: WatchEvent) => !matcher.ignores(event.path)),
-    Stream.map((): void => undefined)
-  );
-  const gitExists =
-    gitDir === undefined
-      ? false
-      : yield* fs.exists(gitDir).pipe(Effect.orElseSucceed(() => false));
+  const stateChanges = yield* watchEager(stateRoot, { recursive: true });
+  const rootChanges = yield* watchEager(root, {
+    ignore: (relPath) => matcher.ignores(relPath),
+    recursive: true,
+  });
   const gitChanges =
-    gitDir !== undefined && gitExists
-      ? yield* watchGitDir(gitDir)
-      : Stream.empty;
+    gitDir === undefined
+      ? Stream.empty
+      : yield* watchEager(gitDir, { recursive: false });
 
   const changes = Stream.mergeAll([stateChanges, rootChanges, gitChanges], {
     concurrency: "unbounded",

@@ -2,8 +2,8 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
-import { cleanupScratchDirs, scratchDir } from "@test-support/fixtures";
-import { makeTestRuntime } from "@test-support/runtime";
+import { cleanupScratchDirs, scratchDir } from "@test/fixtures";
+import { makeTestRuntime } from "@test/runtime";
 import { Option, Schema } from "effect";
 
 import { listDir, readRecord, writeJsonRecord } from "./io";

@@ -2,5 +2,5 @@
 plugins = ["bun-plugin-tailwind"]
 
 [test]
-preload = ["./src/test-setup.ts"]
+preload = ["./src/test/setup.ts"]
 

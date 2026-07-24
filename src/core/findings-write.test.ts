@@ -4,9 +4,9 @@ import path from "node:path";
 
 import { foldFinding } from "@shared/lib/finding";
 import type { FindingWrite } from "@shared/schemas/finding-write";
+import { cleanupScratchDirs, scratchDir } from "@test/fixtures";
+import { makeTestRuntime } from "@test/runtime";
 
-import { cleanupScratchDirs, scratchDir } from "../test-support/fixtures";
-import { makeTestRuntime } from "../test-support/runtime";
 import { writeFindingRecord } from "./findings-write";
 import { readReviewSnapshot } from "./review";
 import { mintChange, resolveWriteContext } from "./write-context";
