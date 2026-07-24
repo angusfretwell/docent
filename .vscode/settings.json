@@ -1,4 +1,5 @@
 {
+  "search.followSymlinks": false,
   "search.exclude": {
     ".agents/skills/**": true,
     ".repos/**": true
