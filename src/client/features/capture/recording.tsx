@@ -106,7 +106,10 @@ function RecordingControls({ replay }: { replay: RrwebReplayer }) {
           aria-label="Recording position"
           className="min-w-0 flex-1 [&_[data-slot=slider-control]]:min-w-0"
           disabled={!ready}
-          max={durationMs}
+          // `durationMs` is 0 until the replayer reports the recording's length,
+          // and Base UI's Slider requires `max > min`. Floor it so the disabled
+          // scrubber doesn't warn on the first frame before the duration lands.
+          max={Math.max(durationMs, 1)}
           min={0}
           onValueChange={handleScrub}
           step={100}
