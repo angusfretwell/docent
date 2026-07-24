@@ -1,12 +1,12 @@
 import { Badge } from "@client/components/ui/badge";
 import type { Callout } from "@client/features/walkthrough/callout-list";
-import { sectionAnchorProps } from "@client/features/walkthrough/target";
-import { targetAnchorProps } from "@client/features/walkthrough/use-active-target";
-import type { WalkthroughStep } from "@client/features/walkthrough/walkthrough";
+import { targetAnchorProps } from "@client/features/walkthrough/hooks/use-active-target";
+import { sectionAnchorProps } from "@client/features/walkthrough/lib/target";
+import type { WalkthroughStep } from "@client/features/walkthrough/lib/walkthrough";
 import {
   stepLayout,
   targetKey,
-} from "@client/features/walkthrough/walkthrough";
+} from "@client/features/walkthrough/lib/walkthrough";
 import type { FoldedFinding } from "@shared/lib/finding";
 import { targetChipIndex } from "@shared/lib/walkthrough-segments";
 import type { ElementContent } from "hast";

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { clampAxis, measure } from "./inner-zoom-geometry";
+import { clampAxis, measure } from "./zoom-geometry";
 
 describe("clampAxis", () => {
   test("centres the frame in the axis when it has slack to spare", () => {

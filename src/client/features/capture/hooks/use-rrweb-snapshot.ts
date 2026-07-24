@@ -12,7 +12,7 @@
  * so the inline style set here wins without racing its resize handling.
  */
 
-import { captureEventsQuery } from "@client/features/product-walkthrough/captures";
+import { captureEventsQuery } from "@client/queries/captures";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import type { eventWithTime } from "rrweb";

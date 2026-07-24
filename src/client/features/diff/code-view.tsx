@@ -1,10 +1,13 @@
-import { AnnotatedCodeView, useDiffItems } from "@client/components/code-view";
-import { DiffAnnotation } from "@client/components/code-view-annotation";
-import { CodeViewHeaderMetadata } from "@client/components/code-view-header-metadata";
 import { IconEmpty } from "@client/components/icon-empty";
-import type { Viewed } from "@client/features/diff/use-viewed";
-import { useFindingCompose } from "@client/features/findings/use-finding-compose";
-import { useFindings } from "@client/features/findings/use-findings";
+import { CodeViewAnnotation } from "@client/features/code-view/annotation";
+import { CodeViewHeaderMetadata } from "@client/features/code-view/header-metadata";
+import {
+  AnnotatedCodeView,
+  useDiffItems,
+} from "@client/features/code-view/view";
+import type { Viewed } from "@client/features/diff/hooks/use-viewed";
+import { useFindingCompose } from "@client/features/findings/hooks/use-finding-compose";
+import { useFindings } from "@client/features/findings/hooks/use-findings";
 import type { DiffFile } from "@client/lib/diff";
 import type { Annotation } from "@client/lib/diff-annotations";
 import { diffTargetAtom } from "@client/lib/diff-target";
@@ -128,7 +131,7 @@ export function DiffCodeView({
         compose.selectLines({ id: context.item.id, range })
       }
       renderAnnotation={(annotation) => (
-        <DiffAnnotation annotation={annotation} compose={compose} />
+        <CodeViewAnnotation annotation={annotation} compose={compose} />
       )}
       renderHeaderMetadata={(codeViewItem) => (
         <CodeViewHeaderMetadata

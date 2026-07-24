@@ -4,8 +4,8 @@ import type { GitStatusEntry } from "@pierre/trees";
 import { FileTree as BaseFileTree, useFileTree } from "@pierre/trees/react";
 import { useEffect, useRef } from "react";
 
-import { FileTreeFilter } from "./file-tree-filter";
-import { FileTreeSearch } from "./file-tree-search";
+import { FileTreeFilter } from "./filter";
+import { FileTreeSearch } from "./search";
 
 const TREES_CSS = `
   [data-file-tree-virtualized-scroll] {
@@ -14,7 +14,16 @@ const TREES_CSS = `
   }
 `;
 
-export function FileTree({
+const TREES_STYLES = {
+  "--trees-padding-inline": 0,
+  "--trees-scrollbar-thumb":
+    "color-mix(in srgb, var(--color-foreground) 20%, transparent)",
+  "--trees-theme-sidebar-bg": "var(--color-background)",
+  backgroundColor: "var(--color-background)",
+  paddingLeft: "6px",
+};
+
+export function FileTreeView({
   gitStatus,
   onFileClick,
   onSelectionChange,
@@ -87,12 +96,7 @@ export function FileTree({
 
   const style = {
     ...themeToTreeStyles(theme),
-    "--trees-padding-inline": 0,
-    "--trees-scrollbar-thumb":
-      "color-mix(in srgb, var(--color-foreground) 20%, transparent)",
-    "--trees-theme-sidebar-bg": "var(--color-background)",
-    backgroundColor: "var(--color-background)",
-    paddingLeft: "6px",
+    ...TREES_STYLES,
   } as React.CSSProperties;
 
   return (

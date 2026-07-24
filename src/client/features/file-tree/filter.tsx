@@ -13,7 +13,11 @@ import type { GitStatus } from "@pierre/trees";
 import { useAtom } from "jotai/react";
 import { ListFilter } from "lucide-react";
 
-import { diffFiltersAtom, EMPTY_FILTERS, toggleStatusFilter } from "./filters";
+import {
+  diffFiltersAtom,
+  EMPTY_FILTERS,
+  toggleStatusFilter,
+} from "./lib/filters";
 
 const STATUS_FILTERS: { label: string; status: GitStatus }[] = [
   { label: "Added", status: "added" },

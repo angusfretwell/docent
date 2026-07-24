@@ -5,7 +5,7 @@ import {
   CollapsiblePanel,
   CollapsibleTrigger,
 } from "@client/components/ui/collapsible";
-import { useRevealSection } from "@client/features/walkthrough/target";
+import { useRevealSection } from "@client/features/walkthrough/lib/target";
 import { useRevealDiffItem } from "@client/lib/diff-target";
 import { cn } from "@client/lib/utils";
 import { STATUS_LABEL } from "@shared/lib/finding";
@@ -20,9 +20,9 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
+import type { FindingSection } from "./lib/types";
 import { FindingLink } from "./link";
 import { FindingThread } from "./thread";
-import type { FindingSection } from "./types";
 
 export const STATUS_VARIANT: Record<Status, BadgeProps["variant"]> = {
   actioned: "warning",

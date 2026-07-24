@@ -1,5 +1,5 @@
 /**
- * The pure geometry behind `useInnerZoom`: given the capture's natural size, the
+ * The pure geometry behind `useZoom`: given the capture's natural size, the
  * stage it sits in, and the view the reader has pushed it to, `measure` resolves
  * where the frame lands and the limits the gestures may move it between. No React
  * and no DOM state, so the hook's render and its gesture handlers can derive the

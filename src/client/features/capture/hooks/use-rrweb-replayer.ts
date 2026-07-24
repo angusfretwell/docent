@@ -9,7 +9,7 @@
  * a panel that mounts one is showing it rather than offering it.
  */
 
-import { captureEventsQuery } from "@client/features/product-walkthrough/captures";
+import { captureEventsQuery } from "@client/queries/captures";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { eventWithTime } from "rrweb";

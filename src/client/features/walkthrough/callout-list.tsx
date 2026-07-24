@@ -1,5 +1,5 @@
 import { Badge } from "@client/components/ui/badge";
-import { usePinHover } from "@client/features/product-walkthrough/pin-hover";
+import { usePinHover } from "@client/features/capture/pin-hover";
 import { cn } from "@client/lib/utils";
 
 /** One pin's label and body, as the prose lists it beside the capture. */

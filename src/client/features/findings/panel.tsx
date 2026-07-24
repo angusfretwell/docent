@@ -4,8 +4,8 @@ import { cn } from "@client/lib/utils";
 import { MessagesSquare } from "lucide-react";
 
 import { FindingsHeader } from "./header";
+import { useFindings } from "./hooks/use-findings";
 import { FindingsItem } from "./item";
-import { useFindings } from "./use-findings";
 
 export function FindingsPanel({ popover }: { popover?: boolean }) {
   const { visible } = useFindings();

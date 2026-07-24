@@ -1,8 +1,8 @@
 import { Surface } from "@client/components/surface";
 import { Button } from "@client/components/ui/button";
 import { Composer } from "@client/features/findings/composer";
+import { useFindingWrite } from "@client/features/findings/hooks/use-finding-write";
 import { FindingThread } from "@client/features/findings/thread";
-import { useFindingWrite } from "@client/features/findings/use-finding-write";
 import type { FoldedFinding } from "@shared/lib/finding";
 import { MessageCirclePlus } from "lucide-react";
 import { useState } from "react";

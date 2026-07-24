@@ -30,8 +30,8 @@ import { useMediaQuery } from "@client/hooks/use-media-query";
 import { useGesture } from "@use-gesture/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
-import type { Offset, Size, View } from "./inner-zoom-geometry";
-import { clampAxis, measure, wheelPixels } from "./inner-zoom-geometry";
+import type { Offset, Size, View } from "../lib/zoom-geometry";
+import { clampAxis, measure, wheelPixels } from "../lib/zoom-geometry";
 
 /** What one double-click multiplies the scale by. */
 const STEP_FACTOR = 2;
@@ -54,7 +54,7 @@ const GLIDE_FLOOR = 0.02;
 /** Longest frame a glide will integrate over, so a stalled tab doesn't teleport it. */
 const MAX_FRAME = 64;
 
-export interface InnerZoom {
+export interface Zoom {
   /** Whether a pan is under way — a press that has travelled, not merely a press. */
   dragging: boolean;
   /** Zoom to and centre on a region of the capture, in normalized (0..1) coordinates. */
@@ -88,7 +88,7 @@ export interface InnerZoom {
 }
 
 /** @param natural - the image's own pixel size, `[width, height]`. */
-export function useInnerZoom(natural: readonly [number, number]): InnerZoom {
+export function useZoom(natural: readonly [number, number]): Zoom {
   const stageRef = useRef<HTMLDivElement>(null);
   // One animation slot for both the glide and the zoom tween, so starting
   // either — or any direct gesture — cancels whatever was already running.

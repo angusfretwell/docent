@@ -27,9 +27,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useAtomValue } from "jotai/react";
 import { useMemo } from "react";
 
-import type { FindingSurface } from "./filters";
-import { findingFiltersAtom, matchesFindingFilters } from "./filters";
-import type { FindingSection } from "./types";
+import type { FindingSurface } from "../lib/filters";
+import { findingFiltersAtom, matchesFindingFilters } from "../lib/filters";
+import type { FindingSection } from "../lib/types";
 
 export interface FindingListItem {
   finding: FoldedFinding;

@@ -16,11 +16,16 @@ import {
   ResizablePanelGroup,
 } from "@client/components/ui/resizable";
 import { Separator } from "@client/components/ui/separator";
+import {
+  diffFiltersAtom,
+  matchesFilters,
+} from "@client/features/file-tree/lib/filters";
 import { useKeyPressed } from "@client/hooks/use-key-pressed";
 import { parsePatchFiles, statusForChange } from "@client/lib/diff";
 import { useDrift } from "@client/lib/drift";
 import { diffLayoutAtom, diffTreeOpenAtom } from "@client/lib/preferences";
 import { diffQueryOptions } from "@client/queries/diff";
+import { pendingQueryOptions } from "@client/queries/pending";
 import { reviewQueryOptions } from "@client/queries/review";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
@@ -32,12 +37,10 @@ import { useDefaultLayout } from "react-resizable-panels";
 
 import { ChangeRangePicker } from "./change-picker";
 import { DiffCodeView } from "./code-view";
-import { diffFiltersAtom, matchesFilters } from "./filters";
-import { isGeneratedPath } from "./generated";
-import { pendingQueryOptions } from "./pending";
+import { useViewedState } from "./hooks/use-viewed";
+import { isGeneratedPath } from "./lib/generated";
+import { computeViewed } from "./lib/viewed";
 import { DiffTree } from "./tree";
-import { useViewedState } from "./use-viewed";
-import { computeViewed } from "./viewed";
 
 export function DiffView() {
   const { data: change } = useSuspenseQuery(diffQueryOptions);

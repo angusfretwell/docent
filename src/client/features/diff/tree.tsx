@@ -1,10 +1,9 @@
+import { FileTreeView } from "@client/features/file-tree/view";
 import type { DiffFile } from "@client/lib/diff";
 import { statusForChange } from "@client/lib/diff";
 import { useRevealDiffItem } from "@client/lib/diff-target";
 import { last } from "radashi";
 import { useMemo } from "react";
-
-import { FileTree } from "./file-tree";
 
 export function DiffTree({ files }: { files: DiffFile[] }) {
   const revealDiffItem = useRevealDiffItem();
@@ -35,7 +34,7 @@ export function DiffTree({ files }: { files: DiffFile[] }) {
   }
 
   return (
-    <FileTree
+    <FileTreeView
       gitStatus={gitStatus}
       paths={paths}
       onFileClick={(path) => reveal(path)}

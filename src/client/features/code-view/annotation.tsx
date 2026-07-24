@@ -1,10 +1,10 @@
 import { Surface } from "@client/components/surface";
 import { Composer } from "@client/features/findings/composer";
+import type { FindingCompose } from "@client/features/findings/hooks/use-finding-compose";
 import { FindingThread } from "@client/features/findings/thread";
-import type { FindingCompose } from "@client/features/findings/use-finding-compose";
 import type { Annotation } from "@client/lib/diff-annotations";
 
-export function DiffAnnotation({
+export function CodeViewAnnotation({
   annotation,
   compose,
 }: {

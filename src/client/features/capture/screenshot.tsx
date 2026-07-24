@@ -2,13 +2,13 @@ import { PinChip } from "@client/features/walkthrough/callout-list";
 import { cn } from "@client/lib/utils";
 import { useEffect, useRef } from "react";
 
-import type { CaptureProps } from "./capture-frame";
-import { CaptureStage, useRefit } from "./capture-frame";
+import type { CaptureProps } from "./frame";
+import { CaptureStage, useRefit } from "./frame";
+import { useZoom } from "./hooks/use-zoom";
+import { useRrwebSnapshot } from "./hooks/use-rrweb-snapshot";
+import type { RegionPin } from "./lib/pins";
+import { screenshotPins } from "./lib/pins";
 import { usePinFocus, usePinHover } from "./pin-hover";
-import type { RegionPin } from "./pins";
-import { screenshotPins } from "./pins";
-import { useInnerZoom } from "./use-inner-zoom";
-import { useRrwebSnapshot } from "./use-rrweb-snapshot";
 
 /**
  * One region mark on a screenshot. Its rect comes from the anchor as fractions
@@ -76,7 +76,7 @@ function RegionOverlay({
  * frame, so the frame must be exactly the rendered capture on both axes — any
  * slack it takes beyond it is slack the pins are measured against, which
  * stretches and displaces them on whichever axis the capture does not fill. Both
- * the fitted and the zoomed size therefore come from `useInnerZoom` as explicit
+ * the fitted and the zoomed size therefore come from `useZoom` as explicit
  * pixels.
  */
 export function ScreenshotCapture({
@@ -89,7 +89,7 @@ export function ScreenshotCapture({
 }: CaptureProps) {
   const regions = screenshotPins(annotations, findings, capture);
   const natural = capture.dims ?? capture.viewport;
-  const zoom = useInnerZoom(natural);
+  const zoom = useZoom(natural);
   const { frameRect, frameStyle, measured, scale } = zoom;
 
   useRefit(zoom, refitted);

@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { parsePatchFiles } from "@client/lib/diff";
 
-import { useDiffItems } from "./code-view";
+import { useDiffItems } from "./view";
 
 const patch = [
   "diff --git a/src/a.ts b/src/a.ts",

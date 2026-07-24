@@ -1,16 +1,19 @@
-import { useFindings } from "@client/features/findings/use-findings";
+import { CaptureFrame } from "@client/features/capture/frame";
 import {
   annotationsFor,
   captureCallouts,
-} from "@client/features/product-walkthrough/pins";
-import { useRevealedSection } from "@client/features/walkthrough/target";
-import { useActiveTarget } from "@client/features/walkthrough/use-active-target";
-import type { PlacedCapture } from "@client/features/walkthrough/walkthrough";
+} from "@client/features/capture/lib/pins";
+import { PinHoverProvider } from "@client/features/capture/pin-hover";
+import { CaptureView } from "@client/features/capture/view";
+import { useFindings } from "@client/features/findings/hooks/use-findings";
+import { useActiveTarget } from "@client/features/walkthrough/hooks/use-active-target";
+import { useRevealedSection } from "@client/features/walkthrough/lib/target";
+import type { PlacedCapture } from "@client/features/walkthrough/lib/walkthrough";
 import {
   captureLabel,
   capturesByKey,
   productSteps,
-} from "@client/features/walkthrough/walkthrough";
+} from "@client/features/walkthrough/lib/walkthrough";
 import { findingsBySection, sectionKey } from "@client/lib/finding-sections";
 import { cn } from "@client/lib/utils";
 import { reviewQueryOptions } from "@client/queries/review";
@@ -25,10 +28,7 @@ import { WalkthroughEmpty } from "../walkthrough/empty";
 import { WalkthroughLayout } from "../walkthrough/layout";
 import { StepProse } from "../walkthrough/prose";
 import { StalenessBadge } from "../walkthrough/staleness";
-import { CaptureView } from "./capture";
-import { CaptureFrame } from "./capture-frame";
 import { ProductEmpty } from "./empty";
-import { PinHoverProvider } from "./pin-hover";
 
 /** How long the capture the reader has left takes to dissolve into the next. */
 const CROSSFADE_MS = 200;

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 
-import { usePinFocus, usePinHovered } from "./pin-hover";
-import type { TimePin } from "./pins";
+import type { TimePin } from "../lib/pins";
+import { usePinFocus, usePinHovered } from "../pin-hover";
 import type { RrwebReplayer } from "./use-rrweb-replayer";
 
 /** How long a pointer settles on a callout before the replay answers it. */

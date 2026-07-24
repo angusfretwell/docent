@@ -12,7 +12,7 @@ import { Reply } from "lucide-react";
 import { useState } from "react";
 
 import { Composer } from "./composer";
-import { useFindingWrite } from "./use-finding-write";
+import { useFindingWrite } from "./hooks/use-finding-write";
 
 /**
  * The next-record actions on a Finding thread. Each action appends one

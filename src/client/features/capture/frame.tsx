@@ -13,7 +13,7 @@ import prettyMilliseconds from "pretty-ms";
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 
-import type { InnerZoom } from "./use-inner-zoom";
+import type { Zoom } from "./hooks/use-zoom";
 
 /**
  * How the panel names the capture it holds, and how the reader steps off it.
@@ -51,7 +51,7 @@ export interface CaptureProps {
  * the one this capture mounted with — a capture arriving is already fitted, and
  * refitting it there would fight the framing a focus request is about to do.
  */
-export function useRefit(zoom: InnerZoom, refitted: number) {
+export function useRefit(zoom: Zoom, refitted: number) {
   const { refit } = zoom;
   const asked = useRef(refitted);
 
@@ -151,7 +151,7 @@ export function CaptureFrame({
 /**
  * The area a capture is fitted into, shared by both kinds so that stepping
  * between a screenshot and a recording of the same size leaves the capture where
- * it was. `useInnerZoom` fits and centres against the stage it measures, so
+ * it was. `useZoom` fits and centres against the stage it measures, so
  * anything a kind adds — a replay's transport — floats over the stage as a
  * sibling rather than taking a row beneath it: a row shortens the stage for that
  * kind alone, which is enough to rescale and reseat the capture.
@@ -174,7 +174,7 @@ export function CaptureStage({
   children: ReactNode;
   kind: "recording" | "screenshot";
   overlay?: ReactNode;
-  zoom: InnerZoom;
+  zoom: Zoom;
 }) {
   const { dragging, stageProps, toggle, zoomable, zoomed } = zoom;
 

@@ -1,15 +1,15 @@
-import { useFindings } from "@client/features/findings/use-findings";
+import { useFindings } from "@client/features/findings/hooks/use-findings";
 import { WalkthroughEmpty } from "@client/features/walkthrough/empty";
+import { useActiveTarget } from "@client/features/walkthrough/hooks/use-active-target";
 import { WalkthroughLayout } from "@client/features/walkthrough/layout";
-import { StepProse } from "@client/features/walkthrough/prose";
-import { StalenessBadge } from "@client/features/walkthrough/staleness";
-import { useRevealedSection } from "@client/features/walkthrough/target";
-import { useActiveTarget } from "@client/features/walkthrough/use-active-target";
+import { useRevealedSection } from "@client/features/walkthrough/lib/target";
 import {
   codeSteps,
   rangesByKey,
   walkthroughPaths,
-} from "@client/features/walkthrough/walkthrough";
+} from "@client/features/walkthrough/lib/walkthrough";
+import { StepProse } from "@client/features/walkthrough/prose";
+import { StalenessBadge } from "@client/features/walkthrough/staleness";
 import { parsePatchFiles } from "@client/lib/diff";
 import { useDrift } from "@client/lib/drift";
 import { findingsBySection, sectionKey } from "@client/lib/finding-sections";

@@ -5,13 +5,13 @@ import { cn } from "@client/lib/utils";
 import { Pause, Play, Repeat } from "lucide-react";
 import prettyMilliseconds from "pretty-ms";
 
-import type { CaptureProps } from "./capture-frame";
-import { CaptureStage, useRefit } from "./capture-frame";
-import { recordingPins } from "./pins";
-import { useInnerZoom } from "./use-inner-zoom";
-import { useRecordingPeek } from "./use-recording-peek";
-import type { RrwebReplayer } from "./use-rrweb-replayer";
-import { useRrwebReplayer } from "./use-rrweb-replayer";
+import type { CaptureProps } from "./frame";
+import { CaptureStage, useRefit } from "./frame";
+import { useZoom } from "./hooks/use-zoom";
+import { useRecordingPeek } from "./hooks/use-recording-peek";
+import type { RrwebReplayer } from "./hooks/use-rrweb-replayer";
+import { useRrwebReplayer } from "./hooks/use-rrweb-replayer";
+import { recordingPins } from "./lib/pins";
 
 /**
  * A recording's playhead offset as `m:ss`. `secondsDecimalDigits: 0` holds it to
@@ -143,7 +143,7 @@ function RecordingControls({ replay }: { replay: RrwebReplayer }) {
  *
  * rrweb reconstructs the DOM at the recorded viewport size and never scales it
  * (scale-to-fit is an rrweb-player feature), so the mount is sized and scaled
- * here — by the same `useInnerZoom` the screenshot arm uses, which makes a
+ * here — by the same `useZoom` the screenshot arm uses, which makes a
  * replay shrunk to fit its panel readable at the size it was recorded at.
  */
 export function RecordingCapture({
@@ -160,7 +160,7 @@ export function RecordingCapture({
 
   useRecordingPeek(replay, pins, target);
 
-  const zoom = useInnerZoom(capture.viewport);
+  const zoom = useZoom(capture.viewport);
   const { frameStyle, scale } = zoom;
 
   useRefit(zoom, refitted);

@@ -24,7 +24,7 @@ import { useAtomValue } from "jotai/react";
 import type { ReactNode, RefObject } from "react";
 import { useMemo } from "react";
 
-import { CodeViewHeaderPrefix } from "./code-view-header-prefix";
+import { CodeViewHeaderPrefix } from "./header-prefix";
 
 // The @pierre diffs DOM is themed in two places that share no import, so the
 // split is otherwise undiscoverable: this inline block, injected through the

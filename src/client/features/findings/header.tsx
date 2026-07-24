@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { Composer } from "./composer";
 import { FindingsFilter } from "./filter";
-import { useFindingWrite } from "./use-finding-write";
+import { useFindingWrite } from "./hooks/use-finding-write";
 
 export function FindingsHeader() {
   const [commentOpen, setCommentOpen] = useState(false);

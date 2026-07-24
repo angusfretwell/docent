@@ -1,7 +1,7 @@
 import { api } from "@client/api";
-import { pendingQueryKey } from "@client/features/diff/pending";
 import { queryClient } from "@client/lib/query-client";
 import { diffQueryOptions } from "@client/queries/diff";
+import { pendingQueryKey } from "@client/queries/pending";
 import { reviewQueryOptions } from "@client/queries/review";
 import { useEffect } from "react";
 

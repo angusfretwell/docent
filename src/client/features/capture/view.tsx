@@ -1,6 +1,6 @@
-import type { CaptureProps } from "./capture-frame";
-import { RecordingCapture } from "./capture-recording";
-import { ScreenshotCapture } from "./capture-screenshot";
+import type { CaptureProps } from "./frame";
+import { RecordingCapture } from "./recording";
+import { ScreenshotCapture } from "./screenshot";
 
 /**
  * Route a capture to the screenshot embed or the rrweb replay. Both fill the

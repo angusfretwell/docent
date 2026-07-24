@@ -1,8 +1,7 @@
+import { Button } from "@client/components/ui/button";
 import type { Annotation } from "@client/lib/diff-annotations";
 import type { CodeViewItem } from "@pierre/diffs";
 import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
-
-import { Button } from "./ui/button";
 
 export function CodeViewHeaderPrefix({
   onToggleItemCollapsed,

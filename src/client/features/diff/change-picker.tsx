@@ -9,12 +9,11 @@ import {
   MenuSeparator,
   MenuTrigger,
 } from "@client/components/ui/menu";
+import { pendingQueryOptions } from "@client/queries/pending";
 import type { PendingRange } from "@shared/schemas/pending";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { GalleryHorizontalEnd } from "lucide-react";
-
-import { pendingQueryOptions } from "./pending";
 
 export function ChangeRangePicker() {
   const navigate = useNavigate();

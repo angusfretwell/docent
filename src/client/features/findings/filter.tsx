@@ -15,7 +15,8 @@ import { useAtom } from "jotai/react";
 import { MessagesSquare } from "lucide-react";
 import plur from "plur";
 
-import type { FindingSurface } from "./filters";
+import { useFindings } from "./hooks/use-findings";
+import type { FindingSurface } from "./lib/filters";
 import {
   DEFAULT_FILTERS,
   FINDING_SURFACES,
@@ -24,8 +25,7 @@ import {
   SURFACE_LABEL,
   toggleStatus,
   toggleSurface,
-} from "./filters";
-import { useFindings } from "./use-findings";
+} from "./lib/filters";
 
 /**
  * The panel's headline and its filter in one control, so the count names what

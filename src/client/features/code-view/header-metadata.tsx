@@ -1,7 +1,6 @@
+import { Button } from "@client/components/ui/button";
+import { Checkbox } from "@client/components/ui/checkbox";
 import { MessageCircleCode } from "lucide-react";
-
-import { Button } from "./ui/button";
-import { Checkbox } from "./ui/checkbox";
 
 export function CodeViewHeaderMetadata({
   onComment,

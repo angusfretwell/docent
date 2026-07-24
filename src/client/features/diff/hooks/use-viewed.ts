@@ -15,8 +15,8 @@ import type { ViewedEvent } from "@shared/schemas/review";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 
-import type { ViewedModel } from "./viewed";
-import { viewedStateFor } from "./viewed";
+import type { ViewedModel } from "../lib/viewed";
+import { viewedStateFor } from "../lib/viewed";
 
 interface ViewedToggle {
   blobSha: string;
