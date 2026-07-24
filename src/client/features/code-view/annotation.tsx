@@ -13,7 +13,7 @@ export function CodeViewAnnotation({
 }) {
   if (annotation.metadata.kind === "finding") {
     return (
-      <div className="my-4 mx-3 w-full max-w-xl">
+      <div className="my-4 mx-3 max-w-xl">
         <Surface className="p-4 font-sans" radius="lg">
           <FindingThread finding={annotation.metadata.finding} />
         </Surface>
