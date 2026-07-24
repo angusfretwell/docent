@@ -9,8 +9,6 @@ import { useMemo } from "react";
 import { Button } from "./ui/button";
 
 export function ReviewMeta() {
-  // The header is global across routes, so this is always the branch diff —
-  // plain useQuery, since not every route's loader ensures the diff query.
   const { data: change } = useQuery(diffQueryOptions);
   const { data: snapshot } = useQuery(reviewQueryOptions);
   const addedColor = useCodeThemeColor("gitDecoration.addedResourceForeground");
@@ -23,18 +21,16 @@ export function ReviewMeta() {
     [change]
   );
 
-  if (change === undefined) {
+  if (!change) {
     return null;
   }
 
-  // A Review auto-creates title-less, so the headline is only there once an
-  // authoring run has named the change.
-  const title = snapshot?.review.title ?? "";
-
   return (
     <div className="flex items-center gap-1 ml-auto pr-1.5">
-      {title === "" ? null : (
-        <span className="text-[13px] truncate">{title}</span>
+      {snapshot?.review.title && (
+        <span className="text-[13px] truncate min-w-0">
+          {snapshot?.review.title}
+        </span>
       )}
 
       {change.remoteUrl === null ? (
@@ -67,11 +63,17 @@ export function ReviewMeta() {
       )}
 
       <div className="flex items-center gap-2">
-        <span className="text-[13px] font-mono" style={{ color: deletedColor }}>
+        <span
+          className="text-[13px] font-mono tabular-nums"
+          style={{ color: deletedColor }}
+        >
           -{deletions}
         </span>
 
-        <span className="text-[13px] font-mono" style={{ color: addedColor }}>
+        <span
+          className="text-[13px] font-mono tabular-nums"
+          style={{ color: addedColor }}
+        >
           +{additions}
         </span>
       </div>

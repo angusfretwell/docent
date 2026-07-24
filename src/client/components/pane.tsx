@@ -1,6 +1,6 @@
 import { cn } from "@client/lib/utils";
 
-import { Card } from "./ui/card";
+import { Surface } from "./surface";
 
 export function Pane({
   className,
@@ -16,7 +16,7 @@ export function Pane({
   }
 
   return (
-    <Card
+    <Surface
       className={cn("flex flex-col h-full overflow-clip", className)}
       {...props}
     />

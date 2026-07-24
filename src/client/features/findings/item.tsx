@@ -1,0 +1,118 @@
+import { Badge } from "@client/components/ui/badge";
+import type { BadgeProps } from "@client/components/ui/badge";
+import {
+  Collapsible,
+  CollapsiblePanel,
+  CollapsibleTrigger,
+} from "@client/components/ui/collapsible";
+import { useRevealSection } from "@client/features/walkthrough/hooks/use-revealed-section";
+import { useRevealDiffItem } from "@client/lib/diff-target";
+import { cn } from "@client/lib/utils";
+import { STATUS_LABEL } from "@shared/lib/finding";
+import type { FoldedFinding, Status } from "@shared/lib/finding";
+import type { DriftState } from "@shared/schemas/drift";
+import {
+  ChevronDown,
+  ChevronRight,
+  Code2,
+  GitCompare,
+  Pointer,
+} from "lucide-react";
+import { useState } from "react";
+
+import type { FindingSection } from "./lib/types";
+import { FindingLink } from "./link";
+import { FindingThread } from "./thread";
+
+export const STATUS_VARIANT: Record<Status, BadgeProps["variant"]> = {
+  actioned: "warning",
+  open: "info",
+  resolved: "success",
+};
+
+export function FindingsItem({
+  finding,
+  diffItemId,
+  drift,
+  location,
+  section,
+}: {
+  finding: FoldedFinding;
+  diffItemId?: string;
+  drift?: DriftState;
+  location: string;
+  section?: FindingSection;
+}) {
+  const [open, setOpen] = useState(true);
+
+  const revealDiffItem = useRevealDiffItem();
+  const revealSection = useRevealSection();
+
+  const isCodeSection = section?.pillar === "code";
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen} className="-mt-px">
+      <CollapsibleTrigger
+        className={cn(
+          "sticky -top-px w-full gap-1 flex cursor-pointer px-2 h-10 items-center group hover:bg-sidebar z-10",
+          "before:absolute before:top-0 before:left-0 before:w-full before:h-px before:content-[''] before:bg-border",
+          open &&
+            "after:absolute after:-bottom-px after:left-0 after:w-full after:h-px after:content-[''] after:bg-border",
+          open && "bg-sidebar"
+        )}
+      >
+        {open ? (
+          <ChevronDown className="size-4" />
+        ) : (
+          <ChevronRight className="size-4" />
+        )}
+
+        <span className="min-w-0 truncate text-[13px]">{location}</span>
+
+        {diffItemId === undefined ? null : (
+          <FindingLink
+            icon={<GitCompare />}
+            label="Show in diff"
+            onReveal={() => revealDiffItem(diffItemId)}
+            to="/"
+          />
+        )}
+
+        {/*
+          The section link wears the pillar's own icon and lands on that pillar's
+          surface, since where it goes is the thing that differs — a finding on a
+          code tour and one on a product tour are the same thread read in two
+          different places.
+        */}
+        {section === undefined ? null : (
+          <FindingLink
+            icon={isCodeSection ? <Code2 /> : <Pointer />}
+            label={`Show in ${isCodeSection ? "code" : "product"} walkthrough`}
+            onReveal={() => revealSection(section.key)}
+            to={isCodeSection ? "/code" : "/product"}
+          />
+        )}
+
+        <div className="flex items-center gap-1 ml-auto">
+          {finding.status !== "open" && (
+            <Badge variant={STATUS_VARIANT[finding.status]} size="sm">
+              {STATUS_LABEL[finding.status]}
+            </Badge>
+          )}
+
+          {drift === "outdated" && (
+            <Badge variant="secondary" size="sm">
+              Outdated
+            </Badge>
+          )}
+        </div>
+      </CollapsibleTrigger>
+
+      <CollapsiblePanel className="transition-none">
+        <div className="p-3 py-4">
+          <FindingThread finding={finding} />
+        </div>
+      </CollapsiblePanel>
+    </Collapsible>
+  );
+}

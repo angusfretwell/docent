@@ -1,29 +1,13 @@
-import { atom } from "jotai";
-import { useSetAtom } from "jotai/react";
-import { useCallback } from "react";
+import { createRevealTarget } from "@client/lib/reveal-target";
+
+const diffReveal = createRevealTarget("id");
 
 /**
- * A scroll request, not selection state: `token` distinguishes two requests for
- * the same item so re-selecting a file scrolls to it again.
+ * A scroll request, not selection state: re-selecting a diff item scrolls to it
+ * again. Survives navigation to `/`, so the Findings panel can target the diff
+ * from any route.
  */
-interface DiffTarget {
-  id: string;
-  token: number;
-}
+export const diffTargetAtom = diffReveal.targetAtom;
 
-export const diffTargetAtom = atom<DiffTarget | null>(null);
-
-/**
- * Reveals a diff item in the code view. Survives navigation to `/`, so the
- * Findings panel can target the diff from any route.
- */
-export function useRevealDiffItem() {
-  const setTarget = useSetAtom(diffTargetAtom);
-
-  return useCallback(
-    (id: string) => {
-      setTarget((prev) => ({ id, token: (prev?.token ?? 0) + 1 }));
-    },
-    [setTarget]
-  );
-}
+/** Reveals a diff item in the code view. */
+export const useRevealDiffItem = diffReveal.useReveal;

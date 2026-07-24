@@ -1,18 +1,11 @@
-@import "tailwindcss";
-
-@import "@fontsource/ibm-plex-sans/400";
-@import "@fontsource/ibm-plex-sans/500";
-@import "@fontsource/ibm-plex-sans/600";
-@import "@fontsource/ibm-plex-mono/400";
-@import "@fontsource/ibm-plex-mono/500";
-@import "@fontsource/ibm-plex-mono/600";
-@import "@fontsource/geist-mono/400";
-@import "@fontsource/geist-mono/500";
-@import "@fontsource/geist-mono/600";
-@import "@fontsource/outfit/400";
-@import "@fontsource/outfit/500";
-@import "@fontsource/outfit/600";
-
+/*
+ * This stylesheet is one of two places that theme the @pierre diffs DOM. It
+ * owns the global rules: the scroll-container class, its scrollbar, and the
+ * light/dark colour scheme. The other place is an inline block passed through
+ * the vendored unsafeCSS option in @client/components/code-view.tsx, which
+ * styles the sticky file header. The split shares no import, so change one and
+ * check the other.
+ */
 :root {
   --diffs-font-family: var(--font-mono);
 }
@@ -35,28 +28,4 @@
     scrollbar-color: --alpha(var(--color-foreground) / 20%) transparent;
     scrollbar-width: thin;
   }
-
-  .diffs::-webkit-scrollbar {
-    /* width: 6px;
-    height: 6px; */
-  }
-
-  .diffs::-webkit-scrollbar-track {
-    /* background: var(--background); */
-    /* border-left: 1px solid var(--color-border); */
-  }
-
-  .diffs::-webkit-scrollbar-thumb {
-    /* background-color: var(--color-red-500); */
-    /* background-clip: content-box;
-    border: 2px solid transparent;
-    border-left-width: 3px;
-    border-radius: 6px; */
-  }
-
-  /* @supports (-moz-appearance: none) {
-    .diffs {
-      scrollbar-color: var(--color-red-500) var(--background);
-    }
-  } */
 }

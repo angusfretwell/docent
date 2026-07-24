@@ -1,8 +1,8 @@
+import { FindingsPanel } from "@client/features/findings/panel";
 import { findingsOpenAtom } from "@client/lib/preferences";
 import { useAtomValue } from "jotai/react";
 import { useDefaultLayout } from "react-resizable-panels";
 
-import { FindingsPanel } from "./findings/panel";
 import { Header } from "./header";
 import { Pane } from "./pane";
 import {
