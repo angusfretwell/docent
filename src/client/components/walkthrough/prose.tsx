@@ -4,6 +4,7 @@ import { stepLayout, targetKey } from "@client/lib/walkthrough";
 import type { Callout } from "@client/lib/walkthrough-pins";
 import { sectionAnchorProps } from "@client/lib/walkthrough-target";
 import type { FoldedFinding } from "@shared/lib/finding";
+import type { SectionId, WalkthroughId } from "@shared/schemas/ids";
 import { targetChipIndex } from "@shared/lib/walkthrough-segments";
 import type { ElementContent } from "hast";
 import type { ComponentProps, ReactNode } from "react";
@@ -41,7 +42,7 @@ interface ChipScope {
   calloutsFor: CalloutsForTarget;
   labelTarget: LabelTarget;
   onSelect: (key: string) => void;
-  sectionId: string;
+  sectionId: SectionId;
 }
 
 // Read through context rather than a closure so `PROSE_COMPONENTS` can be a
@@ -197,7 +198,7 @@ export function StepProse({
   labelTarget: LabelTarget;
   onSelect: (key: string) => void;
   step: WalkthroughStep;
-  walkthroughId: string;
+  walkthroughId: WalkthroughId;
 }) {
   const layout = stepLayout(step);
   const scope = {

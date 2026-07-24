@@ -54,7 +54,9 @@ function anchorSpecFails(args: string[]): boolean {
 }
 
 /** A minimal folded Finding for pure-filter tests. */
-function folded(overrides: Partial<FoldedFinding>): FoldedFinding {
+function folded(
+  overrides: Partial<Omit<FoldedFinding, "id">> & { id?: string }
+): FoldedFinding {
   return {
     body: "",
     id: "fnd_x",
@@ -62,7 +64,7 @@ function folded(overrides: Partial<FoldedFinding>): FoldedFinding {
     replies: [],
     status: "open",
     ...overrides,
-  };
+  } as FoldedFinding;
 }
 
 describe("parseListArgs", () => {
@@ -119,7 +121,7 @@ describe("applyFindingFilter", () => {
   test("status any-of narrows", () => {
     expect(
       applyFindingFilter(all, { status: ["resolved"] }).map(
-        (finding) => finding.id
+        (finding) => finding.id as string
       )
     ).toEqual(["closed"]);
   });
@@ -131,7 +133,7 @@ describe("applyFindingFilter", () => {
   test("the unresolved queue is open plus actioned", () => {
     expect(
       applyFindingFilter(all, { status: ["open", "actioned"] }).map(
-        (finding) => finding.id
+        (finding) => finding.id as string
       )
     ).toEqual(["open", "actioned", "onFile", "byAgent"]);
   });
@@ -139,7 +141,7 @@ describe("applyFindingFilter", () => {
   test("anchor-file narrows to the code arm's file", () => {
     expect(
       applyFindingFilter(all, { anchorFile: "src/a.ts", status: [] }).map(
-        (finding) => finding.id
+        (finding) => finding.id as string
       )
     ).toEqual(["onFile"]);
   });
@@ -147,7 +149,7 @@ describe("applyFindingFilter", () => {
   test("author narrows to a participant id", () => {
     expect(
       applyFindingFilter(all, { author: "claude", status: [] }).map(
-        (finding) => finding.id
+        (finding) => finding.id as string
       )
     ).toEqual(["byAgent"]);
   });
@@ -242,7 +244,7 @@ describe("write + fetch round-trip (shared write path)", () => {
 
     expect(result.findingId).toMatch(/^fnd_/);
     expect(result.record).toBe("001-open.md");
-    expect(result.changeId).toBe("chg_001");
+    expect(result.changeId as string).toBe("chg_001");
 
     const findings = await run(listFindings(repo, { status: [] }));
     const finding = findings.at(0);
@@ -276,13 +278,13 @@ describe("write + fetch round-trip (shared write path)", () => {
     await run(actionFinding(repo, { author: { agent: "fixer" }, findingId }));
     const afterAction = await run(listFindings(repo, { status: [] }));
     expect(
-      afterAction.find((finding) => finding.id === findingId)?.status
+      afterAction.find((finding) => finding.id as string === findingId)?.status
     ).toBe("actioned");
 
     await run(resolveFinding(repo, { author: {}, findingId }));
     const afterResolve = await run(listFindings(repo, { status: [] }));
     expect(
-      afterResolve.find((finding) => finding.id === findingId)?.status
+      afterResolve.find((finding) => finding.id as string === findingId)?.status
     ).toBe("resolved");
   });
 
@@ -338,7 +340,7 @@ describe("write + fetch round-trip (shared write path)", () => {
     await run(reopenFinding(repo, { author: {}, findingId }));
 
     const findings = await run(listFindings(repo, { status: [] }));
-    const reopened = findings.find((finding) => finding.id === findingId);
+    const reopened = findings.find((finding) => finding.id as string === findingId);
     expect(reopened?.status).toBe("open");
   });
 
@@ -362,7 +364,7 @@ describe("write + fetch round-trip (shared write path)", () => {
     );
 
     const findings = await run(listFindings(repo, { status: [] }));
-    const edited = findings.find((finding) => finding.id === findingId);
+    const edited = findings.find((finding) => finding.id as string === findingId);
     expect(edited?.body).toBe("the flush races the drain");
   });
 
@@ -392,7 +394,7 @@ describe("write + fetch round-trip (shared write path)", () => {
     );
 
     const findings = await run(listFindings(repo, { status: [] }));
-    expect(findings.find((finding) => finding.id === findingId)?.body).toBe(
+    expect(findings.find((finding) => finding.id as string === findingId)?.body).toBe(
       "revised"
     );
     expect(missingRecord._tag).toBe("Failure");

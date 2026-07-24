@@ -16,6 +16,7 @@ import { ANCHOR_KIND } from "../enums/anchor-kind";
 import type { FindingStatus } from "../enums/finding-status";
 import type { RecordType } from "../enums/record-type";
 import type { Anchor, Author, FindingRecord } from "../schemas/finding";
+import type { FindingId } from "../schemas/ids";
 
 /**
  * The status each record type moves a Finding to. A Finding's status is simply
@@ -42,7 +43,7 @@ export interface Reply {
 export interface FoldedFinding {
   anchor?: Anchor;
   body: string;
-  id: string;
+  id: FindingId;
   openedAt?: string;
   openedBy?: Author;
   participants: Author[];
@@ -57,7 +58,7 @@ export interface FoldedFinding {
  * names it.
  */
 export function foldFinding(
-  id: string,
+  id: FindingId | string,
   records: readonly FindingRecord[]
 ): FoldedFinding {
   const ordered = records.toSorted((left, right) =>
@@ -104,7 +105,7 @@ export function foldFinding(
   return {
     anchor: root?.anchor,
     body: root ? bodyOf(root) : "",
-    id,
+    id: id as FindingId,
     openedAt: root?.createdAt,
     openedBy: root?.author,
     participants,

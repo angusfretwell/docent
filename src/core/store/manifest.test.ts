@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import type { WalkthroughKind } from "@shared/enums/walkthrough-kind";
+import type { ChangeId, WalkthroughId } from "@shared/schemas/ids";
 import { Walkthrough } from "@shared/schemas/walkthrough";
 import { cleanupScratchDirs, scratchDir } from "@test-support/fixtures";
 import { makeTestRuntime } from "@test-support/runtime";
@@ -28,8 +29,8 @@ afterAll(async () => {
 
 function manifest(overrides: Partial<typeof Walkthrough.Type> = {}) {
   return Walkthrough.make({
-    bornChangeId: "chg_001",
-    id: "wlk_test",
+    bornChangeId: "chg_001" as ChangeId,
+    id: "wlk_test" as WalkthroughId,
     kind: "product",
     schema: "docent/walkthrough",
     sections: [],

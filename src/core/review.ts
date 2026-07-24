@@ -17,6 +17,7 @@ import {
   WalkthroughEntry,
 } from "@shared/schemas/review";
 import type { ViewedRequest } from "@shared/schemas/review";
+import type { FindingId, WalkthroughId } from "@shared/schemas/ids";
 import { walkthroughKinds } from "@shared/enums/walkthrough-kind";
 import type { WalkthroughKind } from "@shared/enums/walkthrough-kind";
 import { Walkthrough } from "@shared/schemas/walkthrough";
@@ -197,7 +198,13 @@ const readFinding = Effect.fn("readFinding")(function* readFinding(
   const root = names.find((name) => name.endsWith("-open.md")) ?? names[0];
   const anchor =
     root === undefined ? {} : yield* readAnchor(path.join(dir, id, root));
-  return FindingEntry.make({ id, records: somes(parsed), ...anchor });
+  // `id` is the record dir name, minted `fnd_…` (or hand-authored); the read
+  // path trusts the on-disk structure, so brand it rather than re-validate.
+  return FindingEntry.make({
+    id: id as FindingId,
+    records: somes(parsed),
+    ...anchor,
+  });
 });
 
 const readFindings = Effect.fn("readFindings")(function* readFindings(
@@ -237,7 +244,7 @@ const readWalkthrough = Effect.fn("readWalkthrough")(function* readWalkthrough(
     { concurrency: "unbounded" }
   );
   return WalkthroughEntry.make({
-    id,
+    id: id as WalkthroughId,
     kind: manifestValue?.kind ?? kind,
     sections: somes(parsed),
     ...(manifestValue === undefined ? {} : { manifest: manifestValue }),

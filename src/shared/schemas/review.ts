@@ -14,6 +14,7 @@ import { Schema } from "effect";
 
 import { walkthroughKinds } from "../enums/walkthrough-kind";
 import { FindingRecord } from "./finding";
+import { ChangeId, FindingId, ReviewId, WalkthroughId } from "./ids";
 import { Walkthrough, WalkthroughSection } from "./walkthrough";
 
 /** `docent/review` — the `review.json` identity record (data-model.md §3). */
@@ -23,7 +24,7 @@ export class Review extends Schema.Class<Review>("Review")({
   /** The branch name — the Review's identity. */
   branch: Schema.String,
   /** Stable opaque id (ULID-based). */
-  id: Schema.String,
+  id: ReviewId,
   schema: Schema.Literal("docent/review"),
   /**
    * A short human name for the change under review — the header's headline.
@@ -41,7 +42,7 @@ export class ChangeRecord extends Schema.Class<ChangeRecord>("ChangeRecord")({
   headRef: Schema.String,
   headSha: Schema.String,
   /** Sequential per-Review id: `chg_001`, `chg_002`, … */
-  id: Schema.String,
+  id: ChangeId,
   schema: Schema.Literal("docent/change"),
 }) {}
 
@@ -78,7 +79,7 @@ export class ViewedRequest extends Schema.Class<ViewedRequest>("ViewedRequest")(
 export class FindingEntry extends Schema.Class<FindingEntry>("FindingEntry")({
   /** The root anchor's file path — present only for `line`/`file` code arms. */
   anchorFile: Schema.optional(Schema.String),
-  id: Schema.String,
+  id: FindingId,
   records: Schema.Array(FindingRecord),
 }) {}
 
@@ -93,7 +94,7 @@ export class FindingEntry extends Schema.Class<FindingEntry>("FindingEntry")({
 export class WalkthroughEntry extends Schema.Class<WalkthroughEntry>(
   "WalkthroughEntry"
 )({
-  id: Schema.String,
+  id: WalkthroughId,
   kind: Schema.Literals(walkthroughKinds),
   manifest: Schema.optional(Walkthrough),
   sections: Schema.Array(WalkthroughSection),

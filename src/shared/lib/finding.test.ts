@@ -253,6 +253,6 @@ describe("sortFoldedFindings", () => {
       ]),
     ]);
 
-    expect(folded.map((finding) => finding.id)).toEqual(["a2", "a", "b"]);
+    expect(folded.map((finding) => finding.id as string)).toEqual(["a2", "a", "b"]);
   });
 });

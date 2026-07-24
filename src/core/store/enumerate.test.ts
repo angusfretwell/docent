@@ -163,7 +163,7 @@ describe("Walkthrough section: decodeWalkthroughSection (strict) vs. readWalkthr
     );
     const bestEffort = await runtime.runPromise(readWalkthroughSection(file));
 
-    expect(strict.id).toBe("sec_entry");
+    expect(strict.id as string).toBe("sec_entry");
     expect(Option.isSome(bestEffort) && bestEffort.value).toEqual(strict);
   });
 

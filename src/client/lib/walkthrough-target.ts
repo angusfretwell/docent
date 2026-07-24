@@ -1,4 +1,5 @@
 import { sectionKey } from "@client/lib/section-findings";
+import type { SectionId, WalkthroughId } from "@shared/schemas/ids";
 import { atom } from "jotai";
 import { useAtomValue, useSetAtom } from "jotai/react";
 import type { RefObject } from "react";
@@ -21,7 +22,10 @@ interface WalkthroughTarget {
 export const walkthroughTargetAtom = atom<WalkthroughTarget | null>(null);
 
 /** The attribute a section carries so a reveal request can find it. */
-export function sectionAnchorProps(walkthroughId: string, sectionId: string) {
+export function sectionAnchorProps(
+  walkthroughId: WalkthroughId,
+  sectionId: SectionId
+) {
   return { [SECTION_ATTRIBUTE]: sectionKey(walkthroughId, sectionId) };
 }
 
@@ -52,7 +56,7 @@ export function useRevealSection() {
  */
 export function useRevealedSection(
   containerRef: RefObject<HTMLElement | null>,
-  walkthroughId: string
+  walkthroughId: WalkthroughId
 ): void {
   const target = useAtomValue(walkthroughTargetAtom);
   const token = target?.token;

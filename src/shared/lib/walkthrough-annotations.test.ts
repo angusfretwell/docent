@@ -136,7 +136,7 @@ describe("schema — code and product arms", () => {
       sections: ["s01-upload.md"],
       title: "Uploading",
     });
-    expect(manifest.captures?.map((capture) => capture.id)).toEqual([
+    expect(manifest.captures?.map((capture) => capture.id as string)).toEqual([
       "cap_a",
       "cap_b",
     ]);
@@ -179,7 +179,7 @@ describe("schema — code and product arms", () => {
       schema: "docent/walkthrough-section",
       title: "Uploading a file",
     });
-    expect(section.captures).toEqual(["cap_a", "cap_b"]);
+    expect(section.captures as readonly string[] | undefined).toEqual(["cap_a", "cap_b"]);
     expect(section.annotations?.at(0)?.anchor.kind).toBe("screenshot-region");
   });
 
@@ -255,7 +255,7 @@ describe("Walkthrough product manifest", () => {
 
   test("decodes the captures[] registry as typed captures", () => {
     const decoded = decodeManifest(manifest);
-    expect(decoded.captures?.map((capture) => capture.id)).toEqual([
+    expect(decoded.captures?.map((capture) => capture.id as string)).toEqual([
       "cap_a",
       "cap_b",
     ]);
@@ -297,7 +297,7 @@ describe("WalkthroughSection product frontmatter", () => {
       schema: "docent/walkthrough-section",
       title: "Uploading a file",
     });
-    expect(section.captures).toEqual(["cap_a", "cap_b"]);
+    expect(section.captures as readonly string[] | undefined).toEqual(["cap_a", "cap_b"]);
     expect(section.annotations?.length).toBe(2);
     expect(section.annotations?.[0]?.anchor.kind).toBe("screenshot-region");
     expect(section.annotations?.[1]?.anchor.kind).toBe("recording-timestamp");

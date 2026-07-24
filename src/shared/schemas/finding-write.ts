@@ -13,6 +13,7 @@
 import { Schema } from "effect";
 
 import { Anchor } from "./finding";
+import { ChangeId, FindingId } from "./ids";
 
 /** Open a new Finding: the root record carries the content-addressed anchor. */
 const OpenWrite = Schema.Struct({
@@ -24,25 +25,25 @@ const OpenWrite = Schema.Struct({
 /** Reply on an existing Finding; being the latest record, it returns it to open. */
 const ReplyWrite = Schema.Struct({
   body: Schema.String,
-  findingId: Schema.String,
+  findingId: FindingId,
   op: Schema.Literal("reply"),
 });
 
 /** Hand a Finding back: the turn is taken, whatever its outcome. */
 const ActionWrite = Schema.Struct({
-  findingId: Schema.String,
+  findingId: FindingId,
   op: Schema.Literal("action"),
 });
 
 /** Resolve a Finding. */
 const ResolveWrite = Schema.Struct({
-  findingId: Schema.String,
+  findingId: FindingId,
   op: Schema.Literal("resolve"),
 });
 
 /** Reopen a resolved Finding. */
 const ReopenWrite = Schema.Struct({
-  findingId: Schema.String,
+  findingId: FindingId,
   op: Schema.Literal("reopen"),
 });
 
@@ -53,8 +54,10 @@ const ReopenWrite = Schema.Struct({
  */
 const EditWrite = Schema.Struct({
   body: Schema.String,
+  // `edits` names the superseded record's *filename* (e.g. `002-reply.md`), not
+  // a record id — it stays a plain string, unlike `findingId`.
   edits: Schema.String,
-  findingId: Schema.String,
+  findingId: FindingId,
   op: Schema.Literal("edit"),
 });
 
@@ -75,8 +78,8 @@ export type FindingWrite = typeof FindingWrite.Type;
  * idempotently reused for the live head).
  */
 export const FindingWriteResult = Schema.Struct({
-  changeId: Schema.String,
-  findingId: Schema.String,
+  changeId: ChangeId,
+  findingId: FindingId,
   record: Schema.String,
 });
 export type FindingWriteResult = typeof FindingWriteResult.Type;

@@ -13,6 +13,7 @@ import { useRevealedSection } from "@client/lib/walkthrough-target";
 import { diffQueryOptions } from "@client/queries/diff";
 import { reviewQueryOptions } from "@client/queries/review";
 import { latestCodeWalkthrough } from "@shared/lib/identity-drift";
+import type { WalkthroughId } from "@shared/schemas/ids";
 import { walkthroughStaleness } from "@shared/lib/walkthrough-annotations";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { FileCode } from "lucide-react";
@@ -44,7 +45,7 @@ export function CodeWalkthroughView() {
   });
 
   const proseRef = useRef<HTMLDivElement>(null);
-  const tourId = walkthrough?.id ?? "";
+  const tourId = walkthrough?.id ?? ("" as WalkthroughId);
   const { activeKey, pinTarget } = useActiveTarget(proseRef, tourId);
   const [reasserted, setReasserted] = useState(0);
 

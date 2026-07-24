@@ -12,6 +12,7 @@
 
 import type { Anchor } from "@shared/schemas/finding";
 import type { FindingWrite } from "@shared/schemas/finding-write";
+import { ChangeId } from "@shared/schemas/ids";
 import { ChangeRecord } from "@shared/schemas/review";
 import { Clock, Effect, Option } from "effect";
 import { FileSystem } from "effect/FileSystem";
@@ -88,7 +89,9 @@ export const mintChange = Effect.fn("mintChange")(function* mintChange(params: {
     }
   }
 
-  const id = `chg_${String(maxSequence(names, /^chg_(?<n>\d+)\.json$/) + 1).padStart(3, "0")}`;
+  const id = ChangeId.make(
+    `chg_${String(maxSequence(names, /^chg_(?<n>\d+)\.json$/) + 1).padStart(3, "0")}`
+  );
   const record = ChangeRecord.make({
     baseRef: params.refs.baseRef,
     baseSha: params.refs.baseSha,

@@ -13,6 +13,7 @@ import { Schema } from "effect";
 import { ANCHOR_KIND } from "../enums/anchor-kind";
 import { recordTypes } from "../enums/record-type";
 import { sides } from "../enums/side";
+import { CaptureId, ChangeId, SectionId, WalkthroughId } from "./ids";
 
 /** Attribution carried by every record (data-model.md §5.4). */
 export class Author extends Schema.Class<Author>("Author")({
@@ -48,18 +49,18 @@ const LineAnchor = Schema.Struct({
 });
 const WalkthroughSectionAnchor = Schema.Struct({
   kind: Schema.Literal(ANCHOR_KIND.walkthroughSection),
-  sectionId: Schema.String,
-  walkthroughId: Schema.String,
+  sectionId: SectionId,
+  walkthroughId: WalkthroughId,
 });
 const ScreenshotRegionAnchor = Schema.Struct({
-  capture: Schema.String,
+  capture: CaptureId,
   kind: Schema.Literal(ANCHOR_KIND.screenshotRegion),
   rect: Schema.optional(
     Schema.Tuple([Schema.Number, Schema.Number, Schema.Number, Schema.Number])
   ),
 });
 const RecordingTimestampAnchor = Schema.Struct({
-  capture: Schema.String,
+  capture: CaptureId,
   fromMs: Schema.optional(Schema.Number),
   kind: Schema.Literal(ANCHOR_KIND.recordingTimestamp),
   toMs: Schema.optional(Schema.Number),
@@ -97,7 +98,7 @@ export class FindingRecord extends Schema.Class<FindingRecord>("FindingRecord")(
     anchor: Schema.optional(Anchor),
     author: Author,
     body: Schema.String,
-    changeId: Schema.String,
+    changeId: ChangeId,
     createdAt: Schema.String,
     edits: Schema.optional(Schema.String),
     /** The record's filename, e.g. `002-reply.md` — orders the log and is the edit target. */

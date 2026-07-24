@@ -11,14 +11,19 @@ import {
   walkthroughPaths,
 } from "./walkthrough";
 
-function section(over: Partial<WalkthroughSection> = {}): WalkthroughSection {
+function section(
+  over: Partial<Omit<WalkthroughSection, "id" | "captures">> & {
+    id?: string;
+    captures?: readonly string[];
+  } = {}
+): WalkthroughSection {
   return {
     body: "",
     id: "sec_1",
     schema: "docent/walkthrough-section",
     title: "A section",
     ...over,
-  } as WalkthroughSection;
+  } as unknown as WalkthroughSection;
 }
 
 function range(file: string, line: number) {
@@ -98,7 +103,7 @@ function capture(id: string, kind: CaptureKind, title?: string) {
     route: `/${id}`,
     viewport: [1280, 800] as [number, number],
     ...(title === undefined ? {} : { title }),
-  } as Capture;
+  } as unknown as Capture;
 }
 
 describe("capturesByKey", () => {

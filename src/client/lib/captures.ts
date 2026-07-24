@@ -6,12 +6,17 @@
  * the code side reads from. No DOM or React here.
  */
 
+import type { WalkthroughId } from "@shared/schemas/ids";
+
 /**
  * The content-addressed endpoint for a capture blob. Every capture — still frame
  * or recording — is an rrweb event stream, so a media sha always resolves to
  * `<sha>.rrweb.json`.
  */
-export function captureUrl(walkthroughId: string, media: string): string {
+export function captureUrl(
+  walkthroughId: WalkthroughId,
+  media: string
+): string {
   return `/api/capture/${walkthroughId}/${media}.rrweb.json`;
 }
 

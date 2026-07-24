@@ -285,7 +285,9 @@ export const writeContext = Effect.fn("writeContext")(function* writeContext(
 const commitWrite = Effect.fn("commitWrite")(function* commitWrite(
   context: WriteContext,
   author: AuthorInput,
-  draft: FindingWrite
+  // The encoded (unbranded) shape: the subcommands assemble drafts from raw
+  // `--finding`/`--body` flags, and this decode is where the ids get branded.
+  draft: typeof FindingWrite.Encoded
 ) {
   const write = yield* Schema.decodeUnknownEffect(FindingWrite)(draft).pipe(
     Effect.mapError(

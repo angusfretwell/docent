@@ -73,7 +73,7 @@ describe("mintChange", () => {
 
     const change = await mint(root);
 
-    expect(change.id).toBe("chg_001");
+    expect(change.id as string).toBe("chg_001");
     expect(change.schema).toBe("docent/change");
     expect(change.baseSha).toBe("aaaa");
     expect(change.headSha).toBe("bbbb");
@@ -89,7 +89,7 @@ describe("mintChange", () => {
 
     expect(second.id).toBe(first.id);
     const snap = await snapshot(root);
-    expect(snap.changes.map((change) => change.id)).toEqual(["chg_001"]);
+    expect(snap.changes.map((change) => change.id as string)).toEqual(["chg_001"]);
   });
 
   test("a new head mints the next sequential Change", async () => {
@@ -98,9 +98,9 @@ describe("mintChange", () => {
     await mint(root);
     const next = await mint(root, { ...REFS, headSha: "cccc" });
 
-    expect(next.id).toBe("chg_002");
+    expect(next.id as string).toBe("chg_002");
     const snap = await snapshot(root);
-    expect(snap.changes.map((change) => change.id)).toEqual([
+    expect(snap.changes.map((change) => change.id as string)).toEqual([
       "chg_001",
       "chg_002",
     ]);
@@ -116,7 +116,7 @@ describe("resolveWriteContext", () => {
     );
 
     expect(resolved.reviewDir).toBe(reviewDir(root));
-    expect(resolved.change.id).toBe("chg_001");
+    expect(resolved.change.id as string).toBe("chg_001");
     expect(resolved.change.baseSha).toBe("aaaa");
     expect(resolved.change.headSha).toBe("bbbb");
     const snap = await snapshot(root);
@@ -133,9 +133,9 @@ describe("resolveWriteContext", () => {
       resolveWriteContext({ base: "main", branch: "feature", refs: REFS, root })
     );
 
-    expect(second.change.id).toBe("chg_001");
+    expect(second.change.id as string).toBe("chg_001");
     const snap = await snapshot(root);
-    expect(snap.changes.map((change) => change.id)).toEqual(["chg_001"]);
+    expect(snap.changes.map((change) => change.id as string)).toEqual(["chg_001"]);
   });
 });
 
@@ -151,7 +151,7 @@ describe("writeFindingRecord", () => {
 
     expect(result.findingId).toMatch(/^fnd_/);
     expect(result.record).toBe("001-open.md");
-    expect(result.changeId).toBe("chg_001");
+    expect(result.changeId as string).toBe("chg_001");
 
     const snap = await snapshot(root);
     const entry = snap.findings.at(0);
@@ -166,7 +166,7 @@ describe("writeFindingRecord", () => {
       id: "angus@example.com",
       kind: "human",
     });
-    expect(root001?.changeId).toBe("chg_001");
+    expect(root001?.changeId as string).toBe("chg_001");
   });
 
   test("file-level and change-level anchors are authorable", async () => {
@@ -327,7 +327,7 @@ describe("writeFindingRecord", () => {
 
     const snap = await snapshot(root);
     const entry = snap.findings.find((finding) => finding.id === findingId);
-    expect(entry?.records.map((record) => record.changeId)).toEqual([
+    expect(entry?.records.map((record) => record.changeId as string)).toEqual([
       "chg_001",
       "chg_002",
     ]);

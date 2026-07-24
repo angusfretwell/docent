@@ -1,5 +1,6 @@
 import { useFindingWrite } from "@client/hooks/use-finding-write";
 import type { FoldedFinding } from "@shared/lib/finding";
+import type { SectionId, WalkthroughId } from "@shared/schemas/ids";
 import { MessageCirclePlus } from "lucide-react";
 import { useState } from "react";
 
@@ -23,8 +24,8 @@ export function SectionFindings({
   walkthroughId,
 }: {
   findings: readonly FoldedFinding[];
-  sectionId: string;
-  walkthroughId: string;
+  sectionId: SectionId;
+  walkthroughId: WalkthroughId;
 }) {
   const [composing, setComposing] = useState(false);
   const write = useFindingWrite();

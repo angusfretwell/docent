@@ -402,11 +402,11 @@ describe("serve routes", () => {
     const result = decodeWriteResult(await res.json());
     expect(result.findingId).toMatch(/^fnd_/);
     expect(result.record).toBe("001-open.md");
-    expect(result.changeId).toBe("chg_001");
+    expect(result.changeId as string).toBe("chg_001");
 
     // The record and its minted Change are both visible in the live snapshot.
     const snap = await fetchReview(client);
-    expect(snap.changes.map((change) => change.id)).toEqual(["chg_001"]);
+    expect(snap.changes.map((change) => change.id as string)).toEqual(["chg_001"]);
     const finding = snap.findings.find(
       (entry) => entry.id === result.findingId
     );

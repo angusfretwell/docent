@@ -115,7 +115,7 @@ describe("runWalkthrough — end to end through git + fs", () => {
     const entry = await onlyWalkthrough(repo);
     expect(entry?.kind).toBe("code");
     expect(entry?.id).toMatch(/^wlk_/);
-    expect(entry?.manifest?.bornChangeId).toBe("chg_001");
+    expect(entry?.manifest?.bornChangeId as string).toBe("chg_001");
     expect(entry?.manifest?.title).toBe("Code tour");
   });
 
@@ -126,7 +126,7 @@ describe("runWalkthrough — end to end through git + fs", () => {
 
     const entry = await onlyWalkthrough(repo);
     expect(entry?.kind).toBe("product");
-    expect(entry?.manifest?.bornChangeId).toBe("chg_001");
+    expect(entry?.manifest?.bornChangeId as string).toBe("chg_001");
     expect(entry?.manifest?.title).toBe("");
   });
 
@@ -199,7 +199,7 @@ describe("runWalkthrough — end to end through git + fs", () => {
 
     const uploaded = await onlyWalkthrough(repo);
     const section = uploaded?.sections.at(0);
-    expect(section?.captures).toEqual(["cap_a", "cap_b"]);
+    expect(section?.captures as readonly string[] | undefined).toEqual(["cap_a", "cap_b"]);
     expect(section?.annotations?.at(0)?.anchor.kind).toBe("screenshot-region");
   });
 

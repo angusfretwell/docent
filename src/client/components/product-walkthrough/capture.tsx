@@ -6,6 +6,7 @@ import { useRrwebSnapshot } from "@client/hooks/use-rrweb-snapshot";
 import { captureUrl } from "@client/lib/captures";
 import { cn } from "@client/lib/utils";
 import type { CaptureKind } from "@shared/enums/capture-kind";
+import type { WalkthroughId } from "@shared/schemas/ids";
 import type { RegionPin, TimePin } from "@client/lib/walkthrough-pins";
 import { recordingPins, screenshotPins } from "@client/lib/walkthrough-pins";
 import type { FoldedFinding } from "@shared/lib/finding";
@@ -64,7 +65,7 @@ export interface CaptureProps {
    */
   refitted: number;
   target: string | undefined;
-  walkthroughId: string;
+  walkthroughId: WalkthroughId;
 }
 
 /**

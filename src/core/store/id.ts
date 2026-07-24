@@ -5,16 +5,42 @@
  * (data-model.md §4–5).
  */
 
+import type {
+  CaptureId,
+  FindingId,
+  ReviewId,
+  SectionId,
+  WalkthroughId,
+} from "@shared/schemas/ids";
 import { Clock, Effect } from "effect";
 
 const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
 /**
+ * The branded id a `<prefix>_` mint yields. A prefix outside this map (e.g. the
+ * `vew_` viewed-event filename) mints an unbranded `string`.
+ */
+interface IdForPrefix {
+  cap: CaptureId;
+  fnd: FindingId;
+  rev: ReviewId;
+  sec: SectionId;
+  wlk: WalkthroughId;
+}
+type MintedId<Prefix extends string> = Prefix extends keyof IdForPrefix
+  ? IdForPrefix[Prefix]
+  : string;
+
+/**
  * A ULID-shaped opaque id under `prefix`: `<prefix>_` + 10 time chars + 16
  * random chars, Crockford base32. The time head keeps ids lexically sortable by
- * mint order — which is also the append-only `viewed/` file order.
+ * mint order — which is also the append-only `viewed/` file order. The return is
+ * branded to the prefix's record id (`makeId("fnd")` → `FindingId`), so a caller
+ * gets its id type back without a cast.
  */
-export const makeId = Effect.fn("makeId")(function* makeId(prefix: string) {
+export const makeId = Effect.fn("makeId")(function* makeId<
+  const Prefix extends string,
+>(prefix: Prefix) {
   const now = yield* Clock.currentTimeMillis;
   let time = now;
   let head = "";
@@ -28,5 +54,5 @@ export const makeId = Effect.fn("makeId")(function* makeId(prefix: string) {
   for (const byte of bytes) {
     tail += CROCKFORD.charAt(byte % 32);
   }
-  return `${prefix}_${head}${tail}`;
+  return `${prefix}_${head}${tail}` as MintedId<Prefix>;
 });

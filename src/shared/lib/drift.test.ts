@@ -219,9 +219,10 @@ describe("changeHistory", () => {
     kind: "agent" as const,
   };
   function record(
-    fields: Partial<FindingRecord> & {
+    fields: Partial<Omit<FindingRecord, "changeId">> & {
       name: string;
       type: FindingRecord["type"];
+      changeId?: string;
     }
   ) {
     return {

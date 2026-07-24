@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
+import type { Anchor } from "@shared/schemas/finding";
+
 import {
   identityAnchorDrift,
   identityDrift,
@@ -77,7 +79,7 @@ describe("identityAnchorDrift", () => {
       walkthroughId: "wlk_01A",
     };
 
-    const drift = identityAnchorDrift(anchor, walkthroughs);
+    const drift = identityAnchorDrift(anchor as Anchor, walkthroughs);
 
     expect(drift).toEqual({ bornText: "Intro prose.", state: "live" });
   });
@@ -93,7 +95,7 @@ describe("identityAnchorDrift", () => {
       walkthroughId: "wlk_01A",
     };
 
-    const drift = identityAnchorDrift(anchor, walkthroughs);
+    const drift = identityAnchorDrift(anchor as Anchor, walkthroughs);
 
     expect(drift).toEqual({ bornText: "Old intro.", state: "outdated" });
   });
@@ -105,7 +107,7 @@ describe("identityAnchorDrift", () => {
       walkthroughId: "wlk_gone",
     };
 
-    const drift = identityAnchorDrift(anchor, [
+    const drift = identityAnchorDrift(anchor as Anchor, [
       codeWalkthrough("wlk_01B", [{ body: "unrelated", id: "sec_1" }]),
     ]);
 
@@ -123,7 +125,7 @@ describe("identityAnchorDrift", () => {
       walkthroughId: "wlk_02A",
     };
 
-    expect(identityAnchorDrift(anchor, walkthroughs)).toEqual({
+    expect(identityAnchorDrift(anchor as Anchor, walkthroughs)).toEqual({
       bornText: "Tour step.",
       state: "outdated",
     });
@@ -137,7 +139,7 @@ describe("identityAnchorDrift", () => {
     ];
     const anchor = { capture: "cap_a", kind: "screenshot-region" as const };
 
-    expect(identityAnchorDrift(anchor, walkthroughs)).toEqual({
+    expect(identityAnchorDrift(anchor as Anchor, walkthroughs)).toEqual({
       state: "live",
     });
   });
@@ -157,7 +159,7 @@ describe("identityAnchorDrift", () => {
       kind: "recording-timestamp" as const,
     };
 
-    expect(identityAnchorDrift(anchor, walkthroughs)).toEqual({
+    expect(identityAnchorDrift(anchor as Anchor, walkthroughs)).toEqual({
       state: "outdated",
     });
   });
@@ -174,7 +176,7 @@ describe("identityAnchorDrift", () => {
       section: "sec_1",
     };
 
-    expect(identityAnchorDrift(anchor, walkthroughs)).toEqual({
+    expect(identityAnchorDrift(anchor as Anchor, walkthroughs)).toEqual({
       bornText: "Save button",
       state: "live",
     });
@@ -190,7 +192,7 @@ describe("identityAnchorDrift", () => {
       section: "sec_1",
     };
 
-    expect(identityAnchorDrift(anchor, walkthroughs)).toEqual({
+    expect(identityAnchorDrift(anchor as Anchor, walkthroughs)).toEqual({
       bornText: "Save button",
       state: "outdated",
     });
@@ -205,6 +207,6 @@ describe("identityAnchorDrift", () => {
       side: "head" as const,
     };
 
-    expect(identityAnchorDrift(anchor, [])).toBeUndefined();
+    expect(identityAnchorDrift(anchor as Anchor, [])).toBeUndefined();
   });
 });

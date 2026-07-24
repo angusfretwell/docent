@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import type { FoldedFinding } from "@shared/lib/finding";
 import type { Anchor } from "@shared/schemas/finding";
+import type { CaptureId, FindingId } from "@shared/schemas/ids";
 import type {
   Capture,
   WalkthroughAnnotation,
@@ -24,8 +25,8 @@ function regionAnchor(
   rect?: readonly [number, number, number, number]
 ): Extract<Anchor, { kind: "screenshot-region" }> {
   return rect === undefined
-    ? { capture: captureId, kind: "screenshot-region" }
-    : { capture: captureId, kind: "screenshot-region", rect };
+    ? { capture: captureId as CaptureId, kind: "screenshot-region" }
+    : { capture: captureId as CaptureId, kind: "screenshot-region", rect };
 }
 
 function timestampAnchor(
@@ -34,7 +35,7 @@ function timestampAnchor(
   toMs?: number
 ): Extract<Anchor, { kind: "recording-timestamp" }> {
   return {
-    capture: captureId,
+    capture: captureId as CaptureId,
     kind: "recording-timestamp",
     ...(fromMs === undefined ? {} : { fromMs }),
     ...(toMs === undefined ? {} : { toMs }),
@@ -52,7 +53,7 @@ function finding(anchor: FoldedFinding["anchor"], body: string): FoldedFinding {
   return {
     anchor,
     body,
-    id: `fnd_${body}`,
+    id: `fnd_${body}` as FindingId,
     participants: [],
     replies: [],
     status: "open",
@@ -66,7 +67,7 @@ function capture(id: string, kind: Capture["kind"] = "screenshot"): Capture {
     media: "media-sha",
     route: "/",
     viewport: [800, 600],
-  } as Capture;
+  } as unknown as Capture;
 }
 
 function section_(over: Partial<WalkthroughSection> = {}): WalkthroughSection {

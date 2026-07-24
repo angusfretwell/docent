@@ -12,6 +12,7 @@ import { annotationsFor, captureCallouts } from "@client/lib/walkthrough-pins";
 import { useRevealedSection } from "@client/lib/walkthrough-target";
 import { reviewQueryOptions } from "@client/queries/review";
 import type { FoldedFinding } from "@shared/lib/finding";
+import type { WalkthroughId } from "@shared/schemas/ids";
 import { latestProductWalkthrough } from "@shared/lib/identity-drift";
 import { walkthroughStaleness } from "@shared/lib/walkthrough-annotations";
 import { useQuery } from "@tanstack/react-query";
@@ -68,7 +69,7 @@ function CapturePanel({
   findings: readonly FoldedFinding[];
   onSelect: (key: string) => void;
   refitted: number;
-  walkthroughId: string;
+  walkthroughId: WalkthroughId;
 }) {
   const [shown, setShown] = useState<{
     key: string | undefined;
@@ -165,7 +166,7 @@ export function ProductWalkthroughView() {
   const sections = walkthrough?.sections ?? [];
 
   const proseRef = useRef<HTMLDivElement>(null);
-  const tourId = walkthrough?.id ?? "";
+  const tourId = walkthrough?.id ?? ("" as WalkthroughId);
   const { activeKey, jumpToTarget, pinTarget } = useActiveTarget(
     proseRef,
     tourId

@@ -3,6 +3,7 @@ import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 
 import type { WalkthroughKind } from "@shared/enums/walkthrough-kind";
+import type { CaptureId } from "@shared/schemas/ids";
 
 import { cleanupScratchDirs, scratchDir } from "../test-support/fixtures";
 import { makeTestRuntime } from "../test-support/runtime";
@@ -54,11 +55,11 @@ describe("writeWalkthrough", () => {
     const result = await create(root, "code", "Entry & dispatch");
 
     expect(result.walkthroughId).toMatch(/^wlk_/);
-    expect(result.changeId).toBe("chg_001");
+    expect(result.changeId as string).toBe("chg_001");
 
     const entry = await walkthrough(root, result.walkthroughId);
     expect(entry?.kind).toBe("code");
-    expect(entry?.manifest?.bornChangeId).toBe("chg_001");
+    expect(entry?.manifest?.bornChangeId as string).toBe("chg_001");
     expect(entry?.manifest?.title).toBe("Entry & dispatch");
     expect(entry?.manifest?.sections).toEqual([]);
     expect(entry?.manifest?.captures).toBeUndefined();
@@ -72,7 +73,7 @@ describe("writeWalkthrough", () => {
 
     expect(second.changeId).toBe(first.changeId);
     const snap = await snapshot(root);
-    expect(snap.changes.map((change) => change.id)).toEqual(["chg_001"]);
+    expect(snap.changes.map((change) => change.id as string)).toEqual(["chg_001"]);
   });
 });
 
@@ -138,7 +139,7 @@ describe("addWalkthroughSection", () => {
         annotations: [
           {
             anchor: {
-              capture: "cap_a",
+              capture: "cap_a" as CaptureId,
               kind: "screenshot-region",
               rect: [0.1, 0.2, 0.3, 0.1],
             },
@@ -155,7 +156,7 @@ describe("addWalkthroughSection", () => {
 
     expect(section).toBe("s01-uploading.md");
     const entry = await walkthrough(root, walkthroughId);
-    expect(entry?.sections.at(0)?.captures).toEqual(["cap_a", "cap_b"]);
+    expect(entry?.sections.at(0)?.captures as readonly string[] | undefined).toEqual(["cap_a", "cap_b"]);
     expect(entry?.sections.at(0)?.annotations?.at(0)?.anchor.kind).toBe(
       "screenshot-region"
     );

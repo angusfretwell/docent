@@ -103,7 +103,7 @@ describe("readReviewSnapshot", () => {
 
     const snap = await snapshot(root, "feature");
 
-    expect(snap.changes.map((c) => c.id)).toEqual(["chg_001"]);
+    expect(snap.changes.map((c) => c.id as string)).toEqual(["chg_001"]);
   });
 
   test("degrades gracefully: a malformed record never breaks the snapshot", async () => {
@@ -133,7 +133,7 @@ describe("readReviewSnapshot", () => {
 
     const snap = await snapshot(root, "feature");
 
-    expect(snap.changes.map((c) => c.id)).toEqual(["chg_002"]);
+    expect(snap.changes.map((c) => c.id as string)).toEqual(["chg_002"]);
   });
 
   test("parses findings records: envelope, anchor, body, and type", async () => {
@@ -184,7 +184,7 @@ describe("readReviewSnapshot", () => {
     if (finding === undefined) {
       throw new Error("expected a finding");
     }
-    expect(finding.id).toBe("fnd_01J9GQ4W7X");
+    expect(finding.id as string).toBe("fnd_01J9GQ4W7X");
     expect(finding.records).toMatchObject([
       {
         anchor: { file: "src/x.ts", kind: "line", lines: [42, 47] },
@@ -395,9 +395,9 @@ describe("readReviewSnapshot walkthroughs", () => {
       throw new Error("expected the walkthrough");
     }
     expect(walkthrough.kind).toBe("code");
-    expect(walkthrough.manifest?.bornChangeId).toBe("chg_002");
+    expect(walkthrough.manifest?.bornChangeId as string).toBe("chg_002");
     // Manifest array order wins over filename order.
-    expect(walkthrough.sections.map((s) => s.id)).toEqual([
+    expect(walkthrough.sections.map((s) => s.id as string)).toEqual([
       "sec_dispatch",
       "sec_entry",
     ]);
@@ -435,7 +435,7 @@ describe("readReviewSnapshot walkthroughs", () => {
     const walkthrough = snap.walkthroughs.find(
       (entry) => entry.id === "wlk_01DEF"
     );
-    expect(walkthrough?.sections.map((s) => s.id)).toEqual(["sec_ok"]);
+    expect(walkthrough?.sections.map((s) => s.id as string)).toEqual(["sec_ok"]);
   });
 
   test("parses a product manifest's captures registry and product section frontmatter", async () => {
@@ -502,12 +502,12 @@ describe("readReviewSnapshot walkthroughs", () => {
     }
     expect(walkthrough.kind).toBe("product");
     expect(
-      walkthrough.manifest?.captures?.map((capture) => capture.id)
+      walkthrough.manifest?.captures?.map((capture) => capture.id as string)
     ).toEqual(["cap_a", "cap_b"]);
     expect(walkthrough.manifest?.captures?.[0]?.dims).toEqual([1280, 2400]);
     expect(walkthrough.manifest?.captures?.[1]?.durationMs).toBe(8200);
     const [section] = walkthrough.sections;
-    expect(section?.captures).toEqual(["cap_a", "cap_b"]);
+    expect(section?.captures as readonly string[] | undefined).toEqual(["cap_a", "cap_b"]);
     expect(section?.annotations?.length).toBe(2);
     expect(section?.annotations?.[0]?.anchor).toMatchObject({
       capture: "cap_a",

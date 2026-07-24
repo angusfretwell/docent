@@ -18,6 +18,7 @@ import { captureKinds } from "../enums/capture-kind";
 import { sides } from "../enums/side";
 import { walkthroughKinds } from "../enums/walkthrough-kind";
 import { Anchor } from "./finding";
+import { CaptureId, ChangeId, SectionId, WalkthroughId } from "./ids";
 
 /** A code range: the same coordinate as the `line` anchor arm (walkthroughs.md §5). */
 export class WalkthroughRange extends Schema.Class<WalkthroughRange>(
@@ -59,8 +60,8 @@ export class WalkthroughSection extends Schema.Class<WalkthroughSection>(
   annotations: Schema.optional(Schema.Array(WalkthroughAnnotation)),
   body: Schema.String,
   /** Product arm: the `cap_*` ids this section embeds, in `{{capture:i}}` order. */
-  captures: Schema.optional(Schema.Array(Schema.String)),
-  id: Schema.String,
+  captures: Schema.optional(Schema.Array(CaptureId)),
+  id: SectionId,
   ranges: Schema.optional(Schema.Array(WalkthroughRange)),
   schema: Schema.Literal("docent/walkthrough-section"),
   title: Schema.String,
@@ -84,7 +85,7 @@ export class WalkthroughSection extends Schema.Class<WalkthroughSection>(
 export class Capture extends Schema.Class<Capture>("Capture")({
   dims: Schema.optional(Schema.Tuple([Schema.Number, Schema.Number])),
   durationMs: Schema.optional(Schema.Number),
-  id: Schema.String,
+  id: CaptureId,
   kind: Schema.Literals(captureKinds),
   media: Schema.String,
   route: Schema.String,
@@ -99,9 +100,9 @@ export class Capture extends Schema.Class<Capture>("Capture")({
  * manifests omit it and the code tab never reads it.
  */
 export class Walkthrough extends Schema.Class<Walkthrough>("Walkthrough")({
-  bornChangeId: Schema.String,
+  bornChangeId: ChangeId,
   captures: Schema.optional(Schema.Array(Capture)),
-  id: Schema.String,
+  id: WalkthroughId,
   kind: Schema.Literals(walkthroughKinds),
   schema: Schema.Literal("docent/walkthrough"),
   sections: Schema.Array(Schema.String),
