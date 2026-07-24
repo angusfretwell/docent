@@ -19,7 +19,7 @@ export function Header() {
     <div className="shrink-0 px-1.5 flex items-center gap-1.5 h-11">
       <Logo />
       <Navigation />
-      <div className="flex items-center gap-1.5 ml-auto">
+      <div className="flex items-center gap-1.5 ml-auto min-w-0">
         <Suspense fallback={<Skeleton className="w-60 h-5" />}>
           <ReviewMeta />
         </Suspense>

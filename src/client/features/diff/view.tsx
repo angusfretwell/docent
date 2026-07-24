@@ -2,6 +2,11 @@ import { KbdHint } from "@client/components/kbd-hint";
 import { Pane } from "@client/components/pane";
 import { Button } from "@client/components/ui/button";
 import {
+  Drawer,
+  DrawerPopup,
+  DrawerTrigger,
+} from "@client/components/ui/drawer";
+import {
   Menu,
   MenuGroup,
   MenuGroupLabel,
@@ -20,8 +25,10 @@ import {
   diffFiltersAtom,
   matchesFilters,
 } from "@client/features/file-tree/lib/filters";
+import { DrawerDismissProvider } from "@client/hooks/use-drawer-dismiss";
 import { useDrift } from "@client/hooks/use-drift";
 import { useKeyPressed } from "@client/hooks/use-key-pressed";
+import { useIsMobile, useMediaQuery } from "@client/hooks/use-media-query";
 import { parsePatchFiles, statusForChange } from "@client/lib/diff";
 import { diffLayoutAtom, diffTreeOpenAtom } from "@client/lib/preferences";
 import { diffQueryOptions } from "@client/queries/diff";
@@ -31,7 +38,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { useAtom, useAtomValue } from "jotai/react";
 import { ListTree, Settings } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useDefaultLayout } from "react-resizable-panels";
 
@@ -48,9 +55,11 @@ export function DiffView() {
   const { data: pending } = useSuspenseQuery(pendingQueryOptions(range));
   const { data: review } = useSuspenseQuery(reviewQueryOptions);
 
-  const [diffLayout, setDiffLayout] = useAtom(diffLayoutAtom);
+  const isMobile = useIsMobile();
 
+  const [diffLayout, setDiffLayout] = useAtom(diffLayoutAtom);
   const [diffTreeOpen, setDiffTreeOpen] = useAtom(diffTreeOpenAtom);
+  const [treeDrawerOpen, setTreeDrawerOpen] = useState(false);
 
   const isAltPressed = useKeyPressed("Alt");
   useHotkeys("Alt + BracketLeft", () => setDiffTreeOpen(!diffTreeOpen));
@@ -126,7 +135,7 @@ export function DiffView() {
       onLayoutChanged={onLayoutChanged}
       className="overflow-visible! h-[calc(100svh-(--spacing(12.5)))]!"
     >
-      {diffTreeOpen && (
+      {diffTreeOpen && !isMobile && (
         <>
           <ResizablePanel
             defaultSize={250}
@@ -145,22 +154,48 @@ export function DiffView() {
 
       <ResizablePanel minSize={300} id="content" className="overflow-visible!">
         <Pane>
-          <div className="px-2 shrink-0 h-11 flex items-center border-b gap-1.5">
-            <Button
-              size="icon-sm"
-              variant="ghost"
-              aria-label="Toggle file tree"
-              onClick={() => setDiffTreeOpen(!diffTreeOpen)}
-            >
-              <KbdHint active={isAltPressed} shortcut="[">
-                <ListTree />
-              </KbdHint>
-            </Button>
+          <div className="px-2 shrink-0 h-11 flex items-center border-b gap-1.5 @container">
+            {isMobile ? (
+              <Drawer open={treeDrawerOpen} onOpenChange={setTreeDrawerOpen}>
+                <DrawerTrigger
+                  render={
+                    <Button
+                      size="icon-sm"
+                      variant="ghost"
+                      aria-label="Toggle file tree"
+                    />
+                  }
+                >
+                  <ListTree />
+                </DrawerTrigger>
+                <DrawerPopup showBar>
+                  <div className="h-svh py-2 relative">
+                    <DrawerDismissProvider
+                      dismiss={() => setTreeDrawerOpen(false)}
+                    >
+                      <DiffTree files={visibleFiles} />
+                    </DrawerDismissProvider>
+                  </div>
+                </DrawerPopup>
+              </Drawer>
+            ) : (
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                aria-label="Toggle file tree"
+                onClick={() => setDiffTreeOpen(!diffTreeOpen)}
+              >
+                <KbdHint active={isAltPressed} shortcut="[">
+                  <ListTree />
+                </KbdHint>
+              </Button>
+            )}
             <Separator orientation="vertical" className="h-4" />
             <ChangeRangePicker />
             <div className="flex items-center gap-2 ml-auto">
               <span className="text-[13px] text-muted-foreground truncate tabular-nums">
-                {viewedCount} / {files.length} viewed
+                {viewedCount} / {files.length}{" "}
+                <span className="@max-xs:sr-only">viewed</span>
               </span>
               <Menu>
                 <MenuTrigger

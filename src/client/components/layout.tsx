@@ -1,5 +1,6 @@
 import { Skeleton } from "@client/components/ui/skeleton";
 import { FindingsPanel } from "@client/features/findings/panel";
+import { useIsMobile, useMediaQuery } from "@client/hooks/use-media-query";
 import { findingsOpenAtom } from "@client/lib/preferences";
 import { useAtomValue } from "jotai/react";
 import { Suspense } from "react";
@@ -15,6 +16,7 @@ import {
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const findingsOpen = useAtomValue(findingsOpenAtom);
+  const isMobile = useMediaQuery("max-md");
 
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
     id: "main",
@@ -35,7 +37,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           {children}
         </ResizablePanel>
 
-        {findingsOpen && (
+        {findingsOpen && !isMobile && (
           <>
             <ResizableHandle withHandle className="w-1.5" />
             <ResizablePanel

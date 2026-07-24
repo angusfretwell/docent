@@ -3,6 +3,7 @@ import { useFindings } from "@client/features/findings/hooks/use-findings";
 import { useActiveTarget } from "@client/features/walkthrough/hooks/use-active-target";
 import { useRevealedSection } from "@client/features/walkthrough/hooks/use-revealed-section";
 import { WalkthroughLayout } from "@client/features/walkthrough/layout";
+import type { WalkthroughPane } from "@client/features/walkthrough/layout";
 import {
   codeSteps,
   rangesByKey,
@@ -20,7 +21,7 @@ import { latestCodeWalkthrough } from "@shared/lib/identity-drift";
 import { walkthroughStaleness } from "@shared/lib/walkthrough-annotations";
 import type { WalkthroughId } from "@shared/schemas/ids";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { Code2, FileCode } from "lucide-react";
+import { Code2, FileCode, GitCompare } from "lucide-react";
 import { useRef, useState } from "react";
 
 import { CodeWalkthroughDiffPanel } from "./diff-panel";
@@ -46,6 +47,7 @@ export function CodeWalkthroughView() {
   const tourId = walkthrough?.id ?? ("" as WalkthroughId);
   const { activeKey, pinTarget } = useActiveTarget(proseRef, tourId);
   const [reasserted, setReasserted] = useState(0);
+  const [pane, setPane] = useState<WalkthroughPane>("prose");
 
   useRevealedSection(proseRef, tourId);
 
@@ -71,6 +73,7 @@ export function CodeWalkthroughView() {
   function selectTarget(key: string) {
     pinTarget(key);
     setReasserted((count) => count + 1);
+    setPane("target");
   }
 
   const referenceRank = new Map(
@@ -101,6 +104,8 @@ export function CodeWalkthroughView() {
   return (
     <WalkthroughLayout
       id="code-walkthrough"
+      onPaneChange={setPane}
+      pane={pane}
       proseRef={proseRef}
       target={
         <CodeWalkthroughDiffPanel
@@ -112,6 +117,8 @@ export function CodeWalkthroughView() {
           reasserted={reasserted}
         />
       }
+      targetIcon={<GitCompare />}
+      targetLabel="Diff"
     >
       <h1 className="text-balance">
         {walkthrough.manifest?.title ?? "Code walkthrough"}

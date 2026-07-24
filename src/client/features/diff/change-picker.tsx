@@ -51,7 +51,9 @@ export function ChangeRangePicker() {
         }
       >
         <GalleryHorizontalEnd />
-        {activeView === "pending" ? "Pending changes" : "All commits"}
+        <span className="@max-xs:sr-only">
+          {activeView === "pending" ? "Pending changes" : "All commits"}
+        </span>
       </MenuTrigger>
       <MenuPopup align="start">
         <MenuGroup>

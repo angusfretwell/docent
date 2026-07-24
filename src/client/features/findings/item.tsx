@@ -6,6 +6,7 @@ import {
   CollapsibleTrigger,
 } from "@client/components/ui/collapsible";
 import { useRevealSection } from "@client/features/walkthrough/hooks/use-revealed-section";
+import { useDrawerDismiss } from "@client/hooks/use-drawer-dismiss";
 import { useRevealDiffItem } from "@client/lib/diff-target";
 import { cn } from "@client/lib/utils";
 import type { DriftState } from "@shared/enums/drift-state";
@@ -48,6 +49,7 @@ export function FindingsItem({
 
   const revealDiffItem = useRevealDiffItem();
   const revealSection = useRevealSection();
+  const dismissDrawer = useDrawerDismiss();
 
   const isCodeSection = section?.pillar === "code";
 
@@ -74,7 +76,10 @@ export function FindingsItem({
           <FindingLink
             icon={<GitCompare />}
             label="Show in diff"
-            onReveal={() => revealDiffItem(diffItemId)}
+            onReveal={() => {
+              revealDiffItem(diffItemId);
+              dismissDrawer();
+            }}
             to="/"
           />
         )}
@@ -83,7 +88,10 @@ export function FindingsItem({
           <FindingLink
             icon={isCodeSection ? <Code2 /> : <Pointer />}
             label={`Show in ${isCodeSection ? "code" : "product"} walkthrough`}
-            onReveal={() => revealSection(section.key)}
+            onReveal={() => {
+              revealSection(section.key);
+              dismissDrawer();
+            }}
             to={isCodeSection ? "/code" : "/product"}
           />
         )}

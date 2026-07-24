@@ -22,9 +22,9 @@ export function ReviewMeta() {
   );
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1 min-w-0 shrink">
       {snapshot.review.title && (
-        <span className="text-[13px] truncate min-w-0">
+        <span className="text-[13px] truncate min-w-0 max-sm:sr-only">
           {snapshot.review.title}
         </span>
       )}
@@ -37,7 +37,7 @@ export function ReviewMeta() {
           className="pointer-events-none text-[13px]!"
         >
           <GitPullRequestArrow />
-          {change.branch}
+          <span className="max-sm:sr-only">{change.branch}</span>
         </Button>
       ) : (
         <Button
@@ -54,7 +54,7 @@ export function ReviewMeta() {
           }
         >
           <GitPullRequestArrow />
-          {change.branch}
+          <span className="max-sm:sr-only">{change.branch}</span>
         </Button>
       )}
 

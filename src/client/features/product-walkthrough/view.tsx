@@ -18,10 +18,11 @@ import { latestProductWalkthrough } from "@shared/lib/identity-drift";
 import { walkthroughStaleness } from "@shared/lib/walkthrough-annotations";
 import type { WalkthroughId } from "@shared/schemas/ids";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { Camera, Pointer, Video } from "lucide-react";
+import { Camera, MonitorSmartphone, Pointer, Video } from "lucide-react";
 import { useRef, useState } from "react";
 
 import { WalkthroughLayout } from "../walkthrough/layout";
+import type { WalkthroughPane } from "../walkthrough/layout";
 import { StepProse } from "../walkthrough/prose";
 import { WalkthroughStaleness } from "../walkthrough/staleness";
 import { ProductWalkthroughCapturePanel } from "./capture-panel";
@@ -40,6 +41,7 @@ export function ProductWalkthroughView() {
     tourId
   );
   const [refitted, setRefitted] = useState(0);
+  const [pane, setPane] = useState<WalkthroughPane>("prose");
 
   useRevealedSection(proseRef, tourId);
 
@@ -81,6 +83,8 @@ export function ProductWalkthroughView() {
   // Clicking the active capture's chip has nothing to switch to, so it refits
   // the frame — undoing a zoom a callout or the reader left it under.
   function selectTarget(key: string) {
+    setPane("target");
+
     if (key === activeKey) {
       setRefitted((count) => count + 1);
       return;
@@ -106,6 +110,8 @@ export function ProductWalkthroughView() {
     <PinHoverProvider onFocus={pinTarget}>
       <WalkthroughLayout
         id="product-walkthrough"
+        onPaneChange={setPane}
+        pane={pane}
         proseRef={proseRef}
         target={
           <ProductWalkthroughCapturePanel
@@ -117,6 +123,8 @@ export function ProductWalkthroughView() {
             walkthroughId={walkthrough.id}
           />
         }
+        targetIcon={<MonitorSmartphone />}
+        targetLabel="Preview"
       >
         <h1 className="text-balance">
           {walkthrough.manifest?.title ?? "Product walkthrough"}

@@ -1,4 +1,5 @@
 import { FileTreeView } from "@client/features/file-tree/view";
+import { useDrawerDismiss } from "@client/hooks/use-drawer-dismiss";
 import type { DiffFile } from "@client/lib/diff";
 import { statusForChange } from "@client/lib/diff";
 import { useRevealDiffItem } from "@client/lib/diff-target";
@@ -7,6 +8,7 @@ import { useMemo } from "react";
 
 export function DiffTree({ files }: { files: DiffFile[] }) {
   const revealDiffItem = useRevealDiffItem();
+  const dismissDrawer = useDrawerDismiss();
 
   const { gitStatus, paths } = useMemo(
     () => ({
@@ -31,6 +33,7 @@ export function DiffTree({ files }: { files: DiffFile[] }) {
     }
 
     revealDiffItem(file.id);
+    dismissDrawer();
   }
 
   return (
