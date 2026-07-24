@@ -24,6 +24,7 @@ const run = runtime.runPromise;
  */
 let stubbedNpxArgv = "";
 let realPath: string | undefined;
+let realIsTTY: boolean | undefined;
 
 beforeAll(() => {
   const bin = scratchDir("docent-install-bin-");
@@ -36,10 +37,17 @@ beforeAll(() => {
 
   realPath = process.env.PATH;
   process.env.PATH = `${bin}:${realPath ?? ""}`;
+
+  // A missing --scope falls back to the interactive scope prompt when stdin is
+  // a TTY, which would block the suite under a real terminal. Pin it off so the
+  // fallback deterministically takes non-interactive project scope.
+  realIsTTY = process.stdin.isTTY;
+  process.stdin.isTTY = false;
 });
 
 afterAll(async () => {
   process.env.PATH = realPath;
+  process.stdin.isTTY = realIsTTY as typeof process.stdin.isTTY;
   await runtime.dispose();
   cleanupScratchDirs();
 });

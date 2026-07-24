@@ -1,6 +1,6 @@
+import { Skeleton } from "@client/components/ui/skeleton";
 import { FindingsPanel } from "@client/features/findings/panel";
 import { findingsOpenAtom } from "@client/lib/preferences";
-import { Skeleton } from "@client/components/ui/skeleton";
 import { useAtomValue } from "jotai/react";
 import { Suspense } from "react";
 import { useDefaultLayout } from "react-resizable-panels";

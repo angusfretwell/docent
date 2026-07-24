@@ -1,5 +1,5 @@
-import { FindingsToggle } from "@client/features/findings/toggle";
 import { Skeleton } from "@client/components/ui/skeleton";
+import { FindingsToggle } from "@client/features/findings/toggle";
 import { Suspense } from "react";
 
 import { Navigation } from "./navigation";
