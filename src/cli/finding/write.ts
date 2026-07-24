@@ -1,16 +1,3 @@
-/**
- * `docent finding add / reply / action / resolve / reopen / edit` — the review
- * loop's **write-findings** primitive. Each runner appends the same validated
- * `docent/finding` record as `POST /api/findings`, through the *same*
- * `writeFindingRecord` implementation — one write path, no divergence
- * (agent-integration.md §3.3).
- *
- * Anchor construction (resolving a code arm's content-addressed `blobSha` from
- * git) is operation logic, so it lives in core (`core/git/anchor`); this file
- * only turns flags into an `AnchorSpec`. The read half of the primitive pair
- * lives in `./list`.
- */
-
 import { writeFindingRecord } from "@core/findings-write";
 import type { AnchorSpec } from "@core/git";
 import { buildAnchor, resolveAuthor } from "@core/git";
@@ -24,27 +11,17 @@ import { Effect, Schema } from "effect";
 
 import { CliUsageError, parseEnum } from "../usage";
 
-/** The author-attribution overrides shared by every write subcommand. */
 export interface AuthorOpts {
-  /** Attribute to an agent with this slug (else the git-config human). */
   agent?: string;
-  /** Override the display name. */
   display?: string;
-  /** Optional agent model metadata. */
   model?: string;
 }
 
-/** The anchor flags `finding add` accepts, exactly one arm of which must be given. */
 export interface AnchorFlags {
-  /** The raw-arm escape hatch: any of the seven arms as JSON. */
   anchor?: string;
-  /** The whole-Change arm. */
   change: boolean;
-  /** The file arm (widened to a line arm by `line`). */
   file?: string;
-  /** A `N`, `N:M`, or `N-M` line spec. */
   line?: string;
-  /** Which side of the Change the code arm pins to; defaults to head. */
   side?: string;
 }
 
@@ -56,8 +33,6 @@ function parseSide(
     : parseEnum("side", value, sides);
 }
 
-// A line spec is `N`, `N:M`, or `N-M` (1-based, inclusive) — a single line
-// widens to `[N, N]`. Anything else is a usage error.
 const LINE_SPEC = /^(?<start>\d+)(?:[:-](?<end>\d+))?$/;
 
 function parseLine(
@@ -76,12 +51,6 @@ function parseLine(
   return Effect.succeed([start, end]);
 }
 
-/**
- * Parse a `finding add` anchor from its flags. `--anchor <json>` is the escape
- * hatch for any of the seven arms (validated against the schema); the
- * convenience flags cover the code arms whose `blobSha` git resolves at write:
- * `--change`, `--file <path>` (+ `--side`), and `--file … --line N[:M]`.
- */
 export const parseAnchorSpec = Effect.fn("parseAnchorSpec")(
   function* parseAnchorSpec(flags: AnchorFlags) {
     const raw = flags.anchor;
@@ -124,11 +93,6 @@ export const parseAnchorSpec = Effect.fn("parseAnchorSpec")(
   }
 );
 
-/**
- * Resolve the write's attribution: the git-config human by default (matching
- * the UI's write path), or an agent when `--agent <slug>` is given — attribution
- * is metadata, never permission (data-model.md §5.4).
- */
 export const buildAuthor = Effect.fn("buildAuthor")(function* buildAuthor(
   root: string,
   opts: AuthorOpts
@@ -149,21 +113,11 @@ export const buildAuthor = Effect.fn("buildAuthor")(function* buildAuthor(
   });
 });
 
-/** The resolved refs a write mints against, plus the read scope for a write. */
 type WriteScope = Effect.Success<ReturnType<typeof resolveChangeScope>>;
 
-/**
- * The shared write tail for every write subcommand: validate the assembled
- * record against the same `FindingWrite` schema the server decodes `POST
- * /api/findings` bodies with, then append it through the shared
- * `writeFindingRecord`. Both surfaces validate and write identically — one
- * implementation, no divergence (agent-integration.md §3.3).
- */
 const commitWrite = Effect.fn("commitWrite")(function* commitWrite(
   scope: WriteScope,
   author: Author,
-  // The encoded (unbranded) shape: the subcommands assemble drafts from raw
-  // `--finding`/`--body` flags, and this decode is where the ids get branded.
   draft: typeof FindingWrite.Encoded
 ) {
   const write = yield* Schema.decodeUnknownEffect(FindingWrite)(draft).pipe(
@@ -182,7 +136,6 @@ const commitWrite = Effect.fn("commitWrite")(function* commitWrite(
   });
 });
 
-/** write-findings `open`: mint an anchored Finding via the shared write path. */
 export const addFinding = Effect.fn("addFinding")(function* addFinding(
   cwd: string,
   params: { anchor: AnchorSpec; author: AuthorOpts; body: string }
@@ -202,7 +155,6 @@ export const addFinding = Effect.fn("addFinding")(function* addFinding(
   });
 });
 
-/** write-findings `reply`: prose on a Finding, returning it to open. */
 export const replyFinding = Effect.fn("replyFinding")(function* replyFinding(
   cwd: string,
   params: { author: AuthorOpts; body: string; findingId: FindingId }
@@ -216,7 +168,6 @@ export const replyFinding = Effect.fn("replyFinding")(function* replyFinding(
   });
 });
 
-/** write-findings `action`: hand the turn back, whatever the outcome. */
 export const actionFinding = Effect.fn("actionFinding")(function* actionFinding(
   cwd: string,
   params: { author: AuthorOpts; findingId: FindingId }
@@ -229,7 +180,6 @@ export const actionFinding = Effect.fn("actionFinding")(function* actionFinding(
   });
 });
 
-/** write-findings `resolve`: close a Finding. */
 export const resolveFinding = Effect.fn("resolveFinding")(
   function* resolveFinding(
     cwd: string,
@@ -244,7 +194,6 @@ export const resolveFinding = Effect.fn("resolveFinding")(
   }
 );
 
-/** write-findings `reopen`: return a resolved Finding to open. */
 export const reopenFinding = Effect.fn("reopenFinding")(function* reopenFinding(
   cwd: string,
   params: { author: AuthorOpts; findingId: FindingId }
@@ -257,7 +206,6 @@ export const reopenFinding = Effect.fn("reopenFinding")(function* reopenFinding(
   });
 });
 
-/** write-findings `edit`: supersede the body of a named earlier record. */
 export const editFinding = Effect.fn("editFinding")(function* editFinding(
   cwd: string,
   params: {

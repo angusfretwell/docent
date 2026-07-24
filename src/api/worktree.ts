@@ -1,10 +1,3 @@
-/**
- * `GET /api/worktree?path=…` — the live bytes of a working-tree file, read off
- * disk on every request and explicitly uncached. This is the Pending diff's
- * head side, which has no committed SHA to address (diff-review.md §6). A path
- * that escapes the repo root 400s; a path that does not exist 404s.
- */
-
 import { Effect } from "effect";
 
 import { resolveWorktreeFile } from "../core/git";

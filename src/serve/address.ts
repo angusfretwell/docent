@@ -1,15 +1,9 @@
 /**
- * The `docent serve` address file and its liveness detection — the "is a server
- * already up for this repo?" primitive `/docent` needs to reuse a running server
- * instead of starting a second one (agent-integration.md §3.1).
- *
- * `docent serve` binds an OS-picked port (`index.ts`, `port: 0`), so no fixed port
- * exists to probe. On boot it records its live URL to `.docent/serve.json` — a
- * machine-local file the `.docent/.gitignore` `*` policy already ignores — and
- * removes it on shutdown. Detection reads that address and confirms the server
- * is genuinely alive *and* serving this repo by probing `GET /api/health`: a
- * stale file (server crashed, or its port was recycled by an unrelated process)
- * fails the probe and reads as not-serving, so no cleanup lock is load-bearing.
+ * `docent serve` binds an OS-picked port, so there is no fixed port to probe: it
+ * records its live URL to `.docent/serve.json` on boot and removes it on
+ * shutdown. Detection reads that address and confirms the server is alive *and*
+ * serving this repo via `GET /api/health` — a stale file simply fails the probe,
+ * so no cleanup lock is load-bearing (agent-integration.md §3.1).
  */
 
 import { Effect, Option, Schema } from "effect";
@@ -23,32 +17,29 @@ import { STATE_ROOT } from "../core/store/layout";
 
 const ADDRESS_FILENAME = "serve.json";
 
-// A slow-but-alive server should still read as serving, and a dead port should
-// fail fast — a short probe timeout balances both for a one-shot detection.
+// Short probe timeout: a slow-but-alive server still reads as serving, a dead
+// port fails fast.
 const PROBE_TIMEOUT_MS = 1500;
 
-/** The recorded address of a live `docent serve` process for a repo. */
 export const ServeAddress = Schema.Struct({
   schema: Schema.Literal("docent/serve-address"),
   url: Schema.String,
 });
 export type ServeAddress = typeof ServeAddress.Type;
 
-/** Whether a docent server is live for the repo, and where to reach it. */
 export interface ServeStatus {
   readonly serving: boolean;
   readonly url?: string;
 }
 
 // `/api/health` echoes the repo it serves, so a recycled port answering for a
-// *different* repo is rejected — only the root need match to confirm identity.
+// different repo is rejected — only the root need match.
 const Health = Schema.Struct({ root: Schema.String });
 
 function addressPath(root: string, path: Path): string {
   return path.join(root, STATE_ROOT, ADDRESS_FILENAME);
 }
 
-/** Record the live server's URL so detection can find and reuse it. */
 export const writeServeAddress = Effect.fn("writeServeAddress")(
   function* writeServeAddress(root: string, url: string) {
     const fs = yield* FileSystem;
@@ -63,7 +54,6 @@ export const writeServeAddress = Effect.fn("writeServeAddress")(
   }
 );
 
-/** Clear the recorded address on shutdown; a missing file is not an error. */
 export const removeServeAddress = Effect.fn("removeServeAddress")(
   function* removeServeAddress(root: string) {
     const fs = yield* FileSystem;
@@ -73,7 +63,6 @@ export const removeServeAddress = Effect.fn("removeServeAddress")(
   }
 );
 
-/** Probe `<url>/api/health`, true only when it answers for `expectedRoot`. */
 const probeHealth = Effect.fn("probeHealth")(function* probeHealth(
   url: string,
   expectedRoot: string
@@ -90,11 +79,7 @@ const probeHealth = Effect.fn("probeHealth")(function* probeHealth(
   });
 });
 
-/**
- * Resolve whether a docent server is already serving this repo: read the
- * recorded address and confirm it is live for this exact root. Side-effect-free
- * — a stale file simply fails the probe, so callers never race a cleanup.
- */
+/** Side-effect-free: a stale file simply fails the probe, so callers never race a cleanup. */
 export const resolveServeStatus = Effect.fn("resolveServeStatus")(
   function* resolveServeStatus(cwd: string) {
     const repo = yield* resolveRepo(cwd);

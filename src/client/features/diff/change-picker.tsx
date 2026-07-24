@@ -21,8 +21,8 @@ export function ChangeRangePicker() {
   const { data: pending } = useSuspenseQuery(pendingQueryOptions(range));
 
   const { dirty } = pending;
-  // A `view=pending` URL while the working tree is clean silently renders the
-  // branch diff, so the selection shown here follows what actually renders.
+  // A `view=pending` URL while the tree is clean renders the branch diff, so the
+  // selection follows what actually renders.
   const activeView = view === "pending" && dirty ? "pending" : "change";
 
   function setView(next: "change" | "pending") {

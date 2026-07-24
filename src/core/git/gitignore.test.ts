@@ -50,7 +50,6 @@ describe("makeMatcher", () => {
 
     expect(matcher.ignores("dist")).toBe(true);
     expect(matcher.ignores("dist/bundle.js")).toBe(true);
-    // Not anchored at a nested level.
     expect(matcher.ignores("src/dist/x.js")).toBe(false);
   });
 

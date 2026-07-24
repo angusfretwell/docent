@@ -8,9 +8,8 @@ import prettyMilliseconds from "pretty-ms";
 import type { RrwebReplayer } from "./hooks/use-rrweb-replayer";
 
 /**
- * A recording's playhead offset as `m:ss`. `secondsDecimalDigits: 0` holds it to
- * whole seconds because the scrubber reads it every animation frame, and the
- * tenths `colonNotation` shows by default would flicker the readout as it runs.
+ * `secondsDecimalDigits: 0` holds it to whole seconds: the scrubber reads it
+ * every frame, and the default tenths would flicker the readout.
  */
 function formatOffset(ms: number) {
   return prettyMilliseconds(ms, {
@@ -19,28 +18,11 @@ function formatOffset(ms: number) {
   });
 }
 
-/**
- * The scrubber's position. `Slider` is typed for range sliders as well as
- * single-thumb ones, so its handlers hand back a union this one thumb can't be.
- */
+/** `Slider` is typed for range sliders too, so its handlers hand back a union this single thumb can't be. */
 function offsetOf(value: number | readonly number[]) {
   return typeof value === "number" ? value : (value[0] ?? 0);
 }
 
-/**
- * The replay's transport: play/pause, a scrubber over the whole recording, and
- * the repeat toggle. The scrubber seeks on every change and leaves play/pause
- * alone, so the replay tracks the pointer through a drag and cannot be left
- * stranded in a state the pointer-up was supposed to undo.
- *
- * Driving the transport by hand frees a span a callout confined it to: having
- * asked to be somewhere else, the reader should not be pulled back on the next
- * lap.
- *
- * It floats over the foot of the stage rather than sitting in a row below it, so
- * a recording and a screenshot are fitted into the same area and stepping from
- * one to the other doesn't move the capture.
- */
 export function RecordingControls({ replay }: { replay: RrwebReplayer }) {
   const {
     currentMs,
@@ -92,17 +74,16 @@ export function RecordingControls({ replay }: { replay: RrwebReplayer }) {
           )}
         </Button>
 
-        {/* The slider sizes itself to fill its row and carries a min-width for
-            standalone use; in a narrow panel that pushes the repeat toggle out
-            of the frame, so both are relaxed to let it take only the slack
+        {/* The Slider's default min-width pushes the repeat toggle out of a
+            narrow panel, so both are relaxed to min-w-0 to take only the slack
             left. */}
         <Slider
           aria-label="Recording position"
           className="min-w-0 flex-1 [&_[data-slot=slider-control]]:min-w-0"
           disabled={!ready}
-          // `durationMs` is 0 until the replayer reports the recording's length,
-          // and Base UI's Slider requires `max > min`. Floor it so the disabled
-          // scrubber doesn't warn on the first frame before the duration lands.
+          // `durationMs` is 0 until the recording's length lands, and Base UI's
+          // Slider requires `max > min` — floor it so the disabled scrubber
+          // doesn't warn.
           max={Math.max(durationMs, 1)}
           min={0}
           onValueChange={handleScrub}

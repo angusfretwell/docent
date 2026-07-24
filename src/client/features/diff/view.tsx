@@ -56,14 +56,13 @@ export function DiffView() {
   useHotkeys("Alt + BracketLeft", () => setDiffTreeOpen(!diffTreeOpen));
 
   // Pending is only renderable while the working tree is dirty; a stale
-  // `view=pending` URL silently renders the branch diff instead.
+  // `view=pending` URL renders the branch diff instead.
   const showPending = view === "pending" && pending.dirty;
 
   const patch = showPending ? pending.patch : change.patch;
 
-  // Drift is defined against the current Change (data-model.md §6), so it is
-  // always read off the branch patch; the Pending preview instead falls back to
-  // the sync blob-match placement inside the annotation model.
+  // Drift is defined against the current Change (data-model.md §6), so it reads
+  // off the branch patch even in the Pending preview.
   const drift = useDrift({
     findings: review.findings,
     patch: change.patch,

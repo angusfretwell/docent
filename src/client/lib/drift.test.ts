@@ -104,11 +104,10 @@ describe("anchorContext", () => {
       ["src/a.ts", renamed],
     ]);
 
-    // Born on the old path (src/a.ts) → renamed away.
     expect(anchorContext(lineAnchor({ file: "src/a.ts" }), files).renamed).toBe(
       true
     );
-    // Born on the new path (src/b.ts) → not renamed away.
+
     expect(anchorContext(lineAnchor({ file: "src/b.ts" }), files).renamed).toBe(
       false
     );

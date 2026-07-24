@@ -6,7 +6,6 @@ import { client } from "./client";
 
 const decodePending = Schema.decodeUnknownSync(Pending);
 
-/** `GET /api/pending?range=…` — the diff preview for the toggled range. */
 export async function get(
   range: PendingRange,
   signal?: AbortSignal

@@ -8,15 +8,6 @@ import type { SectionId, WalkthroughId } from "@shared/schemas/ids";
 import { MessageCirclePlus } from "lucide-react";
 import { useState } from "react";
 
-/**
- * The threads anchored to one step of a tour, read beneath the prose they
- * discuss, plus the control that opens a new one.
- *
- * A section anchor names the step rather than anything inside it — no blob, no
- * line, no capture — so it has nothing to drift against and survives the tour
- * being re-authored against a later Change. What the thread discusses is the
- * step, not whatever the step happened to point at when it was written.
- */
 export function WalkthroughFindings({
   findings,
   sectionId,

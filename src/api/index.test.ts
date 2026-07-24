@@ -19,7 +19,6 @@ import { webHandler } from "./index";
 
 const disposers: (() => Promise<void>)[] = [];
 
-// Sync decode boundary: bun:test assertions are synchronous by design.
 const decodeChange = Schema.decodeUnknownSync(Change);
 const decodeDiffError = Schema.decodeUnknownSync(DiffError);
 const decodeSnapshot = Schema.decodeUnknownSync(ReviewSnapshot);
@@ -31,14 +30,12 @@ afterAll(async () => {
   cleanupScratchDirs();
 });
 
-/** Read the next SSE chunk as text, failing loudly rather than hanging forever. */
 async function readSse(
   reader: ReadableStreamDefaultReader<Uint8Array>,
   decoder: TextDecoder
 ): Promise<string> {
-  // Generous: under full-suite load every handler runs recursive fs watches, and
-  // macOS FSEvents can delay a frame well past a second. This only guards
-  // against a truly hung stream, so a high ceiling costs nothing when frames flow.
+  // macOS FSEvents can delay a frame well past a second under full-suite load;
+  // a high ceiling only guards against a truly hung stream.
   const timeout = new Promise<never>((_resolve, reject) => {
     setTimeout(
       () => reject(new Error("timed out waiting for an SSE frame")),
@@ -49,7 +46,6 @@ async function readSse(
   return done || value === undefined ? "" : decoder.decode(value);
 }
 
-/** Write a product-walkthrough capture blob under a feature branch's Review. */
 function writeCapture(
   repo: string,
   walkthroughId: string,
@@ -70,7 +66,6 @@ function writeCapture(
   writeFileSync(path.join(dir, file), bytes);
 }
 
-/** A scratch repo on branch `feature` with one committed change off `main`. */
 function featureRepo(): string {
   const dir = scratchRepo("docent-serve-test-");
   git(dir, "checkout", "-b", "feature");
@@ -80,20 +75,12 @@ function featureRepo(): string {
   return dir;
 }
 
-// The host is never read by the handler — only the path/query matters — so a
-// fixed base keeps the request URLs readable.
 const BASE = "http://docent.test";
 
-/** A request-in/response-out client bound to a repo's `webHandler`. */
 interface Client {
   fetch: (path: string, init?: RequestInit) => Promise<Response>;
 }
 
-/**
- * Build the serve handler for a repo and drive it directly, no port bound —
- * exactly the `request → Promise<Response>` the entry points hand `Bun.serve`.
- * The handler holds the `.docent/` watch open until disposed in afterAll.
- */
 function serve(repo: string): Client {
   const { handler, dispose } = webHandler({ cwd: repo });
   disposers.push(() => dispose());
@@ -111,7 +98,6 @@ function postFinding(client: Client, body: unknown): Promise<Response> {
   });
 }
 
-/** Fetch and decode the live Review snapshot. */
 async function fetchReview(client: Client) {
   const res = await client.fetch("/api/review");
   return decodeSnapshot(await res.json());
@@ -172,7 +158,6 @@ describe("serve routes", () => {
 
     expect(res.status).toBe(200);
     expect(await res.text()).toBe("new file\n");
-    // Content-addressed → immutable → cache forever.
     expect(res.headers.get("cache-control")).toMatch(/immutable/);
     expect(res.headers.get("cache-control")).toMatch(/max-age=31536000/);
   });
@@ -225,7 +210,6 @@ describe("serve routes", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("application/json");
     expect(await res.json()).toEqual([{ type: 4 }]);
-    // Content-addressed → immutable → cache forever.
     expect(res.headers.get("cache-control")).toMatch(/immutable/);
   });
 
@@ -309,7 +293,6 @@ describe("serve routes", () => {
 
     const body = decodePending(await res.json());
     expect(body.range).toBe("cumulative");
-    // The committed feature file plus the uncommitted working file.
     expect(body.patch).toContain("feature.txt");
     expect(body.patch).toContain("working.txt");
   });
@@ -323,7 +306,6 @@ describe("serve routes", () => {
 
     expect(res.status).toBe(200);
     expect(await res.text()).toBe("edited live on disk\n");
-    // The working tree is mutable — never cache it.
     expect(res.headers.get("cache-control")).toMatch(/no-store/);
   });
 
@@ -432,7 +414,6 @@ describe("serve routes", () => {
     expect(result.record).toBe("001-open.md");
     expect(result.changeId as string).toBe("chg_001");
 
-    // The record and its minted Change are both visible in the live snapshot.
     const snap = await fetchReview(client);
     expect(snap.changes.map((change) => change.id as string)).toEqual([
       "chg_001",
@@ -443,7 +424,6 @@ describe("serve routes", () => {
     const folded = foldFinding(result.findingId, finding?.records ?? []);
     expect(folded.body).toBe("the flush races the mark");
     expect(folded.anchor).toMatchObject({ file: "feature.txt", kind: "line" });
-    // Attribution is the human resolved from git config, never gating.
     expect(finding?.records.at(0)?.author).toMatchObject({ kind: "human" });
   });
 
@@ -521,14 +501,11 @@ describe("serve routes", () => {
     const decoder = new TextDecoder();
 
     try {
-      // The opening comment confirms the stream is live before we write.
       expect(await readSse(reader, decoder)).toContain("connected");
-      // An external agent dropping a record file into `.docent/`, not a UI write.
       writeFileSync(path.join(repo, ".docent", "external.txt"), "hi\n");
 
       expect(await readSse(reader, decoder)).toContain("review-changed");
     } finally {
-      // Cancel the request so the handler's graceful shutdown doesn't wait on it.
       controller.abort();
     }
   });
@@ -549,8 +526,6 @@ describe("serve routes", () => {
 
     try {
       expect(await readSse(reader, decoder)).toContain("connected");
-      // An agent editing a tracked file in the working tree — the Pending diff's
-      // live-refresh trigger, rooted at the repo, not `.docent/`.
       writeFileSync(path.join(repo, "feature.txt"), "edited by an agent\n");
 
       expect(await readSse(reader, decoder)).toContain("review-changed");

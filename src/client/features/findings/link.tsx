@@ -7,12 +7,6 @@ import {
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
-/**
- * The affordance a finding wears to reach where it is anchored — the diff hunk,
- * or the tour step it was opened against. The icon and destination differ; the
- * structure (a hover-revealed ghost button that navigates and reveals without
- * toggling the surrounding row) is identical, so it lives here once.
- */
 export function FindingLink({
   icon,
   label,

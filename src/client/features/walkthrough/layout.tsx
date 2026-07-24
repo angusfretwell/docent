@@ -7,14 +7,6 @@ import { ScrollArea } from "@client/components/ui/scroll-area";
 import type { ReactNode, RefObject } from "react";
 import { useDefaultLayout } from "react-resizable-panels";
 
-/**
- * The two-panel walkthrough shell both pillars share: prose on the left, the
- * pillar's targets on the right. The prose panel is the scroll container the
- * active-target reading is taken against, so its ref belongs to the caller.
- *
- * `id` keys the persisted split, matching how the Diff and app shells persist
- * theirs — each pillar gets its own remembered column width.
- */
 export function WalkthroughLayout({
   children,
   id,
@@ -45,9 +37,8 @@ export function WalkthroughLayout({
         className="overflow-visible!"
       >
         <ScrollArea viewportRef={proseRef} scrollFade>
-          {/* The trailing space lets the last section's anchor scroll up to
-                the read line; without it the final target could never become
-                active, since nothing follows it to scroll against. */}
+          {/* pb lets the last section's anchor scroll up to the read line;
+                without it the final target could never become active. */}
           <div className="p-6 pb-[50%]">
             <div className="typeset typeset-walkthrough mx-auto max-w-[37em] antialiased">
               {children}

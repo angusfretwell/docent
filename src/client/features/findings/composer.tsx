@@ -6,11 +6,6 @@ import {
 } from "@client/components/ui/input-group";
 import { useEffect, useRef, useState } from "react";
 
-/**
- * The comment composer behind every authored record — opening a Finding inline
- * in the diff, replying on a thread, or resolving with a reason. It owns only
- * the draft text; the caller decides what record the submitted body becomes.
- */
 export function Composer({
   busy = false,
   cancelOnBlur = true,
@@ -26,7 +21,6 @@ export function Composer({
   onCancel?: () => void;
   onSubmit: (body: string) => void;
   placeholder?: string;
-  /** When false an empty body submits — a resolve needs no reason. */
   requireBody?: boolean;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);

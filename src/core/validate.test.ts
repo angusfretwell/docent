@@ -50,14 +50,12 @@ const VALID_FINDING = [
   "",
 ].join("\n");
 
-/** Create `<root>/.docent/reviews/feature/` and return its absolute path. */
 function reviewDir(root: string): string {
   const dir = path.join(root, ".docent", "reviews", "feature");
   mkdirSync(dir, { recursive: true });
   return dir;
 }
 
-/** Write `text` at `segments` under `dir`, creating parent directories. */
 function writeUnder(dir: string, segments: string[], text: string): void {
   const file = path.join(dir, ...segments);
   mkdirSync(path.dirname(file), { recursive: true });

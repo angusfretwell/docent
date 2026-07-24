@@ -36,8 +36,6 @@ export function CodeWalkthroughView() {
 
   const bySection = findingsBySection(visible.map((entry) => entry.finding));
 
-  // Drift is read against the branch patch, the same Change the anchors were
-  // born into, so a thread authored in the tour pins where the Diff tab pins it.
   const drift = useDrift({
     findings: review.findings,
     patch: change.patch,
@@ -67,10 +65,9 @@ export function CodeWalkthroughView() {
         };
   }
 
-  // A chip aims the diff and leaves the prose where the reader put it. The diff
-  // re-aims off the active range, so clicking the chip already active says
-  // nothing new — asserting the scroll outright is what gets a reader who
-  // scrolled the diff away back to the range the chip names.
+  // Re-clicking the active chip changes no active range, so the diff won't
+  // re-aim on its own; bumping `reasserted` re-asserts the scroll for a reader
+  // who scrolled the diff away.
   function selectTarget(key: string) {
     pinTarget(key);
     setReasserted((count) => count + 1);

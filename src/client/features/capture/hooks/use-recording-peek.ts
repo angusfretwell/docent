@@ -4,28 +4,13 @@ import type { TimePin } from "../lib/pins";
 import { usePinFocus, usePinHovered } from "./use-pin-hover";
 import type { RrwebReplayer } from "./use-rrweb-replayer";
 
-/** How long a pointer settles on a callout before the replay answers it. */
 const PEEK_DWELL_MS = 200;
 
-/** Where the transport would be found had nothing borrowed it. */
 interface PeekResume {
   currentMs: number;
   playing: boolean;
 }
 
-/**
- * Hovering a recording's callout has the replay demonstrate it: a span loops
- * within itself, a bare timestamp holds on its frame. The transport is borrowed
- * rather than seized — where the playhead was and whether it was running are
- * given back when the pointer leaves, so brushing past a callout on the way down
- * the prose cannot cost a reader their place. A dwell keeps a pointer merely
- * passing through from yanking the playhead at all.
- *
- * Clicking commits instead. The focus request the screenshot arm reads as "frame
- * this region" reads here as "keep me here", and the restore is abandoned — and
- * where the click arrived from another capture's callout, with no dwell to have
- * borrowed the transport in the first place, it does the demonstrating itself.
- */
 export function useRecordingPeek(
   replay: RrwebReplayer,
   pins: readonly TimePin[],
@@ -41,8 +26,8 @@ export function useRecordingPeek(
   );
   const resumeRef = useRef<PeekResume>({ currentMs: 0, playing: false });
 
-  /* Frozen for the duration of a peek: the loop drives the playhead itself, so
-     tracking it through one would overwrite the very position to give back. */
+  /* The loop drives the playhead during a peek, so tracking it then would
+     overwrite the very position to give back. */
   useEffect(() => {
     if (peekRef.current === null) {
       resumeRef.current = { currentMs, playing };
@@ -64,9 +49,8 @@ export function useRecordingPeek(
 
     setLoop(undefined);
 
-    /* `seek` keeps play/pause as it finds it, so the resumed state has to be in
-       place before the playhead moves — otherwise a peek that paused would seek
-       the reader's position and leave it stranded there. */
+    /* `seek` keeps play/pause as it finds it, so the resumed state must be in
+       place before the playhead moves. */
     if (peek.resume.playing) {
       seek(peek.resume.currentMs);
       play();
@@ -94,7 +78,7 @@ export function useRecordingPeek(
     [pause, play, seek, setLoop]
   );
 
-  /* Keyed on the offsets rather than the pin, which is rebuilt on every render:
+  /* Keyed on the offsets, not the pin object, which is rebuilt every render:
      depending on its identity would restart the dwell before it ever elapsed. */
   const pin =
     hovered === undefined || hovered.target !== target
@@ -125,17 +109,16 @@ export function useRecordingPeek(
       return;
     }
 
-    // Nothing can be demonstrated on a transport that has no recording behind it
-    // yet, so the request stands until the replay is loaded.
+    // The request stands until the replay is loaded — nothing can be
+    // demonstrated on a transport with no recording behind it yet.
     if (!ready) {
       return;
     }
 
     served.current = focused.nonce;
 
-    // Clicking a callout of a recording that wasn't on the panel brings it on
-    // with no pointer ever having reached it, so the request does the seeking a
-    // dwell would otherwise have done.
+    // A click on a callout of a recording that wasn't on the panel brings it on
+    // with no pointer having reached it, so it does the seeking a dwell would.
     if (peekRef.current === null) {
       const asked = pins.find(
         (candidate) => candidate.label === focused.key.label

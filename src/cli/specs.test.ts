@@ -11,12 +11,10 @@ import {
 } from "./specs";
 import { CliUsageError } from "./usage";
 
-/** The parsed value, or a thrown failure if the parser rejected the token. */
 function parsed<A>(parse: Effect.Effect<A, CliUsageError>): A {
   return Effect.runSync(parse);
 }
 
-/** The parser's typed rejection — the arm the tests below assert on. */
 function rejection<A>(parse: Effect.Effect<A, CliUsageError>): CliUsageError {
   return Effect.runSync(Effect.flip(parse));
 }

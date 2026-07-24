@@ -19,18 +19,9 @@ export function itemId(path: string, index: number) {
   return `${path}:${index}`;
 }
 
-/**
- * One file of a parsed patch: its metadata plus the stable identity the tree,
- * the scroll, and the viewed fold all share. `id` is minted from the file's
- * patch order before any sorting or filtering, so narrowing the visible set
- * never re-keys the remaining files.
- */
+// `id` is minted from patch order before any sort or filter, so narrowing the visible set never re-keys files.
 export interface DiffFile {
-  /**
-   * Head-blob object id — the key mark-as-viewed asserts against ("I've seen
-   * this file's resulting content"). A deletion carries the null-SHA head id;
-   * a content-less change (mode-only) falls back to the base id, then empty.
-   */
+  /** Head-blob object id mark-as-viewed asserts against; falls back to base id, then empty, when there is no head blob. */
   blobSha: string;
   file: FileDiffMetadata;
   id: string;
@@ -60,13 +51,7 @@ function stringHash(value: string): number {
   return hash;
 }
 
-/**
- * Version number for a diff item in a controlled CodeView. The CodeView
- * re-renders an item only when its `version` changes, so the version just
- * needs to change whenever the rendered inputs (blobs, collapse, inline
- * annotations) do — hashing a stamp of those inputs gives that as a pure
- * function of them.
- */
+// The CodeView re-renders an item only when its `version` changes, so hash the rendered inputs into it.
 export function diffItemVersion(
   { blobSha, file }: DiffFile,
   collapsed: boolean,
@@ -77,7 +62,6 @@ export function diffItemVersion(
   );
 }
 
-/** Total added and deleted line counts across every file in a patch. */
 export function patchStats(patch: string): {
   additions: number;
   deletions: number;
@@ -95,14 +79,10 @@ export function patchStats(patch: string): {
   return { additions, deletions };
 }
 
-/** Parse a patch into identified files, sorted in file-tree order. */
 export function parsePatchFiles(patch: string): DiffFile[] {
   const files = processPatch(patch).files.map((file, index) => ({
     blobSha: file.newObjectId ?? file.prevObjectId ?? "",
-    // The worker pool primes and reuses syntax-highlight results keyed by
-    // `cacheKey`; without it, priming is skipped and every file re-highlights
-    // on scroll. The base/head blob ids capture content exactly and the name
-    // captures the inferred language, so this changes iff the render would.
+    // The worker pool primes and reuses syntax-highlight results keyed by `cacheKey`; without it every file re-highlights on scroll.
     file: {
       ...file,
       cacheKey: `${file.name}:${file.prevObjectId ?? ""}:${file.newObjectId ?? ""}`,

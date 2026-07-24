@@ -1,15 +1,7 @@
 /**
- * The `.docent/` filesystem read/write primitives shared across the record
- * writers: decode a JSON record against a schema, tolerating any read/parse/
- * decode failure as absence rather than a fatal error; list a directory's
- * entries, tolerating a missing directory as empty (architecture.md §3 —
- * the filesystem is the interface, best-effort by design); and serialize a
- * record to its canonical on-disk bytes.
- *
- * `decodeJsonRecord` is the strict half `readRecord` wraps in `Effect.option`
- * — `docent validate`'s oracle (`core/validate.ts`) consumes it directly,
- * unwrapped, so a JSON record type is paired with its decoder exactly once
- * regardless of which caller's failure-handling it runs under.
+ * `decodeJsonRecord` is the strict half `readRecord` wraps in `Effect.option`,
+ * so a JSON record type is paired with its decoder exactly once — `validate`
+ * consumes the strict half directly, the snapshot reader the best-effort wrapper.
  */
 
 import { Effect, Schema } from "effect";
@@ -17,7 +9,6 @@ import { FileSystem } from "effect/FileSystem";
 
 import { parseJson } from "./parse";
 
-/** Decode already-read JSON text against `schema`; fails on any parse/decode problem. */
 export function decodeJsonRecord<S extends Schema.Constraint>(
   text: string,
   schema: S
@@ -25,7 +16,6 @@ export function decodeJsonRecord<S extends Schema.Constraint>(
   return Effect.flatMap(parseJson(text), Schema.decodeUnknownEffect(schema));
 }
 
-/** Decode a JSON file against a schema; `None` on any read/parse/decode failure. */
 export const readRecord = Effect.fn("readRecord")(function* readRecord<
   S extends Schema.Constraint,
 >(file: string, schema: S) {
@@ -34,20 +24,15 @@ export const readRecord = Effect.fn("readRecord")(function* readRecord<
   return yield* decodeJsonRecord(text, schema);
 }, Effect.option);
 
-/** List a directory's entries, or `[]` when it does not exist. */
 export const listDir = Effect.fn("listDir")(function* listDir(dir: string) {
   const fs = yield* FileSystem;
   return yield* fs.readDirectory(dir).pipe(Effect.orElseSucceed(() => []));
 });
 
 /**
- * Write `value` as a JSON record at `file`: encoded through `schema`, 2-space
- * indent, trailing newline — the canonical on-disk shape every `.docent/`
- * record writer produces. The encode is the mirror of `readRecord`'s decode, so
- * a record is written through the same schema it is later read back with and a
- * transforming field can never round-trip asymmetrically. Does not create parent
- * directories; the caller ensures those (each writer's own directory-creation
- * policy differs).
+ * Canonical shape: encoded through `schema` (the mirror of `readRecord`'s
+ * decode), 2-space indent, trailing newline. Does not create parent directories
+ * — the caller ensures those.
  */
 export const writeJsonRecord = Effect.fn("writeJsonRecord")(
   function* writeJsonRecord<S extends Schema.Constraint>(

@@ -14,12 +14,6 @@ import { useState } from "react";
 import { Composer } from "./composer";
 import { useFindingWrite } from "./hooks/use-finding-write";
 
-/**
- * The next-record actions on a Finding thread. Each action appends one
- * append-only record through the shared write path; the SSE refresh re-folds the
- * snapshot, so the thread re-renders from the server's truth rather than from
- * local state.
- */
 export function FindingActions({ finding }: { finding: FoldedFinding }) {
   const [replying, setReplying] = useState(false);
   const write = useFindingWrite();

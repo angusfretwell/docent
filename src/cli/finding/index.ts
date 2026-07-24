@@ -1,15 +1,3 @@
-/**
- * The `docent finding` command tree — the non-`serve` face of the binary, and
- * the CLI half of the review loop's two I/O primitives: `list` reads the queue
- * (`./list`), and `add / reply / action / resolve / reopen / edit` append one
- * record each (`./write`). This file is only the argv surface: which flags each
- * subcommand takes and what its JSON result looks like.
- *
- * The CLI is non-gating: it writes the identical file an agent could
- * hand-author, and a running `docent serve` turns that file drop into an SSE
- * refresh via the `.docent/` watch.
- */
-
 import { findingStatuses } from "@shared/enums/finding-status";
 import { FindingId } from "@shared/schemas/ids";
 import { Effect, Option } from "effect";
@@ -37,8 +25,6 @@ import {
   resolveFinding,
 } from "./write";
 
-// The attribution overrides every write subcommand accepts. Attribution is
-// metadata, never permission (data-model.md §5.4).
 const authorFlags = {
   agent: Flag.string("agent").pipe(
     Flag.optional,
@@ -283,7 +269,6 @@ const edit = Command.make(
     })
 ).pipe(Command.withDescription("Supersede an earlier record's body"));
 
-/** The `docent finding` subcommand tree — fetch-findings plus write-findings. */
 export const findingCommand = Command.make("finding").pipe(
   Command.withDescription("Read and write the Review's Findings"),
   Command.withSubcommands([list, add, reply, action, resolve, reopen, edit])

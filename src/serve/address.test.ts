@@ -22,7 +22,6 @@ afterAll(async () => {
   cleanupScratchDirs();
 });
 
-/** Boot a real docent server for `repo` on an OS-picked port; return its base URL. */
 function serveDocent(repo: string): {
   url: string;
   stop: () => Promise<void>;

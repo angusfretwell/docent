@@ -17,11 +17,6 @@ import { WorkingDirectory } from "./usage";
 const runtime = makeTestRuntime();
 const run = runtime.runPromise;
 
-/**
- * Install shells out to the real skills CLI, so the suite puts a recording
- * `npx` first on `PATH` — the one boundary it stubs, and the only way to run
- * the command without installing anything on the machine.
- */
 let stubbedNpxArgv = "";
 let realPath: string | undefined;
 let realIsTTY: boolean | undefined;
@@ -38,9 +33,7 @@ beforeAll(() => {
   realPath = process.env.PATH;
   process.env.PATH = `${bin}:${realPath ?? ""}`;
 
-  // A missing --scope falls back to the interactive scope prompt when stdin is
-  // a TTY, which would block the suite under a real terminal. Pin it off so the
-  // fallback deterministically takes non-interactive project scope.
+  // Pin isTTY off: a real terminal would block the suite on the interactive scope prompt.
   realIsTTY = process.stdin.isTTY;
   process.stdin.isTTY = false;
 });
@@ -52,7 +45,6 @@ afterAll(async () => {
   cleanupScratchDirs();
 });
 
-/** Run `docent install <argv>` against a fresh repo, returning the skills CLI's argv. */
 async function installed(argv: readonly string[]): Promise<string[]> {
   rmSync(stubbedNpxArgv, { force: true });
 

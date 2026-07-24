@@ -7,9 +7,7 @@ export function CodeViewHeaderMetadata({
   onToggleViewed,
   viewed = false,
 }: {
-  /** Opens the file-level Finding composer; absent when authoring is off. */
   onComment?: () => void;
-  /** Omit where the surface tracks no viewed state — the walkthrough's panel. */
   onToggleViewed?: () => void;
   viewed?: boolean;
 }) {

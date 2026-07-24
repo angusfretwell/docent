@@ -17,14 +17,12 @@ afterAll(async () => {
   cleanupScratchDirs();
 });
 
-/** Run `docent validate <argv>` the way the binary does, against `cwd`. */
 function validate(cwd: string, argv: readonly string[]) {
   return Command.runWith(validateCommand, { version: "test" })(argv).pipe(
     Effect.provideService(WorkingDirectory, cwd)
   );
 }
 
-/** Write `<root>/.docent/reviews/feature/review.json` with `body`. */
 function seedReview(root: string, body: string): void {
   const dir = path.join(root, ".docent", "reviews", "feature");
   mkdirSync(dir, { recursive: true });

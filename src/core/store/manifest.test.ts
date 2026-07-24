@@ -39,7 +39,6 @@ function manifest(overrides: Partial<typeof Walkthrough.Type> = {}) {
   });
 }
 
-/** Write a manifest directly at its on-disk location, bypassing any higher API. */
 function seed(root: string, kind: WalkthroughKind, initial: Walkthrough) {
   return run(
     Effect.gen(function* seedManifest() {

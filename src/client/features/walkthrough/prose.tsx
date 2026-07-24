@@ -19,10 +19,8 @@ import { WalkthroughCallouts } from "./callouts";
 import { ChipRow, TargetChip } from "./chips";
 import { WalkthroughFindings } from "./findings";
 
-/** Resolves a target key to the callouts read beneath it, if the pillar has any. */
 export type CalloutsForTarget = (key: string) => readonly Callout[];
 
-/** A pillar with no callouts of its own — the code walkthrough's targets. */
 function noCallouts(): readonly Callout[] {
   return [];
 }
@@ -42,7 +40,6 @@ interface ChipScope {
 // React would remount every chip in the section on any re-render.
 const ChipScopeContext = createContext<ChipScope | undefined>(undefined);
 
-/** A chip for one target, resolved against the section it was placed in. */
 function ScopedTargetChip({
   anchorKey,
   scope,
@@ -61,11 +58,7 @@ function ScopedTargetChip({
   );
 }
 
-/**
- * The chip links the fold planted in the prose; every other link renders as
- * itself. `node` is react-markdown's own hast handle, dropped rather than spread
- * so it doesn't reach the DOM as an attribute.
- */
+/** `node` is react-markdown's hast handle, dropped rather than spread so it doesn't reach the DOM as an attribute. */
 function ProseLink({
   children,
   href,
@@ -91,7 +84,6 @@ function ProseLink({
   );
 }
 
-/** The target indices of every chip link within a block, in document order. */
 function chipIndices(nodes: readonly ElementContent[] | undefined): number[] {
   if (nodes === undefined) {
     return [];
@@ -108,19 +100,11 @@ function chipIndices(nodes: readonly ElementContent[] | undefined): number[] {
         ? targetChipIndex(href)
         : undefined;
 
-    // A chip is a leaf, so only a node that isn't one is worth descending into.
     return index === undefined ? chipIndices(node.children) : [index];
   });
 }
 
-/**
- * A paragraph, followed by the callouts of whichever captures its chips placed.
- *
- * The callouts land after the paragraph rather than at the chip itself because
- * they are a block of their own — a list of marks — and a `<p>` cannot hold one.
- * Following the paragraph that reaches the capture is close enough that the
- * reader meets the callouts as the panel beside them swaps to what they describe.
- */
+/** Callouts follow the paragraph rather than sit at the chip: they are a block of their own and a `<p>` cannot hold one. */
 function ProseParagraph({
   children,
   node,
@@ -153,11 +137,6 @@ function ProseParagraph({
 
 const PROSE_COMPONENTS: Components = { a: ProseLink, p: ProseParagraph };
 
-/**
- * One section of prose. A target marker renders as a chip naming what the panel
- * beside it will show, which doubles as the anchor keeping the two panels in
- * step. `stepLayout` decides where the chips a marker didn't place land.
- */
 export function StepProse({
   calloutsFor = noCallouts,
   findings = NO_FINDINGS,
@@ -167,7 +146,6 @@ export function StepProse({
   walkthroughId,
 }: {
   calloutsFor?: CalloutsForTarget;
-  /** The threads anchored to this section, read beneath its prose. */
   findings?: readonly FoldedFinding[];
   labelTarget: LabelTarget;
   onSelect: (key: string) => void;

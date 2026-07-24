@@ -1,11 +1,3 @@
-/**
- * The Findings panel's read model: folds each Finding's append-only records
- * into the render shape (shared derivation with the CLI and server), sorts by
- * location, applies the panel's filters, and resolves each anchor to the diff
- * item or tour step it can jump to. One hook behind every findings surface —
- * panel, filter label, and collapsed-toggle popover.
- */
-
 import { useDrift } from "@client/hooks/use-drift";
 import { parsePatchFiles } from "@client/lib/diff";
 import { sectionKey } from "@client/lib/finding-sections";
@@ -34,23 +26,10 @@ import type { FindingSection } from "../lib/types";
 
 export interface FindingListItem {
   finding: FoldedFinding;
-  /** The diff item the finding's anchor file maps to, when it is in the branch diff. */
   diffItemId?: string;
-  /** The anchor's standing against the current Change; absent until drift resolves. */
   drift?: DriftState;
-  /**
-   * The one-line human location the panel heads the thread with. Resolved here
-   * rather than in `findingLocation` because naming a section needs the Review's
-   * walkthroughs, which the shared (CLI-facing) reader has no handle on.
-   */
   location: string;
-  /**
-   * The step of a tour the finding can be shown in. Absent unless the anchor is
-   * a section of a walkthrough the pillar still renders — an anchor left on a
-   * superseded tour has a name to read but nowhere to jump to.
-   */
   section?: FindingSection;
-  /** The surface the finding is read on, for filtering by where it lives. */
   surface?: FindingSurface;
 }
 
@@ -88,9 +67,8 @@ export function useFindings(): { visible: FindingListItem[] } {
       )
     );
 
-    // Only the tours the pillars actually render can be jumped into, so the
-    // reachable sections are gathered from those rather than from every
-    // walkthrough the Review has ever held.
+    // Only tours the pillars still render can be jumped into, so reachable
+    // sections come from those, not from every walkthrough the Review has held.
     const shownTours = [
       {
         pillar: WalkthroughKind.Code,
@@ -110,9 +88,8 @@ export function useFindings(): { visible: FindingListItem[] } {
       )
     );
 
-    // The pillar of every tour the Review holds, superseded ones included: a
-    // finding left on an old tour is still a finding about that pillar, so it
-    // belongs in that filter even though there is nowhere to jump to.
+    // Every tour's pillar, superseded ones included: a finding on an old tour is
+    // still about that pillar, so it belongs in that filter with nowhere to jump.
     const pillarByTour = new Map(
       walkthroughs.map(
         (walkthrough) => [walkthrough.id, walkthrough.kind] as const
@@ -122,9 +99,8 @@ export function useFindings(): { visible: FindingListItem[] } {
     function locationOf(finding: FoldedFinding): string {
       const { anchor } = finding;
 
-      // A finding on no particular part of the change is a finding on the
-      // Review, so it reads as the Review — "Whole change" only where the
-      // Review has yet to be named.
+      // A finding on no particular part of the change reads as the Review;
+      // "Whole change" only where the Review has yet to be named.
       if (anchor?.kind === ANCHOR_KIND.change && reviewTitle !== "") {
         return reviewTitle;
       }
@@ -137,9 +113,6 @@ export function useFindings(): { visible: FindingListItem[] } {
         sectionKey(anchor.walkthroughId, anchor.sectionId)
       );
 
-      // The step's own title, unadorned — the panel heads every other kind of
-      // thread with the plain name of where it is, and a section is no different.
-      // Falling back to the raw id keeps that true for a superseded tour.
       return title ?? anchor.sectionId;
     }
 

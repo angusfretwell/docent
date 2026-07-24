@@ -19,14 +19,12 @@ afterAll(async () => {
   cleanupScratchDirs();
 });
 
-/** Run `docent walkthrough <argv>` the way the binary does, against `cwd`. */
 function walkthrough(cwd: string, argv: readonly string[]) {
   return Command.runWith(walkthroughCommand, { version: "test" })(argv).pipe(
     Effect.provideService(WorkingDirectory, cwd)
   );
 }
 
-/** A scratch repo on `feature`, one file changed off `main`. */
 function featureRepo(): string {
   const dir = scratchRepo("docent-wlk-cli-");
   git(dir, "checkout", "-b", "feature");
@@ -39,7 +37,6 @@ function featureRepo(): string {
   return dir;
 }
 
-/** The single walkthrough in the Review (the tests create exactly one). */
 async function onlyWalkthrough(root: string) {
   const snapshot = await run(
     readReviewSnapshot({ base: "main", branch: "feature", root })
@@ -47,7 +44,6 @@ async function onlyWalkthrough(root: string) {
   return snapshot.walkthroughs.at(0);
 }
 
-/** The id of the single walkthrough in the Review. */
 async function currentWalkthroughId(root: string): Promise<string> {
   const entry = await onlyWalkthrough(root);
   return entry?.id ?? "";

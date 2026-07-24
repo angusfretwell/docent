@@ -58,7 +58,6 @@ describe("resolveChange", () => {
     writeFileSync(path.join(repo, "feature.txt"), "on feature\n");
     git(repo, "add", ".");
     git(repo, "commit", "-m", "feature work");
-    // main moves on after the branch point — its changes must NOT show up.
     git(repo, "checkout", "main");
     writeFileSync(path.join(repo, "main-only.txt"), "on main\n");
     git(repo, "add", ".");
@@ -256,8 +255,7 @@ describe("resolveAuthor", () => {
   test("degrades to a placeholder when git identity is unset", async () => {
     const repo = scratchDir("docent-git-test-");
     git(repo, "init", "-b", "main");
-    // Empty local values shadow any global config so the placeholder path runs
-    // deterministically regardless of the machine's git identity.
+    // Empty local values shadow any global git config so the placeholder path runs deterministically.
     git(repo, "config", "user.email", "");
     git(repo, "config", "user.name", "");
 

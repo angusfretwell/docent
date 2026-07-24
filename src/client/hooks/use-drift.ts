@@ -1,9 +1,3 @@
-/**
- * The React wiring over the client's drift seam (`@client/lib/drift`): it plans
- * each Finding's drift synchronously and resolves the anchors that plan could
- * not settle by fetching their content-addressed blobs (data-model.md §6).
- */
-
 import { fetchBlobText } from "@client/lib/blobs";
 import type {
   DriftFile,
@@ -24,14 +18,6 @@ import type { Anchor } from "@shared/schemas/finding";
 import type { FindingEntry, WalkthroughEntry } from "@shared/schemas/review";
 import { useEffect, useState } from "react";
 
-/**
- * The lazy re-anchor engine behind the Finding drift map (`useDrift`). Given the
- * fetch jobs a caller's synchronous plan could not settle, it fetches the
- * content-addressed blobs (cached forever), runs `reanchorRange`, and folds each
- * result in by id as it lands — so the returned map only ever grows more
- * precise, never mis-pinning a still-in-flight entry. A stable `jobsKey` keeps
- * the effect from re-firing on every render.
- */
 export function useReanchor(
   jobs: readonly ReanchorJob[],
   excerpts: readonly ExcerptJob[]
@@ -71,8 +57,7 @@ export function useReanchor(
             : {}),
         });
       } catch {
-        // Leave the entry out of the map until a later render can re-anchor it;
-        // a fetch failure never mis-pins.
+        // A fetch failure leaves the entry out of the map rather than mis-pinning.
       }
     }
     async function excerpt(job: ExcerptJob) {
@@ -84,7 +69,7 @@ export function useReanchor(
           state: "outdated",
         });
       } catch {
-        // The born blob is unreachable; the row still reads outdated via base.
+        // Born blob unreachable; the row still reads outdated via base.
       }
     }
     void Promise.all([...jobs.map(reanchor), ...excerpts.map(excerpt)]);
@@ -97,7 +82,6 @@ export function useReanchor(
   return resolved;
 }
 
-/** Line range carried straight through for a line anchor; nothing for other arms. */
 function anchorLines(anchor: Anchor): [number, number] | undefined {
   return anchor.kind === "line"
     ? [anchor.lines[0], anchor.lines[1]]
@@ -118,10 +102,7 @@ function planFindings(
       continue;
     }
 
-    // Identity arms (walkthrough-section, capture, text-span) carry no
-    // content-addressed drift: their live/outdated standing is an identity read
-    // against the current walkthroughs, and an outdated one detaches to its born
-    // target synchronously — no blob fetch (data-model.md §6.2).
+    // Identity anchors resolve synchronously against the current walkthroughs — no blob fetch (data-model.md §6.2).
     const identity = identityAnchorDrift(anchor, walkthroughs);
     if (identity !== undefined) {
       base.set(finding.id, {
@@ -148,12 +129,6 @@ function planFindings(
   return { base, excerpts, jobs };
 }
 
-/**
- * The per-Finding drift map. Fast-path results are ready synchronously; a line
- * anchor needing a re-anchor is fetched lazily and folded in as it resolves, so
- * the map only ever grows more precise — a drifted Finding stays out of the
- * inline diff until it re-anchors, never mis-pinned.
- */
 export function useDrift(params: {
   findings: readonly FindingEntry[];
   patch: string;
@@ -167,11 +142,6 @@ export function useDrift(params: {
   );
   const resolved = useReanchor(jobs, excerpts);
 
-  // A re-anchor job carries no synchronous base entry, so it is simply absent
-  // from the map until its fetch resolves — which reads as "no drift yet": the
-  // inline diff drops it (never mis-pinned) and the panel shows it un-badged,
-  // both correcting the moment the re-anchor lands. Consumers look drift up by
-  // id, so a resolved entry for a since-removed Finding is harmless.
   const merged = new Map(base);
   for (const [id, result] of resolved) {
     merged.set(id, result);

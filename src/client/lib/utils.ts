@@ -6,7 +6,6 @@ export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
 }
 
-/** The last segment of a repo-relative path. */
 export function basename(path: string): string {
   const slash = path.lastIndexOf("/");
 

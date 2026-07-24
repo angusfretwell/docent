@@ -1,14 +1,8 @@
 /**
- * The write primitives shared by every Change-scoped write over `.docent/` —
- * the lazy, idempotent Change minting both write paths assemble before dropping
- * their own record. `findings-write.ts` (Finding records) and
- * `walkthrough-write.ts` (walkthroughs/sections/captures) both resolve this
- * identical context first; this is the one place it happens.
- *
- * Writing any record is a minting reference: the Change for the live head mints
- * lazily and idempotently by `(baseSha, headSha)`, and every record stamps the
- * `changeId` current at write. No locks, no read-modify-write — a mutation is a
- * new file, never a rewrite.
+ * The write primitives shared by every Change-scoped write. The Change for the
+ * live head mints lazily and idempotently by `(baseSha, headSha)`, and every
+ * record stamps the `changeId` current at write — no locks, a mutation is a new
+ * file, never a rewrite.
  */
 
 import { ChangeId } from "@shared/schemas/ids";
@@ -23,7 +17,6 @@ import { ensureReview } from "./review";
 import { listDir, readRecord, writeJsonRecord } from "./store/io";
 import { reviewDirPath } from "./store/layout";
 
-/** The resolved Change identity a write mints against (git-resolved refs). */
 export interface ChangeRefs {
   baseSha: string;
   headSha: string;
@@ -31,15 +24,6 @@ export interface ChangeRefs {
   headRef: string;
 }
 
-/**
- * The scope a Change-scoped write keys on, resolved from local git: the repo
- * root, the checked-out branch, the default branch it is reviewed against, and
- * the `(baseSha, headSha)` refs the live head's Change mints under
- * (data-model.md §4). Both write surfaces resolve it — the `/api/*` routes
- * before decoding a request body, the CLI subcommands before assembling a
- * record from flags — and hand it straight to `writeFindingRecord` /
- * `writeWalkthrough`.
- */
 export const resolveChangeScope = Effect.fn("resolveChangeScope")(
   function* resolveChangeScope(cwd: string) {
     const { baseSha, branch, defaultBranch, headSha, root } =
@@ -58,12 +42,10 @@ export const resolveChangeScope = Effect.fn("resolveChangeScope")(
   }
 );
 
-/** The write's timestamp, an ISO-8601 string from the wall clock. */
 export const now = Clock.currentTimeMillis.pipe(
   Effect.map((millis) => new Date(millis).toISOString())
 );
 
-/** The highest `NNN` numeric prefix across `NNN-…`/`chg_NNN` names, or 0. */
 export function maxSequence(names: readonly string[], pattern: RegExp): number {
   const sequences = names.flatMap((name) => {
     const value = pattern.exec(name)?.groups?.n;
@@ -73,11 +55,9 @@ export function maxSequence(names: readonly string[], pattern: RegExp): number {
 }
 
 /**
- * Mint the Change for the live head, or idempotently reuse it. The same
- * `(baseSha, headSha)` never mints twice: an existing matching `chg_NNN.json` is
- * returned as-is; otherwise the next sequential id is appended. Sequencing reads
- * the max on-disk `NNN` so it survives gaps and skipped malformed records
- * (data-model.md §4).
+ * Idempotent by `(baseSha, headSha)`: an existing matching `chg_NNN.json` is
+ * reused, else the next sequential id is appended. Sequencing reads the max
+ * on-disk `NNN`, so it survives gaps and skipped malformed records.
  */
 export const mintChange = Effect.fn("mintChange")(function* mintChange(params: {
   reviewDir: string;
@@ -122,13 +102,6 @@ export const mintChange = Effect.fn("mintChange")(function* mintChange(params: {
   return record;
 });
 
-/**
- * Resolve the write scope shared by every Change-scoped write: the branch's
- * Review dir (auto-created on first use) and the live head's Change, minted
- * or reused for `refs` (data-model.md §4). `findings-write.ts` and
- * `walkthrough-write.ts` both assemble this identical context before writing
- * their own record; this is the one place it happens.
- */
 export const resolveWriteContext = Effect.fn("resolveWriteContext")(
   function* resolveWriteContext(params: {
     root: string;

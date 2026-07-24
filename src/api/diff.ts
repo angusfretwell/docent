@@ -1,9 +1,3 @@
-/**
- * `GET /api/diff` — the live branch diff as JSON, resolved fresh from git on
- * every request (diff-review.md §1, architecture.md §2). A git failure 500s
- * with the message.
- */
-
 import { Effect } from "effect";
 import { HttpServerResponse } from "effect/unstable/http";
 

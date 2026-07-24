@@ -47,9 +47,8 @@ export function FileTreeView({
     unsafeCSS: TREES_CSS,
   });
 
-  // useFileTree builds the model once from its initial options; view switches
-  // and file filters change `paths`/`gitStatus` afterwards, so sync them into
-  // the model imperatively.
+  // useFileTree builds the model once from its initial options, so later
+  // `paths`/`gitStatus` changes must be synced into it imperatively.
   const syncedRef = useRef({ gitStatus, paths });
 
   useEffect(() => {

@@ -1,15 +1,3 @@
-/**
- * The `docent capture` command tree — the media half of the product walkthrough
- * write path (walkthroughs.md §6). `add` content-addresses one media file into
- * the tour's `captures/` directory (byte-identical media dedups to one blob)
- * and appends its `captures[]` registry entry, through the shared
- * `walkthrough-write.ts` implementation.
- *
- * This is the CLI half of `/capture-product-walkthrough`, which drives the
- * browser to produce the media; the editorial half — placing captures on
- * sections — is `./walkthrough`.
- */
-
 import { captureKinds } from "@shared/enums/capture-kind";
 import { WalkthroughId } from "@shared/schemas/ids";
 import { Effect, Option } from "effect";
@@ -76,9 +64,6 @@ const add = Command.make(
         Effect.flatMap((value) => parseDimensions("viewport", value))
       );
 
-      // The metadata arms are kind-specific (walkthroughs.md §6): `dims`
-      // (full-page pixels) rides a screenshot, `durationMs` a recording. Refuse
-      // the mismatch rather than write a nonsensical registry entry.
       const dimsFlag = Option.getOrUndefined(config.dims);
       const durationFlag = Option.getOrUndefined(config.durationMs);
       if (config.kind === "recording" && dimsFlag !== undefined) {
@@ -138,7 +123,6 @@ const add = Command.make(
   )
 );
 
-/** The `docent capture` subcommand tree — the product tour's media registry. */
 export const captureCommand = Command.make("capture").pipe(
   Command.withDescription("Register capture media on a product walkthrough"),
   Command.withSubcommands([add])

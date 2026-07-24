@@ -41,7 +41,6 @@ describe("resolvePending", () => {
 
   test("combines staged and unstaged edits into one delta since HEAD", async () => {
     const repo = repoWithOneCommit();
-    // Stage one edit, then make a further unstaged edit on top.
     writeFileSync(path.join(repo, "hello.txt"), "hello\nstaged\n");
     git(repo, "add", "hello.txt");
     writeFileSync(path.join(repo, "hello.txt"), "hello\nstaged\nunstaged\n");
@@ -66,18 +65,12 @@ describe("resolvePending", () => {
 
     expect(result.patch).toContain("fresh.txt");
     expect(result.patch).toContain("+brand");
-    // A parseable add: /dev/null → new file.
     expect(result.patch).toContain("new file mode");
     expect(result.patch).not.toContain("ignored.txt");
   });
 
   test("renders an untracked binary file as a no-preview add", async () => {
     const repo = repoWithOneCommit();
-    // A NUL byte makes git classify the file as binary, so the add is emitted
-    // as the "Binary files differ" marker — the same no-preview presentation as
-    // a tracked binary change — rather than a textual hunk. `git diff
-    // --no-index` exits 1 on this ("files differ"), which must not read as a
-    // failure and 500 the whole Pending view.
     const bytes = new Uint8Array([
       0x00, 0xff, 0x0a, 0x42, 0x89, 0x50, 0x4e, 0x47,
     ]);
@@ -112,16 +105,13 @@ describe("resolvePending", () => {
     writeFileSync(path.join(repo, "committed.txt"), "committed on feature\n");
     git(repo, "add", ".");
     git(repo, "commit", "-m", "committed feature work");
-    // An uncommitted edit on top of the committed feature work.
     writeFileSync(path.join(repo, "working.txt"), "uncommitted\n");
 
     const incremental = await pending(repo, "incremental");
     const cumulative = await pending(repo, "cumulative");
 
-    // Incremental is only the uncommitted delta since HEAD.
     expect(incremental.patch).toContain("working.txt");
     expect(incremental.patch).not.toContain("committed.txt");
-    // Cumulative is the whole Change (base..HEAD) plus the uncommitted edit.
     expect(cumulative.patch).toContain("committed.txt");
     expect(cumulative.patch).toContain("working.txt");
   });
@@ -133,10 +123,6 @@ describe("resolvePending", () => {
 
     const result = await pending(repo, "incremental");
 
-    // The full 40-char blob id git assigns this working-tree content — the key
-    // mark-as-viewed asserts against. Committing the identical bytes mints a
-    // Change whose head blob is the same content-addressed SHA, so a Pending
-    // viewed mark carries over rather than reading as changed-since-viewed.
     const blobSha = git(repo, "hash-object", path.join(repo, "hello.txt"));
     expect(blobSha).toMatch(/^[0-9a-f]{40}$/);
     expect(result.patch).toContain(blobSha);
@@ -152,8 +138,6 @@ describe("resolvePending", () => {
 
     const result = await pending(repo);
 
-    // The untracked add goes through `git diff --no-index`, which still hashes
-    // the worktree file for its index line — full-length under `--full-index`.
     const blobSha = git(repo, "hash-object", path.join(repo, "fresh.txt"));
     expect(blobSha).toMatch(/^[0-9a-f]{40}$/);
     expect(result.patch).toContain(blobSha);
@@ -207,8 +191,6 @@ describe("resolveWorktreeFile", () => {
     const repo = repoWithOneCommit();
     const outside = scratchDir("docent-outside-");
     writeFileSync(path.join(outside, "secret.txt"), "top secret\n");
-    // A symlink that lives in the repo but resolves outside — the lexical guard
-    // passes, so only following the link catches the escape.
     symlinkSync(path.join(outside, "secret.txt"), path.join(repo, "link.txt"));
 
     await expect(worktree(repo, "link.txt")).rejects.toThrow(/path/i);

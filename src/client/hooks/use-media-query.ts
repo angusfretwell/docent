@@ -9,7 +9,7 @@ export function useMediaQuery(query: string): boolean {
     (callback: () => void) => {
       if (typeof window === "undefined") {
         return () => {
-          // noop
+          // SSR: no media-query listener was attached, so nothing to detach.
         };
       }
 

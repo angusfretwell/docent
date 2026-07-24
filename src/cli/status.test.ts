@@ -24,14 +24,12 @@ afterAll(async () => {
   cleanupScratchDirs();
 });
 
-/** Run `docent status <argv>` the way the binary does, against `cwd`. */
 function status(cwd: string, argv: readonly string[]) {
   return Command.runWith(statusCommand, { version: "test" })(argv).pipe(
     Effect.provideService(WorkingDirectory, cwd)
   );
 }
 
-/** Run a subcommand and parse the machine-readable JSON it printed on stdout. */
 async function printedJson(
   command: ReturnType<typeof status>
 ): Promise<unknown> {
@@ -51,7 +49,6 @@ async function printedJson(
   return JSON.parse(printed.join("\n"));
 }
 
-/** Boot a real docent server for `repo` on an OS-picked port; return its URL. */
 function serveDocent(repo: string): string {
   const { dispose, handler } = webHandler({ cwd: repo });
   const server = Bun.serve({

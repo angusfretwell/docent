@@ -85,7 +85,6 @@ describe("reanchorRange", () => {
 
   test("prefers the block occurrence nearest the born position when repeated", () => {
     const dupBorn = ["x", "target", "y", "z", "target"];
-    // Both born lines 2 and 5 are "target"; anchoring line 5 should stay near 5.
     const current = ["target", "x", "target", "y", "z", "target"];
     expect(reanchorRange(dupBorn, current, [5, 5])).toEqual({
       lines: [6, 6],

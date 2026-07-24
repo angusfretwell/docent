@@ -1,10 +1,3 @@
-/**
- * The authoring state behind the diff's inline composer: opening a line- or
- * file-anchored Finding, and submitting it as a root (open) record through the
- * shared write path. This owns only the compose lifecycle (data-model.md §5.3);
- * the anchor placement model lives in `lib/diff-annotations.ts`.
- */
-
 import type { Annotation, Composing } from "@client/lib/diff-annotations";
 import { annotationSide } from "@client/lib/diff-annotations";
 import type { CodeViewLineSelection, FileDiffMetadata } from "@pierre/diffs";
@@ -15,9 +8,6 @@ import { useState } from "react";
 
 import { useFindingWrite } from "./use-finding-write";
 
-// The content-addressed anchor target on one side of a file: the born blob and
-// the path to freeze into the anchor. A side with no blob (e.g. an add's base
-// side) can't be anchored, so it yields nothing.
 function anchorTarget(fileDiff: FileDiffMetadata, side: Side) {
   const blobSha =
     side === "head" ? fileDiff.newObjectId : fileDiff.prevObjectId;
@@ -52,9 +42,6 @@ export function useFindingCompose(params: {
     setComposing(null);
   }
 
-  // Submit the in-progress composer as a new root (open) record. The SSE refresh
-  // re-folds the snapshot, so the fresh Finding re-renders as a thread. A failed
-  // write leaves the composer open with its draft intact.
   function submit(body: string) {
     if (composing === null) {
       return;
@@ -66,10 +53,6 @@ export function useFindingCompose(params: {
     );
   }
 
-  // A line selection opens a line-anchored composer. The anchor freezes the
-  // exact blob bytes on the selected side (content-addressed born anchor); a
-  // side with no blob (e.g. an add's base side) can't be anchored, so it opens
-  // nothing.
   function selectLines(selection: CodeViewLineSelection | null) {
     if (selection === null) {
       setComposing(null);
@@ -101,8 +84,6 @@ export function useFindingCompose(params: {
     });
   }
 
-  // A file-level Finding: anchor the whole file version (prefer the head blob,
-  // fall back to base for a deletion). Its composer renders at line 0.
   function commentOnFile(itemId: string, fileDiff: FileDiffMetadata) {
     const side = fileDiff.newObjectId === undefined ? "base" : "head";
     const target = anchorTarget(fileDiff, side);

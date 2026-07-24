@@ -1,9 +1,3 @@
-/**
- * `GET /api/review` — the JSON snapshot of the active Review (the one for the
- * checked-out branch), walked live off `.docent/` on every request (uncached).
- * The Review auto-creates on first use; the branch/base come from git.
- */
-
 import { Effect } from "effect";
 import { HttpServerResponse } from "effect/unstable/http";
 

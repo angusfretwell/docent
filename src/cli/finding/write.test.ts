@@ -26,7 +26,6 @@ afterAll(async () => {
   cleanupScratchDirs();
 });
 
-/** A scratch repo on `feature`, one file changed off `main`. */
 function featureRepo(): string {
   const dir = scratchRepo("docent-cli-test-");
   git(dir, "checkout", "-b", "feature");
@@ -36,7 +35,6 @@ function featureRepo(): string {
   return dir;
 }
 
-/** The anchor flags with only the named ones given. */
 function flags(overrides: Partial<AnchorFlags>): AnchorFlags {
   return { change: false, ...overrides };
 }
@@ -45,7 +43,6 @@ function anchorSpec(overrides: Partial<AnchorFlags>) {
   return Effect.runSync(parseAnchorSpec(flags(overrides)));
 }
 
-/** Whether parsing an anchor spec from those flags fails. */
 function anchorSpecFails(overrides: Partial<AnchorFlags>): boolean {
   return (
     Effect.runSyncExit(parseAnchorSpec(flags(overrides)))._tag === "Failure"

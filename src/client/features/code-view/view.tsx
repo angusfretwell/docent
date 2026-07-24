@@ -22,12 +22,8 @@ import { useMemo } from "react";
 
 import { CodeViewHeaderPrefix } from "./header-prefix";
 
-// The @pierre diffs DOM is themed in two places that share no import, so the
-// split is otherwise undiscoverable: this inline block, injected through the
-// vendored `unsafeCSS` option to style the sticky file-header attribute the
-// library stamps, and the global stylesheet at `@client/styles/diffs.css`,
-// which styles the scroll container class and the light/dark colour scheme.
-// Change one, check the other.
+// @pierre diffs theming is split between this block and the global stylesheet
+// `@client/styles/diffs.css`; change one, check the other.
 const DIFFS_CSS = `
   [data-diffs-header] {
     padding-inline: calc(var(--spacing) * 3);
@@ -58,13 +54,6 @@ const DIFFS_CSS = `
   }
 `;
 
-/**
- * The @pierre code view item list shared by the Diff tab and the Code
- * walkthrough panel: one item per file, its annotations folded from the visible
- * findings and any in-progress composer, its `version` bumped whenever the
- * render would change. Callers own only the divergent collapse wiring —
- * `isCollapsed` defaults to always-expanded for surfaces without a control.
- */
 export function useDiffItems({
   composing,
   driftFor,
@@ -109,7 +98,6 @@ interface AnnotatedCodeViewProps {
   ) => void;
   enableGutterUtility?: boolean;
   enableLineSelection?: boolean;
-  /** Omit to render the file headers without a collapse control. */
   onToggleItemCollapsed?: (itemId: string) => void;
   ref: RefObject<CodeViewHandle<Annotation> | null>;
   renderAnnotation?: (

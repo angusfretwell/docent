@@ -1,12 +1,8 @@
 /**
- * The Diff view's mark-as-viewed overlay (diff-review.md §3): an optimistic
- * per-file override so the viewed button responds instantly, ahead of the
- * watch → SSE → re-fetch round trip that folds a toggle into the Review's
- * viewed events. The overlay is deliberately local state rather than a patch
- * of the `["review"]` cache: the server's fold (`computeViewed` over
- * append-only events) is the source of truth, and the SSE-driven snapshot
- * re-fetch delivers it unmodified. The underlying fold
- * (`computeViewed`/`viewedStateFor`) stays in `lib/viewed.ts`.
+ * An optimistic per-file viewed override, local state ahead of the SSE re-fetch
+ * that folds the toggle server-side — which stays the source of truth.
+ *
+ * @see diff-review.md §3
  */
 
 import { api } from "@client/api";
@@ -26,9 +22,8 @@ interface ViewedToggle {
 }
 
 /**
- * Post a mark-as-viewed toggle. The decoded event validates the response (and a
- * non-2xx throws so `onError` rolls back); the overlay drives the button, so the
- * event itself is not consumed.
+ * The decoded event validates the response (a non-2xx throws so `onError` rolls
+ * back); the overlay drives the button, so the event itself is not consumed.
  */
 function postViewed(toggle: ViewedToggle): Promise<ViewedEvent> {
   return api.viewed.toggle({ blobSha: toggle.blobSha, path: toggle.path });
@@ -39,19 +34,13 @@ export interface Viewed {
   toggleViewed: (id: string) => void;
 }
 
-/**
- * @param fileById The patch's id→file lookup, for the toggle's blobSha stamp.
- * @param model The viewed fold a lookup falls back to once its overlay entry is stale or absent.
- */
 export function useViewedState(
   fileById: ReadonlyMap<string, DiffFile>,
   model: ViewedModel
 ): Viewed {
-  // Optimistic viewed overrides, keyed by file id and stamped with the head
-  // blob the toggle asserted against. Blob-stamping makes the override
-  // self-invalidating: once a new Change gives the file a different head blob,
-  // the stamp no longer matches and the fold's cleared / changed-since-viewed
-  // state shows through — no reconcile pass needed.
+  // Stamped with the head blob so the override self-invalidates: once a new
+  // Change gives the file a different blob, the stamp no longer matches and the
+  // fold shows through — no reconcile pass needed.
   const [overlay, setOverlay] = useState<
     ReadonlyMap<string, { viewed: boolean; blobSha: string }>
   >(new Map());
@@ -59,8 +48,8 @@ export function useViewedState(
   const toggle = useMutation({
     mutationFn: postViewed,
     onError: (_error, variables) => {
-      // The write failed, so nothing persisted: drop the override and let the
-      // button fall back to the fold rather than lie about a saved toggle.
+      // The write failed, so nothing persisted: drop the override and fall back
+      // to the fold rather than lie about a saved toggle.
       setOverlay((prev) => {
         const rolledBack = new Map(prev);
         rolledBack.delete(variables.id);

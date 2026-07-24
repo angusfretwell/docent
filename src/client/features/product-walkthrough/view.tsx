@@ -66,9 +66,6 @@ export function ProductWalkthroughView() {
     };
   }
 
-  // The bodies of a capture's pins read in the prose, beside the capture the
-  // labels mark up — so the panel carries the marks and the column carries what
-  // they say.
   function calloutsForTarget(key: string) {
     const placed = captures.get(key);
 
@@ -81,9 +78,8 @@ export function ProductWalkthroughView() {
         );
   }
 
-  // Clicking the chip of the capture already on the panel asks for the capture
-  // itself, since there is nothing to switch to: it gives back the whole frame,
-  // undoing a zoom the reader — or a callout — had left it under.
+  // Clicking the active capture's chip has nothing to switch to, so it refits
+  // the frame — undoing a zoom a callout or the reader left it under.
   function selectTarget(key: string) {
     if (key === activeKey) {
       setRefitted((count) => count + 1);

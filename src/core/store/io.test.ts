@@ -17,8 +17,6 @@ afterAll(async () => {
 
 const Widget = Schema.Struct({ count: Schema.Number, id: Schema.String });
 
-// A record whose `at` encodes to a string and decodes to a `Date` — the
-// asymmetry a write that skipped the schema would silently break.
 const Stamped = Schema.Struct({
   at: Schema.DateFromString,
   id: Schema.String,

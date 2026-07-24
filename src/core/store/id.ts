@@ -1,32 +1,20 @@
 /**
- * ULID-shaped opaque id minting for `.docent/` records: `<prefix>_` plus a
- * lexically sortable Crockford base32 tail, so ids mint in append order — the
- * same order the append-only `viewed/`/finding record directories read back
- * (data-model.md §4–5).
+ * Ids are lexically sortable (Crockford base32, time-headed) so they mint in
+ * append order — the order the append-only record directories read back.
  */
 
 import { Clock, Effect } from "effect";
 
 const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
-/**
- * The id schema a mint constructs through — a branded record id
- * (`@shared/schemas/ids`), or the plain string schema for a prefix with no
- * record id of its own.
- */
 interface IdSchema<Id extends string> {
   readonly make: (input: string) => Id;
 }
 
 /**
- * A ULID-shaped opaque id under `prefix`: `<prefix>_` + 10 time chars + 16
- * random chars, Crockford base32. The time head keeps ids lexically sortable by
- * mint order — which is also the append-only `viewed/` file order.
- *
- * The mint is keyed on the id's own schema (`makeId(FindingId, "fnd")` →
- * `FindingId`), so the value the caller receives is the one that schema's
- * `<prefix>_` refinement admitted: a prefix that disagrees with the schema is a
- * construction error at the mint, not a brand asserted over it.
+ * The mint is keyed on the id's own schema, so a `prefix` that disagrees with
+ * the schema's `<prefix>_` refinement is a construction error at the mint, not a
+ * brand asserted over it.
  */
 export const makeId = Effect.fn("makeId")(function* makeId<Id extends string>(
   schema: IdSchema<Id>,

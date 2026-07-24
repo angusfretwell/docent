@@ -16,9 +16,7 @@ export function useKeyPressed(targetKey: string) {
       }
     }
 
-    // A window that loses focus mid-hold (alt-/cmd-tab) never sees the keyup, so
-    // the held state would stick until the next press. Clear it whenever focus
-    // or visibility is lost — the key can't remain "pressed" from here.
+    // A window that loses focus mid-hold never sees the keyup, so clear the held state on blur/visibility loss.
     function handleReset() {
       setKeyPressed(false);
     }

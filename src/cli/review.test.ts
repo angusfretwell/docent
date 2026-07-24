@@ -19,14 +19,12 @@ afterAll(async () => {
   cleanupScratchDirs();
 });
 
-/** Run `docent review <argv>` the way the binary does, against `cwd`. */
 function review(cwd: string, argv: readonly string[]) {
   return Command.runWith(reviewCommand, { version: "test" })(argv).pipe(
     Effect.provideService(WorkingDirectory, cwd)
   );
 }
 
-/** Run a subcommand and parse the machine-readable JSON it printed on stdout. */
 async function printedJson(
   command: ReturnType<typeof review>
 ): Promise<unknown> {
@@ -46,7 +44,6 @@ async function printedJson(
   return JSON.parse(printed.join("\n"));
 }
 
-/** A scratch repo on `feature`, one file changed off `main`. */
 function featureRepo(): string {
   const dir = scratchRepo("docent-review-cli-");
   git(dir, "checkout", "-b", "feature");
@@ -56,7 +53,6 @@ function featureRepo(): string {
   return dir;
 }
 
-/** The Review the repo's active branch reads back as, through the read path. */
 async function currentReview(root: string) {
   const snapshot = await run(
     readReviewSnapshot({ base: "main", branch: "feature", root })

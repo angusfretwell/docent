@@ -16,10 +16,6 @@ afterAll(async () => {
   cleanupScratchDirs();
 });
 
-/**
- * Run `docent finding <argv>` through the binary's own failure tail, collecting
- * what each stream saw and the exit code `runMain` would hand the process.
- */
 async function runCli(cwd: string, argv: readonly string[]) {
   const stdout: string[] = [];
   const stderr: string[] = [];

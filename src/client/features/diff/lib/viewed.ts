@@ -1,53 +1,33 @@
 /**
- * The mark-as-viewed read-model: a pure fold of the Review's append-only
- * viewed events against the current patch's files. Nothing here is persisted —
- * viewed state, the "changed since viewed" flag, and review progress are all
- * derived on every render, so a new Change recomputes them automatically
- * (diff-review.md §3, data-model.md §8). No DOM or React here.
+ * A file's viewed state is the **parity** of its events for the current head
+ * blob: an odd count for `(path, blobSha)` means viewed. The events carry no
+ * viewed/unviewed flag, so marking appends one event and unmarking appends
+ * another, flipping parity back.
  *
- * ## Keying and toggle semantics
+ * Blob-keying handles cross-Change behavior with no special case: an identical
+ * head blob keeps viewed; a changed blob clears it and flags `changedSinceViewed`
+ * if another blob for that path was viewed; a pure rebase yields the same git
+ * blob SHA, so marks persist.
  *
- * Each event is `{ path, blobSha, ts }` (data-model.md §8) — there is no
- * viewed/unviewed flag in the pinned shape, so a file's viewed state is the
- * **parity** of its events for the current head blob: an odd number of events
- * for `(path, headBlobSha)` means viewed. Marking appends one event; unmarking
- * appends another (flipping parity back). This honors the append-only,
- * lock-free store literally while still letting the button toggle. The writer
- * only appends when the intended state actually flips, so parity stays honest.
- *
- * ## Cross-Change behavior (all three fall out of blob-keying)
- *
- * - Head blob byte-identical across Changes → the same `blobSha` still matches →
- *   viewed persists.
- * - Head blob changed → no matching event for the new `blobSha` → viewed clears,
- *   and if some other blob for that path was viewed the file flags
- *   `changedSinceViewed`.
- * - A pure rebase leaving content identical yields the same git blob SHA
- *   (content-addressed), so the marks are kept — no special case needed.
+ * @see data-model.md §8
  */
 
 import type { DiffFile } from "@client/lib/diff";
 import type { ViewedEvent } from "@shared/schemas/review";
 
 export interface ViewedState {
-  /** The file's current head content has been asserted seen. */
   viewed: boolean;
-  /** A prior content of this file was viewed, but the head blob has since changed. */
   changedSinceViewed: boolean;
 }
 
 export interface ViewedModel {
-  /** Per-file state, keyed by `DiffFile.id`. */
   states: ReadonlyMap<string, ViewedState>;
-  /** Viewed file count — the numerator of the progress read-model. */
   viewed: number;
-  /** Total file count in the patch — the denominator. */
   total: number;
 }
 
 const UNVIEWED: ViewedState = { changedSinceViewed: false, viewed: false };
 
-/** Group events by path into a `blobSha → event count` map (parity source). */
 function countByPath(
   events: readonly ViewedEvent[]
 ): Map<string, Map<string, number>> {
@@ -70,11 +50,9 @@ function isOdd(count: number | undefined): boolean {
 }
 
 /**
- * Fold one file's viewed state from its per-blob event counts. `autoViewed`
- * files (generated, pure renames) start from a viewed baseline: zero events
- * reads as viewed, and the first appended event un-views (parity flipped). The
- * default re-applies at each new head blob, so they never flag changed-since-
- * viewed — they carry nothing to re-review.
+ * `autoViewed` files (generated, pure renames) start from a viewed baseline:
+ * zero events reads as viewed, the first event un-views. The baseline re-applies
+ * at each new head blob, so they never flag changed-since-viewed.
  */
 function foldFile(
   counts: Map<string, number> | undefined,
@@ -102,9 +80,8 @@ function foldFile(
 }
 
 /**
- * Fold the viewed events against the patch's files into per-file state plus the
- * `viewed / total` progress count. `total` is the file count regardless of how
- * many carry events, so progress reflects the whole re-review owed.
+ * `total` is the file count regardless of how many carry events, so progress
+ * reflects the whole re-review owed.
  */
 export function computeViewed(
   events: readonly ViewedEvent[],
@@ -130,7 +107,7 @@ export function computeViewed(
   return { states, total: files.length, viewed };
 }
 
-/** Look up a file's state, defaulting to unviewed for an unknown id. */
+/** Defaults to unviewed for an unknown id. */
 export function viewedStateFor(model: ViewedModel, id: string): ViewedState {
   return model.states.get(id) ?? UNVIEWED;
 }

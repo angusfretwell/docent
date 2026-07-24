@@ -1,4 +1,3 @@
-/** A content-addressed anchor's standing against the newest Change (data-model.md §6.1). */
 export const DriftState = {
   Live: "live",
   Outdated: "outdated",

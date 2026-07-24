@@ -1,8 +1,3 @@
-/**
- * The anchor `kind` discriminant (data-model.md §5.3): seven arms across the
- * three pillars. The values are named once here so the anchor schema
- * (`schemas/finding.ts`) and every fold read the same token.
- */
 export const ANCHOR_KIND = {
   change: "change",
   file: "file",

@@ -79,12 +79,6 @@ export function FindingsItem({
           />
         )}
 
-        {/*
-          The section link wears the pillar's own icon and lands on that pillar's
-          surface, since where it goes is the thing that differs — a finding on a
-          code tour and one on a product tour are the same thread read in two
-          different places.
-        */}
         {section === undefined ? null : (
           <FindingLink
             icon={isCodeSection ? <Code2 /> : <Pointer />}

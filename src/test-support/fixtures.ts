@@ -1,15 +1,9 @@
-/**
- * Shared scratch-repo fixtures for the server test suites. Every temp dir is
- * registered here; each suite calls `cleanupScratchDirs` in its `afterAll`.
- */
-
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
 const scratchDirs: string[] = [];
 
-/** A fresh temp dir, removed by `cleanupScratchDirs`. */
 export function scratchDir(prefix: string): string {
   const dir = mkdtempSync(path.join(tmpdir(), prefix));
   scratchDirs.push(dir);
@@ -22,7 +16,6 @@ export function cleanupScratchDirs(): void {
   }
 }
 
-/** Run a git command, throwing on failure, succeeding with trimmed stdout. */
 export function git(cwd: string, ...args: string[]): string {
   const result = Bun.spawnSync(["git", ...args], { cwd });
   if (result.exitCode !== 0) {
@@ -33,7 +26,6 @@ export function git(cwd: string, ...args: string[]): string {
   return result.stdout.toString().trim();
 }
 
-/** A scratch repo with one commit on `main`. */
 export function scratchRepo(prefix: string): string {
   const dir = scratchDir(prefix);
   git(dir, "init", "-b", "main");

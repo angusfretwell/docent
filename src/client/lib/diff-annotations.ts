@@ -1,11 +1,3 @@
-/**
- * The pure model behind the diff's inline Findings: what a diff-line annotation
- * carries, how a Finding's `line`/`file` anchor maps onto a
- * `{ side, lineNumber }` placement, and the stable key that folds a file's
- * annotations into its CodeView item `version`. No React or DOM here —
- * `diff/annotation.tsx` renders what this computes.
- */
-
 import type {
   AnnotationSide,
   DiffLineAnnotation,
@@ -18,17 +10,10 @@ import type { Anchor } from "@shared/schemas/finding";
 
 import type { DriftResult } from "./drift";
 
-// A diff line-annotation carries either an existing Finding to render as a
-// thread, or the marker for the in-progress composer authoring a new one. Both
-// surface through `renderAnnotation`, anchored at `{ side, lineNumber }`. A
-// finding annotation carries its drift so the inline thread can badge a shifted
-// re-anchor (data-model.md §6.1).
 export type Annotation =
   | { drift?: DriftState; finding: FoldedFinding; kind: "finding" }
   | { kind: "composer" };
 
-// An in-progress authored Finding: the fully-formed anchor it will carry, plus
-// where its composer renders inline (which item, which side, which line).
 export interface Composing {
   anchor: Anchor;
   annotationSide: AnnotationSide;
@@ -36,22 +21,15 @@ export interface Composing {
   lineNumber: number;
 }
 
-// The diff-side an anchor's own side maps onto (data-model.md §5.3: base lines
-// live on the deletions side, head lines on the additions side).
+// data-model.md §5.3: base lines map to the deletions side, head lines to additions.
 export function annotationSide(side: Side): AnnotationSide {
   return side === "head" ? "additions" : "deletions";
 }
 
 // The inline line an anchor renders at, or `undefined` to drop it to the panel.
-// With a drift read (§6.1): a **live** line anchor pins to its born line, a
-// **shifted** one re-anchors to its moved line, an **outdated** one detaches
-// (panel only), and a still-computing re-anchor is held back rather than
-// mis-pinned; a file anchor stays inline (line 0) unless outdated.
-//
-// Without a drift read (Pending), it falls back to the sync fast path: a line
-// anchor renders only while its born `blobSha` still equals the diff's blob on
-// its own side (head → `newObjectId`, base → `prevObjectId`), and drops
-// otherwise — never pinning to possibly-wrong code (§6).
+// Without a drift read (Pending), the sync fast path pins a line anchor only while its
+// born blobSha still matches the diff's blob on its side, else drops it rather than
+// pin to possibly-wrong code (data-model.md §6, §6.1).
 function inlineLine(
   anchor: Extract<Anchor, { kind: "file" | "line" }>,
   fileDiff: FileDiffMetadata,
@@ -77,9 +55,7 @@ function inlineLine(
   return { lineNumber: 0 };
 }
 
-// Existing Findings anchored into a file, as diff-line annotations. Change- and
-// non-code anchors show only in the panel, so they are skipped; the rest defer
-// their inline placement (and whether they appear at all) to `inlineLine`.
+// Change- and non-code anchors are panel-only, so they are skipped here.
 function findingAnnotations(
   findings: readonly FoldedFinding[],
   fileDiff: FileDiffMetadata,
@@ -117,10 +93,6 @@ function findingAnnotations(
   });
 }
 
-/**
- * Every annotation for a file's diff item: its anchored Findings, plus the
- * composer marker when a new Finding is being authored on this item.
- */
 export function itemAnnotations(params: {
   composing: Composing | null;
   driftFor?: (id: string) => DriftResult | undefined;
@@ -145,11 +117,7 @@ export function itemAnnotations(params: {
   return annotations;
 }
 
-/**
- * A stable digest of an item's annotations, folded into its CodeView `version`
- * so the item re-renders exactly when a thread appears, moves, grows, resolves,
- * drifts, or the composer opens/closes on it.
- */
+// Folded into the item's CodeView `version` so it re-renders exactly when its annotations change.
 export function annotationsKey(
   annotations: readonly DiffLineAnnotation<Annotation>[]
 ): string {

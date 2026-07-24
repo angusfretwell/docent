@@ -7,11 +7,6 @@ import { ChevronDown, ChevronUp, Globe } from "lucide-react";
 import prettyMilliseconds from "pretty-ms";
 import type { ReactNode } from "react";
 
-/**
- * How the panel names the capture it holds, and how the reader steps off it.
- * Stepping is the tour's own jump — the handlers scroll the prose — so a
- * neighbour the tour can't reach arrives as `undefined` and disables its arrow.
- */
 interface CaptionProps {
   label: string;
   onNext?: () => void;
@@ -65,16 +60,6 @@ function CaptureCaption({
   );
 }
 
-/**
- * The card the capture is read in: the caption naming what is on the stage, and
- * the dotted field it is staged on. Both belong to the panel rather than to any
- * one capture, so they are rendered once around whichever captures the panel is
- * holding — stepping from one to the next moves only what is on the stage, and
- * the frame around it never blinks.
- *
- * Captures are placed into `children` as siblings filling the stage, which is
- * what lets one dissolve into another over a field that never moves.
- */
 export function CaptureFrame({
   capture,
   children,

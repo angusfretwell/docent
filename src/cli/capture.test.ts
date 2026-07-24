@@ -32,7 +32,6 @@ function walkthrough(cwd: string, argv: readonly string[]) {
   );
 }
 
-/** A scratch repo on `feature` holding one product tour and one media file. */
 async function productRepo(): Promise<{
   media: string;
   walkthroughId: string;

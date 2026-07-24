@@ -1,28 +1,15 @@
-/**
- * The low-level git process runner: spawn `git`, drain stdout/stderr
- * concurrently with the exit wait (so a large diff can't deadlock the pipe),
- * and turn a rejected exit code into `GitCommandFailed`. Every read runs inert
- * (see `GIT_ENV`).
- */
-
 import { Effect, Schema, Stream } from "effect";
 import { ChildProcess } from "effect/unstable/process";
 
 const TRAILING_NEWLINE = /\n$/;
 
-// Keep every git read inert: `GIT_OPTIONAL_LOCKS=0` stops git from taking the
-// index lock to refresh cached stat info, so a `git status`/`git diff` never
-// writes `.git/index`. The repo-rooted watch (serve/watch.ts) would otherwise see its
-// own recompute rewrite the index and feed itself into a loop.
+// `GIT_OPTIONAL_LOCKS=0` stops git taking the index lock to refresh cached stat
+// info, so a `git status`/`git diff` never writes `.git/index` — otherwise the
+// repo-rooted watch (serve/watch.ts) sees its own recompute and loops.
 const GIT_ENV = { GIT_OPTIONAL_LOCKS: "0" } as const;
 
-// A NUL-separated `git status --porcelain -z` (or `check-attr -z`) record
-// separator — shared by the status/untracked-file parsing (pending.ts) and the
-// check-attr parsing (resolve.ts).
 export const NUL = "\0";
 
-// Shared `git diff` argv fragments, extracted so the diff call sites across
-// resolve.ts and pending.ts agree (and don't trip the no-duplicate-string lint).
 export const DIFF = "diff";
 export const NO_COLOR = "--no-color";
 export const FULL_INDEX = "--full-index";
@@ -45,7 +32,6 @@ function streamText<E, R>(stream: Stream.Stream<Uint8Array, E, R>) {
   return Stream.mkString(Stream.decodeText(stream));
 }
 
-/** Concatenate the stream's byte chunks into a single `Uint8Array`. */
 function streamBytes<E, R>(stream: Stream.Stream<Uint8Array, E, R>) {
   return Effect.map(Stream.runCollect(stream), (parts) => {
     const total = parts.reduce((sum, part) => sum + part.length, 0);
@@ -59,12 +45,6 @@ function streamBytes<E, R>(stream: Stream.Stream<Uint8Array, E, R>) {
   });
 }
 
-/**
- * Run a git command and succeed with its trimmed stdout when `accepts` approves
- * the exit code; otherwise fail with the stderr. The exit predicate is the only
- * thing that varies across call sites — a plain command wants exactly 0, while
- * `git diff --no-index` reports a difference with exit 1.
- */
 const gitText = Effect.fn("gitText")(function* gitText(
   cwd: string,
   args: readonly string[],
@@ -75,8 +55,7 @@ const gitText = Effect.fn("gitText")(function* gitText(
     env: GIT_ENV,
     extendEnv: true,
   });
-  // Drain stdout/stderr concurrently with the exit wait so a large diff
-  // can't deadlock the pipe.
+  // Drain concurrently with the exit wait so a large diff can't deadlock the pipe.
   const [stdout, stderr, exitCode] = yield* Effect.all(
     [streamText(handle.stdout), streamText(handle.stderr), handle.exitCode],
     { concurrency: "unbounded" }
@@ -89,26 +68,15 @@ const gitText = Effect.fn("gitText")(function* gitText(
   return stdout.replace(TRAILING_NEWLINE, "");
 }, Effect.scoped);
 
-/** Run a git command, succeeding with its trimmed stdout (exit 0 only). */
 export function git(cwd: string, args: readonly string[]) {
   return gitText(cwd, args, (exitCode) => exitCode === 0);
 }
 
-/**
- * Run `git diff --no-index`, which is git's way to diff arbitrary files and
- * exits **1** (not 0) whenever the two differ — the normal case here, since we
- * feed it `/dev/null` against a real untracked file to render it as an add. A
- * genuine failure (exit ≥ 2) still fails. stdout is returned trimmed.
- */
+/** `git diff --no-index` exits 1 (not 0) when the files differ — the normal case here; exit ≥ 2 is a genuine failure. */
 export function gitDiffNoIndex(cwd: string, args: readonly string[]) {
   return gitText(cwd, args, (exitCode) => exitCode <= 1);
 }
 
-/**
- * Run a git command, succeeding with its raw stdout bytes — verbatim, with no
- * text decode and no newline trim, so binary blobs survive intact. stderr is
- * still decoded for the error message.
- */
 export const gitBytes = Effect.fn("gitBytes")(function* gitBytes(
   cwd: string,
   args: readonly string[]

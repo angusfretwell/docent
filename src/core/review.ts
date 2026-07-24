@@ -1,11 +1,6 @@
 /**
- * The Review store: the read path over `.docent/`. Resolves (auto-creating on
- * first use) the Review for a branch and walks its append-only record
- * directories into a plain JSON snapshot the browser renders.
- *
- * The filesystem is the interface (data-model.md §1): docent is a renderer over
- * plain files, never a gate. The walk is best-effort — a record it cannot parse
- * is skipped, never fatal (architecture.md §3).
+ * The read path over `.docent/`: best-effort — a record it cannot parse is
+ * skipped, never fatal.
  */
 
 import { walkthroughKinds } from "@shared/enums/walkthrough-kind";
@@ -43,7 +38,6 @@ import {
 } from "./store/layout";
 import { FRONTMATTER } from "./store/records";
 
-/** Read `review.json`, creating it (auto-create on first use) when absent. */
 export const ensureReview = Effect.fn("ensureReview")(
   function* ensureReview(params: {
     root: string;
@@ -55,8 +49,8 @@ export const ensureReview = Effect.fn("ensureReview")(
     const path = yield* Path;
     const file = path.join(params.reviewDir, "review.json");
 
-    // Seed the commit policy the moment `.docent` first materializes, so the
-    // machine-local records this write is about to create never leak into git.
+    // Seed the commit policy before creating any record, so machine-local
+    // records never leak into git.
     yield* ensureStateRootGitignore(params.root);
 
     const existing = yield* readRecord(file, Review);
@@ -79,10 +73,8 @@ export const ensureReview = Effect.fn("ensureReview")(
 );
 
 /**
- * Name the change under review, keeping the Review's identity. Unlike every
- * other record under `.docent/`, `review.json` is a singleton identity record
- * rather than an append-only log — so a rename rewrites it in place, preserving
- * the `id` the branch was minted with.
+ * Unlike every other `.docent/` record, `review.json` is a singleton — a rename
+ * rewrites it in place, preserving the `id` the branch was minted with.
  */
 export const setReviewTitle = Effect.fn("setReviewTitle")(
   function* setReviewTitle(params: {
@@ -113,7 +105,6 @@ export const setReviewTitle = Effect.fn("setReviewTitle")(
   }
 );
 
-/** Decode every `*.json` in `<reviewDir>/<sub>`, skipping records that fail. */
 const readJsonRecords = Effect.fn("readJsonRecords")(function* readJsonRecords<
   S extends Schema.Constraint,
 >(reviewDir: string, sub: string, schema: S) {
@@ -130,18 +121,11 @@ const readJsonRecords = Effect.fn("readJsonRecords")(function* readJsonRecords<
   return Array.getSomes(records);
 });
 
-/** An id schema's synchronous constructor — its `<prefix>_` refinement as a check. */
 interface IdSchema<Id extends string> {
   readonly makeOption: (input: string) => Option.Option<Id>;
 }
 
-/**
- * The record ids among a record directory's names, dropping every name the id
- * schema's `<prefix>_` refinement rejects. Directory names are whatever is on
- * disk — hand-authored included (walkthroughs.md §10) — and the walk is
- * best-effort (architecture.md §3), so one unusable name is skipped where
- * constructing it unchecked would make the whole snapshot read fatal.
- */
+/** Drops every name the id schema's `<prefix>_` refinement rejects — best-effort, so one unusable dir name is skipped rather than failing the whole read. */
 function recordIds<Id extends string>(
   schema: IdSchema<Id>,
   names: readonly string[]
@@ -153,12 +137,8 @@ const ANCHOR_FILE = /\bfile:\s*(?<file>[^,}\n]+)/;
 const SURROUNDING_QUOTES = /^["']|["']$/g;
 
 /**
- * Lift the anchored `file` of a Finding root record, best-effort. The anchor is
- * an inline flow map in the frontmatter (data-model.md §5.3), e.g.
- * `anchor: { kind: line, file: src/app.ts, side: head, ... }`. Only the `line`/
- * `file` code arms carry a `file`; every other arm (or an unparseable record)
- * yields no `anchorFile`. This is deliberately a lightweight extractor, not a
- * YAML parse — the full record fold belongs to the Findings panel.
+ * A lightweight regex extractor, not a YAML parse: only the `line`/`file` arms
+ * carry a `file`; every other arm or unparseable record yields none.
  */
 export function parseAnchor(markdown: string): { anchorFile?: string } {
   const frontmatter = FRONTMATTER.exec(markdown)?.groups?.frontmatter;
@@ -180,7 +160,6 @@ export function parseAnchor(markdown: string): { anchorFile?: string } {
   return file ? { anchorFile: file } : {};
 }
 
-/** Read and parse a finding root record's anchor; empty on any read failure. */
 const readAnchor = Effect.fn("readAnchor")(function* readAnchor(file: string) {
   const fs = yield* FileSystem;
   const text = yield* fs
@@ -189,7 +168,6 @@ const readAnchor = Effect.fn("readAnchor")(function* readAnchor(file: string) {
   return parseAnchor(text);
 });
 
-/** Walk one finding's directory, parsing each record and folding its anchor. */
 const readFinding = Effect.fn("readFinding")(function* readFinding(
   dir: string,
   id: FindingId
@@ -201,7 +179,6 @@ const readFinding = Effect.fn("readFinding")(function* readFinding(
     (name) => readFindingRecord(path.join(dir, id, name), name),
     { concurrency: "unbounded" }
   );
-  // The root record carries the anchor: the `*-open.md`, else the first record.
   const root = names.find((name) => name.endsWith("-open.md")) ?? names[0];
   const anchor =
     root === undefined ? {} : yield* readAnchor(path.join(dir, id, root));
@@ -227,11 +204,9 @@ const readFindings = Effect.fn("readFindings")(function* readFindings(
 });
 
 /**
- * Walk one walkthrough's directory: parse its `manifest.json`, then parse its
- * sections in the manifest's array order (the order IS the tour, walkthroughs.md
- * §4). The manifest's `kind` wins over the dir-derived one; sections that fail
- * to parse are dropped, keeping the rest. A manifest-less dir yields no sections
- * (order is undefined without one).
+ * Sections parse in the manifest's array order (the order IS the tour); the
+ * manifest's `kind` wins over the dir-derived one; a manifest-less dir yields no
+ * sections.
  */
 const readWalkthrough = Effect.fn("readWalkthrough")(function* readWalkthrough(
   dir: string,
@@ -259,7 +234,6 @@ const readWalkthrough = Effect.fn("readWalkthrough")(function* readWalkthrough(
   });
 });
 
-/** Walk one walkthrough kind (`code`/`product`) into its entries. */
 const readWalkthroughKind = Effect.fn("readWalkthroughKind")(
   function* readWalkthroughKind(root: string, kind: WalkthroughKind) {
     const path = yield* Path;
@@ -287,11 +261,7 @@ const readWalkthroughs = Effect.fn("readWalkthroughs")(
   }
 );
 
-/**
- * Resolve the Review for `branch` under `root` (auto-creating it on first use)
- * and walk its records into a snapshot. Uncached: the caller re-reads on every
- * request, and the client re-fetches on every SSE change event.
- */
+/** Uncached: the caller re-reads on every request; the client re-fetches on every SSE change event. */
 export const readReviewSnapshot = Effect.fn("readReviewSnapshot")(
   function* readReviewSnapshot(params: {
     root: string;
@@ -333,12 +303,8 @@ export const readReviewSnapshot = Effect.fn("readReviewSnapshot")(
 );
 
 /**
- * Append one mark-as-viewed event to the Review's `viewed/` directory
- * (data-model.md §8). Directory-of-files, append-only: every toggle is a new
- * `vew_*.json`, never a rewrite — so there is no lock and no read-modify-write.
- * The server stamps `ts`; the Review auto-creates on first use so the very
- * first mark has a home. The write trips the `.docent/` watch, which re-pushes
- * the snapshot over SSE — the client's viewed state and progress refresh live.
+ * Append-only: every toggle is a new `vew_*.json`, never a rewrite — no lock, no
+ * read-modify-write. The server stamps `ts`.
  */
 export const appendViewedEvent = Effect.fn("appendViewedEvent")(
   function* appendViewedEvent(params: {
@@ -371,8 +337,8 @@ export const appendViewedEvent = Effect.fn("appendViewedEvent")(
       path: params.request.path,
       ts: new Date(now).toISOString(),
     });
-    // A viewed event is addressed by its filename alone — there is no `vew_`
-    // record id to brand, so the mint runs through the plain string schema.
+    // No `vew_` record id to brand — the event is addressed by filename alone,
+    // so the mint runs through the plain string schema.
     const id = yield* makeId(Schema.String, "vew");
     yield* writeJsonRecord(
       path.join(viewedDir, `${id}.json`),

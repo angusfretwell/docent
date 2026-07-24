@@ -27,7 +27,7 @@ export function DiffCodeView({
 }: {
   /** Off on the read-only Pending preview: no selection, composer, or comment buttons. */
   canAuthor: boolean;
-  /** Per-Finding drift; absent (Pending) falls back to the sync blob-match path. */
+  /** Absent on Pending, which falls back to the sync blob-match path. */
   driftFor?: (id: string) => DriftResult | undefined;
   files: DiffFile[];
   viewed: Viewed;
@@ -42,8 +42,8 @@ export function DiffCodeView({
     fileDiffById: (id) => files.find((entry) => entry.id === id)?.file,
   });
 
-  // Explicit collapse choices (chevron clicks, viewed toggles) override the
-  // default, which follows viewed state: a viewed file starts collapsed.
+  // Explicit collapse choices override the default, which follows viewed state:
+  // a viewed file starts collapsed.
   const [collapsedOverrides, setCollapsedOverrides] = useState<
     ReadonlyMap<string, boolean>
   >(new Map());
@@ -83,9 +83,9 @@ export function DiffCodeView({
     setCollapsedOverrides((prev) => new Map(prev).set(itemId, next));
   }
 
-  // A file-level composer renders as an annotation inside the file, so opening
-  // one on a collapsed file would author into something the reader can't see.
-  // Expanding is a read, not a re-read: viewed state is deliberately untouched.
+  // A file-level composer renders inside the file, so opening one on a collapsed
+  // file would author into something unseen. Expanding is a read, not a re-read
+  // — viewed state is deliberately untouched.
   function handleCommentOnFile(itemId: string, fileDiff: FileDiffMetadata) {
     if (isCollapsed(itemId)) {
       setCollapsedOverrides((prev) => new Map(prev).set(itemId, false));
@@ -110,9 +110,8 @@ export function DiffCodeView({
     }
 
     ref.current?.scrollTo({ behavior: "smooth", id: target.id, type: "item" });
-    // Keyed to `target` only: `isCollapsed` derives from `collapsedOverrides`,
-    // so listing it would re-run this reveal on every collapse toggle rather
-    // than only when the reader jumps to a new target.
+    // Keyed to `target` only: listing `isCollapsed` would re-run this reveal on
+    // every collapse toggle, not only on a jump to a new target.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [target]);
 

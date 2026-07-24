@@ -27,11 +27,6 @@ import {
   toggleSurface,
 } from "./lib/filters";
 
-/**
- * The panel's headline and its filter in one control, so the count names what
- * is being shown: narrowing the filter is answered by the number above the list
- * rather than leaving it claiming findings the reader can no longer see.
- */
 export function FindingsFilter() {
   const { visible } = useFindings();
   const [filters, setFilters] = useAtom(findingFiltersAtom);

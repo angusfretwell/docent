@@ -1,17 +1,8 @@
 /**
- * `docent validate` — the schema oracle (architecture.md §3, testing.md). It
- * walks any `.docent/` tree and decodes every record against the very same
- * `shared/` schemas the runtime reads with, reporting the records that fail. It
- * is **non-gating** (data-model.md §1): a report, never a lock — a caller runs
- * it to learn what is malformed, not to be stopped from writing.
- *
- * Where the snapshot reader (`core/review.ts`) is best-effort — it silently
- * drops a record it cannot parse so the UI degrades gracefully (architecture.md
- * §3) — validate is its strict mirror: the same envelope split and the same
- * schemas, but every decode failure is surfaced with the offending file. That
- * mirror is what makes the fixtures the test suite's oracle (testing.md): they
- * gate on validate reporting nothing. It never touches git, so it validates any
- * `.docent/` tree — a checked-out repo, a fixture, or a bare state root.
+ * The schema oracle: decodes every record in a `.docent/` tree against the same
+ * `shared/` schemas the runtime reads with, reporting failures. Non-gating (a
+ * report, never a lock) and git-free — the strict mirror of the best-effort
+ * snapshot reader, surfacing every decode failure the reader silently skips.
  */
 
 import { walkthroughKinds } from "@shared/enums/walkthrough-kind";
@@ -36,17 +27,12 @@ import { decodeJsonRecord, listDir } from "./store/io";
 import { STATE_ROOT } from "./store/layout";
 import type { JsonParseFailed, YamlParseFailed } from "./store/parse";
 
-/** One record that failed to decode: its path (relative to the state root) and why. */
 export interface Problem {
   file: string;
   message: string;
 }
 
-/**
- * The outcome of validating a `.docent/` tree. Never a failure — validate is a
- * report: `checked` counts every record decoded (valid or not) and `problems`
- * lists the ones that failed, in tree order.
- */
+/** `checked` counts every record decoded (valid or not); `problems` lists the failures in tree order. */
 export interface ValidationReport {
   checked: number;
   problems: Problem[];
@@ -54,11 +40,8 @@ export interface ValidationReport {
 }
 
 /**
- * Resolve a `.docent/` state root from a base path. A path already named
- * `.docent`, or one that directly holds a `reviews/` directory (the committed
- * `fixtures/docent/` shape), is the state root itself; otherwise it is
- * `<base>/.docent` (a repo root). Pure filesystem — validate reads files alone,
- * so it works whether or not `base` is a checked-out git repo.
+ * A path already named `.docent`, or one that directly holds `reviews/`, is the
+ * state root itself; otherwise it is `<base>/.docent`.
  */
 export const resolveStateRoot = Effect.fn("resolveStateRoot")(
   function* resolveStateRoot(base: string) {
@@ -76,33 +59,21 @@ export const resolveStateRoot = Effect.fn("resolveStateRoot")(
   }
 );
 
-/** Does a file exist? `false` on any stat failure — a missing file, never fatal. */
 const exists = Effect.fn("exists")(function* exists(file: string) {
   const fs = yield* FileSystem;
   return yield* fs.exists(file).pipe(Effect.orElseSucceed(() => false));
 });
 
-/**
- * Every way one record's bytes can fail to decode: the parse that turns them
- * into data (`store/parse.ts`), then the schema that decodes that data.
- */
 type DecodeFailure = JsonParseFailed | Schema.SchemaError | YamlParseFailed;
 
-/** One record to validate: where it lives and how to decode its bytes. */
 interface Task {
   decode: (text: string) => Effect.Effect<unknown, DecodeFailure>;
   file: string;
   rel: string;
 }
 
-/** Everything checking one record can fail with: the read, then the decode. */
 type CheckFailure = DecodeFailure | PlatformError;
 
-/**
- * The most specific message a failure carries. Each arm names the field
- * holding the words a reader needs, so a failure type joining the channel has
- * to be given one rather than silently reporting a wrapper's generic message.
- */
 const errorMessage = Match.typeTags<CheckFailure, string>()({
   JsonParseFailed: (error) => error.reason,
   PlatformError: (error) => error.message,
@@ -110,13 +81,11 @@ const errorMessage = Match.typeTags<CheckFailure, string>()({
   YamlParseFailed: (error) => error.reason,
 });
 
-/** A read / parse / decode failure as one grep-friendly report line — a
- * multi-line schema-decode tree collapses onto a single line. */
+/** Collapses a multi-line schema-decode tree onto one grep-friendly line. */
 function formatError(error: CheckFailure): string {
   return errorMessage(error).replaceAll(/\s+/g, " ").trim();
 }
 
-/** Read and decode one record; a `Problem` on any failure, else `undefined`. */
 const check = Effect.fn("check")(function* check(task: Task) {
   const fs = yield* FileSystem;
   return yield* fs.readFileString(task.file).pipe(
@@ -131,7 +100,6 @@ const check = Effect.fn("check")(function* check(task: Task) {
   );
 });
 
-/** The validation tasks under one walkthrough kind (`code`/`product`). */
 const walkthroughTasks = Effect.fn("walkthroughTasks")(
   function* walkthroughTasks(
     reviewDir: string,
@@ -152,8 +120,8 @@ const walkthroughTasks = Effect.fn("walkthroughTasks")(
         );
       }
 
-      // Every `.md` file present is checked, independent of the manifest's
-      // declared `sections` — a stray or unlisted section must still validate.
+      // Every `.md` is checked, independent of the manifest's declared
+      // `sections` — a stray or unlisted section must still validate.
       const sections = yield* listMarkdownRecordNames(walkthroughDir);
       for (const section of sections) {
         tasks.push(
@@ -165,7 +133,6 @@ const walkthroughTasks = Effect.fn("walkthroughTasks")(
   }
 );
 
-/** Every validation task under one Review directory, in tree order. */
 const reviewTasks = Effect.fn("reviewTasks")(function* reviewTasks(
   stateRoot: string,
   slug: string
@@ -173,8 +140,8 @@ const reviewTasks = Effect.fn("reviewTasks")(function* reviewTasks(
   const path = yield* Path;
   const reviewDir = path.join(stateRoot, "reviews", slug);
 
-  // Bind each task to its path relative to the state root, so a report reads the
-  // same wherever the tree lives on disk (a scratch dir, a repo, a fixture).
+  // Path relative to the state root, so a report reads the same wherever the
+  // tree lives on disk.
   function toTask(file: string, decode: Task["decode"]): Task {
     return { decode, file, rel: path.relative(stateRoot, file) };
   }
@@ -221,10 +188,8 @@ const reviewTasks = Effect.fn("reviewTasks")(function* reviewTasks(
 });
 
 /**
- * Walk a `.docent/` state root and decode every record against the `shared/`
- * schemas, returning a report of the failures. All reviews under `reviews/` are
- * validated (validate is branch-agnostic — it needs no git). The walk succeeds
- * even on an empty or absent tree: `checked` is then `0` and `problems` empty.
+ * All reviews under `reviews/` are validated (branch-agnostic, no git). Succeeds
+ * even on an empty or absent tree — `checked` is then 0.
  */
 export const validateStateRoot = Effect.fn("validateStateRoot")(
   function* validateStateRoot(stateRoot: string) {

@@ -1,10 +1,3 @@
-/**
- * Live git resolution for `docent serve` — repo root, checked-out branch,
- * default branch, merge-base, and the merge-base..head patch; plus blob reads
- * and the human author identity. Everything resolves from local git alone
- * (offline; no network, no GitHub).
- */
-
 import { Change } from "@shared/schemas/change";
 import { Author } from "@shared/schemas/finding";
 import { Effect, Schema } from "effect";
@@ -20,8 +13,7 @@ import {
   NUL,
 } from "./exec";
 
-// A git object id: 4–64 lowercase/uppercase hex chars (abbreviated through full
-// SHA-1 or SHA-256). Anything else can't name a blob, so it never reaches git.
+// A git object id: 4–64 hex chars. Anything else can't name a blob, so it never reaches git.
 const OBJECT_ID = /^[0-9a-f]{4,64}$/i;
 
 export class NotAGitRepository extends Schema.TaggedErrorClass<NotAGitRepository>()(
@@ -53,10 +45,6 @@ export class InvalidObjectId extends Schema.TaggedErrorClass<InvalidObjectId>()(
   }
 }
 
-/**
- * The default branch, as { name, ref }: origin's HEAD branch when the repo
- * has an origin, else the local `main`/`master` branch.
- */
 const resolveDefaultBranch = Effect.fn("resolveDefaultBranch")(
   function* resolveDefaultBranch(root: string) {
     const originHead = yield* git(root, [
@@ -81,10 +69,6 @@ const resolveDefaultBranch = Effect.fn("resolveDefaultBranch")(
   }
 );
 
-/**
- * Resolve the repo root, checked-out branch, and default branch — the light
- * identity the Review store keys on, without minting the (expensive) diff.
- */
 export const resolveRepo = Effect.fn("resolveRepo")(function* resolveRepo(
   cwd: string
 ) {
@@ -103,31 +87,18 @@ export const resolveRepo = Effect.fn("resolveRepo")(function* resolveRepo(
   return { branch, defaultBranch, root };
 });
 
-/**
- * The repo's absolute git directory — `<root>/.git` for a normal checkout, or
- * the linked path under `.git/worktrees/<name>` for a git worktree. The watch
- * (serve/watch.ts) watches this for HEAD/index moves so Pending hides live on commit.
- */
 export const resolveGitDir = Effect.fn("resolveGitDir")(function* resolveGitDir(
   cwd: string
 ) {
   return yield* git(cwd, ["rev-parse", "--absolute-git-dir"]);
 });
 
-// A `.gitattributes` value counts a path as generated when the attribute is set
-// (bare `linguist-generated`) or explicitly true (`=true`) — not "unspecified",
-// "unset", or "false".
+// `git check-attr` reports `set`/`true` for a set attribute, else `unspecified`/`unset`/`false`.
 function isGeneratedValue(value: string): boolean {
   return value === "set" || value === "true";
 }
 
-/**
- * The changed paths that `.gitattributes` marks `linguist-generated` or
- * `linguist-vendored` (diff-review.md §5). `git check-attr` reads the same
- * attribute stack Linguist does; the client folds these into its default glob
- * set. Best-effort: any failure (or no changed paths) yields none, so a repo
- * without attributes still renders.
- */
+/** Best-effort: any failure (or no changed paths) yields none. */
 const resolveGeneratedPaths = Effect.fn("resolveGeneratedPaths")(
   function* resolveGeneratedPaths(
     root: string,
@@ -154,8 +125,7 @@ const resolveGeneratedPaths = Effect.fn("resolveGeneratedPaths")(
       "--",
       ...paths,
     ]).pipe(Effect.catchTag("GitCommandFailed", () => Effect.succeed("")));
-    // `check-attr -z` emits NUL-separated (path, attr, value) triples. Collect any
-    // path whose generated/vendored value is set — de-duplicated across attrs.
+    // `check-attr -z` emits NUL-separated (path, attr, value) triples.
     const records = output.split(NUL);
     const generated: string[] = [];
     for (let i = 0; i + 2 < records.length; i += 3) {
@@ -167,13 +137,6 @@ const resolveGeneratedPaths = Effect.fn("resolveGeneratedPaths")(
   }
 );
 
-/**
- * Resolve the checked-out branch's Change identity — its `(baseSha, headSha)`
- * against the default branch, plus the ref labels — without minting the
- * (expensive) diff. This is what lazy Change minting keys on: a Finding write
- * resolves these refs, then mints or idempotently reuses the Change for the
- * live head (data-model.md §4).
- */
 export const resolveChangeRefs = Effect.fn("resolveChangeRefs")(
   function* resolveChangeRefs(cwd: string) {
     const { root, branch, defaultBranch } = yield* resolveRepo(cwd);
@@ -183,12 +146,7 @@ export const resolveChangeRefs = Effect.fn("resolveChangeRefs")(
   }
 );
 
-/**
- * Normalize a git remote URL to a browsable https URL: `ssh://`/`git://`
- * schemes and scp-like `git@host:path` forms become `https://host/path`,
- * credentials and ports drop, and a trailing `.git` strips. A remote that is
- * not URL-shaped (e.g. a local path) passes through unchanged.
- */
+/** A remote that is not URL-shaped (e.g. a local path) passes through unchanged. */
 function normalizeRemoteUrl(remote: string): string {
   const stripped = remote
     .trim()
@@ -211,10 +169,6 @@ function normalizeRemoteUrl(remote: string): string {
   return stripped;
 }
 
-/**
- * The `origin` remote as a normalized https URL, or null when the repo has no
- * origin — the client renders a plain (non-linked) branch label then.
- */
 const resolveRemoteUrl = Effect.fn("resolveRemoteUrl")(
   function* resolveRemoteUrl(root: string) {
     const remote = yield* git(root, ["remote", "get-url", "origin"]).pipe(
@@ -224,17 +178,15 @@ const resolveRemoteUrl = Effect.fn("resolveRemoteUrl")(
   }
 );
 
-/** Resolve the checked-out branch's live Change against the default branch. */
 export const resolveChange = Effect.fn("resolveChange")(function* resolveChange(
   cwd: string
 ) {
   const { root, branch, baseSha, headSha, defaultBranch } =
     yield* resolveChangeRefs(cwd);
   const remoteUrl = yield* resolveRemoteUrl(root);
-  // `--full-index` emits the full blob object ids on each index line. The Diff
-  // tab keys mark-as-viewed on the head-blob SHA (diff-review.md §3); an
-  // abbreviated id's length grows with the repo, so a full id is what stays
-  // byte-comparable across Changes.
+  // `--full-index` emits full blob ids; mark-as-viewed keys on the head-blob
+  // SHA, and an abbreviated id's length grows with the repo, so only a full id
+  // stays byte-comparable across Changes.
   const [patch, generated] =
     baseSha === headSha
       ? ["", []]
@@ -264,13 +216,7 @@ export const resolveChange = Effect.fn("resolveChange")(function* resolveChange(
   });
 });
 
-/**
- * The human author for a UI-authored record, read from local git config. The
- * browser UI is definitionally the human, so attribution comes from
- * `user.email`/`user.name` — never gating anything, just recorded
- * (data-model.md §5.4). A missing config degrades to a usable placeholder
- * rather than failing the write.
- */
+/** A missing git config degrades to a placeholder rather than failing the write. */
 export const resolveAuthor = Effect.fn("resolveAuthor")(function* resolveAuthor(
   root: string
 ) {
@@ -293,13 +239,7 @@ export const resolveAuthor = Effect.fn("resolveAuthor")(function* resolveAuthor(
   });
 });
 
-/**
- * Raw bytes of a git blob addressed by its object id — pure local `git
- * cat-file`, offline, no network. The id is content-addressed and immutable, so
- * the byte stream never changes; `cat-file blob` resolves any abbreviated id
- * while still failing on a non-blob object (a commit/tree id 404s, not
- * misreads). A malformed id short-circuits before git ever runs.
- */
+/** `cat-file blob` resolves any abbreviated id but fails on a non-blob object; a malformed id short-circuits before git runs. */
 export const resolveBlob = Effect.fn("resolveBlob")(function* resolveBlob(
   cwd: string,
   sha: string
@@ -311,12 +251,7 @@ export const resolveBlob = Effect.fn("resolveBlob")(function* resolveBlob(
   return yield* gitBytes(root, ["cat-file", "blob", sha]);
 });
 
-/**
- * The byte size of a git blob by its object id — `git cat-file -s`, which reads
- * only the object header, so it never streams a large binary. The Diff tab shows
- * this as the size-delta row on binary files (diff-review.md §5) without
- * fetching the blob. A malformed id short-circuits; an absent id fails.
- */
+/** `git cat-file -s` reads only the object header, so it never streams a large binary. A malformed id short-circuits before git runs. */
 export const resolveBlobSize = Effect.fn("resolveBlobSize")(
   function* resolveBlobSize(cwd: string, sha: string) {
     if (!OBJECT_ID.test(sha)) {
@@ -328,14 +263,6 @@ export const resolveBlobSize = Effect.fn("resolveBlobSize")(
   }
 );
 
-/**
- * The blob object id of a file at a committed ref — `git rev-parse <ref>:<path>`.
- * This is the content-addressed `blobSha` a Finding's code anchor freezes at
- * birth (data-model.md §5.3): the exact file bytes on the anchored side, which
- * `line`/`file` arms index into and drift is later computed against. The CLI's
- * `finding add` resolves it so anchor construction has one home, matching the
- * UI's write path. A path absent at that ref fails.
- */
 export const resolveBlobShaAt = Effect.fn("resolveBlobShaAt")(
   function* resolveBlobShaAt(root: string, ref: string, file: string) {
     return yield* git(root, ["rev-parse", `${ref}:${file}`]);

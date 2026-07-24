@@ -3,13 +3,11 @@ import { cn } from "@client/lib/utils";
 
 import { PinChip } from "./chips";
 
-/** One pin's label and body, as the prose lists it beside the capture. */
 export interface Callout {
   body: string;
   label: string;
 }
 
-/** One callout, lit while its mark on the capture is hovered, and vice versa. */
 function CalloutItem({
   callout,
   target,
@@ -44,11 +42,6 @@ function CalloutItem({
   );
 }
 
-/**
- * The callouts of one capture, listed where the prose reaches it. Held out of
- * the typeset flow so the surrounding prose rhythm doesn't apply to what is a
- * list of marks rather than a paragraph.
- */
 export function WalkthroughCallouts({
   callouts,
   target,

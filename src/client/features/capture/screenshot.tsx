@@ -11,14 +11,6 @@ import { screenshotPins } from "./lib/pins";
 import { CaptureStage } from "./stage";
 import type { CaptureProps } from "./view";
 
-/**
- * One region mark on a screenshot. Its rect comes from the anchor as fractions
- * of the capture, so the overlay is positioned in percentages of the wrapper and
- * survives any resize. The mark shows its label only while the pin is hovered —
- * from here or from the callout in the prose — so an unread capture isn't
- * covered in chips. Clicking it frames the region, the same act as clicking its
- * callout, since both go through the shared pin focus.
- */
 function RegionOverlay({
   pin,
   target,
@@ -61,23 +53,9 @@ function RegionOverlay({
 }
 
 /**
- * One screenshot: the full-page blob served from the walkthrough's own
- * `captures/` dir, held in a stage that clips it rather than at its natural
- * size — the same framing as a recording, so switching between the two kinds
- * doesn't shift the frame. Clicking the stage zooms the capture to the size it
- * was taken at and drags it around, which is how a full-page screenshot gets
- * read: fitted into a panel it is far too small for its own text.
- *
- * The frame holds reconstructed DOM rather than an image (walkthroughs.md §6),
- * so the zoom scales it by transform: a still frame is real text and stays sharp
- * however far in the reader pushes it, which is the whole reason the blob is an
- * rrweb snapshot rather than a PNG.
- *
- * Normalized `rect` coordinates (0..1) position each pin as percentages of the
- * frame, so the frame must be exactly the rendered capture on both axes — any
- * slack it takes beyond it is slack the pins are measured against, which
- * stretches and displaces them on whichever axis the capture does not fill. Both
- * the fitted and the zoomed size therefore come from `useZoom` as explicit
+ * Pins are positioned as percentages of the frame, so the frame must be exactly
+ * the rendered capture on both axes — otherwise the marks stretch off their
+ * regions. Both the fitted and zoomed sizes come from `useZoom` as explicit
  * pixels.
  */
 export function ScreenshotCapture({
@@ -102,13 +80,10 @@ export function ScreenshotCapture({
   );
   const [naturalWidth, naturalHeight] = natural;
 
-  // A focus request can arrive from either column, and repeatedly for the same
-  // pin, so the nonce it carries is what marks one as served — depending on the
-  // request object alone would re-frame on any unrelated re-render and fight a
-  // reader who had since zoomed by hand.
-  //
-  // A request stands rather than expiring, so one made against a capture that
-  // wasn't on the panel is still waiting when this mounts to answer it.
+  // The nonce marks a request served: depending on the request object alone
+  // would re-frame on any re-render and fight a reader who has since zoomed by
+  // hand. A request stands rather than expiring, so one made against a capture
+  // not yet mounted is still waiting when this mounts.
   const focused = usePinFocus();
   const served = useRef(-1);
 
@@ -121,9 +96,9 @@ export function ScreenshotCapture({
       return;
     }
 
-    // Framing is measured against the stage, so a request that arrives with this
-    // capture mounting has to wait a beat for one to measure — leaving the nonce
-    // unserved is what brings the effect back when it has.
+    // Framing is measured against the stage, so a request arriving as this
+    // capture mounts waits — leaving the nonce unserved brings the effect back
+    // once measured.
     if (!measured) {
       return;
     }
@@ -141,9 +116,8 @@ export function ScreenshotCapture({
   return (
     <>
       <CaptureStage kind="screenshot" zoom={zoom}>
-        {/* rrweb rebuilds the snapshot a beat after the blob loads, so a cold
-            capture would otherwise pop in; fading on `ready` lands it the same
-            way a step between two captures dissolves. */}
+        {/* rrweb rebuilds the snapshot a beat after the blob loads, so fading on
+            `ready` lands it rather than popping in. */}
         <div
           className={cn(
             "absolute ring ring-border transition-opacity duration-75 motion-reduce:transition-none",
@@ -151,9 +125,9 @@ export function ScreenshotCapture({
           )}
           style={frameStyle}
         >
-          {/* As on a replay, rrweb reconstructs the recorded DOM but not the
-              browser's default canvas, so a page that sets no background of its
-              own would render transparent onto the stage. */}
+          {/* rrweb reconstructs the recorded DOM but not the browser's default
+              canvas, so a page with no background of its own would render
+              transparent. */}
           <div
             aria-label={`Screenshot of ${capture.route}`}
             className="h-full w-full overflow-hidden bg-white"
@@ -170,9 +144,9 @@ export function ScreenshotCapture({
             />
           </div>
 
-          {/* Pins are percentages of the frame, which is 0×0 until the stage is
-              measured — rendering them before then collapses every mark into the
-              stage's top-left corner for a frame. */}
+          {/* Pins are percentages of the frame, which is 0×0 until measured —
+              rendering them before then collapses every mark into the top-left
+              for a frame. */}
           {measured
             ? regions.map((pin) => (
                 <RegionOverlay key={pin.label} pin={pin} target={target} />

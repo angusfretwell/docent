@@ -13,7 +13,6 @@ import { findingCommand } from "./index";
 import { applyFindingFilter } from "./list";
 import { addFinding, resolveFinding } from "./write";
 
-/** A minimal folded Finding for pure-filter tests. */
 function folded(
   overrides: Partial<Omit<FoldedFinding, "id">> & { id?: string }
 ): FoldedFinding {
@@ -92,14 +91,12 @@ afterAll(async () => {
   cleanupScratchDirs();
 });
 
-/** Run `docent finding <argv>` the way the binary does, against `cwd`. */
 function findingCli(cwd: string, argv: readonly string[]) {
   return Command.runWith(findingCommand, { version: "test" })(argv).pipe(
     Effect.provideService(WorkingDirectory, cwd)
   );
 }
 
-/** Run `docent finding list <argv>` and parse the JSON it printed on stdout. */
 async function listed(cwd: string, argv: readonly string[]): Promise<string[]> {
   const printed: string[] = [];
   await run(
@@ -118,7 +115,6 @@ async function listed(cwd: string, argv: readonly string[]): Promise<string[]> {
   return result.findings.map((entry) => entry.body);
 }
 
-/** A scratch repo on `feature` holding one open and one resolved Finding. */
 async function seededRepo(): Promise<string> {
   const dir = scratchRepo("docent-list-cli-");
   git(dir, "checkout", "-b", "feature");

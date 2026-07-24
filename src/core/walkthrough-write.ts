@@ -1,25 +1,8 @@
 /**
- * The Walkthrough write path over `.docent/` — the CLI/server home for minting
- * walkthroughs, sections, and captures (agent-integration.md §3.3,
- * walkthroughs.md §3–6). The mirror of `review.ts`'s read path: every write
- * lands the exact plain files the walk parses back, in the shape an agent could
- * hand-author (walkthroughs.md §10; non-gating).
- *
- * It shares the write primitives in `write-context.ts` verbatim —
- * `resolveWriteContext` for the lazy `bornChangeId` (via `mintChange`) — plus
- * `makeId` for the ULID ids, `ensureReview`, and the `records.ts` frontmatter
- * envelope — so there is one implementation of ULID/Change/anchor minting and
- * validation, never a second (issue #44).
- *
- * Unlike Findings (pure append-only record dirs), a walkthrough's `manifest.json`
- * is assembled incrementally: `create` writes the shell, then `add-section` /
- * `add-capture` read-modify-write the manifest to append. The read-modify-write
- * itself — locating a walkthrough, writing a manifest canonically, and the
- * shared load-mutate-persist append shape — lives in `store/manifest.ts`. This
- * is safe here — docent is single-user and local, and these are sequential CLI
- * invocations, so there is no concurrent writer to race (the multi-writer
- * rationale that makes Findings append-only does not apply to one agent
- * building one tour).
+ * The Walkthrough write path over `.docent/`. Unlike Findings (append-only
+ * record dirs), a walkthrough's `manifest.json` is assembled incrementally via
+ * read-modify-write — safe because docent is single-user and local (sequential
+ * CLI invocations, no concurrent writer to race).
  */
 
 import type { CaptureKind } from "@shared/enums/capture-kind";
@@ -55,7 +38,6 @@ export { SectionArmMismatch, WalkthroughNotFound } from "./store/manifest";
 
 type WalkthroughKind = Walkthrough["kind"];
 
-/** A capture write targeted a `code` walkthrough — captures are the product arm. */
 export class CaptureKindMismatch extends Schema.TaggedErrorClass<CaptureKindMismatch>()(
   "CaptureKindMismatch",
   { id: Schema.String }
@@ -65,14 +47,12 @@ export class CaptureKindMismatch extends Schema.TaggedErrorClass<CaptureKindMism
   }
 }
 
-/** The shared read scope every write resolves its Review against. */
 interface WriteBase {
   root: string;
   branch: string;
   base: string;
 }
 
-/** The sha256 content address of a media blob — its `captures/<sha>.…` name. */
 function contentSha(bytes: Uint8Array): string {
   return new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
 }
@@ -80,7 +60,6 @@ function contentSha(bytes: Uint8Array): string {
 const NON_SLUG = /[^a-z0-9]+/g;
 const EDGE_DASHES = /^-+|-+$/g;
 
-/** A filename-safe slug of a section title; empty titles fall back to `section`. */
 function slug(title: string): string {
   const slugged = title
     .toLowerCase()
@@ -89,11 +68,6 @@ function slug(title: string): string {
   return slugged === "" ? "section" : slugged;
 }
 
-/**
- * Create a walkthrough shell: mint a `wlk_` id, mint-or-reuse the live head's
- * Change as `bornChangeId` (the shared lazy-mint), and write an empty-`sections`
- * `docent/walkthrough` manifest. Sections and captures append later.
- */
 export const writeWalkthrough = Effect.fn("writeWalkthrough")(
   function* writeWalkthrough(
     params: WriteBase & {
@@ -130,11 +104,9 @@ export const writeWalkthrough = Effect.fn("writeWalkthrough")(
 );
 
 /**
- * Append a section to a walkthrough: mint a `sec_` id, validate the assembled
- * `docent/walkthrough-section` against the schema, write it as a numbered
- * `sNN-<slug>.md` file (the prefix is cosmetic — the manifest array is the
- * order), and append the filename to the manifest. `ranges` is the code arm;
- * `captureIds`/`annotations` the product arm.
+ * The `sNN-` filename prefix is cosmetic — the manifest array is the
+ * authoritative order. `ranges` is the code arm; `captureIds`/`annotations` the
+ * product arm.
  */
 export const addWalkthroughSection = Effect.fn("addWalkthroughSection")(
   function* addWalkthroughSection(
@@ -160,8 +132,6 @@ export const addWalkthroughSection = Effect.fn("addWalkthroughSection")(
     const loaded = yield* loadWalkthrough(reviewDir, params.walkthroughId);
     const { dir, manifest } = loaded;
 
-    // A section carries the arm for its tour's kind (walkthroughs.md §5): ranges
-    // for code, captures/annotations for product. Refuse the crossed arm.
     const hasRanges = (params.ranges?.length ?? 0) > 0;
     const hasProduct =
       (params.captureIds?.length ?? 0) > 0 ||
@@ -220,16 +190,10 @@ export const addWalkthroughSection = Effect.fn("addWalkthroughSection")(
 );
 
 /**
- * Register a capture on a product walkthrough: content-address the media into
- * `captures/<sha>.rrweb.json` — byte-identical media dedups to one blob — mint a
- * `cap_` id, and append the validated `captures[]` registry entry to the
- * manifest (walkthroughs.md §6). A code walkthrough has no capture arm, so it is
- * refused.
- *
- * Both kinds are rrweb event streams: a recording is the whole stream, a
- * screenshot the `[Meta, FullSnapshot]` pair `takeFullSnapshot` opens one with.
- * A still frame is therefore reconstructed DOM rather than a raster, which is
- * what lets it stay sharp at any zoom.
+ * Byte-identical media dedups to one content-addressed blob. Both kinds are
+ * rrweb event streams: a recording is the whole stream, a screenshot the
+ * `[Meta, FullSnapshot]` pair — a still frame is reconstructed DOM, not a
+ * raster, so it stays sharp at any zoom.
  */
 export const addWalkthroughCapture = Effect.fn("addWalkthroughCapture")(
   function* addWalkthroughCapture(

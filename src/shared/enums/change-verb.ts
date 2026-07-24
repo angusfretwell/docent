@@ -1,4 +1,3 @@
-/** What a milestone record did to the Finding (diff-review.md §7). */
 export const ChangeVerb = {
   Opened: "opened",
   Reopened: "reopened",

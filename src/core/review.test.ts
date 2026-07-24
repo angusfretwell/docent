@@ -430,7 +430,6 @@ describe("readReviewSnapshot walkthroughs", () => {
     }
     expect(walkthrough.kind).toBe("code");
     expect(walkthrough.manifest?.bornChangeId as string).toBe("chg_002");
-    // Manifest array order wins over filename order.
     expect(walkthrough.sections.map((s) => s.id as string)).toEqual([
       "sec_dispatch",
       "sec_entry",

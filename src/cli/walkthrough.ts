@@ -1,18 +1,3 @@
-/**
- * The `docent walkthrough` command tree — the CLI face of the walkthrough write
- * path (agent-integration.md §3.3, walkthroughs.md §4–6). `create` mints a
- * validated `docent/walkthrough` manifest bound to the live head;
- * `add-section` appends a `docent/walkthrough-section`, resolving each
- * `--range`'s content-addressed `blobSha` from git so the range freezes the
- * exact bytes on its side. Both go through the shared `walkthrough-write.ts`
- * implementation — one write implementation, no divergence.
- *
- * As with `docent finding`, the CLI is non-gating: it writes the identical
- * files an agent could hand-author, and a running `docent serve` turns the drop
- * into an SSE refresh via the `.docent/` watch. The registering half of the
- * product arm — content-addressing capture media — is `./capture`.
- */
-
 import { walkthroughKinds } from "@shared/enums/walkthrough-kind";
 import { CaptureId, WalkthroughId } from "@shared/schemas/ids";
 import {
@@ -40,7 +25,6 @@ import {
   resolveBody,
 } from "./usage";
 
-/** Resolve each `--range` spec's content-addressed `blobSha` from git. */
 const buildRanges = Effect.fn("buildRanges")(function* buildRanges(
   root: string,
   refs: Pick<ChangeRefs, "baseSha" | "headSha">,
@@ -63,7 +47,6 @@ const buildRanges = Effect.fn("buildRanges")(function* buildRanges(
   );
 });
 
-/** Decode each `--annotation <json>` against the schema, or fail as a usage error. */
 const parseAnnotations = Effect.fn("parseAnnotations")(
   function* parseAnnotations(raws: readonly string[]) {
     return yield* Effect.forEach(
@@ -197,7 +180,6 @@ const addSection = Command.make(
   Command.withDescription("Validate and append one section, in tour order")
 );
 
-/** The `docent walkthrough` subcommand tree — mint a shell, then grow it. */
 export const walkthroughCommand = Command.make("walkthrough").pipe(
   Command.withDescription("Mint and grow the Review's walkthroughs"),
   Command.withSubcommands([create, addSection])

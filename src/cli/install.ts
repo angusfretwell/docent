@@ -1,20 +1,3 @@
-/**
- * The `docent install` subcommand — the onboarding wizard (architecture.md §5,
- * agent-integration.md §3.5). It explains it is about to install docent's agent
- * skills, asks exactly one question — **project** scope (this repo) or **user**
- * scope (all repos) — then delegates to the skills CLI
- * (`npx skills add … -s '*' -y`, plus `-g` for user scope), letting its own
- * agent detection choose targets non-interactively. It seeds the
- * `.docent/.gitignore` commit policy (data-model.md §1) and prints next steps
- * pointing at `/docent`.
- *
- * `--scope project` / `--scope global` skip the question; a run with no TTY to
- * answer on takes project scope. Re-running install is the documented update
- * story: `@latest` re-resolves the
- * binary and the skill install refreshes the shipped skills — install is
- * idempotent.
- */
-
 import { Console, Effect, Schema } from "effect";
 import { Argument, Command, Flag, Prompt } from "effect/unstable/cli";
 import { ChildProcess } from "effect/unstable/process";
@@ -23,13 +6,10 @@ import { resolveRepo } from "../core/git";
 import { ensureStateRootGitignore } from "../core/store/layout";
 import { CliUsageError, WorkingDirectory } from "./usage";
 
-/** The skills.sh source the CLI installs from: this repo's shipped skills. */
 const SKILLS_SOURCE = "angusfretwell/docent";
 
-/** Install target: this repo (`project`) or every repo on the machine (`global`). */
 export type InstallScope = "project" | "global";
 
-/** The skills CLI exited non-zero — a typed failure through the shared crash tail. */
 export class SkillsInstallFailed extends Schema.TaggedErrorClass<SkillsInstallFailed>()(
   "SkillsInstallFailed",
   {
@@ -41,12 +21,7 @@ export class SkillsInstallFailed extends Schema.TaggedErrorClass<SkillsInstallFa
   }
 }
 
-/**
- * Refuse any positional argument. Install's one question is a scope, never a
- * path — and the parser silently drops arguments no parameter claims, so a
- * stray one would otherwise start a real skill install the caller did not ask
- * for.
- */
+/** The parser silently drops arguments no parameter claims, so without this guard a stray positional would start a skill install nobody asked for. */
 function refusePositionals(
   args: readonly string[]
 ): Effect.Effect<void, CliUsageError> {
@@ -61,17 +36,12 @@ function refusePositionals(
       );
 }
 
-/**
- * The `npx` args for a scope: install the shipped skills, select them all
- * (`-s '*'`), non-interactively (`-y`), and — for user scope — machine-wide
- * (`-g`). No shell runs these, so `*` reaches the CLI verbatim.
- */
+/** No shell runs these args, so the `*` reaches the skills CLI verbatim. */
 function skillsAddArgs(scope: InstallScope): readonly string[] {
   const args = ["skills", "add", SKILLS_SOURCE, "-s", "*", "-y"];
   return scope === "global" ? [...args, "-g"] : args;
 }
 
-/** Install's one question — project scope (this repo) or user scope (all repos). */
 const scopeQuestion: Prompt.Prompt<InstallScope> = Prompt.select({
   choices: [
     {
@@ -88,12 +58,7 @@ const scopeQuestion: Prompt.Prompt<InstallScope> = Prompt.select({
   message: "Install docent's agent skills for",
 });
 
-/**
- * What a missing `--scope` falls back to. A scripted run has no TTY to answer
- * on, so it takes project scope rather than blocking on a question nobody can
- * see; the fallback is an Effect so that choice is made when the flag is
- * actually missing, not when the command is built.
- */
+/** An Effect so the choice is made when the flag is actually missing, not when the command tree is built. */
 const scopeFallback: Effect.Effect<Prompt.Prompt<InstallScope>> = Effect.sync(
   () =>
     process.stdin.isTTY
@@ -101,7 +66,6 @@ const scopeFallback: Effect.Effect<Prompt.Prompt<InstallScope>> = Effect.sync(
       : Prompt.succeed<InstallScope>("project")
 );
 
-/** Shell out to `npx skills add …`, inheriting stdio so its detection is visible. */
 const runSkills = Effect.fn("runSkills")(function* runSkills(
   root: string,
   scope: InstallScope
@@ -119,7 +83,6 @@ const runSkills = Effect.fn("runSkills")(function* runSkills(
   }
 }, Effect.scoped);
 
-/** The `docent install` subcommand — install docent's agent skills. */
 export const installCommand = Command.make(
   "install",
   {

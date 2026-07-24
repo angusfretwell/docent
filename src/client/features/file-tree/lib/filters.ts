@@ -1,19 +1,10 @@
-/**
- * The Diff view's file-filter state and matching rule. Deliberately ephemeral —
- * a plain jotai atom, no storage — so filters reset on reload. Semantics:
- * git-status group none-checked = show all, OR within the group; the Unviewed
- * and Findings toggles each AND on top.
- */
-
 import type { GitStatus } from "@pierre/trees";
 import { atom } from "jotai";
 
 export interface DiffFilters {
-  /** Show only files a Finding is anchored to. */
   findings: boolean;
-  /** Git statuses to show; empty shows all. */
+  /** Empty shows all. */
   statuses: ReadonlySet<GitStatus>;
-  /** Show only files not yet marked viewed. */
   unviewed: boolean;
 }
 
@@ -25,7 +16,6 @@ export const EMPTY_FILTERS: DiffFilters = {
 
 export const diffFiltersAtom = atom<DiffFilters>(EMPTY_FILTERS);
 
-/** Toggle one status inside the git-status group. */
 export function toggleStatusFilter(
   filters: DiffFilters,
   status: GitStatus

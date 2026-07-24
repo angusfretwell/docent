@@ -16,37 +16,6 @@ import type { WalkthroughRange } from "@shared/schemas/walkthrough";
 import { GitCompare } from "lucide-react";
 import { useEffect, useRef } from "react";
 
-/**
- * The Code walkthrough's target panel: the branch diff narrowed to the files the
- * tour actually visits, scrolled to whichever range the reader has reached.
- *
- * The whole tour's files stay mounted rather than swapping to the active
- * section's alone, so the surrounding change stays readable and scrolling
- * between adjacent ranges in one file is continuous instead of a remount. Only
- * files are filtered, not hunks: a `Hunk` indexes into its file's shared
- * `additionLines`/`deletionLines` arrays, so a filtered hunk list would address
- * the wrong lines. Line-precise `scrollTo` gets the reader to the exact range
- * without touching the parsed structure.
- *
- * The files carry no collapse control. The prose drives this panel, so a
- * collapsed file is a range the tour can no longer scroll to — a way to break
- * the read with no counterpart benefit on a set already narrowed to the tour.
- *
- * The reached range is selected as well as scrolled to, so the panel says which
- * lines the prose means rather than leaving the reader to infer it from the
- * scroll position. Selection highlights the lines in place, so unlike an
- * annotation it costs no layout and can't collide with the finding annotations.
- *
- * Findings are authored and read here on the same terms as the Diff tab — one
- * Review-wide set, not a per-pillar one, so a line commented on during the tour
- * is the same thread the Diff tab shows. The tour goes on driving the panel
- * while a composer is open: the prose only re-aims when the reader moves it, and
- * the in-progress anchor is already captured in compose state, so a re-aim costs
- * the composer its scroll position but never its draft.
- *
- * Bumping `reasserted` scrolls to the active range again without it having
- * changed — how a chip click reaches a panel the reader has since scrolled away.
- */
 export function CodeWalkthroughDiffPanel({
   activeRange,
   driftFor,
@@ -54,7 +23,6 @@ export function CodeWalkthroughDiffPanel({
   reasserted,
 }: {
   activeRange: WalkthroughRange | undefined;
-  /** Per-Finding drift, so a shifted anchor pins to its moved line. */
   driftFor?: (id: string) => DriftResult | undefined;
   files: DiffFile[];
   reasserted: number;
@@ -81,9 +49,8 @@ export function CodeWalkthroughDiffPanel({
       ? undefined
       : files.find((entry) => entry.path === activeRange.file);
 
-  // Depended on as primitives so the scroll fires when the reader reaches a new
-  // range rather than on every re-render — otherwise it would fight them for
-  // control of the scroll position.
+  // Depended on as primitives so the effect fires on reaching a new range, not
+  // on every render — otherwise it fights the reader for the scroll position.
   const targetId = targetFile?.id;
   const targetLine = activeRange?.lines[0];
   const targetEndLine = activeRange?.lines[1];

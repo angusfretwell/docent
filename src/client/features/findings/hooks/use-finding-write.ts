@@ -1,9 +1,7 @@
 /**
- * The browser's Finding write path: one POST to `/api/findings` per
- * append-only record. The server mints the Change, stamps attribution and
- * `changeId`, and drops the file; the `.docent/` watch then pushes an SSE
- * event that re-fetches the snapshot. The success-side invalidation here only
- * shortens the round trip for the author's own tab.
+ * The `.docent/` watch pushes an SSE event that re-fetches the snapshot after a
+ * write; the success-side invalidation here only shortens the round trip for
+ * the author's own tab.
  */
 
 import { api } from "@client/api";
