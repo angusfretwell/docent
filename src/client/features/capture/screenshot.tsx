@@ -1,14 +1,15 @@
-import { PinChip } from "@client/features/walkthrough/callout-list";
+import { PinChip } from "@client/features/walkthrough/pin-chip";
 import { cn } from "@client/lib/utils";
 import { useEffect, useRef } from "react";
 
-import type { CaptureProps } from "./frame";
-import { CaptureStage, useRefit } from "./frame";
+import { usePinFocus, usePinHover } from "./hooks/use-pin-hover";
+import { useRefit } from "./hooks/use-refit";
 import { useRrwebSnapshot } from "./hooks/use-rrweb-snapshot";
 import { useZoom } from "./hooks/use-zoom";
 import type { RegionPin } from "./lib/pins";
 import { screenshotPins } from "./lib/pins";
-import { usePinFocus, usePinHover } from "./pin-hover";
+import { CaptureStage } from "./stage";
+import type { CaptureProps } from "./view";
 
 /**
  * One region mark on a screenshot. Its rect comes from the anchor as fractions

@@ -1,9 +1,9 @@
 import { Empty } from "@client/components/empty";
+import { PinHoverProvider } from "@client/features/capture/hooks/use-pin-hover";
 import {
   annotationsFor,
   captureCallouts,
 } from "@client/features/capture/lib/pins";
-import { PinHoverProvider } from "@client/features/capture/pin-hover";
 import { useFindings } from "@client/features/findings/hooks/use-findings";
 import { useActiveTarget } from "@client/features/walkthrough/hooks/use-active-target";
 import { useRevealedSection } from "@client/features/walkthrough/lib/target";
@@ -22,7 +22,7 @@ import { useRef, useState } from "react";
 
 import { WalkthroughLayout } from "../walkthrough/layout";
 import { StepProse } from "../walkthrough/prose";
-import { StalenessBadge } from "../walkthrough/staleness";
+import { WalkthroughStaleness } from "../walkthrough/staleness";
 import { ProductWalkthroughCapturePanel } from "./capture-panel";
 
 export function ProductWalkthroughView() {
@@ -125,7 +125,7 @@ export function ProductWalkthroughView() {
           {walkthrough.manifest?.title ?? "Product walkthrough"}
         </h1>
 
-        <StalenessBadge staleness={staleness} />
+        <WalkthroughStaleness staleness={staleness} />
 
         {steps.map((step) => (
           <StepProse

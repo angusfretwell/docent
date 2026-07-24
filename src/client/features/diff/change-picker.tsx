@@ -1,4 +1,4 @@
-import { MenuTriggerButton } from "@client/components/menu-trigger-button";
+import { Button } from "@client/components/ui/button";
 import {
   Menu,
   MenuGroup,
@@ -43,12 +43,16 @@ export function ChangeRangePicker() {
     <Menu>
       <MenuTrigger
         render={
-          <MenuTriggerButton>
-            <GalleryHorizontalEnd />
-            {activeView === "pending" ? "Pending changes" : "All commits"}
-          </MenuTriggerButton>
+          <Button
+            className="font-normal text-[13px]!"
+            size="sm"
+            variant="ghost"
+          />
         }
-      />
+      >
+        <GalleryHorizontalEnd />
+        {activeView === "pending" ? "Pending changes" : "All commits"}
+      </MenuTrigger>
       <MenuPopup align="start">
         <MenuGroup>
           <MenuGroupLabel>Change</MenuGroupLabel>

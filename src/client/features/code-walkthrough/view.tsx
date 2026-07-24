@@ -9,7 +9,7 @@ import {
   walkthroughPaths,
 } from "@client/features/walkthrough/lib/walkthrough";
 import { StepProse } from "@client/features/walkthrough/prose";
-import { StalenessBadge } from "@client/features/walkthrough/staleness";
+import { WalkthroughStaleness } from "@client/features/walkthrough/staleness";
 import { parsePatchFiles } from "@client/lib/diff";
 import { useDrift } from "@client/lib/drift";
 import { findingsBySection, sectionKey } from "@client/lib/finding-sections";
@@ -119,7 +119,7 @@ export function CodeWalkthroughView() {
         {walkthrough.manifest?.title ?? "Code walkthrough"}
       </h1>
 
-      <StalenessBadge staleness={staleness} />
+      <WalkthroughStaleness staleness={staleness} />
 
       {steps.map((step) => (
         <StepProse

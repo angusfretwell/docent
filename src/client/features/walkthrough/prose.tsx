@@ -1,5 +1,5 @@
 import { Badge } from "@client/components/ui/badge";
-import type { Callout } from "@client/features/walkthrough/callout-list";
+import type { Callout } from "@client/features/walkthrough/callouts";
 import { targetAnchorProps } from "@client/features/walkthrough/hooks/use-active-target";
 import { sectionAnchorProps } from "@client/features/walkthrough/lib/target";
 import type { WalkthroughStep } from "@client/features/walkthrough/lib/walkthrough";
@@ -15,7 +15,7 @@ import { createContext, use } from "react";
 import type { Components, ExtraProps } from "react-markdown";
 import Markdown from "react-markdown";
 
-import { CalloutList } from "./callout-list";
+import { WalkthroughCallouts } from "./callouts";
 import { WalkthroughFindings } from "./findings";
 
 /** How a target reads on its chip: a short label, with the full reference behind it. */
@@ -164,7 +164,11 @@ function ProseParagraph({
       <p {...props}>{children}</p>
 
       {keys.map((key) => (
-        <CalloutList callouts={scope.calloutsFor(key)} key={key} target={key} />
+        <WalkthroughCallouts
+          callouts={scope.calloutsFor(key)}
+          key={key}
+          target={key}
+        />
       ))}
     </>
   );
@@ -221,7 +225,7 @@ export function StepProse({
               <TargetChip anchorKey={layout.heading} scope={scope} />
             </ChipRow>
 
-            <CalloutList
+            <WalkthroughCallouts
               callouts={calloutsFor(layout.heading)}
               target={layout.heading}
             />
@@ -239,7 +243,11 @@ export function StepProse({
             </ChipRow>
 
             {layout.trailing.map((key) => (
-              <CalloutList callouts={calloutsFor(key)} key={key} target={key} />
+              <WalkthroughCallouts
+                callouts={calloutsFor(key)}
+                key={key}
+                target={key}
+              />
             ))}
           </>
         )}

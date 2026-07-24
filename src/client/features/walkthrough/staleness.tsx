@@ -8,7 +8,7 @@ import plur from "plur";
  * never hidden, so a reader knows the prose describes older code than the diff
  * beside it.
  */
-export function StalenessBadge({ staleness }: { staleness: Staleness }) {
+export function WalkthroughStaleness({ staleness }: { staleness: Staleness }) {
   if (!staleness.stale) {
     return null;
   }

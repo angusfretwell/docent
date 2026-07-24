@@ -1,30 +1,12 @@
-import { Badge } from "@client/components/ui/badge";
-import { usePinHover } from "@client/features/capture/pin-hover";
+import { usePinHover } from "@client/features/capture/hooks/use-pin-hover";
 import { cn } from "@client/lib/utils";
+
+import { PinChip } from "./pin-chip";
 
 /** One pin's label and body, as the prose lists it beside the capture. */
 export interface Callout {
   body: string;
   label: string;
-}
-
-/**
- * A pin's label, worn identically by the mark on the capture and by the callout
- * that carries its body in the prose. The two sit in different columns, so the
- * label is the only thing tying them together — it has to read the same in both.
- */
-export function PinChip({
-  label,
-  className,
-}: {
-  label: string;
-  className?: string;
-}) {
-  return (
-    <Badge size="sm" className={cn("tabular-nums", className)}>
-      {label}
-    </Badge>
-  );
 }
 
 /** One callout, lit while its mark on the capture is hovered, and vice versa. */
@@ -67,7 +49,7 @@ function CalloutItem({
  * the typeset flow so the surrounding prose rhythm doesn't apply to what is a
  * list of marks rather than a paragraph.
  */
-export function CalloutList({
+export function WalkthroughCallouts({
   callouts,
   target,
 }: {

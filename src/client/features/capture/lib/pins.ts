@@ -15,7 +15,7 @@
  * this computes.
  */
 
-import type { Callout } from "@client/features/walkthrough/callout-list";
+import type { Callout } from "@client/features/walkthrough/callouts";
 import type { FoldedFinding } from "@shared/lib/finding";
 import { identityDrift } from "@shared/lib/identity-drift";
 import type { DriftState } from "@shared/schemas/drift";
