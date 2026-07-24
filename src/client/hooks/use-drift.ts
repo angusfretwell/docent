@@ -76,7 +76,8 @@ export function useReanchor(
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- jobsKey encodes jobs + excerpts
+    // jobsKey encodes jobs + excerpts
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [jobsKey]);
 
   return resolved;
