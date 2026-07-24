@@ -1,5 +1,5 @@
 {
-  "name": "docent",
+  "name": "@angusfretwell/docent",
   "version": "0.0.0",
   "description": "Local code-review app shell — downloads and runs the docent binary.",
   "license": "MIT",
@@ -16,6 +16,9 @@
     "lib.mjs"
   ],
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
     "node": ">=18"
   }

@@ -6,6 +6,8 @@
     "dev": "bun run build:worker && ./scripts/dev.ts",
     "build": "bun run --sequential build:worker build:docent",
     "build:docent": "./scripts/build-docent.ts",
+    "build:release": "bun run --sequential build:worker build:release:binaries",
+    "build:release:binaries": "./scripts/build-release.ts",
     "build:worker": "./scripts/build-worker.ts",
     "prepare": "bun run --parallel prepare:*",
     "prepare:effect": "./scripts/prepare-effect.sh",

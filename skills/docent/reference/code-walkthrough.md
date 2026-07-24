@@ -29,7 +29,7 @@ The ranking is your judgment, but the shape is fixed:
 ## 3. Mint the walkthrough shell
 
 ```bash
-npx -y docent walkthrough create --kind code --title "<the tour's title>"
+npx -y @angusfretwell/docent walkthrough create --kind code --title "<the tour's title>"
 #   → { "changeId": "chg_…", "walkthroughId": "wlk_…" }
 ```
 
@@ -40,7 +40,7 @@ Mints a `wlk_` id and binds `bornChangeId` to the live head, minting the Change 
 One `add-section` call per section, **in tour order** (the manifest array is the order):
 
 ```bash
-npx -y docent walkthrough add-section --walkthrough wlk_… \
+npx -y @angusfretwell/docent walkthrough add-section --walkthrough wlk_… \
   --title "Entry point & dispatch" \
   --range src/index.ts:10-24@head \
   --range src/parser.ts:40-88@head <<'EOF'
