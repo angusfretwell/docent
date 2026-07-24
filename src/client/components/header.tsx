@@ -1,4 +1,6 @@
 import { FindingsToggle } from "@client/features/findings/toggle";
+import { Skeleton } from "@client/components/ui/skeleton";
+import { Suspense } from "react";
 
 import { Navigation } from "./navigation";
 import { ReviewMeta } from "./review-meta";
@@ -18,8 +20,10 @@ export function Header() {
       <Logo />
       <Navigation />
       <div className="flex items-center gap-1.5 ml-auto">
-        <ReviewMeta />
-        <Separator orientation="vertical" className="h-4" />
+        <Suspense fallback={<Skeleton className="w-60 h-5" />}>
+          <ReviewMeta />
+        </Suspense>
+        <Separator orientation="vertical" className="ml-1.5 h-4" />
         <FindingsToggle />
       </div>
     </div>

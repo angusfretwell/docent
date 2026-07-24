@@ -3,9 +3,15 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { Providers } from "./components/providers";
+import { Spinner } from "./components/ui/spinner";
 import { routeTree } from "./routeTree.gen";
 
 const router = createRouter({
+  defaultPendingComponent: () => (
+    <div className="flex items-center justify-center h-full">
+      <Spinner className="size-4" />
+    </div>
+  ),
   defaultPreload: "intent",
   routeTree,
   scrollRestoration: true,

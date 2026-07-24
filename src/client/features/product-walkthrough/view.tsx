@@ -17,7 +17,7 @@ import { reviewQueryOptions } from "@client/queries/review";
 import { latestProductWalkthrough } from "@shared/lib/identity-drift";
 import { walkthroughStaleness } from "@shared/lib/walkthrough-annotations";
 import type { WalkthroughId } from "@shared/schemas/ids";
-import { useQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { Camera, Pointer, Video } from "lucide-react";
 import { useRef, useState } from "react";
 
@@ -27,10 +27,10 @@ import { WalkthroughStaleness } from "../walkthrough/staleness";
 import { ProductWalkthroughCapturePanel } from "./capture-panel";
 
 export function ProductWalkthroughView() {
-  const { data: review } = useQuery(reviewQueryOptions);
+  const { data: review } = useSuspenseQuery(reviewQueryOptions);
   const { visible } = useFindings();
 
-  const walkthrough = latestProductWalkthrough(review?.walkthroughs ?? []);
+  const walkthrough = latestProductWalkthrough(review.walkthroughs);
   const sections = walkthrough?.sections ?? [];
 
   const proseRef = useRef<HTMLDivElement>(null);
@@ -103,7 +103,7 @@ export function ProductWalkthroughView() {
 
   const staleness = walkthroughStaleness(
     walkthrough.manifest?.bornChangeId ?? "",
-    review?.changes ?? []
+    review.changes
   );
 
   return (

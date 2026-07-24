@@ -19,7 +19,7 @@ import { reviewQueryOptions } from "@client/queries/review";
 import { latestCodeWalkthrough } from "@shared/lib/identity-drift";
 import { walkthroughStaleness } from "@shared/lib/walkthrough-annotations";
 import type { WalkthroughId } from "@shared/schemas/ids";
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { Code2, FileCode } from "lucide-react";
 import { useRef, useState } from "react";
 
@@ -27,11 +27,11 @@ import { CodeWalkthroughDiffPanel } from "./diff-panel";
 
 export function CodeWalkthroughView() {
   const { data: change } = useSuspenseQuery(diffQueryOptions);
-  const { data: review } = useQuery(reviewQueryOptions);
+  const { data: review } = useSuspenseQuery(reviewQueryOptions);
 
   const { visible } = useFindings();
 
-  const walkthrough = latestCodeWalkthrough(review?.walkthroughs ?? []);
+  const walkthrough = latestCodeWalkthrough(review.walkthroughs);
   const sections = walkthrough?.sections ?? [];
 
   const bySection = findingsBySection(visible.map((entry) => entry.finding));
@@ -39,9 +39,9 @@ export function CodeWalkthroughView() {
   // Drift is read against the branch patch, the same Change the anchors were
   // born into, so a thread authored in the tour pins where the Diff tab pins it.
   const drift = useDrift({
-    findings: review?.findings ?? [],
+    findings: review.findings,
     patch: change.patch,
-    walkthroughs: review?.walkthroughs ?? [],
+    walkthroughs: review.walkthroughs,
   });
 
   const proseRef = useRef<HTMLDivElement>(null);
@@ -98,7 +98,7 @@ export function CodeWalkthroughView() {
 
   const staleness = walkthroughStaleness(
     walkthrough.manifest?.bornChangeId ?? "",
-    review?.changes ?? []
+    review.changes
   );
 
   return (

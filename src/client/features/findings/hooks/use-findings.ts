@@ -24,7 +24,7 @@ import {
   latestCodeWalkthrough,
   latestProductWalkthrough,
 } from "@shared/lib/identity-drift";
-import { useQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { useAtomValue } from "jotai/react";
 import { useMemo } from "react";
 
@@ -55,32 +55,32 @@ export interface FindingListItem {
 }
 
 export function useFindings(): { visible: FindingListItem[] } {
-  const { data: review } = useQuery(reviewQueryOptions);
-  const { data: change } = useQuery(diffQueryOptions);
+  const { data: review } = useSuspenseQuery(reviewQueryOptions);
+  const { data: change } = useSuspenseQuery(diffQueryOptions);
   const filters = useAtomValue(findingFiltersAtom);
 
-  const findings = review?.findings;
-  const patch = change?.patch;
-  const walkthroughs = review?.walkthroughs;
-  const reviewTitle = review?.review.title ?? "";
+  const { findings } = review;
+  const { patch } = change;
+  const { walkthroughs } = review;
+  const reviewTitle = review.review.title;
 
   const drift = useDrift({
-    findings: review?.findings ?? [],
-    patch: patch ?? "",
-    walkthroughs: review?.walkthroughs ?? [],
+    findings: review.findings,
+    patch,
+    walkthroughs: review.walkthroughs,
   });
 
   const list = useMemo(() => {
-    const entries = findings ?? [];
+    const entries = findings;
 
     const anchorFileById = new Map(
       entries.map((entry) => [entry.id, entry.anchorFile])
     );
     const itemIdByPath = new Map(
-      parsePatchFiles(patch ?? "").map((file) => [file.path, file.id])
+      parsePatchFiles(patch).map((file) => [file.path, file.id])
     );
     const sectionTitles = new Map(
-      (walkthroughs ?? []).flatMap((walkthrough) =>
+      walkthroughs.flatMap((walkthrough) =>
         walkthrough.sections.map(
           (section) =>
             [sectionKey(walkthrough.id, section.id), section.title] as const
@@ -94,11 +94,11 @@ export function useFindings(): { visible: FindingListItem[] } {
     const shownTours = [
       {
         pillar: WalkthroughKind.Code,
-        walkthrough: latestCodeWalkthrough(walkthroughs ?? []),
+        walkthrough: latestCodeWalkthrough(walkthroughs),
       },
       {
         pillar: WalkthroughKind.Product,
-        walkthrough: latestProductWalkthrough(walkthroughs ?? []),
+        walkthrough: latestProductWalkthrough(walkthroughs),
       },
     ] as const;
     const sectionPillars = new Map(
@@ -114,7 +114,7 @@ export function useFindings(): { visible: FindingListItem[] } {
     // finding left on an old tour is still a finding about that pillar, so it
     // belongs in that filter even though there is nowhere to jump to.
     const pillarByTour = new Map(
-      (walkthroughs ?? []).map(
+      walkthroughs.map(
         (walkthrough) => [walkthrough.id, walkthrough.kind] as const
       )
     );

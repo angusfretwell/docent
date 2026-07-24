@@ -95,7 +95,7 @@ export function ScreenshotCapture({
 
   useRefit(zoom, refitted);
 
-  const { failed, rootRef } = useRrwebSnapshot(
+  const { failed, ready, rootRef } = useRrwebSnapshot(
     walkthroughId,
     capture.media,
     natural
@@ -141,7 +141,16 @@ export function ScreenshotCapture({
   return (
     <>
       <CaptureStage kind="screenshot" zoom={zoom}>
-        <div className="absolute ring ring-border" style={frameStyle}>
+        {/* rrweb rebuilds the snapshot a beat after the blob loads, so a cold
+            capture would otherwise pop in; fading on `ready` lands it the same
+            way a step between two captures dissolves. */}
+        <div
+          className={cn(
+            "absolute ring ring-border transition-opacity duration-75 motion-reduce:transition-none",
+            ready ? "opacity-100" : "opacity-0"
+          )}
+          style={frameStyle}
+        >
           {/* As on a replay, rrweb reconstructs the recorded DOM but not the
               browser's default canvas, so a page that sets no background of its
               own would render transparent onto the stage. */}
@@ -161,9 +170,14 @@ export function ScreenshotCapture({
             />
           </div>
 
-          {regions.map((pin) => (
-            <RegionOverlay key={pin.label} pin={pin} target={target} />
-          ))}
+          {/* Pins are percentages of the frame, which is 0×0 until the stage is
+              measured — rendering them before then collapses every mark into the
+              stage's top-left corner for a frame. */}
+          {measured
+            ? regions.map((pin) => (
+                <RegionOverlay key={pin.label} pin={pin} target={target} />
+              ))
+            : null}
         </div>
       </CaptureStage>
 

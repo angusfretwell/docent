@@ -1,6 +1,8 @@
 import { FindingsPanel } from "@client/features/findings/panel";
 import { findingsOpenAtom } from "@client/lib/preferences";
+import { Skeleton } from "@client/components/ui/skeleton";
 import { useAtomValue } from "jotai/react";
+import { Suspense } from "react";
 import { useDefaultLayout } from "react-resizable-panels";
 
 import { Header } from "./header";
@@ -43,9 +45,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
               id="findings"
               className="overflow-visible!"
             >
-              <Pane>
-                <FindingsPanel />
-              </Pane>
+              <Suspense
+                fallback={
+                  <Pane>
+                    <Skeleton className="w-full h-full rounded-none" />
+                  </Pane>
+                }
+              >
+                <Pane>
+                  <FindingsPanel />
+                </Pane>
+              </Suspense>
             </ResizablePanel>
           </>
         )}

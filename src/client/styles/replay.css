@@ -37,6 +37,17 @@
   transform-origin: top left;
 }
 
+/* rrweb parks a freshly built cursor in the top-left corner and only moves it
+   once the first recorded pointer event plays, which can be well into the
+   recording — a stray arrow sitting in the corner until then. It writes the
+   inline `left`/`top` only when it first places the cursor, so hiding the
+   element until it carries them holds it out of sight until it has somewhere
+   real to be. A lap restart keeps the previous position, which is why the
+   corner only ever showed on the first play. */
+.replay-cursor .replayer-mouse:not([style]) {
+  visibility: hidden;
+}
+
 /* rrweb adds `.active` on a recorded click and only removes it on the next one,
    so the click can only be drawn as a one-shot animation — anything static here
    would stay on screen until the reader clicked again. */

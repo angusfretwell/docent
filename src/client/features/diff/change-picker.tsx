@@ -11,16 +11,16 @@ import {
 } from "@client/components/ui/menu";
 import { pendingQueryOptions } from "@client/queries/pending";
 import type { PendingRange } from "@shared/enums/pending-range";
-import { useQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { GalleryHorizontalEnd } from "lucide-react";
 
 export function ChangeRangePicker() {
   const navigate = useNavigate();
   const { range, view } = useSearch({ from: "/" });
-  const { data: pending } = useQuery(pendingQueryOptions(range));
+  const { data: pending } = useSuspenseQuery(pendingQueryOptions(range));
 
-  const dirty = pending?.dirty ?? false;
+  const { dirty } = pending;
   // A `view=pending` URL while the working tree is clean silently renders the
   // branch diff, so the selection shown here follows what actually renders.
   const activeView = view === "pending" && dirty ? "pending" : "change";

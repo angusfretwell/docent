@@ -2,34 +2,30 @@ import { useCodeThemeColor } from "@client/hooks/use-code-theme";
 import { patchStats } from "@client/lib/diff";
 import { diffQueryOptions } from "@client/queries/diff";
 import { reviewQueryOptions } from "@client/queries/review";
-import { useQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { GitPullRequestArrow } from "lucide-react";
 import { useMemo } from "react";
 
 import { Button } from "./ui/button";
 
 export function ReviewMeta() {
-  const { data: change } = useQuery(diffQueryOptions);
-  const { data: snapshot } = useQuery(reviewQueryOptions);
+  const { data: change } = useSuspenseQuery(diffQueryOptions);
+  const { data: snapshot } = useSuspenseQuery(reviewQueryOptions);
   const addedColor = useCodeThemeColor("gitDecoration.addedResourceForeground");
   const deletedColor = useCodeThemeColor(
     "gitDecoration.deletedResourceForeground"
   );
 
   const { additions, deletions } = useMemo(
-    () => patchStats(change?.patch ?? ""),
+    () => patchStats(change.patch),
     [change]
   );
 
-  if (!change) {
-    return null;
-  }
-
   return (
-    <div className="flex items-center gap-1 pr-1.5">
-      {snapshot?.review.title && (
+    <div className="flex items-center gap-1">
+      {snapshot.review.title && (
         <span className="text-[13px] truncate min-w-0">
-          {snapshot?.review.title}
+          {snapshot.review.title}
         </span>
       )}
 

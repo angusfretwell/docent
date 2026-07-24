@@ -27,7 +27,7 @@ import { diffLayoutAtom, diffTreeOpenAtom } from "@client/lib/preferences";
 import { diffQueryOptions } from "@client/queries/diff";
 import { pendingQueryOptions } from "@client/queries/pending";
 import { reviewQueryOptions } from "@client/queries/review";
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { useAtom, useAtomValue } from "jotai/react";
 import { ListTree, Settings } from "lucide-react";
@@ -45,8 +45,8 @@ import { DiffTree } from "./tree";
 export function DiffView() {
   const { data: change } = useSuspenseQuery(diffQueryOptions);
   const { range, view } = useSearch({ from: "/" });
-  const { data: pending } = useQuery(pendingQueryOptions(range));
-  const { data: review } = useQuery(reviewQueryOptions);
+  const { data: pending } = useSuspenseQuery(pendingQueryOptions(range));
+  const { data: review } = useSuspenseQuery(reviewQueryOptions);
 
   const [diffLayout, setDiffLayout] = useAtom(diffLayoutAtom);
 
@@ -57,7 +57,7 @@ export function DiffView() {
 
   // Pending is only renderable while the working tree is dirty; a stale
   // `view=pending` URL silently renders the branch diff instead.
-  const showPending = view === "pending" && pending?.dirty;
+  const showPending = view === "pending" && pending.dirty;
 
   const patch = showPending ? pending.patch : change.patch;
 
@@ -65,9 +65,9 @@ export function DiffView() {
   // always read off the branch patch; the Pending preview instead falls back to
   // the sync blob-match placement inside the annotation model.
   const drift = useDrift({
-    findings: review?.findings ?? [],
+    findings: review.findings,
     patch: change.patch,
-    walkthroughs: review?.walkthroughs ?? [],
+    walkthroughs: review.walkthroughs,
   });
 
   const files = useMemo(() => parsePatchFiles(patch), [patch]);
@@ -83,7 +83,7 @@ export function DiffView() {
   const viewedModel = useMemo(
     () =>
       computeViewed(
-        review?.viewed ?? [],
+        review.viewed,
         files,
         (file) =>
           file.file.type === "rename-pure" ||
@@ -98,7 +98,7 @@ export function DiffView() {
   const findingPaths = useMemo(
     () =>
       new Set(
-        (review?.findings ?? []).flatMap((finding) =>
+        review.findings.flatMap((finding) =>
           finding.anchorFile === undefined ? [] : [finding.anchorFile]
         )
       ),

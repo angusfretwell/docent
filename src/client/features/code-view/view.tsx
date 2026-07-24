@@ -4,7 +4,6 @@ import type { Annotation, Composing } from "@client/lib/diff-annotations";
 import { annotationsKey, itemAnnotations } from "@client/lib/diff-annotations";
 import type { DriftResult } from "@client/lib/drift";
 import { diffLayoutAtom } from "@client/lib/preferences";
-import { workerFactory, themes } from "@client/lib/worker-factory";
 import type {
   CodeViewDiffItem,
   CodeViewFileItem,
@@ -14,10 +13,7 @@ import type {
   LineAnnotation,
   SelectedLineRange,
 } from "@pierre/diffs";
-import {
-  CodeView as BaseCodeView,
-  WorkerPoolContextProvider,
-} from "@pierre/diffs/react";
+import { CodeView as BaseCodeView } from "@pierre/diffs/react";
 import type { CodeViewHandle } from "@pierre/diffs/react";
 import type { FoldedFinding } from "@shared/lib/finding";
 import { useAtomValue } from "jotai/react";
@@ -150,32 +146,23 @@ export function AnnotatedCodeView({
   );
 
   return (
-    <WorkerPoolContextProvider
-      poolOptions={{ workerFactory }}
-      highlighterOptions={{
-        langs: ["typescript", "javascript", "css", "html"],
-        preferredHighlighter: "shiki-wasm",
-        theme: themes,
-      }}
-    >
-      <BaseCodeView
-        ref={ref}
-        items={items}
-        className="overscroll-contain overflow-auto diffs "
-        options={options}
-        renderAnnotation={renderAnnotation}
-        renderHeaderMetadata={renderHeaderMetadata}
-        renderHeaderPrefix={
-          onToggleItemCollapsed === undefined
-            ? undefined
-            : (item) => (
-                <CodeViewHeaderPrefix
-                  item={item}
-                  onToggleItemCollapsed={onToggleItemCollapsed}
-                />
-              )
-        }
-      />
-    </WorkerPoolContextProvider>
+    <BaseCodeView
+      ref={ref}
+      items={items}
+      className="overscroll-contain overflow-auto diffs "
+      options={options}
+      renderAnnotation={renderAnnotation}
+      renderHeaderMetadata={renderHeaderMetadata}
+      renderHeaderPrefix={
+        onToggleItemCollapsed === undefined
+          ? undefined
+          : (item) => (
+              <CodeViewHeaderPrefix
+                item={item}
+                onToggleItemCollapsed={onToggleItemCollapsed}
+              />
+            )
+      }
+    />
   );
 }
