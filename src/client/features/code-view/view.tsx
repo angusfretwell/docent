@@ -1,8 +1,4 @@
-import type { DiffFile } from "@client/lib/diff";
-import { diffItemVersion } from "@client/lib/diff";
-import type { Annotation, Composing } from "@client/lib/diff-annotations";
-import { annotationsKey, itemAnnotations } from "@client/lib/diff-annotations";
-import type { DriftResult } from "@client/lib/drift";
+import type { Annotation } from "@client/lib/diff-annotations";
 import { diffLayoutAtom } from "@client/lib/preferences";
 import type {
   CodeViewDiffItem,
@@ -15,7 +11,6 @@ import type {
 } from "@pierre/diffs";
 import { CodeView as BaseCodeView } from "@pierre/diffs/react";
 import type { CodeViewHandle } from "@pierre/diffs/react";
-import type { FoldedFinding } from "@shared/lib/finding";
 import { useAtomValue } from "jotai/react";
 import type { ReactNode, RefObject } from "react";
 import { useMemo } from "react";
@@ -53,40 +48,6 @@ const DIFFS_CSS = `
     }
   }
 `;
-
-export function useDiffItems({
-  composing,
-  driftFor,
-  files,
-  findings,
-  isCollapsed = () => false,
-}: {
-  composing: Composing | null;
-  driftFor?: (id: string) => DriftResult | undefined;
-  files: DiffFile[];
-  findings: readonly FoldedFinding[];
-  isCollapsed?: (itemId: string) => boolean;
-}): CodeViewItem<Annotation>[] {
-  return files.map((entry) => {
-    const collapsed = isCollapsed(entry.id);
-    const annotations = itemAnnotations({
-      composing,
-      driftFor,
-      fileDiff: entry.file,
-      findings,
-      itemId: entry.id,
-    });
-
-    return {
-      annotations,
-      collapsed,
-      fileDiff: entry.file,
-      id: entry.id,
-      type: "diff",
-      version: diffItemVersion(entry, collapsed, annotationsKey(annotations)),
-    };
-  });
-}
 
 interface AnnotatedCodeViewProps {
   items: CodeViewItem<Annotation>[];

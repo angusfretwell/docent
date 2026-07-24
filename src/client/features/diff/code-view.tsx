@@ -1,10 +1,8 @@
 import { Empty } from "@client/components/empty";
 import { CodeViewAnnotation } from "@client/features/code-view/annotation";
 import { CodeViewHeaderMetadata } from "@client/features/code-view/header-metadata";
-import {
-  AnnotatedCodeView,
-  useDiffItems,
-} from "@client/features/code-view/view";
+import { useDiffItems } from "@client/features/code-view/hooks/use-diff-items";
+import { AnnotatedCodeView } from "@client/features/code-view/view";
 import type { Viewed } from "@client/features/diff/hooks/use-viewed";
 import { useFindingCompose } from "@client/features/findings/hooks/use-finding-compose";
 import { useFindings } from "@client/features/findings/hooks/use-findings";
