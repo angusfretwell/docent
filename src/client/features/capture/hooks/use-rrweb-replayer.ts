@@ -1,9 +1,12 @@
+import { useResolvedTheme } from "@client/components/theme-provider";
 import { captureEventsQuery } from "@client/queries/captures";
 import type { WalkthroughId } from "@shared/schemas/ids";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { eventWithTime } from "rrweb";
 import { Replayer, ReplayerEvents } from "rrweb";
+
+import { applyReplayScheme } from "../lib/replay-scheme";
 
 export interface RrwebReplayer {
   currentMs: number;
@@ -36,6 +39,8 @@ export function useRrwebReplayer(
 ): RrwebReplayer {
   const rootRef = useRef<HTMLDivElement>(null);
   const replayerRef = useRef<Replayer | null>(null);
+
+  const scheme = useResolvedTheme();
 
   const [currentMs, setCurrentMs] = useState(0);
   const [durationMs, setDurationMs] = useState(0);
@@ -160,6 +165,7 @@ export function useRrwebReplayer(
 
     setPosition(0);
     setDurationMs(replayer.getMetaData().totalTime);
+    applyReplayScheme(replayer.iframe, scheme);
     setReady(true);
 
     /* Runs on arrival: a still first frame reads as a broken image rather than
@@ -173,7 +179,34 @@ export function useRrwebReplayer(
       replayerRef.current = null;
       setReady(false);
     };
+    // `scheme` is applied by the effect below, not a rebuild trigger.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [clearHold, eventStream, setPlayingState, setPosition]);
+
+  /* rrweb re-inserts the recorded stylesheets as playback replays their
+     mutations, so the scheme is forced again on every finished lap as well as
+     when the reader flips the theme. */
+  useEffect(() => {
+    const replayer = replayerRef.current;
+
+    if (!ready || replayer === null) {
+      return;
+    }
+
+    applyReplayScheme(replayer.iframe, scheme);
+
+    function reapply() {
+      if (replayerRef.current !== null) {
+        applyReplayScheme(replayerRef.current.iframe, scheme);
+      }
+    }
+
+    replayer.on(ReplayerEvents.Finish, reapply);
+
+    return () => {
+      replayer.off(ReplayerEvents.Finish, reapply);
+    };
+  }, [ready, scheme]);
 
   useEffect(() => {
     const replayer = replayerRef.current;

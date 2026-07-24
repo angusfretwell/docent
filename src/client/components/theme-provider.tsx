@@ -200,3 +200,25 @@ export function useTheme() {
 
   return context;
 }
+
+function readResolvedTheme(): ResolvedTheme {
+  return document.documentElement.classList.contains("dark") ? "dark" : "light";
+}
+
+/** The theme actually painted right now — `system` collapsed to light/dark, tracked as `ThemeProvider` flips the root class. */
+export function useResolvedTheme(): ResolvedTheme {
+  const [resolved, setResolved] = useState(readResolvedTheme);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const observer = new MutationObserver(() =>
+      setResolved(readResolvedTheme())
+    );
+
+    observer.observe(root, { attributeFilter: ["class"] });
+
+    return () => observer.disconnect();
+  }, []);
+
+  return resolved;
+}
