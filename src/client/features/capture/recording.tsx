@@ -7,10 +7,10 @@ import prettyMilliseconds from "pretty-ms";
 
 import type { CaptureProps } from "./frame";
 import { CaptureStage, useRefit } from "./frame";
-import { useZoom } from "./hooks/use-zoom";
 import { useRecordingPeek } from "./hooks/use-recording-peek";
 import type { RrwebReplayer } from "./hooks/use-rrweb-replayer";
 import { useRrwebReplayer } from "./hooks/use-rrweb-replayer";
+import { useZoom } from "./hooks/use-zoom";
 import { recordingPins } from "./lib/pins";
 
 /**

@@ -16,7 +16,7 @@ import type { Components, ExtraProps } from "react-markdown";
 import Markdown from "react-markdown";
 
 import { CalloutList } from "./callout-list";
-import { SectionFindings } from "./section-findings";
+import { WalkthroughFindings } from "./findings";
 
 /** How a target reads on its chip: a short label, with the full reference behind it. */
 export interface TargetLabel {
@@ -245,7 +245,7 @@ export function StepProse({
         )}
       </section>
 
-      <SectionFindings
+      <WalkthroughFindings
         findings={findings}
         sectionId={step.section.id}
         walkthroughId={walkthroughId}

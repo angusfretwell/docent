@@ -48,7 +48,7 @@ export function WalkthroughLayout({
           {/* The trailing space lets the last section's anchor scroll up to
                 the read line; without it the final target could never become
                 active, since nothing follows it to scroll against. */}
-          <div className="p-6  pb-[50%]">
+          <div className="p-6 pb-[50%]">
             <div className="typeset typeset-walkthrough mx-auto max-w-[37em] antialiased">
               {children}
             </div>

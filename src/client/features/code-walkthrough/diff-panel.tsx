@@ -1,4 +1,4 @@
-import { IconEmpty } from "@client/components/icon-empty";
+import { Empty } from "@client/components/empty";
 import { Pane } from "@client/components/pane";
 import { CodeViewAnnotation } from "@client/features/code-view/annotation";
 import { CodeViewHeaderMetadata } from "@client/features/code-view/header-metadata";
@@ -47,7 +47,7 @@ import { useEffect, useRef } from "react";
  * Bumping `reasserted` scrolls to the active range again without it having
  * changed — how a chip click reaches a panel the reader has since scrolled away.
  */
-export function WalkthroughDiffPanel({
+export function CodeWalkthroughDiffPanel({
   activeRange,
   driftFor,
   files,
@@ -123,7 +123,7 @@ export function WalkthroughDiffPanel({
   if (items.length === 0) {
     return (
       <Pane>
-        <IconEmpty icon={<GitCompare />}>No changes to review.</IconEmpty>
+        <Empty icon={<GitCompare />}>No changes to review.</Empty>
       </Pane>
     );
   }
@@ -131,7 +131,7 @@ export function WalkthroughDiffPanel({
   return (
     <Pane>
       <AnnotatedCodeView
-        // enableGutterUtility={!compose.composing}
+        enableGutterUtility={!compose.composing}
         enableLineSelection={!compose.composing}
         items={items}
         onGutterUtilityClick={(range, context) =>

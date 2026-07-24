@@ -16,7 +16,7 @@ import { useState } from "react";
  * being re-authored against a later Change. What the thread discusses is the
  * step, not whatever the step happened to point at when it was written.
  */
-export function SectionFindings({
+export function WalkthroughFindings({
   findings,
   sectionId,
   walkthroughId,

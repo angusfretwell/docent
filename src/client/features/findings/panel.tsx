@@ -1,4 +1,4 @@
-import { IconEmpty } from "@client/components/icon-empty";
+import { Empty } from "@client/components/empty";
 import { ScrollArea } from "@client/components/ui/scroll-area";
 import { cn } from "@client/lib/utils";
 import { MessagesSquare } from "lucide-react";
@@ -15,7 +15,7 @@ export function FindingsPanel({ popover }: { popover?: boolean }) {
       <FindingsHeader />
 
       {visible.length === 0 ? (
-        <IconEmpty icon={<MessagesSquare />}>No findings yet.</IconEmpty>
+        <Empty icon={<MessagesSquare />}>No findings yet.</Empty>
       ) : (
         <ScrollArea
           className={cn(

@@ -14,6 +14,12 @@ const inFlight = new Map<string, Promise<string>>();
  * same sha. Several drift surfaces re-anchor against the same blobs, so without
  * this each one would refetch. A failure evicts its entry, so a later caller
  * retries rather than inheriting the error forever.
+ *
+ * @param signal First-caller-wins: only the caller that opens a sha's fetch can
+ * abort it, and aborting rejects the shared promise for every later caller too.
+ * Callers that merely want to stop consuming a result should drop it on their
+ * own side instead — the blob is content-addressed, so a fetch that outlives its
+ * caller warms the cache rather than wasting work.
  */
 export function fetchBlobText(
   sha: string,

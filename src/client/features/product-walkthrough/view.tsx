@@ -1,165 +1,29 @@
-import { CaptureFrame } from "@client/features/capture/frame";
+import { Empty } from "@client/components/empty";
 import {
   annotationsFor,
   captureCallouts,
 } from "@client/features/capture/lib/pins";
 import { PinHoverProvider } from "@client/features/capture/pin-hover";
-import { CaptureView } from "@client/features/capture/view";
 import { useFindings } from "@client/features/findings/hooks/use-findings";
 import { useActiveTarget } from "@client/features/walkthrough/hooks/use-active-target";
 import { useRevealedSection } from "@client/features/walkthrough/lib/target";
-import type { PlacedCapture } from "@client/features/walkthrough/lib/walkthrough";
 import {
   captureLabel,
   capturesByKey,
   productSteps,
 } from "@client/features/walkthrough/lib/walkthrough";
 import { findingsBySection, sectionKey } from "@client/lib/finding-sections";
-import { cn } from "@client/lib/utils";
 import { reviewQueryOptions } from "@client/queries/review";
-import type { FoldedFinding } from "@shared/lib/finding";
 import { latestProductWalkthrough } from "@shared/lib/identity-drift";
 import { walkthroughStaleness } from "@shared/lib/walkthrough-annotations";
 import { useQuery } from "@tanstack/react-query";
-import { Camera, Video } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Camera, Pointer, Video } from "lucide-react";
+import { useRef, useState } from "react";
 
-import { WalkthroughEmpty } from "../walkthrough/empty";
 import { WalkthroughLayout } from "../walkthrough/layout";
 import { StepProse } from "../walkthrough/prose";
 import { StalenessBadge } from "../walkthrough/staleness";
-import { ProductEmpty } from "./empty";
-
-/** How long the capture the reader has left takes to dissolve into the next. */
-const CROSSFADE_MS = 200;
-
-/**
- * The panel beside the prose: whichever capture the reader has reached, named by
- * its number and flanked by the steps to its neighbours.
- *
- * Stepping scrolls the prose to the neighbour rather than only swapping the
- * capture, so the two columns travel together rather than the panel running
- * ahead of what is being read. A chip or a callout does not: those ask to see a
- * capture from where the reader already is.
- *
- * Reaching a new capture dissolves into it rather than cutting, so a scroll that
- * crosses a target boundary reads as the panel following the prose rather than
- * as a flash. Only what is on the stage crossfades: the card, the caption, and
- * the field beneath are the panel's own and are held still through the fade, so
- * arriving at a capture doesn't rebuild the furniture around it.
- *
- * Both captures stay mounted for the length of one fade, keyed by their target
- * so the outgoing one keeps the instance — and so the replay keeps the frame —
- * it had while it was being read; rebuilding it would fade out a blank stage.
- * React only relocates a keyed child that moves *earlier* in the list, and the
- * outgoing capture only ever moves later, so neither replay's iframe is
- * re-inserted mid-fade — which would reload it.
- *
- * The outgoing capture is painted over the incoming one, since a fade under an
- * opaque capture is a fade nobody sees. It takes no pointer while it lasts, so
- * the transport and steps belong to the capture being arrived at throughout.
- */
-function CapturePanel({
-  activeKey,
-  captures,
-  findings,
-  onSelect,
-  refitted,
-  walkthroughId,
-}: {
-  activeKey: string | undefined;
-  captures: ReadonlyMap<string, PlacedCapture>;
-  findings: readonly FoldedFinding[];
-  onSelect: (key: string) => void;
-  refitted: number;
-  walkthroughId: string;
-}) {
-  const [shown, setShown] = useState<{
-    key: string | undefined;
-    outgoing: string | undefined;
-  }>({ key: activeKey, outgoing: undefined });
-
-  // Adjusted during render rather than in an effect: an effect fires after the
-  // commit that already dropped the outgoing capture from the tree, which is
-  // one frame too late to keep it.
-  if (shown.key !== activeKey) {
-    setShown({ key: activeKey, outgoing: shown.key });
-  }
-
-  const { outgoing } = shown;
-
-  useEffect(() => {
-    if (outgoing === undefined) {
-      return;
-    }
-
-    const fade = setTimeout(
-      () => setShown((state) => ({ ...state, outgoing: undefined })),
-      CROSSFADE_MS
-    );
-
-    return () => clearTimeout(fade);
-  }, [outgoing]);
-
-  const active = activeKey === undefined ? undefined : captures.get(activeKey);
-  const leaving = outgoing === undefined ? undefined : captures.get(outgoing);
-
-  const layers = [];
-
-  if (active !== undefined && activeKey !== undefined) {
-    layers.push({ fading: false, key: activeKey, placed: active });
-  }
-
-  if (leaving !== undefined && outgoing !== undefined) {
-    layers.push({ fading: true, key: outgoing, placed: leaving });
-  }
-
-  // The caption names the capture being arrived at; while the panel is emptying
-  // it goes on naming the one still fading, so the frame doesn't lose its label
-  // before it loses its contents.
-  const captioned = active ?? leaving;
-
-  if (captioned === undefined) {
-    return <ProductEmpty />;
-  }
-
-  const keys = [...captures.keys()];
-  const index = activeKey === undefined ? -1 : keys.indexOf(activeKey);
-  const previousKey = keys[index - 1];
-  const nextKey = keys[index + 1];
-
-  return (
-    <CaptureFrame
-      capture={captioned.capture}
-      label={captureLabel(captioned)}
-      onNext={nextKey === undefined ? undefined : () => onSelect(nextKey)}
-      onPrevious={
-        previousKey === undefined ? undefined : () => onSelect(previousKey)
-      }
-    >
-      {layers.map(({ fading, key, placed }) => (
-        <div
-          className={cn(
-            "absolute inset-0 flex flex-col transition-opacity duration-200 motion-reduce:transition-none",
-            fading ? "z-10 pointer-events-none opacity-0" : "z-0 opacity-100"
-          )}
-          key={key}
-        >
-          <CaptureView
-            annotations={annotationsFor(placed.section, placed.capture.id)}
-            capture={placed.capture}
-            findings={findings}
-            // A capture on its way out is nobody's answer, so a refit asked for
-            // while it fades belongs to the one arriving.
-            refitted={fading ? 0 : refitted}
-            target={key}
-            walkthroughId={walkthroughId}
-          />
-        </div>
-      ))}
-    </CaptureFrame>
-  );
-}
+import { ProductWalkthroughCapturePanel } from "./capture-panel";
 
 export function ProductWalkthroughView() {
   const { data: review } = useQuery(reviewQueryOptions);
@@ -229,7 +93,11 @@ export function ProductWalkthroughView() {
   }
 
   if (walkthrough === undefined) {
-    return <WalkthroughEmpty pillar="product" />;
+    return (
+      <Empty icon={<Pointer />}>
+        No product walkthrough has been authored for this branch yet.
+      </Empty>
+    );
   }
 
   const staleness = walkthroughStaleness(
@@ -243,7 +111,7 @@ export function ProductWalkthroughView() {
         id="product-walkthrough"
         proseRef={proseRef}
         target={
-          <CapturePanel
+          <ProductWalkthroughCapturePanel
             activeKey={activeKey}
             captures={captures}
             findings={findings}

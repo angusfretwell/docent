@@ -1,4 +1,4 @@
-import { IconEmpty } from "@client/components/icon-empty";
+import { Empty } from "@client/components/empty";
 import { CodeViewAnnotation } from "@client/features/code-view/annotation";
 import { CodeViewHeaderMetadata } from "@client/features/code-view/header-metadata";
 import {
@@ -117,7 +117,7 @@ export function DiffCodeView({
   }, [target]);
 
   if (items.length === 0) {
-    return <IconEmpty icon={<GitCompare />}>No changes to review.</IconEmpty>;
+    return <Empty icon={<GitCompare />}>No changes to review.</Empty>;
   }
 
   return (

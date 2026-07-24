@@ -4,8 +4,8 @@ import { useEffect, useRef } from "react";
 
 import type { CaptureProps } from "./frame";
 import { CaptureStage, useRefit } from "./frame";
-import { useZoom } from "./hooks/use-zoom";
 import { useRrwebSnapshot } from "./hooks/use-rrweb-snapshot";
+import { useZoom } from "./hooks/use-zoom";
 import type { RegionPin } from "./lib/pins";
 import { screenshotPins } from "./lib/pins";
 import { usePinFocus, usePinHover } from "./pin-hover";

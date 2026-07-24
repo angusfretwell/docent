@@ -1,5 +1,5 @@
+import { Empty } from "@client/components/empty";
 import { useFindings } from "@client/features/findings/hooks/use-findings";
-import { WalkthroughEmpty } from "@client/features/walkthrough/empty";
 import { useActiveTarget } from "@client/features/walkthrough/hooks/use-active-target";
 import { WalkthroughLayout } from "@client/features/walkthrough/layout";
 import { useRevealedSection } from "@client/features/walkthrough/lib/target";
@@ -19,10 +19,10 @@ import { reviewQueryOptions } from "@client/queries/review";
 import { latestCodeWalkthrough } from "@shared/lib/identity-drift";
 import { walkthroughStaleness } from "@shared/lib/walkthrough-annotations";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { FileCode } from "lucide-react";
+import { Code2, FileCode } from "lucide-react";
 import { useRef, useState } from "react";
 
-import { WalkthroughDiffPanel } from "./diff-panel";
+import { CodeWalkthroughDiffPanel } from "./diff-panel";
 
 export function CodeWalkthroughView() {
   const { data: change } = useSuspenseQuery(diffQueryOptions);
@@ -88,7 +88,11 @@ export function CodeWalkthroughView() {
     );
 
   if (walkthrough === undefined) {
-    return <WalkthroughEmpty pillar="code" />;
+    return (
+      <Empty icon={<Code2 />}>
+        No code walkthrough has been authored for this branch yet.
+      </Empty>
+    );
   }
 
   const staleness = walkthroughStaleness(
@@ -101,7 +105,7 @@ export function CodeWalkthroughView() {
       id="code-walkthrough"
       proseRef={proseRef}
       target={
-        <WalkthroughDiffPanel
+        <CodeWalkthroughDiffPanel
           activeRange={
             activeKey === undefined ? undefined : ranges.get(activeKey)
           }

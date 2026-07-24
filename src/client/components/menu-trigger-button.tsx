@@ -1,4 +1,5 @@
-import { Button, type ButtonProps } from "@client/components/ui/button";
+import { Button } from "@client/components/ui/button";
+import type { ButtonProps } from "@client/components/ui/button";
 import { cn } from "@client/lib/utils";
 
 /**
