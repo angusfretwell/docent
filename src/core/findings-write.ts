@@ -6,8 +6,9 @@
  * `write-context.ts`, shared with the walkthrough write path.
  */
 
-import type { Anchor } from "@shared/schemas/finding";
+import type { Anchor, Author } from "@shared/schemas/finding";
 import type { FindingWrite } from "@shared/schemas/finding-write";
+import { FindingId } from "@shared/schemas/ids";
 import { Effect } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
@@ -15,7 +16,7 @@ import { Path } from "effect/Path";
 import { makeId } from "./store/id";
 import { listDir } from "./store/io";
 import { recordFile, serializeFrontmatter } from "./store/records";
-import type { AuthorInput, ChangeRefs } from "./write-context";
+import type { ChangeRefs } from "./write-context";
 import { maxSequence, now, resolveWriteContext } from "./write-context";
 
 /**
@@ -25,13 +26,13 @@ import { maxSequence, now, resolveWriteContext } from "./write-context";
  * insertion order below.
  */
 function frontmatter(fields: {
-  author: AuthorInput;
+  author: Author;
   changeId: string;
   createdAt: string;
   anchor?: Anchor;
   edits?: string;
 }): string {
-  const author: AuthorInput = {
+  const author = {
     display: fields.author.display,
     id: fields.author.id,
     kind: fields.author.kind,
@@ -63,7 +64,7 @@ export const writeFindingRecord = Effect.fn("writeFindingRecord")(
     branch: string;
     base: string;
     refs: ChangeRefs;
-    author: AuthorInput;
+    author: Author;
     write: FindingWrite;
   }) {
     const fs = yield* FileSystem;
@@ -83,7 +84,7 @@ export const writeFindingRecord = Effect.fn("writeFindingRecord")(
     // Resolve the target finding dir, record type, next filename, body, and the
     // op-specific frontmatter (anchor on open, the edited record's name on edit).
     const findingId =
-      write.op === "open" ? yield* makeId("fnd") : write.findingId;
+      write.op === "open" ? yield* makeId(FindingId, "fnd") : write.findingId;
     const findingDir = path.join(findingsDir, findingId);
     const existing =
       write.op === "open"

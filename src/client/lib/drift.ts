@@ -14,6 +14,7 @@
 
 import { processPatch } from "@pierre/diffs";
 import type { DriftState } from "@shared/enums/drift-state";
+import type { AnchorContext, DriftPlan } from "@shared/lib/drift";
 import {
   excerptLines,
   planDrift,
@@ -23,7 +24,6 @@ import {
 import { foldFinding } from "@shared/lib/finding";
 import { identityAnchorDrift } from "@shared/lib/identity-drift";
 import { isRealObjectId } from "@shared/lib/patch";
-import type { AnchorContext, DriftPlan } from "@shared/schemas/drift";
 import type { Anchor } from "@shared/schemas/finding";
 import type { FindingEntry, WalkthroughEntry } from "@shared/schemas/review";
 import { useEffect, useState } from "react";

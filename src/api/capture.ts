@@ -10,7 +10,8 @@
  * responses cache forever. A malformed id/filename 400s; an absent file 404s.
  */
 
-import { Effect } from "effect";
+import { WalkthroughId } from "@shared/schemas/ids";
+import { Effect, Schema } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { HttpRouter } from "effect/unstable/http";
 
@@ -25,9 +26,12 @@ import {
   requiredParam,
 } from "./api-route";
 
-// A walkthrough id and a capture filename must be plain, single-segment names —
-// no slashes — before either reaches the `safeJoin` containment check below.
-const WALKTHROUGH_ID = /^wlk_[A-Za-z0-9]+$/;
+// What a walkthrough id *is* belongs to its brand — which admits any
+// non-whitespace tail, including one carrying a path separator. All this route
+// adds is that both segments name a single directory entry, so neither can
+// climb out of the captures directory before `safeJoin`'s containment check.
+const isWalkthroughId = Schema.is(WalkthroughId);
+const PATH_SEGMENT = /^[^/\\]+$/;
 const CAPTURE_FILE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
 /** The content-type for a capture media file, keyed off its extension. */
@@ -46,7 +50,11 @@ export function captureRoute(cwd: string) {
       const params = yield* HttpRouter.params;
       const walkthrough = requiredParam(params.walkthrough);
       const file = requiredParam(params.file);
-      if (!(WALKTHROUGH_ID.test(walkthrough) && CAPTURE_FILE.test(file))) {
+      const addressable =
+        isWalkthroughId(walkthrough) &&
+        PATH_SEGMENT.test(walkthrough) &&
+        CAPTURE_FILE.test(file);
+      if (!addressable) {
         return badRequest("invalid capture path");
       }
       const repo = yield* resolveRepo(cwd);

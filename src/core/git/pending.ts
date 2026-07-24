@@ -14,13 +14,12 @@ import {
   DIFF,
   FIND_RENAMES,
   FULL_INDEX,
-  gitRunner,
+  git,
+  gitDiffNoIndex,
   NO_COLOR,
   NUL,
 } from "./exec";
 import { resolveRepo } from "./resolve";
-
-const { diffNoIndex: gitDiffNoIndex, text: git } = gitRunner;
 
 // The marker for an untracked entry in a `git status --porcelain -z` record:
 // its two-char status, then a space.

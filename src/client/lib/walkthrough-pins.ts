@@ -136,7 +136,9 @@ function rawPins(
 
 /** The arm a capture's pins are anchored through, by the kind of capture it is. */
 function captureArm(capture: Capture) {
-  return capture.kind === "recording" ? ANCHOR_KIND.recordingTimestamp : ANCHOR_KIND.screenshotRegion;
+  return capture.kind === "recording"
+    ? ANCHOR_KIND.recordingTimestamp
+    : ANCHOR_KIND.screenshotRegion;
 }
 
 /** A capture's screenshot pins that carry a rect, as overlay rectangles. */
@@ -154,7 +156,9 @@ export function screenshotPins(
     ANCHOR_KIND.screenshotRegion
   )) {
     const rect =
-      pin.anchor.kind === ANCHOR_KIND.screenshotRegion ? pin.anchor.rect : undefined;
+      pin.anchor.kind === ANCHOR_KIND.screenshotRegion
+        ? pin.anchor.rect
+        : undefined;
 
     if (rect) {
       regions.push({ body: pin.body, label: pin.label, rect });

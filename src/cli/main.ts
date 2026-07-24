@@ -14,8 +14,9 @@
  */
 
 import { BunRuntime, BunServices } from "@effect/platform-bun";
-import { Console, Effect, Option } from "effect";
+import { Console, Data, Effect, Option, Runtime } from "effect";
 import { Argument, CliError, Command } from "effect/unstable/cli";
+import { FetchHttpClient } from "effect/unstable/http";
 
 import type { EntryOptions } from "../serve";
 import { serve } from "../serve";
@@ -32,20 +33,38 @@ import { walkthroughCommand } from "./walkthrough";
 const VERSION = "0.0.0";
 
 /**
- * Print the error message and exit non-zero — the shared failure tail for every
- * subcommand. All the binary's own errors carry a human `.message`.
+ * A failure whose human message has already reached stderr. Marking it here
+ * rather than on each error class is what keeps the marker true: "already
+ * reported" is a fact about the tail, not about `CliUsageError` or the
+ * platform's own `PlatformError`, which the tail also prints.
+ */
+class Reported extends Data.TaggedError("Reported") {
+  override readonly [Runtime.errorReported] = false;
+}
+
+/**
+ * Print the error message on stderr, then re-fail — the shared failure tail for
+ * every subcommand. All the binary's own errors carry a human `.message`.
+ *
+ * The re-fail is load-bearing: `process.exit` here would tear the process down
+ * mid-fiber and skip every pending finalizer — the provided layers' scopes,
+ * `install`'s scoped child process, `serve`'s recorded-address cleanup.
+ * `runMain` instead unwinds them and lets `Runtime.defaultTeardown` pick the
+ * exit code — 1 for a plain failure.
  *
  * A `ShowHelp` failure is re-raised untouched: the runner has already rendered
  * the help, and the error carries its own exit code (0 for an asked-for
  * `--help`, 1 for a usage error) through `Runtime.errorExitCode`.
  */
-function crash(error: unknown) {
+export function crash(
+  error: unknown
+): Effect.Effect<never, CliError.ShowHelp | Reported> {
   if (CliError.isCliError(error) && error._tag === "ShowHelp") {
     return Effect.fail(error);
   }
   return Effect.andThen(
     Console.error(error instanceof Error ? error.message : String(error)),
-    Effect.sync(() => process.exit(1))
+    Effect.fail(new Reported())
   );
 }
 
@@ -96,7 +115,9 @@ function docentCli(entry: EntryOptions) {
 export function runMain(entry: EntryOptions): void {
   BunRuntime.runMain(
     Command.run(docentCli(entry), { version: VERSION }).pipe(
-      Effect.provide(BunServices.layer),
+      // `BunServices` carries no HTTP client, and `status`'s liveness probe is
+      // the binary's only outbound request.
+      Effect.provide([BunServices.layer, FetchHttpClient.layer]),
       Effect.catch(crash)
     )
   );

@@ -23,14 +23,6 @@ import { ensureReview } from "./review";
 import { listDir, readRecord, writeJsonRecord } from "./store/io";
 import { reviewDirPath } from "./store/layout";
 
-/** The plain human/agent attribution a write stamps onto its record. */
-export interface AuthorInput {
-  kind: "human" | "agent";
-  id: string;
-  display: string;
-  model?: string;
-}
-
 /** The resolved Change identity a write mints against (git-resolved refs). */
 export interface ChangeRefs {
   baseSha: string;
@@ -126,7 +118,7 @@ export const mintChange = Effect.fn("mintChange")(function* mintChange(params: {
     schema: "docent/change",
   });
   yield* fs.makeDirectory(dir, { recursive: true });
-  yield* writeJsonRecord(path.join(dir, `${id}.json`), record);
+  yield* writeJsonRecord(path.join(dir, `${id}.json`), ChangeRecord, record);
   return record;
 });
 

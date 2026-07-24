@@ -16,7 +16,7 @@ import { Path } from "effect/Path";
 import { Argument, Command } from "effect/unstable/cli";
 
 import { resolveStateRoot, validateStateRoot } from "../core/validate";
-import { attempt, CliUsageError, WorkingDirectory } from "./usage";
+import { CliUsageError, WorkingDirectory } from "./usage";
 
 /**
  * The report found invalid records. A typed failure so the shared crash tail
@@ -41,13 +41,16 @@ export class ValidationFailed extends Schema.TaggedErrorClass<ValidationFailed>(
  * variadic rather than optional because a second positional is a usage error
  * here, and the parser silently drops arguments no parameter claims.
  */
-export function onlyPath(paths: readonly string[]): string | undefined {
-  if (paths.length > 1) {
-    throw new CliUsageError({
-      reason: `validate takes at most one path (got ${paths.length})`,
-    });
-  }
-  return paths[0];
+function onlyPath(
+  paths: readonly string[]
+): Effect.Effect<string | undefined, CliUsageError> {
+  return paths.length > 1
+    ? Effect.fail(
+        new CliUsageError({
+          reason: `validate takes at most one path (got ${paths.length})`,
+        })
+      )
+    : Effect.succeed(paths[0]);
 }
 
 /** The `docent validate [path]` subcommand — the non-gating schema oracle. */
@@ -63,7 +66,7 @@ export const validateCommand = Command.make(
     Effect.gen(function* runValidate() {
       const cwd = yield* WorkingDirectory;
       const path = yield* Path;
-      const target = yield* attempt(() => onlyPath(config.paths));
+      const target = yield* onlyPath(config.paths);
       const base = target === undefined ? cwd : path.resolve(cwd, target);
 
       const stateRoot = yield* resolveStateRoot(base);

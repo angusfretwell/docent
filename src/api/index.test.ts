@@ -229,6 +229,17 @@ describe("serve routes", () => {
     expect(res.headers.get("cache-control")).toMatch(/immutable/);
   });
 
+  test("GET /api/capture serves a hand-authored walkthrough id", async () => {
+    const repo = featureRepo();
+    const client = serve(repo);
+    writeCapture(repo, "wlk_my_tour", "shaA.rrweb.json", '[{"type":4}]');
+
+    const res = await client.fetch("/api/capture/wlk_my_tour/shaA.rrweb.json");
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual([{ type: 4 }]);
+  });
+
   test("GET /api/capture 404s an absent capture file", async () => {
     const client = serve(featureRepo());
 
@@ -243,11 +254,16 @@ describe("serve routes", () => {
     const client = serve(featureRepo());
 
     const badWlk = await client.fetch("/api/capture/not-a-wlk/shaA.rrweb.json");
+    // A separator-carrying tail satisfies the id brand, but is not one segment.
+    const escapingWlk = await client.fetch(
+      "/api/capture/wlk_%2e%2e%2fsecret/shaA.rrweb.json"
+    );
     const badFile = await client.fetch(
       "/api/capture/wlk_01PROD/%2e%2e%2fsecret"
     );
 
     expect(badWlk.status).toBe(400);
+    expect(escapingWlk.status).toBe(400);
     expect(badFile.status).toBe(400);
   });
 
@@ -389,6 +405,18 @@ describe("serve routes", () => {
     expect(res.status).toBe(400);
   });
 
+  test("POST /api/viewed 400s a body that isn't valid JSON", async () => {
+    const client = serve(featureRepo());
+
+    const res = await client.fetch("/api/viewed", {
+      body: "not json",
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+
+    expect(res.status).toBe(400);
+  });
+
   test("POST /api/findings opens a Finding, minting the head's Change", async () => {
     const client = serve(featureRepo());
 
@@ -406,7 +434,9 @@ describe("serve routes", () => {
 
     // The record and its minted Change are both visible in the live snapshot.
     const snap = await fetchReview(client);
-    expect(snap.changes.map((change) => change.id as string)).toEqual(["chg_001"]);
+    expect(snap.changes.map((change) => change.id as string)).toEqual([
+      "chg_001",
+    ]);
     const finding = snap.findings.find(
       (entry) => entry.id === result.findingId
     );

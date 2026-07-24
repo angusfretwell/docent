@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import type { FindingRecord } from "../schemas/finding";
+import { FindingId } from "../schemas/ids";
 import { findingLocation, foldFinding, sortFoldedFindings } from "./finding";
 
 const angus = {
@@ -37,7 +38,7 @@ const lineAnchor = {
 
 describe("foldFinding", () => {
   test("derives anchor and body from the open record", () => {
-    const folded = foldFinding("fnd_1", [
+    const folded = foldFinding(FindingId.make("fnd_1"), [
       record({
         anchor: lineAnchor,
         body: "backpressure races the flush",
@@ -51,7 +52,7 @@ describe("foldFinding", () => {
   });
 
   test("a fresh finding is open", () => {
-    const folded = foldFinding("fnd_1", [
+    const folded = foldFinding(FindingId.make("fnd_1"), [
       record({ anchor: lineAnchor, name: "001-open.md", type: "open" }),
     ]);
 
@@ -59,7 +60,7 @@ describe("foldFinding", () => {
   });
 
   test("collects replies and unique participants in order", () => {
-    const folded = foldFinding("fnd_1", [
+    const folded = foldFinding(FindingId.make("fnd_1"), [
       record({
         anchor: lineAnchor,
         author: claude,
@@ -91,7 +92,7 @@ describe("foldFinding", () => {
   });
 
   test("an action record hands the finding back", () => {
-    const folded = foldFinding("fnd_1", [
+    const folded = foldFinding(FindingId.make("fnd_1"), [
       record({ anchor: lineAnchor, name: "001-open.md", type: "open" }),
       record({ body: "fixed the flush", name: "002-reply.md", type: "reply" }),
       record({ name: "003-action.md", type: "action" }),
@@ -101,7 +102,7 @@ describe("foldFinding", () => {
   });
 
   test("a reply after an action returns the finding to open", () => {
-    const folded = foldFinding("fnd_1", [
+    const folded = foldFinding(FindingId.make("fnd_1"), [
       record({ anchor: lineAnchor, name: "001-open.md", type: "open" }),
       record({ name: "002-action.md", type: "action" }),
       record({
@@ -115,7 +116,7 @@ describe("foldFinding", () => {
   });
 
   test("re-commenting after a resolve reopens the finding", () => {
-    const folded = foldFinding("fnd_1", [
+    const folded = foldFinding(FindingId.make("fnd_1"), [
       record({ anchor: lineAnchor, name: "001-open.md", type: "open" }),
       record({ name: "002-resolve.md", type: "resolve" }),
       record({
@@ -129,7 +130,7 @@ describe("foldFinding", () => {
   });
 
   test("a resolve record closes the finding", () => {
-    const folded = foldFinding("fnd_1", [
+    const folded = foldFinding(FindingId.make("fnd_1"), [
       record({ anchor: lineAnchor, name: "001-open.md", type: "open" }),
       record({ name: "002-resolve.md", type: "resolve" }),
     ]);
@@ -138,7 +139,7 @@ describe("foldFinding", () => {
   });
 
   test("a reopen after a resolve returns the finding to open", () => {
-    const folded = foldFinding("fnd_1", [
+    const folded = foldFinding(FindingId.make("fnd_1"), [
       record({ anchor: lineAnchor, name: "001-open.md", type: "open" }),
       record({ name: "002-resolve.md", type: "resolve" }),
       record({ name: "003-reopen.md", type: "reopen" }),
@@ -148,7 +149,7 @@ describe("foldFinding", () => {
   });
 
   test("an edit leaves the status untouched", () => {
-    const folded = foldFinding("fnd_1", [
+    const folded = foldFinding(FindingId.make("fnd_1"), [
       record({ anchor: lineAnchor, name: "001-open.md", type: "open" }),
       record({ name: "002-resolve.md", type: "resolve" }),
       record({
@@ -163,7 +164,7 @@ describe("foldFinding", () => {
   });
 
   test("an edit record supersedes the named record's body", () => {
-    const folded = foldFinding("fnd_1", [
+    const folded = foldFinding(FindingId.make("fnd_1"), [
       record({
         anchor: lineAnchor,
         body: "original open body",
@@ -192,7 +193,7 @@ describe("foldFinding", () => {
   });
 
   test("folds an empty record list without throwing", () => {
-    const folded = foldFinding("fnd_1", []);
+    const folded = foldFinding(FindingId.make("fnd_1"), []);
 
     expect(folded.anchor).toBeUndefined();
     expect(folded.body).toBe("");
@@ -221,7 +222,7 @@ describe("findingLocation", () => {
   });
 
   test("renders a missing anchor as detached", () => {
-    const noAnchor = foldFinding("fnd_1", []).anchor;
+    const noAnchor = foldFinding(FindingId.make("fnd_1"), []).anchor;
 
     expect(findingLocation(noAnchor)).toBe("Detached");
   });
@@ -230,21 +231,21 @@ describe("findingLocation", () => {
 describe("sortFoldedFindings", () => {
   test("orders code findings by file then line", () => {
     const folded = sortFoldedFindings([
-      foldFinding("b", [
+      foldFinding(FindingId.make("fnd_b"), [
         record({
           anchor: { ...lineAnchor, file: "src/b.ts", lines: [10, 10] },
           name: "001-open.md",
           type: "open",
         }),
       ]),
-      foldFinding("a", [
+      foldFinding(FindingId.make("fnd_a"), [
         record({
           anchor: { ...lineAnchor, file: "src/a.ts", lines: [90, 90] },
           name: "001-open.md",
           type: "open",
         }),
       ]),
-      foldFinding("a2", [
+      foldFinding(FindingId.make("fnd_a2"), [
         record({
           anchor: { ...lineAnchor, file: "src/a.ts", lines: [5, 5] },
           name: "001-open.md",
@@ -253,6 +254,10 @@ describe("sortFoldedFindings", () => {
       ]),
     ]);
 
-    expect(folded.map((finding) => finding.id as string)).toEqual(["a2", "a", "b"]);
+    expect(folded.map((finding) => finding.id)).toEqual([
+      FindingId.make("fnd_a2"),
+      FindingId.make("fnd_a"),
+      FindingId.make("fnd_b"),
+    ]);
   });
 });

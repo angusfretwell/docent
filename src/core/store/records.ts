@@ -12,6 +12,8 @@
 import { recordTypes } from "@shared/enums/record-type";
 import { Effect } from "effect";
 
+import { parseYaml } from "./parse";
+
 /**
  * Serialize an ordered list of frontmatter fields into the block-style envelope:
  * one `key: value` line per field, with nested objects/arrays rendered flow-style
@@ -59,8 +61,8 @@ export const splitEnvelope = Effect.fn("splitEnvelope")(function* splitEnvelope(
   const match = FRONTMATTER.exec(text);
   const frontmatter = match?.groups?.frontmatter ?? "";
   const body = (match?.groups?.body ?? "").trim();
-  const meta = yield* Effect.try(() => Bun.YAML.parse(frontmatter) ?? {});
-  return { body, meta: meta as object };
+  const meta = yield* parseYaml(frontmatter);
+  return { body, meta: (meta ?? {}) as object };
 });
 
 // A Finding record filename is `NNN-<type>.md`; the type suffix is the record

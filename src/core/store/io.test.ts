@@ -17,6 +17,13 @@ afterAll(async () => {
 
 const Widget = Schema.Struct({ count: Schema.Number, id: Schema.String });
 
+// A record whose `at` encodes to a string and decodes to a `Date` — the
+// asymmetry a write that skipped the schema would silently break.
+const Stamped = Schema.Struct({
+  at: Schema.DateFromString,
+  id: Schema.String,
+});
+
 describe("readRecord", () => {
   test("decodes a well-formed JSON file against the schema", async () => {
     const root = scratchDir("docent-io-");
@@ -68,7 +75,7 @@ describe("writeJsonRecord", () => {
     const file = path.join(root, "widget.json");
     const value = { count: 3, id: "w1" };
 
-    await runtime.runPromise(writeJsonRecord(file, value));
+    await runtime.runPromise(writeJsonRecord(file, Widget, value));
 
     expect(readFileSync(file, "utf-8")).toBe(
       `${JSON.stringify(value, null, 2)}\n`
@@ -80,8 +87,19 @@ describe("writeJsonRecord", () => {
     const file = path.join(root, "widget.json");
     const value = { count: 3, id: "w1" };
 
-    await runtime.runPromise(writeJsonRecord(file, value));
+    await runtime.runPromise(writeJsonRecord(file, Widget, value));
     const result = await runtime.runPromise(readRecord(file, Widget));
+
+    expect(Option.isSome(result) && result.value).toEqual(value);
+  });
+
+  test("round-trips a field whose encoded form differs from its decoded one", async () => {
+    const root = scratchDir("docent-io-");
+    const file = path.join(root, "stamped.json");
+    const value = { at: new Date("2026-01-02T03:04:05.000Z"), id: "w1" };
+
+    await runtime.runPromise(writeJsonRecord(file, Stamped, value));
+    const result = await runtime.runPromise(readRecord(file, Stamped));
 
     expect(Option.isSome(result) && result.value).toEqual(value);
   });

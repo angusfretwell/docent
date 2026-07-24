@@ -14,15 +14,15 @@
 import { writeFindingRecord } from "@core/findings-write";
 import type { AnchorSpec } from "@core/git";
 import { buildAnchor, resolveAuthor } from "@core/git";
-import type { AuthorInput } from "@core/write-context";
 import { resolveChangeScope } from "@core/write-context";
 import { sides } from "@shared/enums/side";
 import type { Side } from "@shared/enums/side";
-import { Anchor } from "@shared/schemas/finding";
+import { Anchor, Author } from "@shared/schemas/finding";
 import { FindingWrite } from "@shared/schemas/finding-write";
+import type { FindingId } from "@shared/schemas/ids";
 import { Effect, Schema } from "effect";
 
-import { attempt, CliUsageError, parseEnum } from "../usage";
+import { CliUsageError, parseEnum } from "../usage";
 
 /** The author-attribution overrides shared by every write subcommand. */
 export interface AuthorOpts {
@@ -48,24 +48,32 @@ export interface AnchorFlags {
   side?: string;
 }
 
-function parseSide(value: string | undefined): Side {
-  return value === undefined ? "head" : parseEnum("side", value, sides);
+function parseSide(
+  value: string | undefined
+): Effect.Effect<Side, CliUsageError> {
+  return value === undefined
+    ? Effect.succeed<Side>("head")
+    : parseEnum("side", value, sides);
 }
 
 // A line spec is `N`, `N:M`, or `N-M` (1-based, inclusive) — a single line
 // widens to `[N, N]`. Anything else is a usage error.
 const LINE_SPEC = /^(?<start>\d+)(?:[:-](?<end>\d+))?$/;
 
-function parseLine(value: string): [number, number] {
+function parseLine(
+  value: string
+): Effect.Effect<[number, number], CliUsageError> {
   const match = LINE_SPEC.exec(value.trim());
   if (match?.groups === undefined) {
-    throw new CliUsageError({
-      reason: `bad --line: ${value} (N, N:M, or N-M)`,
-    });
+    return Effect.fail(
+      new CliUsageError({ reason: `bad --line: ${value} (N, N:M, or N-M)` })
+    );
   }
+
   const start = Number(match.groups.start);
   const end = match.groups.end === undefined ? start : Number(match.groups.end);
-  return [start, end];
+
+  return Effect.succeed([start, end]);
 }
 
 /**
@@ -74,10 +82,8 @@ function parseLine(value: string): [number, number] {
  * convenience flags cover the code arms whose `blobSha` git resolves at write:
  * `--change`, `--file <path>` (+ `--side`), and `--file … --line N[:M]`.
  */
-export function parseAnchorSpec(
-  flags: AnchorFlags
-): Effect.Effect<AnchorSpec, CliUsageError> {
-  return Effect.gen(function* build() {
+export const parseAnchorSpec = Effect.fn("parseAnchorSpec")(
+  function* parseAnchorSpec(flags: AnchorFlags) {
     const raw = flags.anchor;
     if (raw !== undefined) {
       const json = yield* Effect.try({
@@ -106,14 +112,17 @@ export function parseAnchorSpec(
         })
       );
     }
-    const side = yield* attempt(() => parseSide(flags.side));
+
+    const side = yield* parseSide(flags.side);
     if (line === undefined) {
       return { file, kind: "file", side } satisfies AnchorSpec;
     }
-    const lines = yield* attempt(() => parseLine(line));
+
+    const lines = yield* parseLine(line);
+
     return { file, kind: "line", lines, side } satisfies AnchorSpec;
-  });
-}
+  }
+);
 
 /**
  * Resolve the write's attribution: the git-config human by default (matching
@@ -125,18 +134,19 @@ export const buildAuthor = Effect.fn("buildAuthor")(function* buildAuthor(
   opts: AuthorOpts
 ) {
   if (opts.agent !== undefined) {
-    return {
+    return Author.make({
       display: opts.display ?? opts.agent,
       id: opts.agent,
       kind: "agent",
       ...(opts.model === undefined ? {} : { model: opts.model }),
-    } satisfies AuthorInput;
+    });
   }
   const human = yield* resolveAuthor(root);
-  return {
-    ...human,
-    ...(opts.display === undefined ? {} : { display: opts.display }),
-  };
+  return Author.make({
+    display: opts.display ?? human.display,
+    id: human.id,
+    kind: human.kind,
+  });
 });
 
 /** The resolved refs a write mints against, plus the read scope for a write. */
@@ -151,7 +161,7 @@ type WriteScope = Effect.Success<ReturnType<typeof resolveChangeScope>>;
  */
 const commitWrite = Effect.fn("commitWrite")(function* commitWrite(
   scope: WriteScope,
-  author: AuthorInput,
+  author: Author,
   // The encoded (unbranded) shape: the subcommands assemble drafts from raw
   // `--finding`/`--body` flags, and this decode is where the ids get branded.
   draft: typeof FindingWrite.Encoded
@@ -195,7 +205,7 @@ export const addFinding = Effect.fn("addFinding")(function* addFinding(
 /** write-findings `reply`: prose on a Finding, returning it to open. */
 export const replyFinding = Effect.fn("replyFinding")(function* replyFinding(
   cwd: string,
-  params: { author: AuthorOpts; body: string; findingId: string }
+  params: { author: AuthorOpts; body: string; findingId: FindingId }
 ) {
   const scope = yield* resolveChangeScope(cwd);
   const author = yield* buildAuthor(scope.root, params.author);
@@ -209,7 +219,7 @@ export const replyFinding = Effect.fn("replyFinding")(function* replyFinding(
 /** write-findings `action`: hand the turn back, whatever the outcome. */
 export const actionFinding = Effect.fn("actionFinding")(function* actionFinding(
   cwd: string,
-  params: { author: AuthorOpts; findingId: string }
+  params: { author: AuthorOpts; findingId: FindingId }
 ) {
   const scope = yield* resolveChangeScope(cwd);
   const author = yield* buildAuthor(scope.root, params.author);
@@ -223,7 +233,7 @@ export const actionFinding = Effect.fn("actionFinding")(function* actionFinding(
 export const resolveFinding = Effect.fn("resolveFinding")(
   function* resolveFinding(
     cwd: string,
-    params: { author: AuthorOpts; findingId: string }
+    params: { author: AuthorOpts; findingId: FindingId }
   ) {
     const scope = yield* resolveChangeScope(cwd);
     const author = yield* buildAuthor(scope.root, params.author);
@@ -237,7 +247,7 @@ export const resolveFinding = Effect.fn("resolveFinding")(
 /** write-findings `reopen`: return a resolved Finding to open. */
 export const reopenFinding = Effect.fn("reopenFinding")(function* reopenFinding(
   cwd: string,
-  params: { author: AuthorOpts; findingId: string }
+  params: { author: AuthorOpts; findingId: FindingId }
 ) {
   const scope = yield* resolveChangeScope(cwd);
   const author = yield* buildAuthor(scope.root, params.author);
@@ -250,7 +260,12 @@ export const reopenFinding = Effect.fn("reopenFinding")(function* reopenFinding(
 /** write-findings `edit`: supersede the body of a named earlier record. */
 export const editFinding = Effect.fn("editFinding")(function* editFinding(
   cwd: string,
-  params: { author: AuthorOpts; body: string; edits: string; findingId: string }
+  params: {
+    author: AuthorOpts;
+    body: string;
+    edits: string;
+    findingId: FindingId;
+  }
 ) {
   const scope = yield* resolveChangeScope(cwd);
   const author = yield* buildAuthor(scope.root, params.author);

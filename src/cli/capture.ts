@@ -11,6 +11,7 @@
  */
 
 import { captureKinds } from "@shared/enums/capture-kind";
+import { WalkthroughId } from "@shared/schemas/ids";
 import { Effect, Option } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
@@ -18,9 +19,8 @@ import { Command, Flag } from "effect/unstable/cli";
 
 import { addWalkthroughCapture } from "../core/walkthrough-write";
 import { resolveChangeScope } from "../core/write-context";
-import { parseDimensions, parseDurationMs } from "./specs";
+import { parseDimensions, parseDurationMs, parseRecordId } from "./specs";
 import {
-  attempt,
   CliUsageError,
   WorkingDirectory,
   printJson,
@@ -64,16 +64,16 @@ const add = Command.make(
       const path = yield* Path;
       const cwd = yield* WorkingDirectory;
 
-      const walkthroughId = yield* attempt(() =>
-        requireText("walkthrough", config.walkthrough)
+      const walkthroughId = yield* parseRecordId(
+        "walkthrough",
+        WalkthroughId,
+        config.walkthrough
       );
-      const mediaPath = yield* attempt(() =>
-        requireText("media", config.media)
-      );
-      const route = yield* attempt(() => requireText("route", config.route));
+      const mediaPath = yield* requireText("media", config.media);
+      const route = yield* requireText("route", config.route);
       const title = Option.getOrUndefined(config.title)?.trim();
-      const viewport = yield* attempt(() =>
-        parseDimensions("viewport", requireText("viewport", config.viewport))
+      const viewport = yield* requireText("viewport", config.viewport).pipe(
+        Effect.flatMap((value) => parseDimensions("viewport", value))
       );
 
       // The metadata arms are kind-specific (walkthroughs.md §6): `dims`
@@ -100,11 +100,11 @@ const add = Command.make(
       const dims =
         dimsFlag === undefined
           ? undefined
-          : yield* attempt(() => parseDimensions("dims", dimsFlag));
+          : yield* parseDimensions("dims", dimsFlag);
       const durationMs =
         durationFlag === undefined
           ? undefined
-          : yield* attempt(() => parseDurationMs(durationFlag));
+          : yield* parseDurationMs(durationFlag);
 
       const media = yield* fs
         .readFile(path.resolve(cwd, mediaPath))

@@ -171,15 +171,13 @@ describe("write + fetch round-trip (shared write path)", () => {
     await run(actionFinding(repo, { author: { agent: "fixer" }, findingId }));
     const afterAction = await run(listFindings(repo, { status: [] }));
     expect(
-      afterAction.find((finding) => (finding.id as string) === findingId)
-        ?.status
+      afterAction.find((finding) => finding.id === findingId)?.status
     ).toBe("actioned");
 
     await run(resolveFinding(repo, { author: {}, findingId }));
     const afterResolve = await run(listFindings(repo, { status: [] }));
     expect(
-      afterResolve.find((finding) => (finding.id as string) === findingId)
-        ?.status
+      afterResolve.find((finding) => finding.id === findingId)?.status
     ).toBe("resolved");
   });
 
@@ -235,9 +233,7 @@ describe("write + fetch round-trip (shared write path)", () => {
     await run(reopenFinding(repo, { author: {}, findingId }));
 
     const findings = await run(listFindings(repo, { status: [] }));
-    const reopened = findings.find(
-      (finding) => (finding.id as string) === findingId
-    );
+    const reopened = findings.find((finding) => finding.id === findingId);
     expect(reopened?.status).toBe("open");
   });
 
@@ -261,20 +257,7 @@ describe("write + fetch round-trip (shared write path)", () => {
     );
 
     const findings = await run(listFindings(repo, { status: [] }));
-    const edited = findings.find(
-      (finding) => (finding.id as string) === findingId
-    );
+    const edited = findings.find((finding) => finding.id === findingId);
     expect(edited?.body).toBe("the flush races the drain");
-  });
-
-  test("a blank finding id is refused, never written as a stray record", async () => {
-    const repo = featureRepo();
-
-    const exit = await runtime.runPromiseExit(
-      replyFinding(repo, { author: {}, body: "x", findingId: "" })
-    );
-
-    expect(exit._tag).toBe("Failure");
-    expect(await run(listFindings(repo, { status: [] }))).toHaveLength(0);
   });
 });

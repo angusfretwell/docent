@@ -14,7 +14,7 @@ import { Command, Flag } from "effect/unstable/cli";
 
 import { setReviewTitle } from "../core/review";
 import { resolveChangeScope } from "../core/write-context";
-import { attempt, WorkingDirectory, printJson, requireText } from "./usage";
+import { WorkingDirectory, printJson, requireText } from "./usage";
 
 const set = Command.make(
   "set",
@@ -26,7 +26,7 @@ const set = Command.make(
   (config) =>
     Effect.gen(function* runSet() {
       const cwd = yield* WorkingDirectory;
-      const title = yield* attempt(() => requireText("title", config.title));
+      const title = yield* requireText("title", config.title);
       const scope = yield* resolveChangeScope(cwd);
 
       return yield* printJson(

@@ -264,6 +264,40 @@ body
     expect(finding.records.map((record) => record.type)).toEqual(["reply"]);
   });
 
+  test("degrades gracefully: a finding dir with an unusable name is skipped", async () => {
+    const root = scratchDir("docent-review-");
+    await snapshot(root, "feature");
+    const findingsDir = path.join(
+      root,
+      ".docent",
+      "reviews",
+      "feature",
+      "findings"
+    );
+    mkdirSync(path.join(findingsDir, "fnd_"), { recursive: true });
+    const goodDir = path.join(findingsDir, "fnd_04");
+    mkdirSync(goodDir, { recursive: true });
+    writeFileSync(
+      path.join(goodDir, "001-open.md"),
+      [
+        "---",
+        "schema: docent/finding",
+        "changeId: chg_001",
+        "createdAt: 2026-07-10T02:14:00Z",
+        "---",
+        "",
+        "still here",
+        "",
+      ].join("\n")
+    );
+
+    const snap = await snapshot(root, "feature");
+
+    expect(snap.findings.map((finding) => finding.id as string)).toEqual([
+      "fnd_04",
+    ]);
+  });
+
   test("degrades gracefully: a record with the wrong schema is skipped", async () => {
     const root = scratchDir("docent-review-");
     await snapshot(root, "feature");
@@ -435,7 +469,9 @@ describe("readReviewSnapshot walkthroughs", () => {
     const walkthrough = snap.walkthroughs.find(
       (entry) => entry.id === "wlk_01DEF"
     );
-    expect(walkthrough?.sections.map((s) => s.id as string)).toEqual(["sec_ok"]);
+    expect(walkthrough?.sections.map((s) => s.id as string)).toEqual([
+      "sec_ok",
+    ]);
   });
 
   test("parses a product manifest's captures registry and product section frontmatter", async () => {
@@ -507,7 +543,10 @@ describe("readReviewSnapshot walkthroughs", () => {
     expect(walkthrough.manifest?.captures?.[0]?.dims).toEqual([1280, 2400]);
     expect(walkthrough.manifest?.captures?.[1]?.durationMs).toBe(8200);
     const [section] = walkthrough.sections;
-    expect(section?.captures as readonly string[] | undefined).toEqual(["cap_a", "cap_b"]);
+    expect(section?.captures as readonly string[] | undefined).toEqual([
+      "cap_a",
+      "cap_b",
+    ]);
     expect(section?.annotations?.length).toBe(2);
     expect(section?.annotations?.[0]?.anchor).toMatchObject({
       capture: "cap_a",
@@ -550,6 +589,43 @@ describe("readReviewSnapshot walkthroughs", () => {
       sections: [],
     });
     expect(walkthrough?.manifest).toBeUndefined();
+  });
+
+  test("degrades gracefully: a walkthrough dir with an unusable name is skipped", async () => {
+    const root = scratchDir("docent-review-");
+    await snapshot(root, "feature");
+    mkdirSync(
+      path.join(
+        root,
+        ".docent",
+        "reviews",
+        "feature",
+        "walkthroughs",
+        "code",
+        "wlk_bad name"
+      ),
+      { recursive: true }
+    );
+    writeWalkthrough(
+      root,
+      "feature",
+      "wlk_01GHI",
+      JSON.stringify({
+        bornChangeId: "chg_001",
+        id: "wlk_01GHI",
+        kind: "code",
+        schema: "docent/walkthrough",
+        sections: [],
+        title: "Survivor",
+      }),
+      {}
+    );
+
+    const snap = await snapshot(root, "feature");
+
+    expect(snap.walkthroughs.map((entry) => entry.id as string)).toEqual([
+      "wlk_01GHI",
+    ]);
   });
 });
 

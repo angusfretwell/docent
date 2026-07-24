@@ -11,11 +11,12 @@
  */
 
 import { findingStatuses } from "@shared/enums/finding-status";
+import { FindingId } from "@shared/schemas/ids";
 import { Effect, Option } from "effect";
 import { Argument, Command, Flag } from "effect/unstable/cli";
 
+import { parseRecordId } from "../specs";
 import {
-  attempt,
   commaSeparated,
   parseEnum,
   printJson,
@@ -98,8 +99,8 @@ const list = Command.make(
   (config) =>
     Effect.gen(function* runList() {
       const cwd = yield* WorkingDirectory;
-      yield* attempt(() => refuseArguments(config.args));
-      const status = yield* attempt(() =>
+      yield* refuseArguments(config.args);
+      const status = yield* Effect.all(
         config.status.map((value) =>
           parseEnum("status", value, findingStatuses)
         )
@@ -168,8 +169,10 @@ const reply = Command.make(
   (config) =>
     Effect.gen(function* runReply() {
       const cwd = yield* WorkingDirectory;
-      const findingId = yield* attempt(() =>
-        requireText("finding", config.finding)
+      const findingId = yield* parseRecordId(
+        "finding",
+        FindingId,
+        config.finding
       );
       const body = yield* resolveBody(config.body, true);
 
@@ -191,8 +194,10 @@ const action = Command.make(
   (config) =>
     Effect.gen(function* runAction() {
       const cwd = yield* WorkingDirectory;
-      const findingId = yield* attempt(() =>
-        requireText("finding", config.finding)
+      const findingId = yield* parseRecordId(
+        "finding",
+        FindingId,
+        config.finding
       );
 
       return yield* printJson(
@@ -210,8 +215,10 @@ const resolve = Command.make(
   (config) =>
     Effect.gen(function* runResolve() {
       const cwd = yield* WorkingDirectory;
-      const findingId = yield* attempt(() =>
-        requireText("finding", config.finding)
+      const findingId = yield* parseRecordId(
+        "finding",
+        FindingId,
+        config.finding
       );
 
       return yield* printJson(
@@ -229,8 +236,10 @@ const reopen = Command.make(
   (config) =>
     Effect.gen(function* runReopen() {
       const cwd = yield* WorkingDirectory;
-      const findingId = yield* attempt(() =>
-        requireText("finding", config.finding)
+      const findingId = yield* parseRecordId(
+        "finding",
+        FindingId,
+        config.finding
       );
 
       return yield* printJson(
@@ -255,10 +264,12 @@ const edit = Command.make(
   (config) =>
     Effect.gen(function* runEdit() {
       const cwd = yield* WorkingDirectory;
-      const findingId = yield* attempt(() =>
-        requireText("finding", config.finding)
+      const findingId = yield* parseRecordId(
+        "finding",
+        FindingId,
+        config.finding
       );
-      const edits = yield* attempt(() => requireText("record", config.record));
+      const edits = yield* requireText("record", config.record);
       const body = yield* resolveBody(config.body, true);
 
       return yield* printJson(

@@ -58,7 +58,7 @@ export interface FoldedFinding {
  * names it.
  */
 export function foldFinding(
-  id: FindingId | string,
+  id: FindingId,
   records: readonly FindingRecord[]
 ): FoldedFinding {
   const ordered = records.toSorted((left, right) =>
@@ -105,7 +105,7 @@ export function foldFinding(
   return {
     anchor: root?.anchor,
     body: root ? bodyOf(root) : "",
-    id: id as FindingId,
+    id,
     openedAt: root?.createdAt,
     openedBy: root?.author,
     participants,

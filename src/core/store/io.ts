@@ -15,15 +15,14 @@
 import { Effect, Schema } from "effect";
 import { FileSystem } from "effect/FileSystem";
 
+import { parseJson } from "./parse";
+
 /** Decode already-read JSON text against `schema`; fails on any parse/decode problem. */
 export function decodeJsonRecord<S extends Schema.Constraint>(
   text: string,
   schema: S
 ) {
-  return Effect.flatMap(
-    Effect.try(() => JSON.parse(text) as unknown),
-    Schema.decodeUnknownEffect(schema)
-  );
+  return Effect.flatMap(parseJson(text), Schema.decodeUnknownEffect(schema));
 }
 
 /** Decode a JSON file against a schema; `None` on any read/parse/decode failure. */
@@ -42,14 +41,22 @@ export const listDir = Effect.fn("listDir")(function* listDir(dir: string) {
 });
 
 /**
- * Write `value` as a JSON record at `file`: 2-space indent, trailing newline —
- * the canonical on-disk shape every `.docent/` record writer produces, and the
- * write counterpart of `readRecord`. Does not create parent directories; the
- * caller ensures those (each writer's own directory-creation policy differs).
+ * Write `value` as a JSON record at `file`: encoded through `schema`, 2-space
+ * indent, trailing newline — the canonical on-disk shape every `.docent/`
+ * record writer produces. The encode is the mirror of `readRecord`'s decode, so
+ * a record is written through the same schema it is later read back with and a
+ * transforming field can never round-trip asymmetrically. Does not create parent
+ * directories; the caller ensures those (each writer's own directory-creation
+ * policy differs).
  */
 export const writeJsonRecord = Effect.fn("writeJsonRecord")(
-  function* writeJsonRecord(file: string, value: unknown) {
+  function* writeJsonRecord<S extends Schema.Constraint>(
+    file: string,
+    schema: S,
+    value: S["Type"]
+  ) {
     const fs = yield* FileSystem;
-    yield* fs.writeFileString(file, `${JSON.stringify(value, null, 2)}\n`);
+    const encoded = yield* Schema.encodeEffect(schema)(value);
+    yield* fs.writeFileString(file, `${JSON.stringify(encoded, null, 2)}\n`);
   }
 );

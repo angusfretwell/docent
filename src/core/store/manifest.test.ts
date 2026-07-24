@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import type { WalkthroughKind } from "@shared/enums/walkthrough-kind";
-import type { ChangeId, WalkthroughId } from "@shared/schemas/ids";
+import { ChangeId, WalkthroughId } from "@shared/schemas/ids";
 import { Walkthrough } from "@shared/schemas/walkthrough";
 import { cleanupScratchDirs, scratchDir } from "@test-support/fixtures";
 import { makeTestRuntime } from "@test-support/runtime";
@@ -29,8 +29,8 @@ afterAll(async () => {
 
 function manifest(overrides: Partial<typeof Walkthrough.Type> = {}) {
   return Walkthrough.make({
-    bornChangeId: "chg_001" as ChangeId,
-    id: "wlk_test" as WalkthroughId,
+    bornChangeId: ChangeId.make("chg_001"),
+    id: WalkthroughId.make("wlk_test"),
     kind: "product",
     schema: "docent/walkthrough",
     sections: [],
@@ -104,7 +104,7 @@ describe("loadWalkthrough", () => {
     const { dir } = await seed(root, "product", manifest());
 
     const loaded = await run(
-      loadWalkthrough(path.join(root, "review"), "wlk_test")
+      loadWalkthrough(path.join(root, "review"), WalkthroughId.make("wlk_test"))
     );
 
     expect(loaded.dir).toBe(dir);
@@ -116,7 +116,10 @@ describe("loadWalkthrough", () => {
     const root = scratchDir("docent-manifest-");
 
     const exit = await runtime.runPromiseExit(
-      loadWalkthrough(path.join(root, "review"), "wlk_missing")
+      loadWalkthrough(
+        path.join(root, "review"),
+        WalkthroughId.make("wlk_missing")
+      )
     );
 
     expect(exit._tag).toBe("Failure");
@@ -141,7 +144,9 @@ describe("appendToManifest", () => {
     const root = scratchDir("docent-manifest-");
     await seed(root, "product", manifest());
     const reviewDir = path.join(root, "review");
-    const loaded = await run(loadWalkthrough(reviewDir, "wlk_test"));
+    const loaded = await run(
+      loadWalkthrough(reviewDir, WalkthroughId.make("wlk_test"))
+    );
 
     const updated = await run(
       appendToManifest(loaded, (current) =>
@@ -153,7 +158,9 @@ describe("appendToManifest", () => {
     );
 
     expect(updated.sections).toEqual(["s01-first.md"]);
-    const reloaded = await run(loadWalkthrough(reviewDir, "wlk_test"));
+    const reloaded = await run(
+      loadWalkthrough(reviewDir, WalkthroughId.make("wlk_test"))
+    );
     expect(reloaded.manifest.sections).toEqual(["s01-first.md"]);
   });
 });

@@ -17,6 +17,9 @@ import {
 import { sectionKey } from "@client/lib/section-findings";
 import { diffQueryOptions } from "@client/queries/diff";
 import { reviewQueryOptions } from "@client/queries/review";
+import { ANCHOR_KIND } from "@shared/enums/anchor-kind";
+import type { DriftState } from "@shared/enums/drift-state";
+import { WalkthroughKind } from "@shared/enums/walkthrough-kind";
 import {
   findingLocation,
   foldFinding,
@@ -27,9 +30,6 @@ import {
   latestCodeWalkthrough,
   latestProductWalkthrough,
 } from "@shared/lib/identity-drift";
-import { ANCHOR_KIND } from "@shared/enums/anchor-kind";
-import type { DriftState } from "@shared/enums/drift-state";
-import { WalkthroughKind } from "@shared/enums/walkthrough-kind";
 import { useQuery } from "@tanstack/react-query";
 import { useAtomValue } from "jotai/react";
 import { useMemo } from "react";

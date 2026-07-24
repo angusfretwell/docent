@@ -86,7 +86,9 @@ describe("mintChange", () => {
 
     expect(second.id).toBe(first.id);
     const snap = await snapshot(root);
-    expect(snap.changes.map((change) => change.id as string)).toEqual(["chg_001"]);
+    expect(snap.changes.map((change) => change.id as string)).toEqual([
+      "chg_001",
+    ]);
   });
 
   test("a new head mints the next sequential Change", async () => {
@@ -132,7 +134,9 @@ describe("resolveWriteContext", () => {
 
     expect(second.change.id as string).toBe("chg_001");
     const snap = await snapshot(root);
-    expect(snap.changes.map((change) => change.id as string)).toEqual(["chg_001"]);
+    expect(snap.changes.map((change) => change.id as string)).toEqual([
+      "chg_001",
+    ]);
   });
 });
 

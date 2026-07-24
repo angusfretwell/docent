@@ -38,12 +38,22 @@ interface TaggedMessage {
   readonly message: string;
 }
 
+/**
+ * The tags an error channel can carry. Written as a distributive conditional
+ * rather than `E["_tag"]` because an indexed access in a target position takes
+ * the *write* type — the intersection across the union's members, i.e. `never`
+ * for any error channel with more than one tag. Distributing gives the union
+ * each member contributes, so a route's tags stay checked against real tags
+ * even when part of the channel is a still-free generic.
+ */
+type ErrorTag<E> = E extends TaggedMessage ? E["_tag"] : never;
+
 export interface ApiRouteOptions<Tag extends string> {
   /**
-   * A `_tag` to answer 400 with `{ error: message }` instead of falling
-   * through to the route's default status.
+   * A `_tag` — or several — to answer 400 with `{ error: message }` instead of
+   * falling through to the route's default status.
    */
-  readonly badRequest?: Tag;
+  readonly badRequest?: Tag | readonly Tag[];
   /**
    * When set, every error not caught by `badRequest` answers 404 instead of
    * the default 500 — the shape a resolve-then-read route wants (an absent
@@ -58,20 +68,33 @@ function errorResponse(error: TaggedMessage, status: number) {
   );
 }
 
+/** The `badRequest` option read as the tag list the tail matches against. */
+function badRequestTags(
+  tags: string | readonly string[] | undefined
+): readonly string[] {
+  if (tags === undefined) {
+    return [];
+  }
+
+  return typeof tags === "string" ? [tags] : tags;
+}
+
 /**
- * Apply the `{ badRequest, notFound }` tail to one route's effect. A generic
- * `E["_tag"]` can't drive `Effect.catchTag`'s literal-narrowing overload (it
- * only resolves to a plain `string` for an unconstrained `E`), so the tag
- * compare is a plain runtime check inside one `Effect.catch` instead.
+ * Apply the `{ badRequest, notFound }` tail to one route's effect. The tail is
+ * total — it has to discharge `E` all the way to `never` — where
+ * `Effect.catchTag` is partial: `ExcludeTag<E, E["_tag"]>` doesn't reduce to
+ * `never` for a generic `E`, so it would still need a catch-all behind it. One
+ * `Effect.catch` comparing `_tag` at runtime covers both halves at once.
  */
 function withErrorTail<E extends TaggedMessage, R>(
   effect: Effect.Effect<HttpServerResponse.HttpServerResponse, E, R>,
-  options: ApiRouteOptions<E["_tag"]>
+  options: ApiRouteOptions<ErrorTag<E>>
 ): Effect.Effect<HttpServerResponse.HttpServerResponse, never, R> {
+  const badRequests = badRequestTags(options.badRequest);
+
   return effect.pipe(
     Effect.catch((error) => {
-      const isBadRequest =
-        options.badRequest !== undefined && error._tag === options.badRequest;
+      const isBadRequest = badRequests.includes(error._tag);
 
       let status = 500;
       if (isBadRequest) {
@@ -93,14 +116,14 @@ function withErrorTail<E extends TaggedMessage, R>(
  * it that way and one that doesn't (`diff`, `health`) hands the effect
  * directly.
  *
- * @param options.badRequest a `_tag` whose error answers 400
+ * @param options.badRequest a `_tag`, or list of them, whose error answers 400
  * @param options.notFound answer every other error 404 instead of 500
  */
 export function apiRoute<E extends TaggedMessage, R>(
   method: ApiMethod,
   path: ApiPath,
   effect: ApiHandler<E, R>,
-  options: ApiRouteOptions<E["_tag"]> = {}
+  options: ApiRouteOptions<ErrorTag<E>> = {}
 ) {
   const tailed = Effect.isEffect(effect)
     ? withErrorTail(effect, options)
@@ -111,11 +134,12 @@ export function apiRoute<E extends TaggedMessage, R>(
 
 /**
  * Build a `POST /api/*` append-write route: decode the JSON body against
- * `schema`, hand the decoded value to `write`, and answer its result as JSON —
- * under the shared `SchemaError → 400` tail (a malformed body 400s; a git/write
- * failure 500s). The two append-write routes (`viewed`, `findings`) differ only
- * in the schema and what `write` resolves-then-writes, so that is all this
- * takes.
+ * `schema`, hand the decoded value to `write`, and answer its result as JSON.
+ * A body that fails to parse as JSON (`HttpServerError`) and one that parses but
+ * doesn't match `schema` (`SchemaError`) both 400 under the shared tail; a
+ * git/write failure 500s. The two append-write routes (`viewed`, `findings`)
+ * differ only in the schema and what `write` resolves-then-writes, so that is
+ * all this takes.
  */
 export function postWriteRoute<
   A,
@@ -128,20 +152,15 @@ export function postWriteRoute<
   schema: Schema.ConstraintDecoder<A, RD>,
   write: (body: A) => Effect.Effect<Result, WriteError, WriteContext>
 ) {
-  // Widen the composed error channel to `TaggedMessage` for `apiRoute`: a free
-  // `WriteError` in the inferred union makes its indexed `E["_tag"]` collapse to
-  // `never`, which the tail's runtime `_tag` compare doesn't need anyway.
-  const handler: Effect.Effect<
-    HttpServerResponse.HttpServerResponse,
-    TaggedMessage,
-    HttpServerRequest.HttpServerRequest | RD | WriteContext
-  > = Effect.gen(function* postWrite() {
+  const handler = Effect.gen(function* postWrite() {
     const body = yield* HttpServerRequest.schemaBodyJson(schema);
     const result = yield* write(body);
     return yield* HttpServerResponse.json(result);
   });
 
-  return apiRoute("POST", path, handler, { badRequest: "SchemaError" });
+  return apiRoute("POST", path, handler, {
+    badRequest: ["SchemaError", "HttpServerError"],
+  });
 }
 
 /**

@@ -18,9 +18,11 @@ import { walkthroughKinds } from "@shared/enums/walkthrough-kind";
 import type { WalkthroughKind } from "@shared/enums/walkthrough-kind";
 import { ChangeRecord, Review, ViewedEvent } from "@shared/schemas/review";
 import { Walkthrough } from "@shared/schemas/walkthrough";
-import { Effect } from "effect";
+import { Effect, Match } from "effect";
+import type { Schema } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
+import type { PlatformError } from "effect/PlatformError";
 
 import {
   decodeFindingRecord,
@@ -32,6 +34,7 @@ import {
 } from "./store/enumerate";
 import { decodeJsonRecord, listDir } from "./store/io";
 import { STATE_ROOT } from "./store/layout";
+import type { JsonParseFailed, YamlParseFailed } from "./store/parse";
 
 /** One record that failed to decode: its path (relative to the state root) and why. */
 export interface Problem {
@@ -79,31 +82,37 @@ const exists = Effect.fn("exists")(function* exists(file: string) {
   return yield* fs.exists(file).pipe(Effect.orElseSucceed(() => false));
 });
 
+/**
+ * Every way one record's bytes can fail to decode: the parse that turns them
+ * into data (`store/parse.ts`), then the schema that decodes that data.
+ */
+type DecodeFailure = JsonParseFailed | Schema.SchemaError | YamlParseFailed;
+
 /** One record to validate: where it lives and how to decode its bytes. */
 interface Task {
-  decode: (text: string) => Effect.Effect<unknown, unknown>;
+  decode: (text: string) => Effect.Effect<unknown, DecodeFailure>;
   file: string;
   rel: string;
 }
 
+/** Everything checking one record can fail with: the read, then the decode. */
+type CheckFailure = DecodeFailure | PlatformError;
+
 /**
- * The most specific message an error carries. `Effect.try` wraps a thrown
- * `JSON.parse` / `Bun.YAML.parse` error under a generic message, so prefer the
- * wrapped `cause` when it holds the real one.
+ * The most specific message a failure carries. Each arm names the field
+ * holding the words a reader needs, so a failure type joining the channel has
+ * to be given one rather than silently reporting a wrapper's generic message.
  */
-function errorMessage(error: unknown): string {
-  if (!(error instanceof Error)) {
-    return String(error);
-  }
-  if (error.cause instanceof Error) {
-    return error.cause.message;
-  }
-  return error.message;
-}
+const errorMessage = Match.typeTags<CheckFailure, string>()({
+  JsonParseFailed: (error) => error.reason,
+  PlatformError: (error) => error.message,
+  SchemaError: (error) => error.issue.toString(),
+  YamlParseFailed: (error) => error.reason,
+});
 
 /** A read / parse / decode failure as one grep-friendly report line — a
  * multi-line schema-decode tree collapses onto a single line. */
-function formatError(error: unknown): string {
+function formatError(error: CheckFailure): string {
   return errorMessage(error).replaceAll(/\s+/g, " ").trim();
 }
 

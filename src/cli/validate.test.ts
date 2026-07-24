@@ -8,7 +8,7 @@ import { Effect } from "effect";
 import { Command } from "effect/unstable/cli";
 
 import { WorkingDirectory } from "./usage";
-import { onlyPath, validateCommand } from "./validate";
+import { validateCommand } from "./validate";
 
 const runtime = makeTestRuntime();
 
@@ -39,17 +39,18 @@ const VALID_REVIEW = JSON.stringify({
   title: "A feature",
 });
 
-describe("onlyPath", () => {
-  test("no argument means the current directory (undefined)", () => {
-    expect(onlyPath([])).toBeUndefined();
-  });
-
-  test("a second path is a usage error", () => {
-    expect(() => onlyPath(["a", "b"])).toThrow();
-  });
-});
-
 describe("docent validate", () => {
+  test("a second positional is refused, never silently dropped", async () => {
+    const root = scratchDir("docent-validate-cli-");
+    seedReview(root, VALID_REVIEW);
+
+    const error = await runtime.runPromise(
+      Effect.flip(validate(root, [".", "."]))
+    );
+
+    expect(error.message).toBe("validate takes at most one path (got 2)");
+  });
+
   test("exits zero on a well-formed tree", async () => {
     const root = scratchDir("docent-validate-cli-");
     seedReview(root, VALID_REVIEW);

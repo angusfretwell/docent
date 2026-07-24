@@ -1,43 +1,103 @@
-import { describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import path from "node:path";
 
-import { flagScope, refusePositionals, skillsAddArgs } from "./install";
-import { CliUsageError } from "./usage";
+import {
+  cleanupScratchDirs,
+  scratchDir,
+  scratchRepo,
+} from "@test-support/fixtures";
+import { makeTestRuntime } from "@test-support/runtime";
+import { Console, Effect } from "effect";
+import { Command } from "effect/unstable/cli";
 
-describe("flagScope", () => {
-  test("no flag means the prompt decides (undefined)", () => {
-    expect(flagScope({ global: false, project: false })).toBeUndefined();
-  });
+import { installCommand } from "./install";
+import { WorkingDirectory } from "./usage";
 
-  test("--project selects project scope", () => {
-    expect(flagScope({ global: false, project: true })).toBe("project");
-  });
+const runtime = makeTestRuntime();
+const run = runtime.runPromise;
 
-  test("--global selects user scope", () => {
-    expect(flagScope({ global: true, project: false })).toBe("global");
-  });
+/**
+ * Install shells out to the real skills CLI, so the suite puts a recording
+ * `npx` first on `PATH` — the one boundary it stubs, and the only way to run
+ * the command without installing anything on the machine.
+ */
+let stubbedNpxArgv = "";
+let realPath: string | undefined;
 
-  test("--project and --global together is a usage error", () => {
-    expect(() => flagScope({ global: true, project: true })).toThrow(
-      CliUsageError
+beforeAll(() => {
+  const bin = scratchDir("docent-install-bin-");
+  stubbedNpxArgv = path.join(bin, "argv.txt");
+  writeFileSync(
+    path.join(bin, "npx"),
+    `#!/bin/sh\nprintf '%s\\n' "$@" > ${JSON.stringify(stubbedNpxArgv)}\n`,
+    { mode: 0o755 }
+  );
+
+  realPath = process.env.PATH;
+  process.env.PATH = `${bin}:${realPath ?? ""}`;
+});
+
+afterAll(async () => {
+  process.env.PATH = realPath;
+  await runtime.dispose();
+  cleanupScratchDirs();
+});
+
+/** Run `docent install <argv>` against a fresh repo, returning the skills CLI's argv. */
+async function installed(argv: readonly string[]): Promise<string[]> {
+  rmSync(stubbedNpxArgv, { force: true });
+
+  await run(
+    Command.runWith(installCommand, { version: "test" })(argv).pipe(
+      Effect.provideService(
+        WorkingDirectory,
+        scratchRepo("docent-install-cli-")
+      ),
+      Effect.provideService(Console.Console, {
+        ...globalThis.console,
+        log: () => {},
+      })
+    )
+  );
+
+  return readFileSync(stubbedNpxArgv, "utf-8").trim().split("\n");
+}
+
+describe("docent install — the argv surface", () => {
+  test("a stray positional is refused before any install starts", async () => {
+    rmSync(stubbedNpxArgv, { force: true });
+
+    const error = await run(
+      Effect.flip(
+        Command.runWith(installCommand, { version: "test" })(["./here"]).pipe(
+          Effect.provideService(
+            WorkingDirectory,
+            scratchRepo("docent-install-cli-")
+          ),
+          Effect.provideService(Console.Console, {
+            ...globalThis.console,
+            log: () => {},
+          })
+        )
+      )
     );
+
+    expect({
+      message: error.message,
+      skillsRan: existsSync(stubbedNpxArgv),
+    }).toEqual({
+      message: "install takes no positional arguments (got ./here)",
+      skillsRan: false,
+    });
   });
 });
 
-describe("refusePositionals", () => {
-  test("no positional passes", () => {
-    expect(() => refusePositionals([])).not.toThrow();
-  });
+describe("docent install — end to end through the skills CLI", () => {
+  test("project scope selects every shipped skill, non-interactively, not machine-wide", async () => {
+    const argv = await installed(["--scope", "project"]);
 
-  test("a positional is a usage error, so no install starts", () => {
-    expect(() => refusePositionals(["./here"])).toThrow(CliUsageError);
-  });
-});
-
-describe("skillsAddArgs", () => {
-  test("project scope selects all skills non-interactively, no -g", () => {
-    const args = skillsAddArgs("project");
-
-    expect(args).toEqual([
+    expect(argv).toEqual([
       "skills",
       "add",
       "angusfretwell/docent",
@@ -47,7 +107,9 @@ describe("skillsAddArgs", () => {
     ]);
   });
 
-  test("global scope appends -g for a machine-wide install", () => {
-    expect(skillsAddArgs("global")).toContain("-g");
+  test("global scope installs the same skills machine-wide", async () => {
+    const argv = await installed(["--scope", "global"]);
+
+    expect(argv).toContain("-g");
   });
 });

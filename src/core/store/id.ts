@@ -5,42 +5,33 @@
  * (data-model.md §4–5).
  */
 
-import type {
-  CaptureId,
-  FindingId,
-  ReviewId,
-  SectionId,
-  WalkthroughId,
-} from "@shared/schemas/ids";
 import { Clock, Effect } from "effect";
 
 const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
 /**
- * The branded id a `<prefix>_` mint yields. A prefix outside this map (e.g. the
- * `vew_` viewed-event filename) mints an unbranded `string`.
+ * The id schema a mint constructs through — a branded record id
+ * (`@shared/schemas/ids`), or the plain string schema for a prefix with no
+ * record id of its own.
  */
-interface IdForPrefix {
-  cap: CaptureId;
-  fnd: FindingId;
-  rev: ReviewId;
-  sec: SectionId;
-  wlk: WalkthroughId;
+interface IdSchema<Id extends string> {
+  readonly make: (input: string) => Id;
 }
-type MintedId<Prefix extends string> = Prefix extends keyof IdForPrefix
-  ? IdForPrefix[Prefix]
-  : string;
 
 /**
  * A ULID-shaped opaque id under `prefix`: `<prefix>_` + 10 time chars + 16
  * random chars, Crockford base32. The time head keeps ids lexically sortable by
- * mint order — which is also the append-only `viewed/` file order. The return is
- * branded to the prefix's record id (`makeId("fnd")` → `FindingId`), so a caller
- * gets its id type back without a cast.
+ * mint order — which is also the append-only `viewed/` file order.
+ *
+ * The mint is keyed on the id's own schema (`makeId(FindingId, "fnd")` →
+ * `FindingId`), so the value the caller receives is the one that schema's
+ * `<prefix>_` refinement admitted: a prefix that disagrees with the schema is a
+ * construction error at the mint, not a brand asserted over it.
  */
-export const makeId = Effect.fn("makeId")(function* makeId<
-  const Prefix extends string,
->(prefix: Prefix) {
+export const makeId = Effect.fn("makeId")(function* makeId<Id extends string>(
+  schema: IdSchema<Id>,
+  prefix: string
+) {
   const now = yield* Clock.currentTimeMillis;
   let time = now;
   let head = "";
@@ -54,5 +45,5 @@ export const makeId = Effect.fn("makeId")(function* makeId<
   for (const byte of bytes) {
     tail += CROCKFORD.charAt(byte % 32);
   }
-  return `${prefix}_${head}${tail}` as MintedId<Prefix>;
+  return schema.make(`${prefix}_${head}${tail}`);
 });

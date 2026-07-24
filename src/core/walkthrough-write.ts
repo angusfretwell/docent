@@ -23,6 +23,7 @@
  */
 
 import type { CaptureKind } from "@shared/enums/capture-kind";
+import { CaptureId, SectionId, WalkthroughId } from "@shared/schemas/ids";
 import type {
   WalkthroughAnnotation,
   WalkthroughRange,
@@ -110,7 +111,7 @@ export const writeWalkthrough = Effect.fn("writeWalkthrough")(
       refs: params.refs,
       root: params.root,
     });
-    const id = yield* makeId("wlk");
+    const id = yield* makeId(WalkthroughId, "wlk");
 
     const manifest = Walkthrough.make({
       bornChangeId: change.id,
@@ -138,11 +139,11 @@ export const writeWalkthrough = Effect.fn("writeWalkthrough")(
 export const addWalkthroughSection = Effect.fn("addWalkthroughSection")(
   function* addWalkthroughSection(
     params: WriteBase & {
-      walkthroughId: string;
+      walkthroughId: WalkthroughId;
       title: string;
       body: string;
       ranges?: readonly WalkthroughRange[];
-      captureIds?: readonly string[];
+      captureIds?: readonly CaptureId[];
       annotations?: readonly WalkthroughAnnotation[];
     }
   ) {
@@ -174,7 +175,7 @@ export const addWalkthroughSection = Effect.fn("addWalkthroughSection")(
       return yield* Effect.fail(mismatch);
     }
 
-    const id = yield* makeId("sec");
+    const id = yield* makeId(SectionId, "sec");
     const section = yield* Schema.decodeUnknownEffect(WalkthroughSection)({
       body: params.body,
       id,
@@ -233,7 +234,7 @@ export const addWalkthroughSection = Effect.fn("addWalkthroughSection")(
 export const addWalkthroughCapture = Effect.fn("addWalkthroughCapture")(
   function* addWalkthroughCapture(
     params: WriteBase & {
-      walkthroughId: string;
+      walkthroughId: WalkthroughId;
       kind: CaptureKind;
       media: Uint8Array;
       route: string;
@@ -269,7 +270,7 @@ export const addWalkthroughCapture = Effect.fn("addWalkthroughCapture")(
       params.media
     );
 
-    const id = yield* makeId("cap");
+    const id = yield* makeId(CaptureId, "cap");
     const entry = yield* Schema.decodeUnknownEffect(Capture)({
       id,
       kind: params.kind,

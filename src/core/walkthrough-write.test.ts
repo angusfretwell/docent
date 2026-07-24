@@ -3,7 +3,7 @@ import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 
 import type { WalkthroughKind } from "@shared/enums/walkthrough-kind";
-import type { CaptureId } from "@shared/schemas/ids";
+import { CaptureId, WalkthroughId } from "@shared/schemas/ids";
 
 import { cleanupScratchDirs, scratchDir } from "../test-support/fixtures";
 import { makeTestRuntime } from "../test-support/runtime";
@@ -42,7 +42,7 @@ function snapshot(root: string) {
   return run(readReviewSnapshot({ ...base, root }));
 }
 
-function walkthrough(root: string, id: string) {
+function walkthrough(root: string, id: WalkthroughId) {
   return snapshot(root).then((snap) =>
     snap.walkthroughs.find((entry) => entry.id === id)
   );
@@ -73,7 +73,9 @@ describe("writeWalkthrough", () => {
 
     expect(second.changeId).toBe(first.changeId);
     const snap = await snapshot(root);
-    expect(snap.changes.map((change) => change.id as string)).toEqual(["chg_001"]);
+    expect(snap.changes.map((change) => change.id as string)).toEqual([
+      "chg_001",
+    ]);
   });
 });
 
@@ -139,7 +141,7 @@ describe("addWalkthroughSection", () => {
         annotations: [
           {
             anchor: {
-              capture: "cap_a" as CaptureId,
+              capture: CaptureId.make("cap_a"),
               kind: "screenshot-region",
               rect: [0.1, 0.2, 0.3, 0.1],
             },
@@ -147,7 +149,7 @@ describe("addWalkthroughSection", () => {
           },
         ],
         body: "Drag a file {{capture:0}}.",
-        captureIds: ["cap_a", "cap_b"],
+        captureIds: [CaptureId.make("cap_a"), CaptureId.make("cap_b")],
         root,
         title: "Uploading",
         walkthroughId,
@@ -156,7 +158,10 @@ describe("addWalkthroughSection", () => {
 
     expect(section).toBe("s01-uploading.md");
     const entry = await walkthrough(root, walkthroughId);
-    expect(entry?.sections.at(0)?.captures as readonly string[] | undefined).toEqual(["cap_a", "cap_b"]);
+    expect(entry?.sections.at(0)?.captures).toEqual([
+      CaptureId.make("cap_a"),
+      CaptureId.make("cap_b"),
+    ]);
     expect(entry?.sections.at(0)?.annotations?.at(0)?.anchor.kind).toBe(
       "screenshot-region"
     );
@@ -171,7 +176,7 @@ describe("addWalkthroughSection", () => {
         body: "x",
         root,
         title: "T",
-        walkthroughId: "wlk_nope",
+        walkthroughId: WalkthroughId.make("wlk_nope"),
       })
     );
 
@@ -211,7 +216,7 @@ describe("addWalkthroughSection", () => {
       addWalkthroughSection({
         ...base,
         body: "x",
-        captureIds: ["cap_a"],
+        captureIds: [CaptureId.make("cap_a")],
         root,
         title: "T",
         walkthroughId,

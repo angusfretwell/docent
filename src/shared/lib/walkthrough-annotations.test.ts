@@ -179,7 +179,10 @@ describe("schema — code and product arms", () => {
       schema: "docent/walkthrough-section",
       title: "Uploading a file",
     });
-    expect(section.captures as readonly string[] | undefined).toEqual(["cap_a", "cap_b"]);
+    expect(section.captures as readonly string[] | undefined).toEqual([
+      "cap_a",
+      "cap_b",
+    ]);
     expect(section.annotations?.at(0)?.anchor.kind).toBe("screenshot-region");
   });
 
@@ -297,7 +300,10 @@ describe("WalkthroughSection product frontmatter", () => {
       schema: "docent/walkthrough-section",
       title: "Uploading a file",
     });
-    expect(section.captures as readonly string[] | undefined).toEqual(["cap_a", "cap_b"]);
+    expect(section.captures as readonly string[] | undefined).toEqual([
+      "cap_a",
+      "cap_b",
+    ]);
     expect(section.annotations?.length).toBe(2);
     expect(section.annotations?.[0]?.anchor.kind).toBe("screenshot-region");
     expect(section.annotations?.[1]?.anchor.kind).toBe("recording-timestamp");

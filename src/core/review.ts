@@ -10,7 +10,7 @@
 
 import { walkthroughKinds } from "@shared/enums/walkthrough-kind";
 import type { WalkthroughKind } from "@shared/enums/walkthrough-kind";
-import type { FindingId, WalkthroughId } from "@shared/schemas/ids";
+import { FindingId, ReviewId, WalkthroughId } from "@shared/schemas/ids";
 import {
   ChangeRecord,
   FindingEntry,
@@ -21,8 +21,7 @@ import {
 } from "@shared/schemas/review";
 import type { ViewedRequest } from "@shared/schemas/review";
 import { Walkthrough } from "@shared/schemas/walkthrough";
-import type { Schema } from "effect";
-import { Array, Clock, Effect, Option } from "effect";
+import { Array, Clock, Effect, Option, Schema } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 
@@ -65,7 +64,7 @@ export const ensureReview = Effect.fn("ensureReview")(
       return existing.value;
     }
 
-    const id = yield* makeId("rev");
+    const id = yield* makeId(ReviewId, "rev");
     const review = Review.make({
       base: params.base,
       branch: params.branch,
@@ -74,7 +73,7 @@ export const ensureReview = Effect.fn("ensureReview")(
       title: "",
     });
     yield* fs.makeDirectory(params.reviewDir, { recursive: true });
-    yield* writeJsonRecord(file, review);
+    yield* writeJsonRecord(file, Review, review);
     return review;
   }
 );
@@ -109,7 +108,7 @@ export const setReviewTitle = Effect.fn("setReviewTitle")(
       title: params.title,
     });
 
-    yield* writeJsonRecord(path.join(reviewDir, "review.json"), review);
+    yield* writeJsonRecord(path.join(reviewDir, "review.json"), Review, review);
     return review;
   }
 );
@@ -130,6 +129,25 @@ const readJsonRecords = Effect.fn("readJsonRecords")(function* readJsonRecords<
   );
   return Array.getSomes(records);
 });
+
+/** An id schema's synchronous constructor — its `<prefix>_` refinement as a check. */
+interface IdSchema<Id extends string> {
+  readonly makeOption: (input: string) => Option.Option<Id>;
+}
+
+/**
+ * The record ids among a record directory's names, dropping every name the id
+ * schema's `<prefix>_` refinement rejects. Directory names are whatever is on
+ * disk — hand-authored included (walkthroughs.md §10) — and the walk is
+ * best-effort (architecture.md §3), so one unusable name is skipped where
+ * constructing it unchecked would make the whole snapshot read fatal.
+ */
+function recordIds<Id extends string>(
+  schema: IdSchema<Id>,
+  names: readonly string[]
+): Id[] {
+  return Array.getSomes(names.map((name) => schema.makeOption(name)));
+}
 
 const ANCHOR_FILE = /\bfile:\s*(?<file>[^,}\n]+)/;
 const SURROUNDING_QUOTES = /^["']|["']$/g;
@@ -174,7 +192,7 @@ const readAnchor = Effect.fn("readAnchor")(function* readAnchor(file: string) {
 /** Walk one finding's directory, parsing each record and folding its anchor. */
 const readFinding = Effect.fn("readFinding")(function* readFinding(
   dir: string,
-  id: string
+  id: FindingId
 ) {
   const path = yield* Path;
   const names = yield* listMarkdownRecordNames(path.join(dir, id));
@@ -187,10 +205,8 @@ const readFinding = Effect.fn("readFinding")(function* readFinding(
   const root = names.find((name) => name.endsWith("-open.md")) ?? names[0];
   const anchor =
     root === undefined ? {} : yield* readAnchor(path.join(dir, id, root));
-  // `id` is the record dir name, minted `fnd_…` (or hand-authored); the read
-  // path trusts the on-disk structure, so brand it rather than re-validate.
   return FindingEntry.make({
-    id: id as FindingId,
+    id,
     records: Array.getSomes(parsed),
     ...anchor,
   });
@@ -201,10 +217,13 @@ const readFindings = Effect.fn("readFindings")(function* readFindings(
 ) {
   const path = yield* Path;
   const dir = path.join(reviewDir, "findings");
-  const ids = yield* listFindingIds(dir);
-  return yield* Effect.forEach(ids, (id) => readFinding(dir, id), {
-    concurrency: "unbounded",
-  });
+  const names = yield* listFindingIds(dir);
+
+  return yield* Effect.forEach(
+    recordIds(FindingId, names),
+    (id) => readFinding(dir, id),
+    { concurrency: "unbounded" }
+  );
 });
 
 /**
@@ -217,7 +236,7 @@ const readFindings = Effect.fn("readFindings")(function* readFindings(
 const readWalkthrough = Effect.fn("readWalkthrough")(function* readWalkthrough(
   dir: string,
   kind: WalkthroughKind,
-  id: string
+  id: WalkthroughId
 ) {
   const path = yield* Path;
   const wlkDir = path.join(dir, id);
@@ -233,7 +252,7 @@ const readWalkthrough = Effect.fn("readWalkthrough")(function* readWalkthrough(
     { concurrency: "unbounded" }
   );
   return WalkthroughEntry.make({
-    id: id as WalkthroughId,
+    id,
     kind: manifestValue?.kind ?? kind,
     sections: Array.getSomes(parsed),
     ...(manifestValue === undefined ? {} : { manifest: manifestValue }),
@@ -245,10 +264,13 @@ const readWalkthroughKind = Effect.fn("readWalkthroughKind")(
   function* readWalkthroughKind(root: string, kind: WalkthroughKind) {
     const path = yield* Path;
     const dir = path.join(root, kind);
-    const ids = yield* listWalkthroughIds(dir);
-    return yield* Effect.forEach(ids, (id) => readWalkthrough(dir, kind, id), {
-      concurrency: "unbounded",
-    });
+    const names = yield* listWalkthroughIds(dir);
+
+    return yield* Effect.forEach(
+      recordIds(WalkthroughId, names),
+      (id) => readWalkthrough(dir, kind, id),
+      { concurrency: "unbounded" }
+    );
   }
 );
 
@@ -349,8 +371,14 @@ export const appendViewedEvent = Effect.fn("appendViewedEvent")(
       path: params.request.path,
       ts: new Date(now).toISOString(),
     });
-    const id = yield* makeId("vew");
-    yield* writeJsonRecord(path.join(viewedDir, `${id}.json`), event);
+    // A viewed event is addressed by its filename alone — there is no `vew_`
+    // record id to brand, so the mint runs through the plain string schema.
+    const id = yield* makeId(Schema.String, "vew");
+    yield* writeJsonRecord(
+      path.join(viewedDir, `${id}.json`),
+      ViewedEvent,
+      event
+    );
     return event;
   }
 );

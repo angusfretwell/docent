@@ -6,6 +6,7 @@
  */
 
 import { Change } from "@shared/schemas/change";
+import { Author } from "@shared/schemas/finding";
 import { Effect, Schema } from "effect";
 import { unique } from "radashi";
 
@@ -13,12 +14,11 @@ import {
   DIFF,
   FIND_RENAMES,
   FULL_INDEX,
-  gitRunner,
+  git,
+  gitBytes,
   NO_COLOR,
   NUL,
 } from "./exec";
-
-const { bytes: gitBytes, text: git } = gitRunner;
 
 // A git object id: 4–64 lowercase/uppercase hex chars (abbreviated through full
 // SHA-1 or SHA-256). Anything else can't name a blob, so it never reaches git.
@@ -286,11 +286,11 @@ export const resolveAuthor = Effect.fn("resolveAuthor")(function* resolveAuthor(
   } else if (email !== "") {
     display = email;
   }
-  return {
+  return Author.make({
     display,
     id: email === "" ? "unknown" : email,
-    kind: "human" as const,
-  };
+    kind: "human",
+  });
 });
 
 /**

@@ -15,6 +15,7 @@
 import { Effect, Option, Schema } from "effect";
 import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
+import { HttpClient, HttpClientResponse } from "effect/unstable/http";
 
 import { resolveRepo } from "../core/git";
 import { readRecord, writeJsonRecord } from "../core/store/io";
@@ -58,7 +59,7 @@ export const writeServeAddress = Effect.fn("writeServeAddress")(
     };
 
     yield* fs.makeDirectory(path.join(root, STATE_ROOT), { recursive: true });
-    yield* writeJsonRecord(addressPath(root, path), address);
+    yield* writeJsonRecord(addressPath(root, path), ServeAddress, address);
   }
 );
 
@@ -77,12 +78,9 @@ const probeHealth = Effect.fn("probeHealth")(function* probeHealth(
   url: string,
   expectedRoot: string
 ) {
-  const health = yield* Effect.tryPromise(() =>
-    fetch(new URL("api/health", url).href, {
-      signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
-    }).then((response) => response.json() as Promise<unknown>)
-  ).pipe(
-    Effect.flatMap((json) => Schema.decodeUnknownEffect(Health)(json)),
+  const health = yield* HttpClient.get(new URL("api/health", url)).pipe(
+    Effect.flatMap(HttpClientResponse.schemaBodyJson(Health)),
+    Effect.timeout(PROBE_TIMEOUT_MS),
     Effect.option
   );
 

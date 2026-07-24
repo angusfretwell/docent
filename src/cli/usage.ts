@@ -6,10 +6,11 @@
  * `--body`-or-piped-stdin resolver, and the machine-readable JSON printer every
  * subcommand ends with.
  *
- * Nothing here duplicates `Flag`. It exists because the CLI's own error strings
- * and compact value syntaxes are a consumed contract — agent skills read both
- * the JSON on stdout and the messages on stderr (`skills/docent-cli`) — so they
- * are authored here rather than delegated to framework wording.
+ * Nothing here duplicates `Flag`. It exists because the binary's consumed
+ * contract (`skills/docent-cli`) is behavioural — machine-readable JSON on
+ * stdout, a human-readable message on stderr, a non-zero exit — and because the
+ * compact value syntaxes the skill documents (`--x a,b`, `--range
+ * file:start[-end][@side]`) have no `Flag` equivalent.
  */
 
 import { Console, Context, Effect, Option, Schema, Stream } from "effect";
@@ -29,22 +30,7 @@ export class CliUsageError extends Schema.TaggedErrorClass<CliUsageError>()(
 }
 
 /**
- * Run a throwing synchronous parser as a typed `CliUsageError` failure. The
- * compact value parsers throw for readable, colocated validation; this converts
- * the throw into an Effect failure so it never escapes a handler as a defect.
- */
-export function attempt<A>(parse: () => A): Effect.Effect<A, CliUsageError> {
-  return Effect.try({
-    catch: (error) =>
-      error instanceof CliUsageError
-        ? error
-        : new CliUsageError({ reason: String(error) }),
-    try: parse,
-  });
-}
-
-/**
- * Assert a value is one of a closed set, or throw a usage error naming the
+ * Assert a value is one of a closed set, or fail with a usage error naming the
  * allowed values. `Flag.choice` covers the flags whose whole value is an enum;
  * this covers the enums nested inside a compact syntax (`--range`'s `@side`)
  * and the repeatable enums that comma-split before they can be checked
@@ -54,13 +40,16 @@ export function parseEnum<T extends string>(
   flag: string,
   value: string,
   values: readonly T[]
-): T {
-  if (!values.includes(value as T)) {
-    throw new CliUsageError({
-      reason: `unknown --${flag}: ${value} (one of ${values.join(", ")})`,
-    });
-  }
-  return value as T;
+): Effect.Effect<T, CliUsageError> {
+  const allowed = values.find((candidate) => candidate === value);
+
+  return allowed === undefined
+    ? Effect.fail(
+        new CliUsageError({
+          reason: `unknown --${flag}: ${value} (one of ${values.join(", ")})`,
+        })
+      )
+    : Effect.succeed(allowed);
 }
 
 /**
@@ -73,11 +62,16 @@ export function parseEnum<T extends string>(
  * A write subcommand needs no such guard; its required flags reject the stray
  * invocation first.
  */
-export function refuseArguments(args: readonly string[]): void {
+export function refuseArguments(
+  args: readonly string[]
+): Effect.Effect<void, CliUsageError> {
   const stray = args.at(0);
-  if (stray !== undefined) {
-    throw new CliUsageError({ reason: `unexpected argument: ${stray}` });
-  }
+
+  return stray === undefined
+    ? Effect.void
+    : Effect.fail(
+        new CliUsageError({ reason: `unexpected argument: ${stray}` })
+      );
 }
 
 /**
@@ -85,12 +79,17 @@ export function refuseArguments(args: readonly string[]): void {
  * `Flag` treats a present-but-blank `--title ""` as satisfied; the write path
  * does not — a blank id or title is never a legitimate write.
  */
-export function requireText(flag: string, value: string): string {
+export function requireText(
+  flag: string,
+  value: string
+): Effect.Effect<string, CliUsageError> {
   const trimmed = value.trim();
-  if (trimmed === "") {
-    throw new CliUsageError({ reason: `--${flag} <value> is required` });
-  }
-  return trimmed;
+
+  return trimmed === ""
+    ? Effect.fail(
+        new CliUsageError({ reason: `--${flag} <value> is required` })
+      )
+    : Effect.succeed(trimmed);
 }
 
 /**

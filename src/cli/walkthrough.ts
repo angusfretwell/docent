@@ -14,6 +14,7 @@
  */
 
 import { walkthroughKinds } from "@shared/enums/walkthrough-kind";
+import { CaptureId, WalkthroughId } from "@shared/schemas/ids";
 import {
   WalkthroughAnnotation,
   WalkthroughRange,
@@ -28,10 +29,9 @@ import {
 } from "../core/walkthrough-write";
 import type { ChangeRefs } from "../core/write-context";
 import { resolveChangeScope } from "../core/write-context";
-import { parseRangeSpec } from "./specs";
+import { parseRangeSpec, parseRecordId } from "./specs";
 import type { RangeSpec } from "./specs";
 import {
-  attempt,
   CliUsageError,
   commaSeparated,
   WorkingDirectory,
@@ -159,11 +159,20 @@ const addSection = Command.make(
   (config) =>
     Effect.gen(function* runAddSection() {
       const cwd = yield* WorkingDirectory;
-      const walkthroughId = yield* attempt(() =>
-        requireText("walkthrough", config.walkthrough)
+      const walkthroughId = yield* parseRecordId(
+        "walkthrough",
+        WalkthroughId,
+        config.walkthrough
       );
-      const title = yield* attempt(() => requireText("title", config.title));
-      const specs = yield* attempt(() => config.range.map(parseRangeSpec));
+      const captureIds = yield* Effect.all(
+        config.capture.map((value) =>
+          parseRecordId("capture", CaptureId, value)
+        )
+      );
+      const title = yield* requireText("title", config.title);
+      const specs = yield* Effect.all(
+        config.range.map((value) => parseRangeSpec(value))
+      );
       const annotations = yield* parseAnnotations(config.annotation);
       const body = yield* resolveBody(config.body, false);
 
@@ -179,9 +188,7 @@ const addSection = Command.make(
           title,
           walkthroughId,
           ...(ranges.length === 0 ? {} : { ranges }),
-          ...(config.capture.length === 0
-            ? {}
-            : { captureIds: config.capture }),
+          ...(captureIds.length === 0 ? {} : { captureIds }),
           ...(annotations.length === 0 ? {} : { annotations }),
         })
       );

@@ -1,14 +1,8 @@
 /**
  * The low-level git process runner: spawn `git`, drain stdout/stderr
  * concurrently with the exit wait (so a large diff can't deadlock the pipe),
- * and turn a rejected exit code into `GitCommandFailed`. Every read runs
- * inert (`GIT_OPTIONAL_LOCKS=0`): git never takes the index lock to refresh
- * cached stat info, so a `git status`/`git diff` never writes `.git/index` —
- * the repo-rooted watch (serve/watch.ts) would otherwise see its own recompute
- * rewrite the index and feed itself into a loop.
- *
- * Exposed as the `GitRunner` interface (not bare functions), so a resolver
- * could run against a fake git in a test without spawning a real process.
+ * and turn a rejected exit code into `GitCommandFailed`. Every read runs inert
+ * (see `GIT_ENV`).
  */
 
 import { Effect, Schema, Stream } from "effect";
@@ -96,7 +90,7 @@ const gitText = Effect.fn("gitText")(function* gitText(
 }, Effect.scoped);
 
 /** Run a git command, succeeding with its trimmed stdout (exit 0 only). */
-function git(cwd: string, args: readonly string[]) {
+export function git(cwd: string, args: readonly string[]) {
   return gitText(cwd, args, (exitCode) => exitCode === 0);
 }
 
@@ -106,7 +100,7 @@ function git(cwd: string, args: readonly string[]) {
  * feed it `/dev/null` against a real untracked file to render it as an add. A
  * genuine failure (exit ≥ 2) still fails. stdout is returned trimmed.
  */
-function gitDiffNoIndex(cwd: string, args: readonly string[]) {
+export function gitDiffNoIndex(cwd: string, args: readonly string[]) {
   return gitText(cwd, args, (exitCode) => exitCode <= 1);
 }
 
@@ -115,7 +109,7 @@ function gitDiffNoIndex(cwd: string, args: readonly string[]) {
  * text decode and no newline trim, so binary blobs survive intact. stderr is
  * still decoded for the error message.
  */
-const gitBytes = Effect.fn("gitBytes")(function* gitBytes(
+export const gitBytes = Effect.fn("gitBytes")(function* gitBytes(
   cwd: string,
   args: readonly string[]
 ) {
@@ -135,18 +129,3 @@ const gitBytes = Effect.fn("gitBytes")(function* gitBytes(
   }
   return stdout;
 }, Effect.scoped);
-
-/**
- * The real `GitRunner`: spawns the system `git` binary. Its shape — `text` /
- * `diffNoIndex` / `bytes`, each `(cwd, args) => Effect<...>` — is the seam a
- * resolver depends on; a test can swap in an object of the same shape that
- * never spawns a process.
- */
-export const gitRunner = {
-  bytes: gitBytes,
-  diffNoIndex: gitDiffNoIndex,
-  text: git,
-};
-
-/** The git operations a resolver needs — swappable for a fake in a test. */
-export type GitRunner = typeof gitRunner;

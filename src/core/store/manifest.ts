@@ -13,6 +13,7 @@
  */
 
 import { walkthroughKinds } from "@shared/enums/walkthrough-kind";
+import type { WalkthroughId } from "@shared/schemas/ids";
 import { Walkthrough } from "@shared/schemas/walkthrough";
 import { Effect, Option, Schema } from "effect";
 import { Path } from "effect/Path";
@@ -77,7 +78,7 @@ export function walkthroughDir(
   path: Path,
   reviewDir: string,
   kind: Walkthrough["kind"],
-  id: string
+  id: WalkthroughId
 ): string {
   return path.join(reviewDir, "walkthroughs", kind, id);
 }
@@ -93,7 +94,7 @@ export interface LoadedWalkthrough {
  * manifest's own `kind` is authoritative; a missing manifest is a not-found.
  */
 export const loadWalkthrough = Effect.fn("loadWalkthrough")(
-  function* loadWalkthrough(reviewDir: string, id: string) {
+  function* loadWalkthrough(reviewDir: string, id: WalkthroughId) {
     const path = yield* Path;
     for (const kind of walkthroughKinds) {
       const dir = walkthroughDir(path, reviewDir, kind, id);
@@ -115,7 +116,11 @@ export const writeManifest = Effect.fn("writeManifest")(function* writeManifest(
   manifest: Walkthrough
 ) {
   const path = yield* Path;
-  yield* writeJsonRecord(path.join(dir, "manifest.json"), manifest);
+  yield* writeJsonRecord(
+    path.join(dir, "manifest.json"),
+    Walkthrough,
+    manifest
+  );
 });
 
 /**
