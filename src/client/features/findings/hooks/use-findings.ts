@@ -6,8 +6,8 @@
  * panel, filter label, and collapsed-toggle popover.
  */
 
+import { useDrift } from "@client/hooks/use-drift";
 import { parsePatchFiles } from "@client/lib/diff";
-import { useDrift } from "@client/lib/drift";
 import { sectionKey } from "@client/lib/finding-sections";
 import { diffQueryOptions } from "@client/queries/diff";
 import { reviewQueryOptions } from "@client/queries/review";

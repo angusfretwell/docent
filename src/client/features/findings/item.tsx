@@ -5,7 +5,7 @@ import {
   CollapsiblePanel,
   CollapsibleTrigger,
 } from "@client/components/ui/collapsible";
-import { useRevealSection } from "@client/features/walkthrough/lib/target";
+import { useRevealSection } from "@client/features/walkthrough/hooks/use-revealed-section";
 import { useRevealDiffItem } from "@client/lib/diff-target";
 import { cn } from "@client/lib/utils";
 import { STATUS_LABEL } from "@shared/lib/finding";

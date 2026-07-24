@@ -1,7 +1,6 @@
-import { Badge } from "@client/components/ui/badge";
 import type { Callout } from "@client/features/walkthrough/callouts";
-import { targetAnchorProps } from "@client/features/walkthrough/hooks/use-active-target";
-import { sectionAnchorProps } from "@client/features/walkthrough/lib/target";
+import type { LabelTarget } from "@client/features/walkthrough/chips";
+import { sectionAnchorProps } from "@client/features/walkthrough/hooks/use-revealed-section";
 import type { WalkthroughStep } from "@client/features/walkthrough/lib/walkthrough";
 import {
   stepLayout,
@@ -10,24 +9,14 @@ import {
 import type { FoldedFinding } from "@shared/lib/finding";
 import { targetChipIndex } from "@shared/lib/walkthrough-segments";
 import type { ElementContent } from "hast";
-import type { ComponentProps, ReactNode } from "react";
+import type { ComponentProps } from "react";
 import { createContext, use } from "react";
 import type { Components, ExtraProps } from "react-markdown";
 import Markdown from "react-markdown";
 
 import { WalkthroughCallouts } from "./callouts";
+import { ChipRow, TargetChip } from "./chips";
 import { WalkthroughFindings } from "./findings";
-
-/** How a target reads on its chip: a short label, with the full reference behind it. */
-export interface TargetLabel {
-  detail?: string;
-  /** The mark naming what kind of target this is — a file, a screenshot, a recording. */
-  icon: ReactNode;
-  text: string;
-}
-
-/** Resolves a target key to its chip label, or `undefined` if the tour can't reach it. */
-export type LabelTarget = (key: string) => TargetLabel | undefined;
 
 /** Resolves a target key to the callouts read beneath it, if the pillar has any. */
 export type CalloutsForTarget = (key: string) => readonly Callout[];
@@ -52,38 +41,22 @@ interface ChipScope {
 // React would remount every chip in the section on any re-render.
 const ChipScopeContext = createContext<ChipScope | undefined>(undefined);
 
-/**
- * One target as a chip: the anchor the active-target reading keys off, and the
- * control that aims the panel at it deliberately.
- */
-function TargetChip({
+/** A chip for one target, resolved against the section it was placed in. */
+function ScopedTargetChip({
   anchorKey,
   scope,
 }: {
   anchorKey: string;
   scope: ChipScope;
 }) {
-  const label = scope.labelTarget(anchorKey);
-
-  // A target the walkthrough can't resolve gets no chip — there is nothing to
-  // name it with — but it keeps its anchor, so the panel still shows its empty
-  // state as the reader passes rather than holding the previous target.
-  if (label === undefined) {
-    return <span aria-hidden {...targetAnchorProps(anchorKey)} />;
-  }
+  const { labelTarget, onSelect: selectTarget } = scope;
 
   return (
-    <Badge
-      data-not-typeset
-      onClick={() => scope.onSelect(anchorKey)}
-      render={<button aria-label={`Show ${label.text}`} type="button" />}
-      title={label.detail}
-      variant="outline"
-      {...targetAnchorProps(anchorKey)}
-    >
-      {label.icon}
-      {label.text}
-    </Badge>
+    <TargetChip
+      anchorKey={anchorKey}
+      label={labelTarget(anchorKey)}
+      onSelect={selectTarget}
+    />
   );
 }
 
@@ -110,7 +83,10 @@ function ProseLink({
   }
 
   return (
-    <TargetChip anchorKey={targetKey(scope.sectionId, index)} scope={scope} />
+    <ScopedTargetChip
+      anchorKey={targetKey(scope.sectionId, index)}
+      scope={scope}
+    />
   );
 }
 
@@ -176,15 +152,6 @@ function ProseParagraph({
 
 const PROSE_COMPONENTS: Components = { a: ProseLink, p: ProseParagraph };
 
-/** Chips placed around the prose rather than inside it, kept off the typeset flow. */
-function ChipRow({ children }: { children: ReactNode }) {
-  return (
-    <div className="mt-2 flex flex-wrap gap-1.5" data-not-typeset>
-      {children}
-    </div>
-  );
-}
-
 /**
  * One section of prose. A target marker renders as a chip naming what the panel
  * beside it will show, which doubles as the anchor keeping the two panels in
@@ -222,7 +189,7 @@ export function StepProse({
         {layout.heading !== undefined && (
           <>
             <ChipRow>
-              <TargetChip anchorKey={layout.heading} scope={scope} />
+              <ScopedTargetChip anchorKey={layout.heading} scope={scope} />
             </ChipRow>
 
             <WalkthroughCallouts
@@ -238,7 +205,7 @@ export function StepProse({
           <>
             <ChipRow>
               {layout.trailing.map((key) => (
-                <TargetChip anchorKey={key} key={key} scope={scope} />
+                <ScopedTargetChip anchorKey={key} key={key} scope={scope} />
               ))}
             </ChipRow>
 

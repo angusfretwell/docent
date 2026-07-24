@@ -1,8 +1,8 @@
 import { Empty } from "@client/components/empty";
 import { useFindings } from "@client/features/findings/hooks/use-findings";
 import { useActiveTarget } from "@client/features/walkthrough/hooks/use-active-target";
+import { useRevealedSection } from "@client/features/walkthrough/hooks/use-revealed-section";
 import { WalkthroughLayout } from "@client/features/walkthrough/layout";
-import { useRevealedSection } from "@client/features/walkthrough/lib/target";
 import {
   codeSteps,
   rangesByKey,
@@ -10,8 +10,8 @@ import {
 } from "@client/features/walkthrough/lib/walkthrough";
 import { StepProse } from "@client/features/walkthrough/prose";
 import { WalkthroughStaleness } from "@client/features/walkthrough/staleness";
+import { useDrift } from "@client/hooks/use-drift";
 import { parsePatchFiles } from "@client/lib/diff";
-import { useDrift } from "@client/lib/drift";
 import { findingsBySection, sectionKey } from "@client/lib/finding-sections";
 import { basename } from "@client/lib/utils";
 import { diffQueryOptions } from "@client/queries/diff";

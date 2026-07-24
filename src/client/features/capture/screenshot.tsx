@@ -1,4 +1,4 @@
-import { PinChip } from "@client/features/walkthrough/pin-chip";
+import { PinChip } from "@client/features/walkthrough/chips";
 import { cn } from "@client/lib/utils";
 import { useEffect, useRef } from "react";
 

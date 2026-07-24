@@ -6,7 +6,7 @@ import {
 } from "@client/features/capture/lib/pins";
 import { useFindings } from "@client/features/findings/hooks/use-findings";
 import { useActiveTarget } from "@client/features/walkthrough/hooks/use-active-target";
-import { useRevealedSection } from "@client/features/walkthrough/lib/target";
+import { useRevealedSection } from "@client/features/walkthrough/hooks/use-revealed-section";
 import {
   captureLabel,
   capturesByKey,

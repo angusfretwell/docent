@@ -20,9 +20,9 @@ import {
   diffFiltersAtom,
   matchesFilters,
 } from "@client/features/file-tree/lib/filters";
+import { useDrift } from "@client/hooks/use-drift";
 import { useKeyPressed } from "@client/hooks/use-key-pressed";
 import { parsePatchFiles, statusForChange } from "@client/lib/diff";
-import { useDrift } from "@client/lib/drift";
 import { diffLayoutAtom, diffTreeOpenAtom } from "@client/lib/preferences";
 import { diffQueryOptions } from "@client/queries/diff";
 import { pendingQueryOptions } from "@client/queries/pending";

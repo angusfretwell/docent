@@ -1,7 +1,7 @@
 import { usePinHover } from "@client/features/capture/hooks/use-pin-hover";
 import { cn } from "@client/lib/utils";
 
-import { PinChip } from "./pin-chip";
+import { PinChip } from "./chips";
 
 /** One pin's label and body, as the prose lists it beside the capture. */
 export interface Callout {
