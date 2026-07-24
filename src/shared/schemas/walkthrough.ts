@@ -18,9 +18,7 @@ export class WalkthroughRange extends Schema.Class<WalkthroughRange>(
 }) {}
 
 /** Anchor reuses the full Comment union, deliberately not narrowed to capture arms — any arm an author writes still renders. Not a resolvable thread. */
-export class WalkthroughAnnotation extends Schema.Class<WalkthroughAnnotation>(
-  "WalkthroughAnnotation"
-)({
+export class Callout extends Schema.Class<Callout>("Callout")({
   anchor: Anchor,
   body: Schema.String,
 }) {}
@@ -28,9 +26,9 @@ export class WalkthroughAnnotation extends Schema.Class<WalkthroughAnnotation>(
 export class WalkthroughSection extends Schema.Class<WalkthroughSection>(
   "WalkthroughSection"
 )({
-  /** Product arm: authored callouts. */
-  annotations: Schema.optional(Schema.Array(WalkthroughAnnotation)),
   body: Schema.String,
+  /** Product arm: authored callouts. */
+  callouts: Schema.optional(Schema.Array(Callout)),
   /** Product arm: `cap_*` ids in `{{capture:i}}` order. */
   captures: Schema.optional(Schema.Array(CaptureId)),
   id: SectionId,

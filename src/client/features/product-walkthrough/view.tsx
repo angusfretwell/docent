@@ -1,7 +1,7 @@
 import { Empty } from "@client/components/empty";
 import { PinHoverProvider } from "@client/features/capture/hooks/use-pin-hover";
 import {
-  annotationsFor,
+  calloutsFor,
   captureCallouts,
 } from "@client/features/capture/lib/pins";
 import { useComments } from "@client/features/comments/hooks/use-comments";
@@ -15,7 +15,7 @@ import {
 import { commentsBySection, sectionKey } from "@client/lib/comment-sections";
 import { reviewQueryOptions } from "@client/queries/review";
 import { latestProductWalkthrough } from "@shared/lib/identity-drift";
-import { walkthroughStaleness } from "@shared/lib/walkthrough-annotations";
+import { walkthroughStaleness } from "@shared/lib/walkthrough-callouts";
 import type { WalkthroughId } from "@shared/schemas/ids";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Camera, MonitorSmartphone, Pointer, Video } from "lucide-react";
@@ -74,7 +74,7 @@ export function ProductWalkthroughView() {
     return placed === undefined
       ? []
       : captureCallouts(
-          annotationsFor(placed.section, placed.capture.id),
+          calloutsFor(placed.section, placed.capture.id),
           comments,
           placed.capture
         );

@@ -516,7 +516,7 @@ describe("readReviewSnapshot walkthroughs", () => {
           "id: sec_upload",
           'title: "Uploading a file"',
           "captures: [cap_a, cap_b]",
-          "annotations:",
+          "callouts:",
           "  - anchor: { kind: screenshot-region, capture: cap_a, rect: [0.1, 0.2, 0.3, 0.1] }",
           '    body: "The new upload control."',
           "  - anchor: { kind: recording-timestamp, capture: cap_b, fromMs: 3200, toMs: 5000 }",
@@ -549,13 +549,13 @@ describe("readReviewSnapshot walkthroughs", () => {
       "cap_a",
       "cap_b",
     ]);
-    expect(section?.annotations?.length).toBe(2);
-    expect(section?.annotations?.[0]?.anchor).toMatchObject({
+    expect(section?.callouts?.length).toBe(2);
+    expect(section?.callouts?.[0]?.anchor).toMatchObject({
       capture: "cap_a",
       kind: "screenshot-region",
       rect: [0.1, 0.2, 0.3, 0.1],
     });
-    expect(section?.annotations?.[1]?.anchor).toMatchObject({
+    expect(section?.callouts?.[1]?.anchor).toMatchObject({
       capture: "cap_b",
       fromMs: 3200,
       kind: "recording-timestamp",

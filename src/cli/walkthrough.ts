@@ -1,9 +1,6 @@
 import { walkthroughKinds } from "@shared/enums/walkthrough-kind";
 import { CaptureId, WalkthroughId } from "@shared/schemas/ids";
-import {
-  WalkthroughAnnotation,
-  WalkthroughRange,
-} from "@shared/schemas/walkthrough";
+import { Callout, WalkthroughRange } from "@shared/schemas/walkthrough";
 import { Effect, Option, Schema } from "effect";
 import { Command, Flag } from "effect/unstable/cli";
 
@@ -47,32 +44,30 @@ const buildRanges = Effect.fn("buildRanges")(function* buildRanges(
   );
 });
 
-const parseAnnotations = Effect.fn("parseAnnotations")(
-  function* parseAnnotations(raws: readonly string[]) {
-    return yield* Effect.forEach(
-      raws,
-      (raw) =>
-        Effect.gen(function* decode() {
-          const json = yield* Effect.try({
-            catch: () =>
-              new CliUsageError({
-                reason: `--annotation is not valid JSON: ${raw}`,
-              }),
-            try: () => JSON.parse(raw) as unknown,
-          });
-          return yield* Schema.decodeUnknownEffect(WalkthroughAnnotation)(
-            json
-          ).pipe(
-            Effect.mapError(
-              (error) =>
-                new CliUsageError({ reason: `invalid --annotation: ${error}` })
-            )
-          );
-        }),
-      { concurrency: "unbounded" }
-    );
-  }
-);
+const parseCallouts = Effect.fn("parseCallouts")(function* parseCallouts(
+  raws: readonly string[]
+) {
+  return yield* Effect.forEach(
+    raws,
+    (raw) =>
+      Effect.gen(function* decode() {
+        const json = yield* Effect.try({
+          catch: () =>
+            new CliUsageError({
+              reason: `--callout is not valid JSON: ${raw}`,
+            }),
+          try: () => JSON.parse(raw) as unknown,
+        });
+        return yield* Schema.decodeUnknownEffect(Callout)(json).pipe(
+          Effect.mapError(
+            (error) =>
+              new CliUsageError({ reason: `invalid --callout: ${error}` })
+          )
+        );
+      }),
+    { concurrency: "unbounded" }
+  );
+});
 
 const create = Command.make(
   "create",
@@ -108,15 +103,15 @@ const create = Command.make(
 const addSection = Command.make(
   "add-section",
   {
-    // Annotations are JSON, which embeds commas — so this one repeats without
-    // the comma-splitting every other repeatable flag gets.
-    annotation: Flag.string("annotation").pipe(
-      Flag.atLeast(0),
-      Flag.withDescription("One JSON callout — repeat the flag per annotation")
-    ),
     body: Flag.string("body").pipe(
       Flag.optional,
       Flag.withDescription("Section prose (omit to read it from piped stdin)")
+    ),
+    // Callouts are JSON, which embeds commas — so this one repeats without
+    // the comma-splitting every other repeatable flag gets.
+    callout: Flag.string("callout").pipe(
+      Flag.atLeast(0),
+      Flag.withDescription("One JSON callout — repeat the flag per callout")
     ),
     capture: commaSeparated(
       Flag.string("capture").pipe(
@@ -156,7 +151,7 @@ const addSection = Command.make(
       const specs = yield* Effect.all(
         config.range.map((value) => parseRangeSpec(value))
       );
-      const annotations = yield* parseAnnotations(config.annotation);
+      const callouts = yield* parseCallouts(config.callout);
       const body = yield* resolveBody(config.body, false);
 
       const scope = yield* resolveChangeScope(cwd);
@@ -172,7 +167,7 @@ const addSection = Command.make(
           walkthroughId,
           ...(ranges.length === 0 ? {} : { ranges }),
           ...(captureIds.length === 0 ? {} : { captureIds }),
-          ...(annotations.length === 0 ? {} : { annotations }),
+          ...(callouts.length === 0 ? {} : { callouts }),
         })
       );
     })

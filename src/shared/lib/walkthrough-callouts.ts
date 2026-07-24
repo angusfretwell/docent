@@ -3,7 +3,7 @@ import type { DriftState } from "../enums/drift-state";
 import type { Anchor } from "../schemas/comment";
 import type {
   Capture,
-  WalkthroughAnnotation,
+  Callout,
   WalkthroughRange,
 } from "../schemas/walkthrough";
 import { commentLocation } from "./comment";
@@ -65,13 +65,13 @@ export function captureById(
   return manifest?.captures?.find((capture) => capture.id === captureId);
 }
 
-export interface AnnotationNote {
+export interface CalloutNote {
   body: string;
   location: string;
 }
 
-export interface FoldedAnnotations {
-  notes: AnnotationNote[];
+export interface FoldedCallouts {
+  notes: CalloutNote[];
   quotes: string[];
 }
 
@@ -80,24 +80,24 @@ const CAPTURE_ANCHOR_KINDS: ReadonlySet<Anchor["kind"]> = new Set([
   ANCHOR_KIND.recordingTimestamp,
 ]);
 
-/** Every arm the annotation schema admits shows somewhere — nothing an author writes is silently dropped. */
-export function foldSectionAnnotations(
-  annotations: readonly WalkthroughAnnotation[]
-): FoldedAnnotations {
-  const notes: AnnotationNote[] = [];
+/** Every arm the callout schema admits shows somewhere — nothing an author writes is silently dropped. */
+export function foldSectionCallouts(
+  callouts: readonly Callout[]
+): FoldedCallouts {
+  const notes: CalloutNote[] = [];
   const quotes: string[] = [];
 
-  for (const annotation of annotations) {
-    if (CAPTURE_ANCHOR_KINDS.has(annotation.anchor.kind)) {
+  for (const callout of callouts) {
+    if (CAPTURE_ANCHOR_KINDS.has(callout.anchor.kind)) {
       continue;
     }
 
     notes.push({
-      body: annotation.body,
-      location: commentLocation(annotation.anchor),
+      body: callout.body,
+      location: commentLocation(callout.anchor),
     });
-    if (annotation.anchor.kind === "text-span") {
-      quotes.push(annotation.anchor.quote);
+    if (callout.anchor.kind === "text-span") {
+      quotes.push(callout.anchor.quote);
     }
   }
 

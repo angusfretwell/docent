@@ -3,7 +3,7 @@ import { cn } from "@client/lib/utils";
 
 import { PinChip } from "./chips";
 
-export interface Callout {
+export interface LabeledCallout {
   body: string;
   label: string;
 }
@@ -12,7 +12,7 @@ function CalloutItem({
   callout,
   target,
 }: {
-  callout: Callout;
+  callout: LabeledCallout;
   target: string | undefined;
 }) {
   const { active, onClick, onPointerEnter, onPointerLeave } = usePinHover(
@@ -46,7 +46,7 @@ export function WalkthroughCallouts({
   callouts,
   target,
 }: {
-  callouts: readonly Callout[];
+  callouts: readonly LabeledCallout[];
   target?: string;
 }) {
   if (callouts.length === 0) {

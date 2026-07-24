@@ -5,12 +5,12 @@ import type { Anchor } from "@shared/schemas/comment";
 import type { CaptureId, CommentId } from "@shared/schemas/ids";
 import type {
   Capture,
-  WalkthroughAnnotation,
+  Callout,
   WalkthroughSection,
 } from "@shared/schemas/walkthrough";
 
 import {
-  annotationsFor,
+  calloutsFor,
   captureAnchorId,
   captureCallouts,
   captureCommentDrift,
@@ -42,11 +42,8 @@ function timestampAnchor(
   };
 }
 
-function annotation(
-  anchor: WalkthroughAnnotation["anchor"],
-  body: string
-): WalkthroughAnnotation {
-  return { anchor, body } as WalkthroughAnnotation;
+function callout(anchor: Callout["anchor"], body: string): Callout {
+  return { anchor, body } as Callout;
 }
 
 function comment(anchor: FoldedComment["anchor"], body: string): FoldedComment {
@@ -115,13 +112,13 @@ describe("captureCommentDrift", () => {
 });
 
 describe("screenshotPins", () => {
-  test("keeps only pins that carry a rect, numbering annotations and comments separately", () => {
-    const annotations = [
-      annotation(
+  test("keeps only pins that carry a rect, numbering callouts and comments separately", () => {
+    const callouts = [
+      callout(
         regionAnchor("cap_1", [0.1, 0.1, 0.2, 0.2]),
-        "annotation with a rect"
+        "callout with a rect"
       ),
-      annotation(regionAnchor("cap_1"), "whole annotation"),
+      callout(regionAnchor("cap_1"), "whole callout"),
     ];
     const comments = [
       comment(
@@ -130,11 +127,11 @@ describe("screenshotPins", () => {
       ),
     ];
 
-    const regions = screenshotPins(annotations, comments, capture("cap_1"));
+    const regions = screenshotPins(callouts, comments, capture("cap_1"));
 
     expect(regions).toEqual([
       {
-        body: "annotation with a rect",
+        body: "callout with a rect",
         label: "A1",
         rect: [0.1, 0.1, 0.2, 0.2],
       },
@@ -146,7 +143,7 @@ describe("screenshotPins", () => {
     ]);
   });
 
-  test("filters comments to the given capture, trusting annotations are already scoped to it by annotationsFor", () => {
+  test("filters comments to the given capture, trusting callouts are already scoped to it by calloutsFor", () => {
     const comments = [
       comment(
         regionAnchor("cap_other", [0.5, 0.5, 0.1, 0.1]),
@@ -162,17 +159,17 @@ describe("screenshotPins", () => {
 
 describe("recordingPins", () => {
   test("keeps only pins that carry an offset", () => {
-    const annotations = [
-      annotation(timestampAnchor("cap_1", 1000, 2000), "seek annotation"),
+    const callouts = [
+      callout(timestampAnchor("cap_1", 1000, 2000), "seek callout"),
     ];
     const comments = [comment(timestampAnchor("cap_1"), "whole comment")];
 
-    const times = recordingPins(annotations, comments, capture("cap_1"));
+    const times = recordingPins(callouts, comments, capture("cap_1"));
 
     expect(times).toEqual([
       {
         atMs: 1000,
-        body: "seek annotation",
+        body: "seek callout",
         label: "A1",
         toMs: 2000,
       },
@@ -182,15 +179,15 @@ describe("recordingPins", () => {
 
 describe("captureCallouts", () => {
   test("carries the body of every screenshot pin, placed or not, under its overlay label", () => {
-    const annotations = [
-      annotation(regionAnchor("cap_1", [0.1, 0.1, 0.2, 0.2]), "placed"),
-      annotation(regionAnchor("cap_1"), "unplaced"),
+    const callouts = [
+      callout(regionAnchor("cap_1", [0.1, 0.1, 0.2, 0.2]), "placed"),
+      callout(regionAnchor("cap_1"), "unplaced"),
     ];
     const comments = [comment(regionAnchor("cap_1"), "a reviewer's note")];
 
-    const callouts = captureCallouts(annotations, comments, capture("cap_1"));
+    const labeled = captureCallouts(callouts, comments, capture("cap_1"));
 
-    expect(callouts).toEqual([
+    expect(labeled).toEqual([
       { body: "placed", label: "A1" },
       { body: "unplaced", label: "A2" },
       { body: "a reviewer's note", label: "C1" },
@@ -198,38 +195,36 @@ describe("captureCallouts", () => {
   });
 
   test("reads a recording's pins through the timestamp arm", () => {
-    const annotations = [
-      annotation(timestampAnchor("cap_1", 1000), "at one second"),
-    ];
+    const callouts = [callout(timestampAnchor("cap_1", 1000), "at one second")];
 
-    const callouts = captureCallouts(
-      annotations,
+    const labeled = captureCallouts(
+      callouts,
       [],
       capture("cap_1", "recording")
     );
 
-    expect(callouts).toEqual([{ body: "at one second", label: "A1" }]);
+    expect(labeled).toEqual([{ body: "at one second", label: "A1" }]);
   });
 });
 
-describe("annotationsFor", () => {
-  test("keeps only the annotations whose capture-arm anchor targets the given capture", () => {
+describe("calloutsFor", () => {
+  test("keeps only the callouts whose capture-arm anchor targets the given capture", () => {
     const section = section_({
-      annotations: [
-        annotation(regionAnchor("cap_1"), "on cap_1"),
-        annotation(regionAnchor("cap_2"), "on cap_2"),
-        annotation(changeAnchor, "not capture-anchored"),
+      callouts: [
+        callout(regionAnchor("cap_1"), "on cap_1"),
+        callout(regionAnchor("cap_2"), "on cap_2"),
+        callout(changeAnchor, "not capture-anchored"),
       ],
     });
 
-    const result = annotationsFor(section, "cap_1");
+    const result = calloutsFor(section, "cap_1");
 
     expect(result.map((entry) => entry.body)).toEqual(["on cap_1"]);
   });
 
-  test("an empty annotations list yields no matches", () => {
+  test("an empty callouts list yields no matches", () => {
     const section = section_({});
 
-    expect(annotationsFor(section, "cap_1")).toEqual([]);
+    expect(calloutsFor(section, "cap_1")).toEqual([]);
   });
 });

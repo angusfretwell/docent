@@ -130,7 +130,7 @@ describe("docent walkthrough — end to end through git + fs", () => {
     expect(entry?.sections.at(0)?.ranges).toHaveLength(2);
   });
 
-  test("a product tour takes capture ids and annotations on a section", async () => {
+  test("a product tour takes capture ids and callouts on a section", async () => {
     const repo = featureRepo();
     await run(
       walkthrough(repo, [
@@ -152,7 +152,7 @@ describe("docent walkthrough — end to end through git + fs", () => {
         "Uploading",
         "--capture",
         "cap_a,cap_b",
-        "--annotation",
+        "--callout",
         JSON.stringify({
           anchor: {
             capture: "cap_a",
@@ -172,7 +172,7 @@ describe("docent walkthrough — end to end through git + fs", () => {
       "cap_a",
       "cap_b",
     ]);
-    expect(section?.annotations?.at(0)?.anchor.kind).toBe("screenshot-region");
+    expect(section?.callouts?.at(0)?.anchor.kind).toBe("screenshot-region");
   });
 
   test("an unknown subcommand fails, never a stray write", async () => {

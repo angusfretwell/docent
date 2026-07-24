@@ -63,7 +63,7 @@ export function requireText(
     : Effect.succeed(trimmed);
 }
 
-/** Empty segments drop, so a bare `--x ""` means "no values" rather than one blank one. Not applied to `--annotation`: its values are JSON, which embeds commas. */
+/** Empty segments drop, so a bare `--x ""` means "no values" rather than one blank one. Not applied to `--callout`: its values are JSON, which embeds commas. */
 export function commaSeparated(
   flag: Flag.Flag<string>
 ): Flag.Flag<readonly string[]> {

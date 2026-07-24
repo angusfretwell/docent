@@ -1,4 +1,4 @@
-import type { Callout } from "@client/features/walkthrough/callouts";
+import type { LabeledCallout } from "@client/features/walkthrough/callouts";
 import { ANCHOR_KIND } from "@shared/enums/anchor-kind";
 import type { DriftState } from "@shared/enums/drift-state";
 import type { FoldedComment } from "@shared/lib/comment";
@@ -6,7 +6,7 @@ import { identityDrift } from "@shared/lib/identity-drift";
 import type { Anchor } from "@shared/schemas/comment";
 import type {
   Capture,
-  WalkthroughAnnotation,
+  Callout,
   WalkthroughSection,
 } from "@shared/schemas/walkthrough";
 
@@ -62,22 +62,22 @@ export function captureCommentDrift(
   return id === undefined ? undefined : identityDrift(placedCaptureIds.has(id));
 }
 
-/** Annotations targeting the capture (numbered `A1…`) then its Comments (`F1…`). */
+/** Callouts targeting the capture (numbered `A1…`) then its Comments (`F1…`). */
 function rawPins(
-  annotations: readonly WalkthroughAnnotation[],
+  callouts: readonly Callout[],
   comments: readonly FoldedComment[],
   captureId: string,
   kind: "screenshot-region" | "recording-timestamp"
 ): RawPin[] {
   const pins: RawPin[] = [];
-  let annotationCount = 0;
-  for (const annotation of annotations) {
-    if (annotation.anchor.kind === kind) {
-      annotationCount += 1;
+  let calloutCount = 0;
+  for (const callout of callouts) {
+    if (callout.anchor.kind === kind) {
+      calloutCount += 1;
       pins.push({
-        anchor: annotation.anchor,
-        body: annotation.body,
-        label: `A${annotationCount}`,
+        anchor: callout.anchor,
+        body: callout.body,
+        label: `A${calloutCount}`,
       });
     }
   }
@@ -103,14 +103,14 @@ function captureArm(capture: Capture) {
 }
 
 export function screenshotPins(
-  annotations: readonly WalkthroughAnnotation[],
+  callouts: readonly Callout[],
   comments: readonly FoldedComment[],
   capture: Capture
 ): RegionPin[] {
   const regions: RegionPin[] = [];
 
   for (const pin of rawPins(
-    annotations,
+    callouts,
     comments,
     capture.id,
     ANCHOR_KIND.screenshotRegion
@@ -129,14 +129,14 @@ export function screenshotPins(
 }
 
 export function recordingPins(
-  annotations: readonly WalkthroughAnnotation[],
+  callouts: readonly Callout[],
   comments: readonly FoldedComment[],
   capture: Capture
 ): TimePin[] {
   const times: TimePin[] = [];
 
   for (const pin of rawPins(
-    annotations,
+    callouts,
     comments,
     capture.id,
     ANCHOR_KIND.recordingTimestamp
@@ -160,24 +160,24 @@ export function recordingPins(
  * overlays — including the pins no coordinate placed, which have no overlay.
  */
 export function captureCallouts(
-  annotations: readonly WalkthroughAnnotation[],
+  callouts: readonly Callout[],
   comments: readonly FoldedComment[],
   capture: Capture
-): Callout[] {
-  return rawPins(annotations, comments, capture.id, captureArm(capture)).map(
+): LabeledCallout[] {
+  return rawPins(callouts, comments, capture.id, captureArm(capture)).map(
     ({ body, label }) => ({ body, label })
   );
 }
 
 /**
- * A non-capture arm never matches a capture id here; `foldSectionAnnotations`
+ * A non-capture arm never matches a capture id here; `foldSectionCallouts`
  * surfaces those as section notes so none is dropped.
  */
-export function annotationsFor(
+export function calloutsFor(
   section: WalkthroughSection,
   captureId: string
-): WalkthroughAnnotation[] {
-  return (section.annotations ?? []).filter(
-    (annotation) => captureAnchorId(annotation.anchor) === captureId
+): Callout[] {
+  return (section.callouts ?? []).filter(
+    (callout) => captureAnchorId(callout.anchor) === captureId
   );
 }

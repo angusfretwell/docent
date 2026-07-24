@@ -8,17 +8,14 @@ import {
   Walkthrough,
   WalkthroughSection,
 } from "../schemas/walkthrough";
-import type {
-  WalkthroughAnnotation,
-  WalkthroughRange,
-} from "../schemas/walkthrough";
+import type { Callout, WalkthroughRange } from "../schemas/walkthrough";
 import {
   captureById,
-  foldSectionAnnotations,
+  foldSectionCallouts,
   rangeAnchor,
   rollupDrift,
   walkthroughStaleness,
-} from "./walkthrough-annotations";
+} from "./walkthrough-callouts";
 
 const decodeManifest = Schema.decodeUnknownSync(Walkthrough);
 const decodeSection = Schema.decodeUnknownSync(WalkthroughSection);
@@ -161,9 +158,10 @@ describe("schema — code and product arms", () => {
     expect(section.ranges?.at(0)?.file).toBe("src/index.ts");
   });
 
-  test("a product section decodes captures and annotations", () => {
+  test("a product section decodes captures and callouts", () => {
     const section = decodeSection({
-      annotations: [
+      body: "Drag a file {{capture:0}}.",
+      callouts: [
         {
           anchor: {
             capture: "cap_a",
@@ -173,7 +171,6 @@ describe("schema — code and product arms", () => {
           body: "The upload control.",
         },
       ],
-      body: "Drag a file {{capture:0}}.",
       captures: ["cap_a", "cap_b"],
       id: "sec_2",
       schema: "docent/walkthrough-section",
@@ -183,7 +180,7 @@ describe("schema — code and product arms", () => {
       "cap_a",
       "cap_b",
     ]);
-    expect(section.annotations?.at(0)?.anchor.kind).toBe("screenshot-region");
+    expect(section.callouts?.at(0)?.anchor.kind).toBe("screenshot-region");
   });
 
   test("a capture with a bad kind fails to decode", () => {
@@ -273,9 +270,10 @@ describe("Walkthrough product manifest", () => {
 });
 
 describe("WalkthroughSection product frontmatter", () => {
-  test("decodes captures ids and annotations with capture anchors", () => {
+  test("decodes captures ids and callouts with capture anchors", () => {
     const section = decodeSection({
-      annotations: [
+      body: "Drag a file {{capture:0}}.",
+      callouts: [
         {
           anchor: {
             capture: "cap_a",
@@ -294,7 +292,6 @@ describe("WalkthroughSection product frontmatter", () => {
           body: "Validation fires.",
         },
       ],
-      body: "Drag a file {{capture:0}}.",
       captures: ["cap_a", "cap_b"],
       id: "sec_1",
       schema: "docent/walkthrough-section",
@@ -304,26 +301,26 @@ describe("WalkthroughSection product frontmatter", () => {
       "cap_a",
       "cap_b",
     ]);
-    expect(section.annotations?.length).toBe(2);
-    expect(section.annotations?.[0]?.anchor.kind).toBe("screenshot-region");
-    expect(section.annotations?.[1]?.anchor.kind).toBe("recording-timestamp");
+    expect(section.callouts?.length).toBe(2);
+    expect(section.callouts?.[0]?.anchor.kind).toBe("screenshot-region");
+    expect(section.callouts?.[1]?.anchor.kind).toBe("recording-timestamp");
   });
 
-  test("decodes a whole-capture annotation with the coordinate omitted", () => {
+  test("decodes a whole-capture callout with the coordinate omitted", () => {
     const section = decodeSection({
-      annotations: [
+      body: "Overview.",
+      callouts: [
         {
           anchor: { capture: "cap_a", kind: "screenshot-region" },
           body: "This whole screen.",
         },
       ],
-      body: "Overview.",
       captures: ["cap_a"],
       id: "sec_2",
       schema: "docent/walkthrough-section",
       title: "Overview",
     });
-    const anchor = section.annotations?.[0]?.anchor;
+    const anchor = section.callouts?.[0]?.anchor;
     expect(anchor?.kind).toBe("screenshot-region");
     expect(
       anchor?.kind === "screenshot-region" ? anchor.rect : "x"
@@ -331,24 +328,22 @@ describe("WalkthroughSection product frontmatter", () => {
   });
 });
 
-describe("foldSectionAnnotations", () => {
-  function annotationsOf(
-    annotations: readonly unknown[]
-  ): readonly WalkthroughAnnotation[] {
+describe("foldSectionCallouts", () => {
+  function calloutsOf(callouts: readonly unknown[]): readonly Callout[] {
     return (
       decodeSection({
-        annotations,
         body: "Body.",
+        callouts,
         id: "sec_x",
         schema: "docent/walkthrough-section",
         title: "Section",
-      }).annotations ?? []
+      }).callouts ?? []
     );
   }
 
-  test("skips capture-arm annotations — they pin to their capture", () => {
-    const folded = foldSectionAnnotations(
-      annotationsOf([
+  test("skips capture-arm callouts — they pin to their capture", () => {
+    const folded = foldSectionCallouts(
+      calloutsOf([
         { anchor: { capture: "cap_a", kind: "screenshot-region" }, body: "A" },
         {
           anchor: { capture: "cap_b", kind: "recording-timestamp" },
@@ -361,9 +356,9 @@ describe("foldSectionAnnotations", () => {
     expect(folded.quotes).toEqual([]);
   });
 
-  test("surfaces a file-anchored annotation as a note located by its file", () => {
-    const folded = foldSectionAnnotations(
-      annotationsOf([
+  test("surfaces a file-anchored callout as a note located by its file", () => {
+    const folded = foldSectionCallouts(
+      calloutsOf([
         {
           anchor: {
             blobSha: "sha",
@@ -384,9 +379,9 @@ describe("foldSectionAnnotations", () => {
     ]);
   });
 
-  test("locates line, change, and walkthrough-section annotation notes", () => {
-    const folded = foldSectionAnnotations(
-      annotationsOf([
+  test("locates line, change, and walkthrough-section callout notes", () => {
+    const folded = foldSectionCallouts(
+      calloutsOf([
         {
           anchor: {
             blobSha: "sha",
@@ -416,9 +411,9 @@ describe("foldSectionAnnotations", () => {
     ]);
   });
 
-  test("a text-span annotation both notes and highlights its quote", () => {
-    const folded = foldSectionAnnotations(
-      annotationsOf([
+  test("a text-span callout both notes and highlights its quote", () => {
+    const folded = foldSectionCallouts(
+      calloutsOf([
         {
           anchor: { kind: "text-span", quote: "on blur", section: "sec_x" },
           body: "Validation fires.",
@@ -432,9 +427,9 @@ describe("foldSectionAnnotations", () => {
     expect(folded.quotes).toEqual(["on blur"]);
   });
 
-  test("mixes arms without dropping any non-capture annotation", () => {
-    const folded = foldSectionAnnotations(
-      annotationsOf([
+  test("mixes arms without dropping any non-capture callout", () => {
+    const folded = foldSectionCallouts(
+      calloutsOf([
         {
           anchor: {
             capture: "cap_a",

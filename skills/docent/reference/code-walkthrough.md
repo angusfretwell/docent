@@ -53,7 +53,7 @@ EOF
 - `--title` names the **section** (required).
 - **Body** — `--body <text>`, or omit it and pipe stdin (heredoc) for multi-line prose.
 - **Literate interleave** — place `{{range:i}}` markers to narrate _between_ ranges; `i` is the range's position in the `--range` list, in the order passed. No markers ⇒ ranges render in order after the prose.
-- `--capture` / `--annotation` are the product arms; on a code walkthrough they are refused.
+- `--capture` / `--callout` are the product arms; on a code walkthrough they are refused.
 
 ## 5. Confirm it renders
 

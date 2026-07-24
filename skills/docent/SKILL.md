@@ -106,7 +106,7 @@ If the code pillar is live, skip it.
 If the product pillar is missing or stale, run the two product halves **in order** — capture first (it mints the shell), then author into it:
 
 1. **[reference/capture.md](reference/capture.md)** — re-drive capture **wholesale**: drive the served app fresh and mint a new product `wlk_*/` shell with its `captures[]` populated and `sections` empty. Individual prior captures are not reused, but content-addressing dedups byte-identical screens for free — an unchanged screen hashes to the same blob, so re-capturing costs nothing on disk. Capture consumes the app the preflight (§1) already reached, and runs AFK against the `.docent/capture.md` the preflight recorded.
-2. **[reference/product-walkthrough.md](reference/product-walkthrough.md)** — the editorial half. It reads the captures-only shell just minted, drops the sections (prose, `{{capture:i}}` interleave, pinned annotations), then sets the shell's title. It touches no browser.
+2. **[reference/product-walkthrough.md](reference/product-walkthrough.md)** — the editorial half. It reads the captures-only shell just minted, drops the sections (prose, `{{capture:i}}` interleave, pinned callouts), then sets the shell's title. It touches no browser.
 
 The result is one fresh immutable product `wlk_` for the head. If the product pillar is live, skip both — capture is expensive and deliberately separable.
 

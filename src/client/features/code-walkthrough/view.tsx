@@ -18,7 +18,7 @@ import { basename } from "@client/lib/utils";
 import { diffQueryOptions } from "@client/queries/diff";
 import { reviewQueryOptions } from "@client/queries/review";
 import { latestCodeWalkthrough } from "@shared/lib/identity-drift";
-import { walkthroughStaleness } from "@shared/lib/walkthrough-annotations";
+import { walkthroughStaleness } from "@shared/lib/walkthrough-callouts";
 import type { WalkthroughId } from "@shared/schemas/ids";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Code2, FileCode, GitCompare } from "lucide-react";

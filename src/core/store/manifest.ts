@@ -35,7 +35,7 @@ export interface SectionArms {
   hasProduct: boolean;
 }
 
-/** `ranges` is the code arm; `captures`/`annotations` the product arm. `undefined` when the arms match the kind. */
+/** `ranges` is the code arm; `captures`/`callouts` the product arm. `undefined` when the arms match the kind. */
 export function assertSectionArms(
   kind: Walkthrough["kind"],
   arms: SectionArms,
@@ -46,7 +46,7 @@ export function assertSectionArms(
   }
   if (kind === "code" && arms.hasProduct) {
     return new SectionArmMismatch({
-      arm: "--capture/--annotation",
+      arm: "--capture/--callout",
       id,
       kind,
     });

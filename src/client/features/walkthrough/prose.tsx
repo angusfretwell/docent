@@ -1,4 +1,4 @@
-import type { Callout } from "@client/features/walkthrough/callouts";
+import type { LabeledCallout } from "@client/features/walkthrough/callouts";
 import type { LabelTarget } from "@client/features/walkthrough/chips";
 import { sectionAnchorProps } from "@client/features/walkthrough/hooks/use-revealed-section";
 import type { WalkthroughStep } from "@client/features/walkthrough/lib/walkthrough";
@@ -19,9 +19,9 @@ import { WalkthroughCallouts } from "./callouts";
 import { ChipRow, TargetChip } from "./chips";
 import { WalkthroughComments } from "./comments";
 
-export type CalloutsForTarget = (key: string) => readonly Callout[];
+export type CalloutsForTarget = (key: string) => readonly LabeledCallout[];
 
-function noCallouts(): readonly Callout[] {
+function noCallouts(): readonly LabeledCallout[] {
   return [];
 }
 

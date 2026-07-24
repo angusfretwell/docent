@@ -1,15 +1,12 @@
 import type { FoldedComment } from "@shared/lib/comment";
 import type { WalkthroughId } from "@shared/schemas/ids";
-import type {
-  Capture,
-  WalkthroughAnnotation,
-} from "@shared/schemas/walkthrough";
+import type { Capture, Callout } from "@shared/schemas/walkthrough";
 
 import { RecordingCapture } from "./recording";
 import { ScreenshotCapture } from "./screenshot";
 
 export interface CaptureProps {
-  annotations: readonly WalkthroughAnnotation[];
+  callouts: readonly Callout[];
   capture: Capture;
   comments: readonly FoldedComment[];
   /**
