@@ -17,9 +17,11 @@ export function Header() {
     <div className="shrink-0 px-1.5 flex items-center gap-1.5 h-11">
       <Logo />
       <Navigation />
-      <ReviewMeta />
-      <Separator orientation="vertical" className="h-4" />
-      <FindingsToggle />
+      <div className="flex items-center gap-1.5 ml-auto">
+        <ReviewMeta />
+        <Separator orientation="vertical" className="h-4" />
+        <FindingsToggle />
+      </div>
     </div>
   );
 }

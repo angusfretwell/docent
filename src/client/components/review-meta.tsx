@@ -26,7 +26,7 @@ export function ReviewMeta() {
   }
 
   return (
-    <div className="flex items-center gap-1 ml-auto pr-1.5">
+    <div className="flex items-center gap-1 pr-1.5">
       {snapshot?.review.title && (
         <span className="text-[13px] truncate min-w-0">
           {snapshot?.review.title}
