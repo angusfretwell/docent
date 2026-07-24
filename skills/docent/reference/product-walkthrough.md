@@ -39,7 +39,7 @@ The spine is prose-primary: an ordered list of authored sections, each narration
 One `add-section` call per section, **in tour order** (the manifest array is the order):
 
 ```bash
-docent walkthrough add-section --walkthrough wlk_… \
+npx -y docent walkthrough add-section --walkthrough wlk_… \
   --title "Uploading a file" \
   --capture cap_a --capture cap_b \
   --callout '{"anchor":{"kind":"screenshot-region","capture":"cap_a","rect":[0.1,0.2,0.3,0.1]},"body":"The new upload control."}' \

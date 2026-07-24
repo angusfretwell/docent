@@ -7,7 +7,6 @@ import type { EntryOptions } from "../serve";
 import { serve } from "../serve";
 import { captureCommand } from "./capture";
 import { commentCommand } from "./comment";
-import { installCommand } from "./install";
 import { reviewCommand } from "./review";
 import { statusCommand } from "./status";
 import { WorkingDirectory } from "./usage";
@@ -25,9 +24,8 @@ class Reported extends Data.TaggedError("Reported") {
 /**
  * The re-fail is load-bearing: `process.exit` here would tear the process down
  * mid-fiber and skip every pending finalizer — the provided layers' scopes,
- * `install`'s scoped child process, `serve`'s recorded-address cleanup.
- * `runMain` instead unwinds them and lets `Runtime.defaultTeardown` pick the
- * exit code.
+ * `serve`'s recorded-address cleanup. `runMain` instead unwinds them and lets
+ * `Runtime.defaultTeardown` pick the exit code.
  *
  * A `ShowHelp` failure is re-raised untouched: the runner has already rendered
  * the help, and the error carries its own exit code through
@@ -77,7 +75,6 @@ function docentCli(entry: EntryOptions) {
       captureCommand,
       reviewCommand,
       validateCommand,
-      installCommand,
       statusCommand,
     ])
   );

@@ -17,12 +17,12 @@ Every subcommand prints machine-readable JSON on stdout. Errors go to stderr and
 Folds every Comment, applies the filter, and prints `{ "comments": [ … ] }` in reading order (code comments first, by file then line; then whole-change, walkthrough, capture, text, detached). Each folded comment carries `id`, `anchor`, `body`, `participants[]`, `replies[]`, and `status` — the whole thread, enough to act without a second read.
 
 ```bash
-docent comment list                              # the whole queue
-docent comment list --status open                # only comments someone owes work on
-docent comment list --status open,actioned       # everything unresolved (any-of: comma or repeat)
-docent comment list --status actioned            # handed back — awaiting verification
-docent comment list --anchor-file src/app.ts     # anchored on this file
-docent comment list --author claude-code         # this author participated
+npx -y docent comment list                              # the whole queue
+npx -y docent comment list --status open                # only comments someone owes work on
+npx -y docent comment list --status open,actioned       # everything unresolved (any-of: comma or repeat)
+npx -y docent comment list --status actioned            # handed back — awaiting verification
+npx -y docent comment list --anchor-file src/app.ts     # anchored on this file
+npx -y docent comment list --author claude-code         # this author participated
 ```
 
 Filters (all optional, AND-combined): `--status` (any-of), `--anchor-file` (the `line`/`file` code anchor is this path), `--author` (this author id participated).
@@ -42,11 +42,11 @@ Filters (all optional, AND-combined): `--status` (any-of), `--anchor-file` (the 
 Mints an anchored Comment, born **open**. Requires an anchor and a body.
 
 ```bash
-docent comment add --change --body "The error path is never tested."                 # whole-change note
-docent comment add --file src/app.ts --line 42:47 --body "This early-return leaks the lock."
-docent comment add --file src/app.ts --body "This module has no exports."            # whole file, default side head
-docent comment add --file src/app.ts --line 10 --side base --body "This was the safe version."
-docent comment add --change <<'EOF'                                                  # long body via stdin — omit --body
+npx -y docent comment add --change --body "The error path is never tested."                 # whole-change note
+npx -y docent comment add --file src/app.ts --line 42:47 --body "This early-return leaks the lock."
+npx -y docent comment add --file src/app.ts --body "This module has no exports."            # whole file, default side head
+npx -y docent comment add --file src/app.ts --line 10 --side base --body "This was the safe version."
+npx -y docent comment add --change <<'EOF'                                                  # long body via stdin — omit --body
 Multi-paragraph comment body…
 EOF
 ```
@@ -80,8 +80,8 @@ Appends an edit record that supersedes an earlier record's body at fold time —
 Every write records **who** did it; it never gates who may. By default the write is attributed to the git-config human. When you run these subcommands as an agent, pass `--agent <your-slug>` (optionally `--display`, `--model`) so the attribution reads true in the UI:
 
 ```bash
-docent comment add --change --body "…" --agent claude-code --model claude-fable-5
-docent comment action --comment cmt_… --agent claude-code
+npx -y docent comment add --change --body "…" --agent claude-code --model claude-fable-5
+npx -y docent comment action --comment cmt_… --agent claude-code
 ```
 
 ### Output shape
@@ -96,7 +96,7 @@ Pull Comments out of the Review and into your session so your own fixing process
 1. **Fetch the work — default to the open queue.** With no filter from the human, pull `--status open` — the fixer's inbox, where fresh Comments, plain comments, and "do it again" re-comments all fold. Reach past it with the filters above when the human deliberately wants another slice (verifying actioned Comments, reviewing resolved ones, one file's worklist).
 
    ```bash
-   docent comment list --status open
+   npx -y docent comment list --status open
    ```
 
 2. **Render each Comment faithfully.** Bring each into context whole — never summarize away the parts a fixing process needs:
@@ -118,12 +118,12 @@ Record what the session produced into the Review. The outcomes come from whateve
 
    | The session… | Record it as | CLI |
    | --- | --- | --- |
-   | Raised a new review concern | a **fresh Comment**, born open | `docent comment add` |
-   | Addressed a Comment pulled via `--read` | a **reply**, then a **hand-back** | `docent comment reply` + `docent comment action` |
-   | Looked at a claimed fix and found it wrong | a **reply** alone (leaves it open) | `docent comment reply` |
-   | Verified a fix that now holds | a **resolve** | `docent comment resolve` |
+   | Raised a new review concern | a **fresh Comment**, born open | `npx -y docent comment add` |
+   | Addressed a Comment pulled via `--read` | a **reply**, then a **hand-back** | `npx -y docent comment reply` + `npx -y docent comment action` |
+   | Looked at a claimed fix and found it wrong | a **reply** alone (leaves it open) | `npx -y docent comment reply` |
+   | Verified a fix that now holds | a **resolve** | `npx -y docent comment resolve` |
 
-   Then fetch the queue (`docent comment list --status open,actioned`) so a reply or resolve lands on the Comment it belongs to and you don't re-raise something already open. Work done against a Comment already in the queue is a **reply**; a genuinely new concern with no open Comment is a fresh **add**. When in doubt, match the concern's anchor against the queue.
+   Then fetch the queue (`npx -y docent comment list --status open,actioned`) so a reply or resolve lands on the Comment it belongs to and you don't re-raise something already open. Work done against a Comment already in the queue is a **reply**; a genuinely new concern with no open Comment is a fresh **add**. When in doubt, match the concern's anchor against the queue.
 
 2. **Fresh Comments — born open.** Anchor each as tightly as the concern allows — a line range beats a file, a file beats the whole change. One Comment per concern: a Comment is an anchored conversation; keep each to a single issue. Pass `--agent <your-slug>`.
 
@@ -133,4 +133,4 @@ Record what the session produced into the Review. The outcomes come from whateve
 
    **Fixer ≠ resolver, by prose.** One flow carries the full write vocabulary, so the discipline is yours: don't resolve a Comment this same turn handed back with `action`. A fix and the verification that closes it are different passes — leave it **actioned** for a later pass that genuinely re-checked the fix against head. Leave other actioned Comments alone unless the session genuinely verified, answered, or decided them.
 
-5. **Confirm.** Re-list the queue (`docent comment list --status open,actioned`) to confirm the outcomes landed: fresh Comments present, turns handed back, verified fixes closed.
+5. **Confirm.** Re-list the queue (`npx -y docent comment list --status open,actioned`) to confirm the outcomes landed: fresh Comments present, turns handed back, verified fixes closed.
