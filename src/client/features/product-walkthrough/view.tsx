@@ -93,6 +93,11 @@ export function ProductWalkthroughView() {
     pinTarget(key);
   }
 
+  function focusTarget(key: string) {
+    setPane("target");
+    pinTarget(key);
+  }
+
   if (walkthrough === undefined) {
     return (
       <Empty icon={<Pointer />}>
@@ -107,7 +112,7 @@ export function ProductWalkthroughView() {
   );
 
   return (
-    <PinHoverProvider onFocus={pinTarget}>
+    <PinHoverProvider onFocus={focusTarget}>
       <WalkthroughLayout
         id="product-walkthrough"
         onPaneChange={setPane}
