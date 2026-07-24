@@ -1,7 +1,20 @@
 import type { Author } from "@shared/schemas/finding";
-import { formatDistanceToNow } from "date-fns";
+import { differenceInMilliseconds, formatDistanceToNow } from "date-fns";
 import { Bot } from "lucide-react";
+import prettyMilliseconds from "pretty-ms";
 import Markdown from "react-markdown";
+
+function formatTimestamp(createdAt: string) {
+  const difference = differenceInMilliseconds(new Date(), new Date(createdAt));
+
+  if (difference < 1000) {
+    return "just now";
+  }
+
+  return prettyMilliseconds(difference, {
+    compact: true,
+  });
+}
 
 export function Comment({
   author,
@@ -14,14 +27,12 @@ export function Comment({
 }) {
   return (
     <div className="grid gap-2">
-      <p className="flex items-center gap-1 text-[13px] leading-none">
+      <p className="flex flex-wrap items-center gap-1 text-[13px] leading-none">
         {author?.kind === "agent" && <Bot className="size-3.5" />}{" "}
         {author && <span className="font-medium">{author.display}</span>}{" "}
         {createdAt && (
           <span className="text-muted-foreground">
-            {formatDistanceToNow(new Date(createdAt), {
-              addSuffix: true,
-            })}
+            {formatTimestamp(createdAt)}
           </span>
         )}
       </p>
