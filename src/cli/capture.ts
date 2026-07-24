@@ -1,0 +1,145 @@
+/**
+ * The `docent capture` command tree — the media half of the product walkthrough
+ * write path (walkthroughs.md §6). `add` content-addresses one media file into
+ * the tour's `captures/` directory (byte-identical media dedups to one blob)
+ * and appends its `captures[]` registry entry, through the shared
+ * `walkthrough-write.ts` implementation.
+ *
+ * This is the CLI half of `/capture-product-walkthrough`, which drives the
+ * browser to produce the media; the editorial half — placing captures on
+ * sections — is `./walkthrough`.
+ */
+
+import { captureKinds } from "@shared/enums/capture-kind";
+import { Effect, Option } from "effect";
+import { FileSystem } from "effect/FileSystem";
+import { Path } from "effect/Path";
+import { Command, Flag } from "effect/unstable/cli";
+
+import { addWalkthroughCapture } from "../core/walkthrough-write";
+import { resolveChangeScope } from "../core/write-context";
+import { parseDimensions, parseDurationMs } from "./specs";
+import {
+  attempt,
+  CliUsageError,
+  WorkingDirectory,
+  printJson,
+  requireText,
+} from "./usage";
+
+const add = Command.make(
+  "add",
+  {
+    dims: Flag.string("dims").pipe(
+      Flag.optional,
+      Flag.withDescription("A screenshot's full-page pixels, WxH")
+    ),
+    durationMs: Flag.string("duration-ms").pipe(
+      Flag.optional,
+      Flag.withDescription("A recording's length in milliseconds")
+    ),
+    kind: Flag.choice("kind", captureKinds).pipe(
+      Flag.withDescription("The media kind: screenshot or recording")
+    ),
+    media: Flag.string("media").pipe(
+      Flag.withDescription("Path to the media file, relative to the cwd")
+    ),
+    route: Flag.string("route").pipe(
+      Flag.withDescription("The app route the capture was taken on")
+    ),
+    title: Flag.string("title").pipe(
+      Flag.optional,
+      Flag.withDescription("A short name for the captured state")
+    ),
+    viewport: Flag.string("viewport").pipe(
+      Flag.withDescription("The browser viewport the capture was taken at, WxH")
+    ),
+    walkthrough: Flag.string("walkthrough").pipe(
+      Flag.withDescription("The product wlk_ id to register the capture on")
+    ),
+  },
+  (config) =>
+    Effect.gen(function* runCaptureAdd() {
+      const fs = yield* FileSystem;
+      const path = yield* Path;
+      const cwd = yield* WorkingDirectory;
+
+      const walkthroughId = yield* attempt(() =>
+        requireText("walkthrough", config.walkthrough)
+      );
+      const mediaPath = yield* attempt(() =>
+        requireText("media", config.media)
+      );
+      const route = yield* attempt(() => requireText("route", config.route));
+      const title = Option.getOrUndefined(config.title)?.trim();
+      const viewport = yield* attempt(() =>
+        parseDimensions("viewport", requireText("viewport", config.viewport))
+      );
+
+      // The metadata arms are kind-specific (walkthroughs.md §6): `dims`
+      // (full-page pixels) rides a screenshot, `durationMs` a recording. Refuse
+      // the mismatch rather than write a nonsensical registry entry.
+      const dimsFlag = Option.getOrUndefined(config.dims);
+      const durationFlag = Option.getOrUndefined(config.durationMs);
+      if (config.kind === "recording" && dimsFlag !== undefined) {
+        return yield* Effect.fail(
+          new CliUsageError({
+            reason:
+              "--dims is for screenshots; a recording takes --duration-ms",
+          })
+        );
+      }
+      if (config.kind === "screenshot" && durationFlag !== undefined) {
+        return yield* Effect.fail(
+          new CliUsageError({
+            reason:
+              "--duration-ms is for recordings; a screenshot takes --dims",
+          })
+        );
+      }
+      const dims =
+        dimsFlag === undefined
+          ? undefined
+          : yield* attempt(() => parseDimensions("dims", dimsFlag));
+      const durationMs =
+        durationFlag === undefined
+          ? undefined
+          : yield* attempt(() => parseDurationMs(durationFlag));
+
+      const media = yield* fs
+        .readFile(path.resolve(cwd, mediaPath))
+        .pipe(
+          Effect.mapError(
+            () =>
+              new CliUsageError({ reason: `cannot read --media: ${mediaPath}` })
+          )
+        );
+      const scope = yield* resolveChangeScope(cwd);
+
+      return yield* printJson(
+        yield* addWalkthroughCapture({
+          base: scope.base,
+          branch: scope.branch,
+          kind: config.kind,
+          media,
+          root: scope.root,
+          route,
+          viewport,
+          walkthroughId,
+          ...(title === undefined || title === "" ? {} : { title }),
+          ...(dims === undefined ? {} : { dims }),
+          ...(durationMs === undefined ? {} : { durationMs }),
+        })
+      );
+    })
+).pipe(
+  Command.withDescription(
+    "Content-address a media file and register it on a product tour"
+  )
+);
+
+/** The `docent capture` subcommand tree — the product tour's media registry. */
+export const captureCommand = Command.make("capture").pipe(
+  Command.withDescription("Register capture media on a product walkthrough"),
+  Command.withSubcommands([add])
+);

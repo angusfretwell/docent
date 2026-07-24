@@ -14,11 +14,12 @@
  */
 
 import { Console, Effect, Schema } from "effect";
+import { Argument, Command, Flag } from "effect/unstable/cli";
 import { ChildProcess } from "effect/unstable/process";
 
 import { resolveRepo } from "../core/git";
 import { ensureStateRootGitignore } from "../core/store/layout";
-import { attempt, CliUsageError } from "./args";
+import { attempt, CliUsageError, WorkingDirectory } from "./usage";
 
 /** The skills.sh source the CLI installs from: this repo's shipped skills. */
 const SKILLS_SOURCE = "angusfretwell/docent";
@@ -39,33 +40,37 @@ export class SkillsInstallFailed extends Schema.TaggedErrorClass<SkillsInstallFa
 }
 
 /**
- * Parse `install [--project|--global]` argv into a scope, or `undefined` when
- * neither flag is given (the prompt then decides). `--project` and `--global`
- * are mutually exclusive; any positional or other flag is a usage error.
+ * The scope the flags name, or `undefined` when neither is given (the prompt
+ * then decides). `--project` and `--global` are mutually exclusive.
  */
-export function parseInstallArgs(
-  argv: readonly string[]
-): InstallScope | undefined {
-  let scope: InstallScope | undefined;
-  for (const token of argv) {
-    if (token === "--project" || token === "--global") {
-      const next: InstallScope = token === "--project" ? "project" : "global";
-      if (scope !== undefined && scope !== next) {
-        throw new CliUsageError({
-          reason: "--project and --global are mutually exclusive",
-        });
-      }
-      scope = next;
-      continue;
-    }
-    if (token.startsWith("--")) {
-      throw new CliUsageError({ reason: `unknown flag: ${token}` });
-    }
+export function flagScope(flags: {
+  global: boolean;
+  project: boolean;
+}): InstallScope | undefined {
+  if (flags.global && flags.project) {
     throw new CliUsageError({
-      reason: `install takes no positional arguments (got ${token})`,
+      reason: "--project and --global are mutually exclusive",
     });
   }
-  return scope;
+  if (flags.global) {
+    return "global";
+  }
+  return flags.project ? "project" : undefined;
+}
+
+/**
+ * Refuse any positional argument. Install's one question is a scope, never a
+ * path — and the parser silently drops arguments no parameter claims, so a
+ * stray one would otherwise start a real skill install the caller did not ask
+ * for.
+ */
+export function refusePositionals(args: readonly string[]): void {
+  const stray = args.at(0);
+  if (stray !== undefined) {
+    throw new CliUsageError({
+      reason: `install takes no positional arguments (got ${stray})`,
+    });
+  }
 }
 
 /**
@@ -115,38 +120,56 @@ const runSkills = Effect.fn("runSkills")(function* runSkills(
   }
 }, Effect.scoped);
 
-/**
- * Run one `docent install` invocation: explain, resolve the scope (flag or
- * prompt), install the skills, seed the commit policy, and print next steps.
- */
-export const runInstall = Effect.fn("runInstall")(function* runInstall(
-  cwd: string,
-  argv: readonly string[]
-) {
-  const flagScope = yield* attempt(() => parseInstallArgs(argv));
-  const root = yield* resolveRepo(cwd).pipe(
-    Effect.map((repo) => repo.root),
-    Effect.orElseSucceed(() => cwd)
-  );
+/** The `docent install` subcommand — install docent's agent skills. */
+export const installCommand = Command.make(
+  "install",
+  {
+    args: Argument.string("arg").pipe(
+      Argument.variadic(),
+      Argument.withDescription(
+        "Not accepted — install's only choice is a scope flag"
+      )
+    ),
+    global: Flag.boolean("global").pipe(
+      Flag.withDescription("Install for every repo on this machine")
+    ),
+    project: Flag.boolean("project").pipe(
+      Flag.withDescription("Install for this repo only (the default)")
+    ),
+  },
+  (config) =>
+    Effect.gen(function* runInstall() {
+      const cwd = yield* WorkingDirectory;
+      yield* attempt(() => refusePositionals(config.args));
+      const named = yield* attempt(() => flagScope(config));
+      const root = yield* resolveRepo(cwd).pipe(
+        Effect.map((repo) => repo.root),
+        Effect.orElseSucceed(() => cwd)
+      );
 
-  yield* Console.log(
-    "docent install — installing docent's agent skills for your coding agent."
-  );
+      yield* Console.log(
+        "docent install — installing docent's agent skills for your coding agent."
+      );
 
-  const scope = flagScope ?? (yield* promptScope);
+      const scope = named ?? (yield* promptScope);
 
-  yield* Console.log(
-    scope === "global"
-      ? "→ user scope: all repos on this machine."
-      : "→ project scope: this repo."
-  );
-  yield* runSkills(root, scope);
+      yield* Console.log(
+        scope === "global"
+          ? "→ user scope: all repos on this machine."
+          : "→ project scope: this repo."
+      );
+      yield* runSkills(root, scope);
 
-  yield* ensureStateRootGitignore(root);
+      yield* ensureStateRootGitignore(root);
 
-  yield* Console.log("");
-  yield* Console.log(
-    "Done. Run `/docent` in your agent session to generate a walkthrough."
-  );
-  yield* Console.log("Re-run `docent install` any time to update the skills.");
-});
+      yield* Console.log("");
+      yield* Console.log(
+        "Done. Run `/docent` in your agent session to generate a walkthrough."
+      );
+      yield* Console.log(
+        "Re-run `docent install` any time to update the skills."
+      );
+    })
+).pipe(
+  Command.withDescription("Install docent's agent skills for your coding agent")
+);

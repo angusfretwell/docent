@@ -13,9 +13,10 @@
 
 import { Console, Effect, Schema } from "effect";
 import { Path } from "effect/Path";
+import { Argument, Command } from "effect/unstable/cli";
 
 import { resolveStateRoot, validateStateRoot } from "../core/validate";
-import { attempt, CliUsageError } from "./args";
+import { attempt, CliUsageError, WorkingDirectory } from "./usage";
 
 /**
  * The report found invalid records. A typed failure so the shared crash tail
@@ -36,58 +37,56 @@ export class ValidationFailed extends Schema.TaggedErrorClass<ValidationFailed>(
 }
 
 /**
- * Parse `validate [path]` argv: an optional target path, no flags. The finding
- * and walkthrough subcommands are all-flags, but validate's one argument is a
- * path — so it takes a lone positional and rejects both flags and a second one.
+ * The lone target path, or `undefined` for the current directory. Declared
+ * variadic rather than optional because a second positional is a usage error
+ * here, and the parser silently drops arguments no parameter claims.
  */
-export function parseValidateArgs(argv: readonly string[]): string | undefined {
-  const positionals: string[] = [];
-  for (const token of argv) {
-    if (token.startsWith("--")) {
-      throw new CliUsageError({ reason: `unknown flag: ${token}` });
-    }
-    positionals.push(token);
-  }
-
-  if (positionals.length > 1) {
+export function onlyPath(paths: readonly string[]): string | undefined {
+  if (paths.length > 1) {
     throw new CliUsageError({
-      reason: `validate takes at most one path (got ${positionals.length})`,
+      reason: `validate takes at most one path (got ${paths.length})`,
     });
   }
-  return positionals[0];
+  return paths[0];
 }
 
-/**
- * Run one `docent validate [path]` invocation: resolve the state root, validate
- * every record, print the failures, and fail (exit non-zero) when any record was
- * invalid. A clean tree prints an `ok` line and exits zero.
- */
-export const runValidate = Effect.fn("runValidate")(function* runValidate(
-  cwd: string,
-  argv: readonly string[]
-) {
-  const target = yield* attempt(() => parseValidateArgs(argv));
-  const path = yield* Path;
-  const base = target === undefined ? cwd : path.resolve(cwd, target);
+/** The `docent validate [path]` subcommand — the non-gating schema oracle. */
+export const validateCommand = Command.make(
+  "validate",
+  {
+    paths: Argument.string("path").pipe(
+      Argument.variadic(),
+      Argument.withDescription("The tree to validate (default: this directory)")
+    ),
+  },
+  (config) =>
+    Effect.gen(function* runValidate() {
+      const cwd = yield* WorkingDirectory;
+      const path = yield* Path;
+      const target = yield* attempt(() => onlyPath(config.paths));
+      const base = target === undefined ? cwd : path.resolve(cwd, target);
 
-  const stateRoot = yield* resolveStateRoot(base);
-  const report = yield* validateStateRoot(stateRoot);
+      const stateRoot = yield* resolveStateRoot(base);
+      const report = yield* validateStateRoot(stateRoot);
 
-  for (const problem of report.problems) {
-    yield* Console.log(`${problem.file}: ${problem.message}`);
-  }
+      for (const problem of report.problems) {
+        yield* Console.log(`${problem.file}: ${problem.message}`);
+      }
 
-  if (report.problems.length > 0) {
-    return yield* Effect.fail(
-      new ValidationFailed({
-        checked: report.checked,
-        invalid: report.problems.length,
-        stateRoot: report.stateRoot,
-      })
-    );
-  }
+      if (report.problems.length > 0) {
+        return yield* Effect.fail(
+          new ValidationFailed({
+            checked: report.checked,
+            invalid: report.problems.length,
+            stateRoot: report.stateRoot,
+          })
+        );
+      }
 
-  yield* Console.log(
-    `ok — ${report.checked} record(s) valid in ${report.stateRoot}`
-  );
-});
+      yield* Console.log(
+        `ok — ${report.checked} record(s) valid in ${report.stateRoot}`
+      );
+    })
+).pipe(
+  Command.withDescription("Decode every record in a .docent/ tree and report")
+);

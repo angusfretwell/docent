@@ -18,7 +18,7 @@ import {
   HttpServerResponse,
 } from "effect/unstable/http";
 
-import { resolveChangeRefs, resolveRepo } from "../core/git";
+import { resolveRepo } from "../core/git";
 
 // The method/path types `HttpRouter.add` itself accepts — derived so this
 // seam can never drift from the router it wraps.
@@ -161,26 +161,12 @@ export const readScope = Effect.fn("readScope")(function* readScope(
  * The fuller write scope a Change-scoped write keys on: the same identity
  * `readScope` resolves, plus the `(baseSha, headSha)` refs the live head's
  * Change mints against (data-model.md §4). `findings` assembles
- * `writeFindingRecord`'s context by spreading this — the same shape rebuilt off
- * `resolveChangeRefs` inline before.
+ * `writeFindingRecord`'s context by spreading this. Re-exported under the
+ * route-facing name; the CLI's write subcommands resolve the identical scope.
+ *
+ * @see core/write-context.ts
  */
-export const readChangeScope = Effect.fn("readChangeScope")(
-  function* readChangeScope(cwd: string) {
-    const { baseSha, branch, defaultBranch, headSha, root } =
-      yield* resolveChangeRefs(cwd);
-    return {
-      base: defaultBranch.name,
-      branch,
-      refs: {
-        baseRef: defaultBranch.name,
-        baseSha,
-        headRef: branch,
-        headSha,
-      },
-      root,
-    };
-  }
-);
+export { resolveChangeScope as readChangeScope } from "../core/write-context";
 
 // Base for parsing a request's relative URL; only the path/query is read from
 // it (pending, worktree).

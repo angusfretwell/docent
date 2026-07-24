@@ -18,6 +18,7 @@ import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 import { max } from "radashi";
 
+import { resolveChangeRefs } from "./git";
 import { ensureReview } from "./review";
 import { listDir, readRecord, writeJsonRecord } from "./store/io";
 import { reviewDirPath } from "./store/layout";
@@ -37,6 +38,33 @@ export interface ChangeRefs {
   baseRef: string;
   headRef: string;
 }
+
+/**
+ * The scope a Change-scoped write keys on, resolved from local git: the repo
+ * root, the checked-out branch, the default branch it is reviewed against, and
+ * the `(baseSha, headSha)` refs the live head's Change mints under
+ * (data-model.md §4). Both write surfaces resolve it — the `/api/*` routes
+ * before decoding a request body, the CLI subcommands before assembling a
+ * record from flags — and hand it straight to `writeFindingRecord` /
+ * `writeWalkthrough`.
+ */
+export const resolveChangeScope = Effect.fn("resolveChangeScope")(
+  function* resolveChangeScope(cwd: string) {
+    const { baseSha, branch, defaultBranch, headSha, root } =
+      yield* resolveChangeRefs(cwd);
+    return {
+      base: defaultBranch.name,
+      branch,
+      refs: {
+        baseRef: defaultBranch.name,
+        baseSha,
+        headRef: branch,
+        headSha,
+      },
+      root,
+    };
+  }
+);
 
 /** The write's timestamp, an ISO-8601 string from the wall clock. */
 export const now = Clock.currentTimeMillis.pipe(

@@ -2,10 +2,13 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
-import { cleanupScratchDirs, scratchDir } from "../test-support/fixtures";
-import { makeTestRuntime } from "../test-support/runtime";
-import { CliUsageError } from "./args";
-import { parseValidateArgs, runValidate } from "./validate";
+import { cleanupScratchDirs, scratchDir } from "@test-support/fixtures";
+import { makeTestRuntime } from "@test-support/runtime";
+import { Effect } from "effect";
+import { Command } from "effect/unstable/cli";
+
+import { WorkingDirectory } from "./usage";
+import { onlyPath, validateCommand } from "./validate";
 
 const runtime = makeTestRuntime();
 
@@ -13,6 +16,13 @@ afterAll(async () => {
   await runtime.dispose();
   cleanupScratchDirs();
 });
+
+/** Run `docent validate <argv>` the way the binary does, against `cwd`. */
+function validate(cwd: string, argv: readonly string[]) {
+  return Command.runWith(validateCommand, { version: "test" })(argv).pipe(
+    Effect.provideService(WorkingDirectory, cwd)
+  );
+}
 
 /** Write `<root>/.docent/reviews/feature/review.json` with `body`. */
 function seedReview(root: string, body: string): void {
@@ -29,30 +39,31 @@ const VALID_REVIEW = JSON.stringify({
   title: "A feature",
 });
 
-describe("parseValidateArgs", () => {
-  test("returns the lone positional path", () => {
-    expect(parseValidateArgs(["./fixtures/docent"])).toBe("./fixtures/docent");
-  });
-
+describe("onlyPath", () => {
   test("no argument means the current directory (undefined)", () => {
-    expect(parseValidateArgs([])).toBeUndefined();
+    expect(onlyPath([])).toBeUndefined();
   });
 
-  test("rejects a flag", () => {
-    expect(() => parseValidateArgs(["--json"])).toThrow(CliUsageError);
-  });
-
-  test("rejects a second positional", () => {
-    expect(() => parseValidateArgs(["a", "b"])).toThrow(CliUsageError);
+  test("a second path is a usage error", () => {
+    expect(() => onlyPath(["a", "b"])).toThrow();
   });
 });
 
-describe("runValidate", () => {
+describe("docent validate", () => {
   test("exits zero on a well-formed tree", async () => {
     const root = scratchDir("docent-validate-cli-");
     seedReview(root, VALID_REVIEW);
 
-    const exit = await runtime.runPromiseExit(runValidate(root, []));
+    const exit = await runtime.runPromiseExit(validate(root, []));
+
+    expect(exit._tag).toBe("Success");
+  });
+
+  test("validates the tree named by the lone positional", async () => {
+    const root = scratchDir("docent-validate-cli-");
+    seedReview(root, VALID_REVIEW);
+
+    const exit = await runtime.runPromiseExit(validate(root, ["."]));
 
     expect(exit._tag).toBe("Success");
   });
@@ -61,7 +72,7 @@ describe("runValidate", () => {
     const root = scratchDir("docent-validate-cli-");
     seedReview(root, "{ not valid json");
 
-    const exit = await runtime.runPromiseExit(runValidate(root, []));
+    const exit = await runtime.runPromiseExit(validate(root, []));
 
     expect(exit._tag).toBe("Failure");
   });

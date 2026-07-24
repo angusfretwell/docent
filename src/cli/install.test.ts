@@ -1,33 +1,35 @@
 import { describe, expect, test } from "bun:test";
 
-import { CliUsageError } from "./args";
-import { parseInstallArgs, skillsAddArgs } from "./install";
+import { flagScope, refusePositionals, skillsAddArgs } from "./install";
+import { CliUsageError } from "./usage";
 
-describe("parseInstallArgs", () => {
+describe("flagScope", () => {
   test("no flag means the prompt decides (undefined)", () => {
-    expect(parseInstallArgs([])).toBeUndefined();
+    expect(flagScope({ global: false, project: false })).toBeUndefined();
   });
 
   test("--project selects project scope", () => {
-    expect(parseInstallArgs(["--project"])).toBe("project");
+    expect(flagScope({ global: false, project: true })).toBe("project");
   });
 
   test("--global selects user scope", () => {
-    expect(parseInstallArgs(["--global"])).toBe("global");
+    expect(flagScope({ global: true, project: false })).toBe("global");
   });
 
   test("--project and --global together is a usage error", () => {
-    expect(() => parseInstallArgs(["--project", "--global"])).toThrow(
+    expect(() => flagScope({ global: true, project: true })).toThrow(
       CliUsageError
     );
   });
+});
 
-  test("rejects an unknown flag", () => {
-    expect(() => parseInstallArgs(["--user"])).toThrow(CliUsageError);
+describe("refusePositionals", () => {
+  test("no positional passes", () => {
+    expect(() => refusePositionals([])).not.toThrow();
   });
 
-  test("rejects a positional argument", () => {
-    expect(() => parseInstallArgs(["./here"])).toThrow(CliUsageError);
+  test("a positional is a usage error, so no install starts", () => {
+    expect(() => refusePositionals(["./here"])).toThrow(CliUsageError);
   });
 });
 

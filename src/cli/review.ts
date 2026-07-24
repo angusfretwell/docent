@@ -10,47 +10,38 @@
  */
 
 import { Effect } from "effect";
+import { Command, Flag } from "effect/unstable/cli";
 
 import { setReviewTitle } from "../core/review";
-import {
-  attempt,
-  CliUsageError,
-  parseArgs,
-  printJson,
-  requireFlag,
-} from "./args";
-import type { ParsedArgs } from "./args";
-import { writeContext } from "./finding";
+import { resolveChangeScope } from "../core/write-context";
+import { attempt, WorkingDirectory, printJson, requireText } from "./usage";
 
-/** `review set` — name the change under review, keeping the Review's id. */
-const runSet = Effect.fn("runSet")(function* runSet(
-  cwd: string,
-  args: ParsedArgs
-) {
-  const title = yield* attempt(() => requireFlag(args, "title"));
-  const context = yield* writeContext(cwd);
+const set = Command.make(
+  "set",
+  {
+    title: Flag.string("title").pipe(
+      Flag.withDescription("A short human name for the change under review")
+    ),
+  },
+  (config) =>
+    Effect.gen(function* runSet() {
+      const cwd = yield* WorkingDirectory;
+      const title = yield* attempt(() => requireText("title", config.title));
+      const scope = yield* resolveChangeScope(cwd);
 
-  return yield* setReviewTitle({
-    base: context.base,
-    branch: context.branch,
-    root: context.root,
-    title,
-  });
-});
-
-/** Run one `docent review <op> …` invocation and print its JSON result. */
-export const runReview = Effect.fn("runReview")(function* runReview(
-  cwd: string,
-  argv: readonly string[]
-) {
-  const [op, ...rest] = argv;
-  if (op === "set") {
-    const args = yield* attempt(() => parseArgs(rest, new Set()));
-    return yield* printJson(yield* runSet(cwd, args));
-  }
-  return yield* Effect.fail(
-    new CliUsageError({
-      reason: `unknown review subcommand: ${op ?? "(none)"} (set)`,
+      return yield* printJson(
+        yield* setReviewTitle({
+          base: scope.base,
+          branch: scope.branch,
+          root: scope.root,
+          title,
+        })
+      );
     })
-  );
-});
+).pipe(Command.withDescription("Name the change under review, keeping its id"));
+
+/** The `docent review` subcommand tree — the Review's identity record. */
+export const reviewCommand = Command.make("review").pipe(
+  Command.withDescription("Read and write the Review's own identity record"),
+  Command.withSubcommands([set])
+);

@@ -1,118 +1,44 @@
 /**
- * The `docent walkthrough` and `docent capture` subcommands — the CLI face of
- * the walkthrough write path (agent-integration.md §3.3, walkthroughs.md §4–6).
- * They mint validated `docent/walkthrough` manifests, `docent/walkthrough-
- * section` sections, and content-addressed captures through the shared
- * `walkthrough-write.ts` implementation, reusing the finding CLI's argv parsing,
- * git-ref resolution (`writeContext`), and JSON result printing — one CLI
- * substrate, no divergence.
+ * The `docent walkthrough` command tree — the CLI face of the walkthrough write
+ * path (agent-integration.md §3.3, walkthroughs.md §4–6). `create` mints a
+ * validated `docent/walkthrough` manifest bound to the live head;
+ * `add-section` appends a `docent/walkthrough-section`, resolving each
+ * `--range`'s content-addressed `blobSha` from git so the range freezes the
+ * exact bytes on its side. Both go through the shared `walkthrough-write.ts`
+ * implementation — one write implementation, no divergence.
  *
- * As with `docent finding`, the CLI is non-gating: it writes the identical files
- * an agent could hand-author, and a running `docent serve` turns the drop into
- * an SSE refresh via the `.docent/` watch. The compact `--range` / `--viewport`
- * parsers are pure (unit-tested directly); the effectful layer resolves git + fs.
+ * As with `docent finding`, the CLI is non-gating: it writes the identical
+ * files an agent could hand-author, and a running `docent serve` turns the drop
+ * into an SSE refresh via the `.docent/` watch. The registering half of the
+ * product arm — content-addressing capture media — is `./capture`.
  */
 
-import { captureKinds } from "@shared/enums/capture-kind";
-import { sides } from "@shared/enums/side";
-import type { Side } from "@shared/enums/side";
 import { walkthroughKinds } from "@shared/enums/walkthrough-kind";
 import {
   WalkthroughAnnotation,
   WalkthroughRange,
 } from "@shared/schemas/walkthrough";
-import { Effect, Schema } from "effect";
-import { FileSystem } from "effect/FileSystem";
-import { Path } from "effect/Path";
+import { Effect, Option, Schema } from "effect";
+import { Command, Flag } from "effect/unstable/cli";
 
 import { resolveBlobShaAt } from "../core/git";
 import {
-  addWalkthroughCapture,
   addWalkthroughSection,
   writeWalkthrough,
 } from "../core/walkthrough-write";
 import type { ChangeRefs } from "../core/write-context";
+import { resolveChangeScope } from "../core/write-context";
+import { parseRangeSpec } from "./specs";
+import type { RangeSpec } from "./specs";
 import {
   attempt,
   CliUsageError,
-  many,
-  one,
-  parseArgs,
-  parseEnum,
+  commaSeparated,
+  WorkingDirectory,
   printJson,
-  requireFlag,
+  requireText,
   resolveBody,
-} from "./args";
-import type { ParsedArgs } from "./args";
-import { writeContext } from "./finding";
-
-// A `--range` token: `<file>:<start>[-<end>][@<side>]`, e.g.
-// `src/index.ts:10-24@head` or `src/parser.ts:40` (side defaults to head).
-const RANGE_LINES = /^(?<start>\d+)(?:-(?<end>\d+))?$/;
-
-/** A parsed `--range` before git resolves its `blobSha`. */
-export interface RangeSpec {
-  file: string;
-  side: Side;
-  lines: [number, number];
-}
-
-/**
- * Parse one compact `--range` token into its file, side, and 1-based inclusive
- * line span. The optional `@side` suffix and a `-`-separated line range keep the
- * token colon-unambiguous (the file/lines split is the last `:`). Throws a
- * `CliUsageError` on any malformed part.
- */
-export function parseRangeSpec(spec: string): RangeSpec {
-  let rest = spec.trim();
-  let side: Side = "head";
-  const at = rest.lastIndexOf("@");
-  if (at !== -1) {
-    side = parseEnum("side", rest.slice(at + 1), sides);
-    rest = rest.slice(0, at);
-  }
-  const colon = rest.lastIndexOf(":");
-  if (colon === -1) {
-    throw new CliUsageError({
-      reason: `bad --range: ${spec} (file:start[-end][@side])`,
-    });
-  }
-  const file = rest.slice(0, colon);
-  const match = RANGE_LINES.exec(rest.slice(colon + 1));
-  if (file === "" || match?.groups === undefined) {
-    throw new CliUsageError({
-      reason: `bad --range: ${spec} (file:start[-end][@side])`,
-    });
-  }
-  const start = Number(match.groups.start);
-  const end = match.groups.end === undefined ? start : Number(match.groups.end);
-  return { file, lines: [start, end], side };
-}
-
-// A `WxH` viewport/dimensions token, e.g. `1280x800`.
-const DIMENSIONS = /^(?<width>\d+)x(?<height>\d+)$/;
-
-/** Parse a `WxH` flag (`--viewport` / `--dims`) into `[width, height]`, or a usage error. */
-export function parseDimensions(flag: string, value: string): [number, number] {
-  const match = DIMENSIONS.exec(value.trim());
-  if (match?.groups === undefined) {
-    throw new CliUsageError({
-      reason: `bad --${flag}: ${value} (WxH, e.g. 1280x800)`,
-    });
-  }
-  return [Number(match.groups.width), Number(match.groups.height)];
-}
-
-/** Parse `--duration-ms` as a non-negative integer, or a usage error. */
-export function parseDurationMs(value: string): number {
-  const millis = Number(value.trim());
-  if (!Number.isInteger(millis) || millis < 0) {
-    throw new CliUsageError({
-      reason: `bad --duration-ms: ${value} (a non-negative integer)`,
-    });
-  }
-  return millis;
-}
+} from "./usage";
 
 /** Resolve each `--range` spec's content-addressed `blobSha` from git. */
 const buildRanges = Effect.fn("buildRanges")(function* buildRanges(
@@ -165,166 +91,107 @@ const parseAnnotations = Effect.fn("parseAnnotations")(
   }
 );
 
-/**
- * `walkthrough create` — mint a walkthrough shell bound to the live head.
- * `--title` is optional: the capture flow mints a title-less product shell
- * (a title is editorial, filled in by `/author-product-walkthrough` later).
- */
-const runCreate = Effect.fn("runCreate")(function* runCreate(
-  cwd: string,
-  args: ParsedArgs
-) {
-  const kind = yield* attempt(() =>
-    parseEnum("kind", requireFlag(args, "kind"), walkthroughKinds)
-  );
-  const title = one(args, "title")?.trim() ?? "";
-  const context = yield* writeContext(cwd);
-  return yield* writeWalkthrough({
-    base: context.base,
-    branch: context.branch,
-    kind,
-    refs: context.refs,
-    root: context.root,
-    title,
-  });
-});
+const create = Command.make(
+  "create",
+  {
+    kind: Flag.choice("kind", walkthroughKinds).pipe(
+      Flag.withDescription("Which pillar this tour is: code or product")
+    ),
+    title: Flag.string("title").pipe(
+      Flag.optional,
+      Flag.withDescription("The tour's title — editorial, so optional")
+    ),
+  },
+  (config) =>
+    Effect.gen(function* runCreate() {
+      const cwd = yield* WorkingDirectory;
+      const scope = yield* resolveChangeScope(cwd);
 
-/** `walkthrough add-section` — validate + append a section (code or product arm). */
-const runAddSection = Effect.fn("runAddSection")(function* runAddSection(
-  cwd: string,
-  args: ParsedArgs
-) {
-  const walkthroughId = yield* attempt(() => requireFlag(args, "walkthrough"));
-  const title = yield* attempt(() => requireFlag(args, "title"));
-  const specs = yield* attempt(() => many(args, "range").map(parseRangeSpec));
-  const captureIds = many(args, "capture");
-  // Annotations are JSON, which embeds commas — so take the raw repeated
-  // `--annotation` values, never the comma-splitting `many`.
-  const annotations = yield* parseAnnotations(
-    args.values.get("annotation") ?? []
-  );
-  const body = yield* resolveBody(args, false);
-  const context = yield* writeContext(cwd);
-  const ranges = yield* buildRanges(context.root, context.refs, specs);
-  return yield* addWalkthroughSection({
-    base: context.base,
-    body,
-    branch: context.branch,
-    root: context.root,
-    title,
-    walkthroughId,
-    ...(ranges.length === 0 ? {} : { ranges }),
-    ...(captureIds.length === 0 ? {} : { captureIds }),
-    ...(annotations.length === 0 ? {} : { annotations }),
-  });
-});
-
-/**
- * Run one `docent walkthrough <op> …` invocation: parse, execute against git +
- * fs, and print the machine-readable JSON result an agent consumes directly.
- */
-export const runWalkthrough = Effect.fn("runWalkthrough")(
-  function* runWalkthrough(cwd: string, argv: readonly string[]) {
-    const [op, ...rest] = argv;
-    if (op === "create") {
-      const args = yield* attempt(() => parseArgs(rest, new Set()));
-      return yield* printJson(yield* runCreate(cwd, args));
-    }
-    if (op === "add-section") {
-      const args = yield* attempt(() => parseArgs(rest, new Set()));
-      return yield* printJson(yield* runAddSection(cwd, args));
-    }
-    return yield* Effect.fail(
-      new CliUsageError({
-        reason: `unknown walkthrough subcommand: ${op ?? "(none)"} (create | add-section)`,
-      })
-    );
-  }
+      return yield* printJson(
+        yield* writeWalkthrough({
+          base: scope.base,
+          branch: scope.branch,
+          kind: config.kind,
+          refs: scope.refs,
+          root: scope.root,
+          title: Option.getOrUndefined(config.title)?.trim() ?? "",
+        })
+      );
+    })
+).pipe(
+  Command.withDescription("Mint a walkthrough shell bound to the live head")
 );
 
-/** `capture add` — content-address a media file and register it on a product tour. */
-const runCaptureAdd = Effect.fn("runCaptureAdd")(function* runCaptureAdd(
-  cwd: string,
-  args: ParsedArgs
-) {
-  const fs = yield* FileSystem;
-  const path = yield* Path;
-
-  const walkthroughId = yield* attempt(() => requireFlag(args, "walkthrough"));
-  const kind = yield* attempt(() =>
-    parseEnum("kind", requireFlag(args, "kind"), captureKinds)
-  );
-  const mediaPath = yield* attempt(() => requireFlag(args, "media"));
-  const route = yield* attempt(() => requireFlag(args, "route"));
-  const title = one(args, "title")?.trim();
-  const viewport = yield* attempt(() =>
-    parseDimensions("viewport", requireFlag(args, "viewport"))
-  );
-
-  // The metadata arms are kind-specific (walkthroughs.md §6): `dims` (full-page
-  // pixels) rides a screenshot, `durationMs` a recording. Refuse the mismatch
-  // rather than write a nonsensical registry entry.
-  const dimsFlag = one(args, "dims");
-  const durationFlag = one(args, "duration-ms");
-  if (kind === "recording" && dimsFlag !== undefined) {
-    return yield* Effect.fail(
-      new CliUsageError({
-        reason: "--dims is for screenshots; a recording takes --duration-ms",
-      })
-    );
-  }
-  if (kind === "screenshot" && durationFlag !== undefined) {
-    return yield* Effect.fail(
-      new CliUsageError({
-        reason: "--duration-ms is for recordings; a screenshot takes --dims",
-      })
-    );
-  }
-  const dims =
-    dimsFlag === undefined
-      ? undefined
-      : yield* attempt(() => parseDimensions("dims", dimsFlag));
-  const durationMs =
-    durationFlag === undefined
-      ? undefined
-      : yield* attempt(() => parseDurationMs(durationFlag));
-
-  const media = yield* fs
-    .readFile(path.resolve(cwd, mediaPath))
-    .pipe(
-      Effect.mapError(
-        () => new CliUsageError({ reason: `cannot read --media: ${mediaPath}` })
+const addSection = Command.make(
+  "add-section",
+  {
+    // Annotations are JSON, which embeds commas — so this one repeats without
+    // the comma-splitting every other repeatable flag gets.
+    annotation: Flag.string("annotation").pipe(
+      Flag.atLeast(0),
+      Flag.withDescription("One JSON callout — repeat the flag per annotation")
+    ),
+    body: Flag.string("body").pipe(
+      Flag.optional,
+      Flag.withDescription("Section prose (omit to read it from piped stdin)")
+    ),
+    capture: commaSeparated(
+      Flag.string("capture").pipe(
+        Flag.withDescription(
+          "A cap_ id on this tour — repeatable or comma-joined"
+        )
       )
-    );
-  const context = yield* writeContext(cwd);
-  return yield* addWalkthroughCapture({
-    base: context.base,
-    branch: context.branch,
-    kind,
-    media,
-    root: context.root,
-    route,
-    viewport,
-    walkthroughId,
-    ...(title === undefined || title === "" ? {} : { title }),
-    ...(dims === undefined ? {} : { dims }),
-    ...(durationMs === undefined ? {} : { durationMs }),
-  });
-});
+    ),
+    range: commaSeparated(
+      Flag.string("range").pipe(
+        Flag.withDescription(
+          "file:start[-end][@side] — repeatable or comma-joined"
+        )
+      )
+    ),
+    title: Flag.string("title").pipe(
+      Flag.withDescription("The section's title")
+    ),
+    walkthrough: Flag.string("walkthrough").pipe(
+      Flag.withDescription("The wlk_ id to append to")
+    ),
+  },
+  (config) =>
+    Effect.gen(function* runAddSection() {
+      const cwd = yield* WorkingDirectory;
+      const walkthroughId = yield* attempt(() =>
+        requireText("walkthrough", config.walkthrough)
+      );
+      const title = yield* attempt(() => requireText("title", config.title));
+      const specs = yield* attempt(() => config.range.map(parseRangeSpec));
+      const annotations = yield* parseAnnotations(config.annotation);
+      const body = yield* resolveBody(config.body, false);
 
-/** Run one `docent capture <op> …` invocation and print its JSON result. */
-export const runCapture = Effect.fn("runCapture")(function* runCapture(
-  cwd: string,
-  argv: readonly string[]
-) {
-  const [op, ...rest] = argv;
-  if (op === "add") {
-    const args = yield* attempt(() => parseArgs(rest, new Set()));
-    return yield* printJson(yield* runCaptureAdd(cwd, args));
-  }
-  return yield* Effect.fail(
-    new CliUsageError({
-      reason: `unknown capture subcommand: ${op ?? "(none)"} (add)`,
+      const scope = yield* resolveChangeScope(cwd);
+      const ranges = yield* buildRanges(scope.root, scope.refs, specs);
+
+      return yield* printJson(
+        yield* addWalkthroughSection({
+          base: scope.base,
+          body,
+          branch: scope.branch,
+          root: scope.root,
+          title,
+          walkthroughId,
+          ...(ranges.length === 0 ? {} : { ranges }),
+          ...(config.capture.length === 0
+            ? {}
+            : { captureIds: config.capture }),
+          ...(annotations.length === 0 ? {} : { annotations }),
+        })
+      );
     })
-  );
-});
+).pipe(
+  Command.withDescription("Validate and append one section, in tour order")
+);
+
+/** The `docent walkthrough` subcommand tree — mint a shell, then grow it. */
+export const walkthroughCommand = Command.make("walkthrough").pipe(
+  Command.withDescription("Mint and grow the Review's walkthroughs"),
+  Command.withSubcommands([create, addSection])
+);
