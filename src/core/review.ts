@@ -5,10 +5,10 @@
 
 import { walkthroughKinds } from "@shared/enums/walkthrough-kind";
 import type { WalkthroughKind } from "@shared/enums/walkthrough-kind";
-import { FindingId, ReviewId, WalkthroughId } from "@shared/schemas/ids";
+import { CommentId, ReviewId, WalkthroughId } from "@shared/schemas/ids";
 import {
   ChangeRecord,
-  FindingEntry,
+  CommentEntry,
   Review,
   ReviewSnapshot,
   ViewedEvent,
@@ -21,11 +21,11 @@ import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 
 import {
-  listFindingIds,
+  listCommentIds,
   listJsonRecordNames,
   listMarkdownRecordNames,
   listWalkthroughIds,
-  readFindingRecord,
+  readCommentRecord,
   readWalkthroughSection,
 } from "./store/enumerate";
 import { makeId } from "./store/id";
@@ -168,37 +168,37 @@ const readAnchor = Effect.fn("readAnchor")(function* readAnchor(file: string) {
   return parseAnchor(text);
 });
 
-const readFinding = Effect.fn("readFinding")(function* readFinding(
+const readComment = Effect.fn("readComment")(function* readComment(
   dir: string,
-  id: FindingId
+  id: CommentId
 ) {
   const path = yield* Path;
   const names = yield* listMarkdownRecordNames(path.join(dir, id));
   const parsed = yield* Effect.forEach(
     names,
-    (name) => readFindingRecord(path.join(dir, id, name), name),
+    (name) => readCommentRecord(path.join(dir, id, name), name),
     { concurrency: "unbounded" }
   );
   const root = names.find((name) => name.endsWith("-open.md")) ?? names[0];
   const anchor =
     root === undefined ? {} : yield* readAnchor(path.join(dir, id, root));
-  return FindingEntry.make({
+  return CommentEntry.make({
     id,
     records: Array.getSomes(parsed),
     ...anchor,
   });
 });
 
-const readFindings = Effect.fn("readFindings")(function* readFindings(
+const readComments = Effect.fn("readComments")(function* readComments(
   reviewDir: string
 ) {
   const path = yield* Path;
-  const dir = path.join(reviewDir, "findings");
-  const names = yield* listFindingIds(dir);
+  const dir = path.join(reviewDir, "comments");
+  const names = yield* listCommentIds(dir);
 
   return yield* Effect.forEach(
-    recordIds(FindingId, names),
-    (id) => readFinding(dir, id),
+    recordIds(CommentId, names),
+    (id) => readComment(dir, id),
     { concurrency: "unbounded" }
   );
 });
@@ -282,10 +282,10 @@ export const readReviewSnapshot = Effect.fn("readReviewSnapshot")(
       reviewDir,
       root: params.root,
     });
-    const [changes, findings, walkthroughs, viewed] = yield* Effect.all(
+    const [changes, comments, walkthroughs, viewed] = yield* Effect.all(
       [
         readJsonRecords(reviewDir, "changes", ChangeRecord),
-        readFindings(reviewDir),
+        readComments(reviewDir),
         readWalkthroughs(reviewDir),
         readJsonRecords(reviewDir, "viewed", ViewedEvent),
       ],
@@ -294,7 +294,7 @@ export const readReviewSnapshot = Effect.fn("readReviewSnapshot")(
 
     return ReviewSnapshot.make({
       changes,
-      findings,
+      comments,
       review,
       viewed,
       walkthroughs,

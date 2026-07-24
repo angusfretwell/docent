@@ -4,7 +4,7 @@ import {
   annotationsFor,
   captureCallouts,
 } from "@client/features/capture/lib/pins";
-import { useFindings } from "@client/features/findings/hooks/use-findings";
+import { useComments } from "@client/features/comments/hooks/use-comments";
 import { useActiveTarget } from "@client/features/walkthrough/hooks/use-active-target";
 import { useRevealedSection } from "@client/features/walkthrough/hooks/use-revealed-section";
 import {
@@ -12,7 +12,7 @@ import {
   capturesByKey,
   productSteps,
 } from "@client/features/walkthrough/lib/walkthrough";
-import { findingsBySection, sectionKey } from "@client/lib/finding-sections";
+import { commentsBySection, sectionKey } from "@client/lib/comment-sections";
 import { reviewQueryOptions } from "@client/queries/review";
 import { latestProductWalkthrough } from "@shared/lib/identity-drift";
 import { walkthroughStaleness } from "@shared/lib/walkthrough-annotations";
@@ -29,7 +29,7 @@ import { ProductWalkthroughCapturePanel } from "./capture-panel";
 
 export function ProductWalkthroughView() {
   const { data: review } = useSuspenseQuery(reviewQueryOptions);
-  const { visible } = useFindings();
+  const { visible } = useComments();
 
   const walkthrough = latestProductWalkthrough(review.walkthroughs);
   const sections = walkthrough?.sections ?? [];
@@ -51,8 +51,8 @@ export function ProductWalkthroughView() {
     walkthrough?.manifest?.captures ?? []
   );
 
-  const findings = visible.map((entry) => entry.finding);
-  const bySection = findingsBySection(findings);
+  const comments = visible.map((entry) => entry.comment);
+  const bySection = commentsBySection(comments);
 
   function labelTarget(key: string) {
     const placed = captures.get(key);
@@ -75,7 +75,7 @@ export function ProductWalkthroughView() {
       ? []
       : captureCallouts(
           annotationsFor(placed.section, placed.capture.id),
-          findings,
+          comments,
           placed.capture
         );
   }
@@ -122,7 +122,7 @@ export function ProductWalkthroughView() {
           <ProductWalkthroughCapturePanel
             activeKey={activeKey}
             captures={captures}
-            findings={findings}
+            comments={comments}
             onSelect={jumpToTarget}
             refitted={refitted}
             walkthroughId={walkthrough.id}
@@ -140,7 +140,7 @@ export function ProductWalkthroughView() {
         {steps.map((step) => (
           <StepProse
             calloutsFor={calloutsForTarget}
-            findings={bySection.get(
+            comments={bySection.get(
               sectionKey(walkthrough.id, step.section.id)
             )}
             key={step.section.id}

@@ -1,6 +1,6 @@
 ---
 name: docent
-description: Docent review companion for the branch under review. `/docent` reconciles the code and product walkthroughs against the head change and serves the tour; `/docent --read` pulls the Review's Findings into the session to work on; `/docent --write` records the session's review outcomes back to the Review. Use when the human asks to (re)generate, refresh, or reconcile walkthroughs, bring a stale tour up to date, pull or fetch docent review findings, or write review outcomes back to docent.
+description: Docent review companion for the branch under review. `/docent` reconciles the code and product walkthroughs against the head change and serves the tour; `/docent --read` pulls the Review's Comments into the session to work on; `/docent --write` records the session's review outcomes back to the Review. Use when the human asks to (re)generate, refresh, or reconcile walkthroughs, bring a stale tour up to date, pull or fetch docent review comments, or write review outcomes back to docent.
 ---
 
 # docent
@@ -12,8 +12,8 @@ Dispatch on the invocation:
 | Invocation | Branch |
 | --- | --- |
 | `/docent` (optionally a focus or pillar scope) | **Reconcile walkthroughs** — this file, §1–§6. |
-| `/docent --read [filters]` | **Pull Findings** into the session — load [reference/findings.md](reference/findings.md), "Reading the queue". |
-| `/docent --write` | **Record outcomes** back to the Review — load [reference/findings.md](reference/findings.md), "Writing outcomes". |
+| `/docent --read [filters]` | **Pull Comments** into the session — load [reference/comments.md](reference/comments.md), "Reading the queue". |
+| `/docent --write` | **Record outcomes** back to the Review — load [reference/comments.md](reference/comments.md), "Writing outcomes". |
 
 The rest of this file is the default branch: "type `/docent`, get a browser tab with the tour." The tool only ever _surfaces_ walkthrough staleness; it never auto-regenerates — the human running `/docent` is the regeneration trigger. Per pillar (**code**, **product**) you read the head Change and the pillar's latest walkthrough, decide from **existence + drift** what to do, and regenerate **only the stale or missing pillars**, each minting a fresh immutable `wlk_`. Your job is the reconcile decision; the reference files own the authoring:
 
@@ -141,7 +141,7 @@ Open the browser at the served `url`; the reconciled pillar's tour is on its wal
 
 - **You reconcile and dispatch; the reference files author.** The reference files own the file writes and the editorial judgment; the `docent walkthrough` / `docent capture` write path owns id minting and content-addressing. Never hand-author a walkthrough file to shortcut them.
 - **A fresh `wlk_` per regenerated pillar — never edit in place.** Regeneration mints a new immutable walkthrough bound to the head; the prior one persists.
-- **Walkthroughs and Findings are separate flows.** Reconciliation produces tours; the review → Findings loop is `--read` / `--write`.
+- **Walkthroughs and Comments are separate flows.** Reconciliation produces tours; the review → Comments loop is `--read` / `--write`.
 - **Human-invoked only.** The tool never triggers regeneration — it only surfaces staleness. Regeneration happens exactly when the human runs `/docent`.
 - **Serving the app under review is the human's workflow** — you consume it, never spawn it. Serving docent itself (§6) is different: that is docent's own process, which you may start in the background.
 - **Commit / push are the human's workflow** — out of scope.

@@ -4,8 +4,8 @@ import { CodeViewAnnotation } from "@client/features/code-view/annotation";
 import { CodeViewHeaderMetadata } from "@client/features/code-view/header-metadata";
 import { useDiffItems } from "@client/features/code-view/hooks/use-diff-items";
 import { AnnotatedCodeView } from "@client/features/code-view/view";
-import { useFindingCompose } from "@client/features/findings/hooks/use-finding-compose";
-import { useFindings } from "@client/features/findings/hooks/use-findings";
+import { useCommentCompose } from "@client/features/comments/hooks/use-comment-compose";
+import { useComments } from "@client/features/comments/hooks/use-comments";
 import type { DiffFile } from "@client/lib/diff";
 import type { Annotation } from "@client/lib/diff-annotations";
 import type { DriftResult } from "@client/lib/drift";
@@ -27,19 +27,19 @@ export function CodeWalkthroughDiffPanel({
 }) {
   const ref = useRef<CodeViewHandle<Annotation>>(null);
 
-  const { visible } = useFindings();
-  const findings = visible.map((entry) => entry.finding);
+  const { visible } = useComments();
+  const comments = visible.map((entry) => entry.comment);
 
-  const compose = useFindingCompose({
+  const compose = useCommentCompose({
     codeRef: ref,
     fileDiffById: (id) => files.find((entry) => entry.id === id)?.file,
   });
 
   const items = useDiffItems({
+    comments,
     composing: compose.composing,
     driftFor,
     files,
-    findings,
   });
 
   const targetFile =

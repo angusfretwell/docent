@@ -3,7 +3,7 @@
  * Materialize the dev fixture repo: delete and deterministically rebuild a real
  * git repo at the gitignored `.dev/` from the checked-in source under
  * `fixtures/`, so that pointing `docent serve` at it shows a rich review — a
- * diff with a Pending section, a Findings queue spanning the full state matrix
+ * diff with a Pending section, a Comments queue spanning the full state matrix
  * with drift badges, and a stale code walkthrough with the Change history lit up.
  *
  * The toy app's three snapshot trees (`fixtures/repo/{base,change-1,change-2}`)

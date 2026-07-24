@@ -50,7 +50,7 @@ export const splitEnvelope = Effect.fn("splitEnvelope")(function* splitEnvelope(
   return { body, meta: (meta ?? {}) as object };
 });
 
-// A Finding record's type comes from its `NNN-<type>.md` filename — the
+// A Comment record's type comes from its `NNN-<type>.md` filename — the
 // frontmatter carries no type field. Vocabulary owned by `enums/record-type.ts`.
 const RECORD_NAME = new RegExp(`^\\d+-(?<type>${recordTypes.join("|")})\\.md$`);
 

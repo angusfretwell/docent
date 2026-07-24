@@ -32,7 +32,7 @@ export function parseEnum<T extends string>(
 
 /**
  * `Command` drops arguments no parameter claims, which on a read command widens
- * the answer instead of rejecting it: `docent finding list open` — a plausible
+ * the answer instead of rejecting it: `docent comment list open` — a plausible
  * typo for `--status open` — would return the whole queue rather than erroring.
  * A write subcommand needs no such guard; its required flags reject the stray
  * invocation first.

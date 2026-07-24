@@ -5,13 +5,13 @@ import type {
 } from "@pierre/diffs";
 import type { DriftState } from "@shared/enums/drift-state";
 import type { Side } from "@shared/enums/side";
-import type { FoldedFinding } from "@shared/lib/finding";
-import type { Anchor } from "@shared/schemas/finding";
+import type { FoldedComment } from "@shared/lib/comment";
+import type { Anchor } from "@shared/schemas/comment";
 
 import type { DriftResult } from "./drift";
 
 export type Annotation =
-  | { drift?: DriftState; finding: FoldedFinding; kind: "finding" }
+  | { drift?: DriftState; comment: FoldedComment; kind: "comment" }
   | { kind: "composer" };
 
 export interface Composing {
@@ -56,13 +56,13 @@ function inlineLine(
 }
 
 // Change- and non-code anchors are panel-only, so they are skipped here.
-function findingAnnotations(
-  findings: readonly FoldedFinding[],
+function commentAnnotations(
+  comments: readonly FoldedComment[],
   fileDiff: FileDiffMetadata,
   driftFor: ((id: string) => DriftResult | undefined) | undefined
 ): DiffLineAnnotation<Annotation>[] {
-  return findings.flatMap((finding): DiffLineAnnotation<Annotation>[] => {
-    const { anchor } = finding;
+  return comments.flatMap((comment): DiffLineAnnotation<Annotation>[] => {
+    const { anchor } = comment;
     if (
       anchor === undefined ||
       (anchor.kind !== "line" && anchor.kind !== "file")
@@ -76,7 +76,7 @@ function findingAnnotations(
     const placement = inlineLine(
       anchor,
       fileDiff,
-      driftFor?.(finding.id),
+      driftFor?.(comment.id),
       driftFor !== undefined
     );
     if (placement === undefined) {
@@ -86,7 +86,7 @@ function findingAnnotations(
     return [
       {
         lineNumber: placement.lineNumber,
-        metadata: { drift: placement.drift, finding, kind: "finding" },
+        metadata: { comment, drift: placement.drift, kind: "comment" },
         side: annotationSide(anchor.side),
       },
     ];
@@ -97,11 +97,11 @@ export function itemAnnotations(params: {
   composing: Composing | null;
   driftFor?: (id: string) => DriftResult | undefined;
   fileDiff: FileDiffMetadata;
-  findings: readonly FoldedFinding[];
+  comments: readonly FoldedComment[];
   itemId: string;
 }): DiffLineAnnotation<Annotation>[] {
-  const annotations = findingAnnotations(
-    params.findings,
+  const annotations = commentAnnotations(
+    params.comments,
     params.fileDiff,
     params.driftFor
   );
@@ -123,13 +123,13 @@ export function annotationsKey(
 ): string {
   return annotations
     .map((annotation) =>
-      annotation.metadata.kind === "finding"
+      annotation.metadata.kind === "comment"
         ? [
             annotation.side,
             annotation.lineNumber,
-            annotation.metadata.finding.id,
-            annotation.metadata.finding.status,
-            annotation.metadata.finding.replies.length,
+            annotation.metadata.comment.id,
+            annotation.metadata.comment.status,
+            annotation.metadata.comment.replies.length,
             annotation.metadata.drift ?? "",
           ].join(":")
         : `composer:${annotation.side}:${annotation.lineNumber}`

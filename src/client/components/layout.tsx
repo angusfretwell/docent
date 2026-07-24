@@ -1,7 +1,7 @@
 import { Skeleton } from "@client/components/ui/skeleton";
-import { FindingsPanel } from "@client/features/findings/panel";
+import { CommentsPanel } from "@client/features/comments/panel";
 import { useMediaQuery } from "@client/hooks/use-media-query";
-import { findingsOpenAtom } from "@client/lib/preferences";
+import { commentsOpenAtom } from "@client/lib/preferences";
 import { useAtomValue } from "jotai/react";
 import { Suspense } from "react";
 import { useDefaultLayout } from "react-resizable-panels";
@@ -15,7 +15,7 @@ import {
 } from "./ui/resizable";
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const findingsOpen = useAtomValue(findingsOpenAtom);
+  const commentsOpen = useAtomValue(commentsOpenAtom);
   const isMobile = useMediaQuery("max-md");
 
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
@@ -37,14 +37,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
           {children}
         </ResizablePanel>
 
-        {findingsOpen && !isMobile && (
+        {commentsOpen && !isMobile && (
           <>
             <ResizableHandle withHandle className="w-1.5" />
             <ResizablePanel
               groupResizeBehavior="preserve-pixel-size"
               minSize={200}
               defaultSize={350}
-              id="findings"
+              id="comments"
               className="overflow-visible!"
             >
               <Suspense
@@ -55,7 +55,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 }
               >
                 <Pane>
-                  <FindingsPanel />
+                  <CommentsPanel />
                 </Pane>
               </Suspense>
             </ResizablePanel>

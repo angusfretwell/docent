@@ -1,5 +1,5 @@
 /**
- * Unlike Findings (append-only), a manifest is assembled incrementally via
+ * Unlike Comments (append-only), a manifest is assembled incrementally via
  * read-modify-write. Safe because docent is single-user and local — sequential
  * CLI invocations, no concurrent writer to race.
  */

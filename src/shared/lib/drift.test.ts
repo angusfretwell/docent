@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import type { FindingRecord } from "../schemas/finding";
+import type { CommentRecord } from "../schemas/comment";
 import {
   changeHistory,
   changeHistoryLabel,
@@ -215,9 +215,9 @@ describe("changeHistory", () => {
     kind: "agent" as const,
   };
   function record(
-    fields: Partial<Omit<FindingRecord, "changeId">> & {
+    fields: Partial<Omit<CommentRecord, "changeId">> & {
       name: string;
-      type: FindingRecord["type"];
+      type: CommentRecord["type"];
       changeId?: string;
     }
   ) {
@@ -226,9 +226,9 @@ describe("changeHistory", () => {
       body: "",
       changeId: "chg_001",
       createdAt: "2026-07-10T02:14:00Z",
-      schema: "docent/finding",
+      schema: "docent/comment",
       ...fields,
-    } as FindingRecord;
+    } as CommentRecord;
   }
 
   test("labels each milestone with the change it was authored on", () => {

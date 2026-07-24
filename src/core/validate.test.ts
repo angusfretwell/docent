@@ -37,16 +37,16 @@ const VALID_CHANGE = JSON.stringify({
   id: "chg_001",
   schema: "docent/change",
 });
-const VALID_FINDING = [
+const VALID_COMMENT = [
   "---",
-  "schema: docent/finding",
+  "schema: docent/comment",
   'author: { kind: human, id: a@b.com, display: "A" }',
   "changeId: chg_001",
   "createdAt: 2026-07-10T02:14:00Z",
   "anchor: { kind: change }",
   "---",
   "",
-  "a finding body",
+  "a comment body",
   "",
 ].join("\n");
 
@@ -68,7 +68,7 @@ describe("validateStateRoot", () => {
     const dir = reviewDir(root);
     writeUnder(dir, ["review.json"], VALID_REVIEW);
     writeUnder(dir, ["changes", "chg_001.json"], VALID_CHANGE);
-    writeUnder(dir, ["findings", "fnd_01", "001-open.md"], VALID_FINDING);
+    writeUnder(dir, ["comments", "cmt_01", "001-open.md"], VALID_COMMENT);
 
     const report = await run(validateStateRoot(path.join(root, ".docent")));
 
@@ -95,15 +95,15 @@ describe("validateStateRoot", () => {
     const dir = reviewDir(root);
     writeUnder(
       dir,
-      ["findings", "fnd_01", "001-open.md"],
-      VALID_FINDING.replace("docent/finding", "docent/comment")
+      ["comments", "cmt_01", "001-open.md"],
+      VALID_COMMENT.replace("docent/comment", "docent/bogus")
     );
 
     const report = await run(validateStateRoot(path.join(root, ".docent")));
 
     expect(report.problems).toHaveLength(1);
     expect(report.problems[0]?.file).toBe(
-      path.join("reviews", "feature", "findings", "fnd_01", "001-open.md")
+      path.join("reviews", "feature", "comments", "cmt_01", "001-open.md")
     );
   });
 

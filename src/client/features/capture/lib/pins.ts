@@ -1,9 +1,9 @@
 import type { Callout } from "@client/features/walkthrough/callouts";
 import { ANCHOR_KIND } from "@shared/enums/anchor-kind";
 import type { DriftState } from "@shared/enums/drift-state";
-import type { FoldedFinding } from "@shared/lib/finding";
+import type { FoldedComment } from "@shared/lib/comment";
 import { identityDrift } from "@shared/lib/identity-drift";
-import type { Anchor } from "@shared/schemas/finding";
+import type { Anchor } from "@shared/schemas/comment";
 import type {
   Capture,
   WalkthroughAnnotation,
@@ -25,7 +25,7 @@ export interface TimePin {
   toMs?: number;
 }
 
-// Derived from the Finding anchor union so it can't drift from the schema.
+// Derived from the Comment anchor union so it can't drift from the schema.
 type CaptureAnchor = Extract<
   Anchor,
   { kind: "screenshot-region" | "recording-timestamp" }
@@ -38,7 +38,7 @@ interface RawPin {
 }
 
 export function captureAnchorId(
-  anchor?: FoldedFinding["anchor"]
+  anchor?: FoldedComment["anchor"]
 ): string | undefined {
   if (
     anchor?.kind === ANCHOR_KIND.screenshotRegion ||
@@ -51,21 +51,21 @@ export function captureAnchorId(
 
 /**
  * Placement, not registry membership, is the test: a capture no section renders
- * has nowhere to pin a live Finding, so such Findings detach and surface rather
+ * has nowhere to pin a live Comment, so such Comments detach and surface rather
  * than vanish. `undefined` for a non-capture anchor.
  */
-export function captureFindingDrift(
-  anchor: FoldedFinding["anchor"],
+export function captureCommentDrift(
+  anchor: FoldedComment["anchor"],
   placedCaptureIds: ReadonlySet<string>
 ): DriftState | undefined {
   const id = captureAnchorId(anchor);
   return id === undefined ? undefined : identityDrift(placedCaptureIds.has(id));
 }
 
-/** Annotations targeting the capture (numbered `A1…`) then its Findings (`F1…`). */
+/** Annotations targeting the capture (numbered `A1…`) then its Comments (`F1…`). */
 function rawPins(
   annotations: readonly WalkthroughAnnotation[],
-  findings: readonly FoldedFinding[],
+  comments: readonly FoldedComment[],
   captureId: string,
   kind: "screenshot-region" | "recording-timestamp"
 ): RawPin[] {
@@ -81,15 +81,15 @@ function rawPins(
       });
     }
   }
-  let findingCount = 0;
-  for (const finding of findings) {
-    const { anchor } = finding;
+  let commentCount = 0;
+  for (const comment of comments) {
+    const { anchor } = comment;
     if (anchor?.kind === kind && anchor.capture === captureId) {
-      findingCount += 1;
+      commentCount += 1;
       pins.push({
         anchor,
-        body: finding.body,
-        label: `F${findingCount}`,
+        body: comment.body,
+        label: `C${commentCount}`,
       });
     }
   }
@@ -104,14 +104,14 @@ function captureArm(capture: Capture) {
 
 export function screenshotPins(
   annotations: readonly WalkthroughAnnotation[],
-  findings: readonly FoldedFinding[],
+  comments: readonly FoldedComment[],
   capture: Capture
 ): RegionPin[] {
   const regions: RegionPin[] = [];
 
   for (const pin of rawPins(
     annotations,
-    findings,
+    comments,
     capture.id,
     ANCHOR_KIND.screenshotRegion
   )) {
@@ -130,14 +130,14 @@ export function screenshotPins(
 
 export function recordingPins(
   annotations: readonly WalkthroughAnnotation[],
-  findings: readonly FoldedFinding[],
+  comments: readonly FoldedComment[],
   capture: Capture
 ): TimePin[] {
   const times: TimePin[] = [];
 
   for (const pin of rawPins(
     annotations,
-    findings,
+    comments,
     capture.id,
     ANCHOR_KIND.recordingTimestamp
   )) {
@@ -161,10 +161,10 @@ export function recordingPins(
  */
 export function captureCallouts(
   annotations: readonly WalkthroughAnnotation[],
-  findings: readonly FoldedFinding[],
+  comments: readonly FoldedComment[],
   capture: Capture
 ): Callout[] {
-  return rawPins(annotations, findings, capture.id, captureArm(capture)).map(
+  return rawPins(annotations, comments, capture.id, captureArm(capture)).map(
     ({ body, label }) => ({ body, label })
   );
 }

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import type { DriftPlan } from "@shared/lib/drift";
-import type { Anchor } from "@shared/schemas/finding";
+import type { Anchor } from "@shared/schemas/comment";
 
 import type { DriftFile } from "./drift";
 import { anchorContext, indexDiffFiles, triagePlan } from "./drift";

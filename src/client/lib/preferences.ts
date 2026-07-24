@@ -1,6 +1,6 @@
 import { atomWithStorage } from "jotai/utils";
 
-export const findingsOpenAtom = atomWithStorage("findingsOpen", true);
+export const commentsOpenAtom = atomWithStorage("commentsOpen", true);
 
 export const diffLayoutAtom = atomWithStorage<"unified" | "split">(
   "diffLayout",

@@ -1,6 +1,6 @@
 import type { ChangeVerb } from "../enums/change-verb";
 import type { DriftState } from "../enums/drift-state";
-import type { Anchor, FindingRecord } from "../schemas/finding";
+import type { Anchor, CommentRecord } from "../schemas/comment";
 
 export interface Reanchor {
   /** Born range for live/outdated; the moved range for shifted. */
@@ -133,7 +133,7 @@ export function driftBadge(
   return undefined;
 }
 
-const RECORD_VERB: Partial<Record<FindingRecord["type"], ChangeVerb>> = {
+const RECORD_VERB: Partial<Record<CommentRecord["type"], ChangeVerb>> = {
   open: "opened",
   reopen: "reopened",
   reply: "replied",
@@ -141,7 +141,7 @@ const RECORD_VERB: Partial<Record<FindingRecord["type"], ChangeVerb>> = {
 };
 
 export function changeHistory(
-  records: readonly FindingRecord[]
+  records: readonly CommentRecord[]
 ): ChangeEvent[] {
   const ordered = records.toSorted((left, right) =>
     left.name.localeCompare(right.name)
@@ -156,7 +156,7 @@ export function changeHistory(
   return events;
 }
 
-export function changeHistoryLabel(records: readonly FindingRecord[]): string {
+export function changeHistoryLabel(records: readonly CommentRecord[]): string {
   return changeHistory(records)
     .map((event) => `${event.verb} on ${event.changeId}`)
     .join(" · ");

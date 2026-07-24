@@ -16,9 +16,9 @@ import { Path } from "effect/Path";
 import type { PlatformError } from "effect/PlatformError";
 
 import {
-  decodeFindingRecord,
+  decodeCommentRecord,
   decodeWalkthroughSection,
-  listFindingIds,
+  listCommentIds,
   listJsonRecordNames,
   listMarkdownRecordNames,
   listWalkthroughIds,
@@ -166,15 +166,15 @@ const reviewTasks = Effect.fn("reviewTasks")(function* reviewTasks(
     }
   }
 
-  const findingsDir = path.join(reviewDir, "findings");
-  const findingIds = yield* listFindingIds(findingsDir);
-  for (const id of findingIds) {
-    const findingDir = path.join(findingsDir, id);
-    const records = yield* listMarkdownRecordNames(findingDir);
+  const commentsDir = path.join(reviewDir, "comments");
+  const commentIds = yield* listCommentIds(commentsDir);
+  for (const id of commentIds) {
+    const commentDir = path.join(commentsDir, id);
+    const records = yield* listMarkdownRecordNames(commentDir);
     for (const name of records) {
       tasks.push(
-        toTask(path.join(findingDir, name), (text) =>
-          decodeFindingRecord(text, name)
+        toTask(path.join(commentDir, name), (text) =>
+          decodeCommentRecord(text, name)
         )
       );
     }

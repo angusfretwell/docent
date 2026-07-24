@@ -1,5 +1,5 @@
 /**
- * The Walkthrough write path over `.docent/`. Unlike Findings (append-only
+ * The Walkthrough write path over `.docent/`. Unlike Comments (append-only
  * record dirs), a walkthrough's `manifest.json` is assembled incrementally via
  * read-modify-write — safe because docent is single-user and local (sequential
  * CLI invocations, no concurrent writer to race).

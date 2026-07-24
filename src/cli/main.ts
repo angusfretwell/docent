@@ -6,7 +6,7 @@ import { FetchHttpClient } from "effect/unstable/http";
 import type { EntryOptions } from "../serve";
 import { serve } from "../serve";
 import { captureCommand } from "./capture";
-import { findingCommand } from "./finding";
+import { commentCommand } from "./comment";
 import { installCommand } from "./install";
 import { reviewCommand } from "./review";
 import { statusCommand } from "./status";
@@ -68,11 +68,11 @@ function docentCli(entry: EntryOptions) {
 
   return Command.make("docent", {}, () => serveHere).pipe(
     Command.withDescription(
-      "Local code review: walkthroughs, findings, and the diff"
+      "Local code review: walkthroughs, comments, and the diff"
     ),
     Command.withSubcommands([
       serveCommand,
-      findingCommand,
+      commentCommand,
       walkthroughCommand,
       captureCommand,
       reviewCommand,

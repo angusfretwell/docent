@@ -1,5 +1,5 @@
 import { Change } from "@shared/schemas/change";
-import { Author } from "@shared/schemas/finding";
+import { Author } from "@shared/schemas/comment";
 import { Effect, Schema } from "effect";
 import { unique } from "radashi";
 

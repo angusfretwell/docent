@@ -6,16 +6,16 @@ import type {
   ReanchorJob,
 } from "@client/lib/drift";
 import { anchorContext, indexDiffFiles, triagePlan } from "@client/lib/drift";
+import { foldComment } from "@shared/lib/comment";
 import {
   excerptLines,
   planDrift,
   reanchorRange,
   splitLines,
 } from "@shared/lib/drift";
-import { foldFinding } from "@shared/lib/finding";
 import { identityAnchorDrift } from "@shared/lib/identity-drift";
-import type { Anchor } from "@shared/schemas/finding";
-import type { FindingEntry, WalkthroughEntry } from "@shared/schemas/review";
+import type { Anchor } from "@shared/schemas/comment";
+import type { CommentEntry, WalkthroughEntry } from "@shared/schemas/review";
 import { useEffect, useState } from "react";
 
 export function useReanchor(
@@ -89,16 +89,16 @@ function anchorLines(anchor: Anchor): [number, number] | undefined {
     : undefined;
 }
 
-function planFindings(
-  findings: readonly FindingEntry[],
+function planComments(
+  comments: readonly CommentEntry[],
   files: ReadonlyMap<string, DriftFile>,
   walkthroughs: readonly WalkthroughEntry[]
 ) {
   const base = new Map<string, DriftResult>();
   const jobs: ReanchorJob[] = [];
   const excerpts: ExcerptJob[] = [];
-  for (const finding of findings) {
-    const { anchor } = foldFinding(finding.id, finding.records);
+  for (const comment of comments) {
+    const { anchor } = foldComment(comment.id, comment.records);
     if (anchor === undefined) {
       continue;
     }
@@ -106,7 +106,7 @@ function planFindings(
     // Identity anchors resolve synchronously against the current walkthroughs — no blob fetch (data-model.md §6.2).
     const identity = identityAnchorDrift(anchor, walkthroughs);
     if (identity !== undefined) {
-      base.set(finding.id, {
+      base.set(comment.id, {
         state: identity.state,
         ...(identity.bornText === undefined
           ? {}
@@ -116,9 +116,9 @@ function planFindings(
     }
 
     const plan = planDrift(anchor, anchorContext(anchor, files));
-    const triage = triagePlan(finding.id, plan, anchorLines(anchor));
+    const triage = triagePlan(comment.id, plan, anchorLines(anchor));
     if (triage.base !== undefined) {
-      base.set(finding.id, triage.base);
+      base.set(comment.id, triage.base);
     }
     if (triage.job !== undefined) {
       jobs.push(triage.job);
@@ -131,13 +131,13 @@ function planFindings(
 }
 
 export function useDrift(params: {
-  findings: readonly FindingEntry[];
+  comments: readonly CommentEntry[];
   patch: string;
   walkthroughs: readonly WalkthroughEntry[];
 }): ReadonlyMap<string, DriftResult> {
   const files = indexDiffFiles(params.patch);
-  const { base, excerpts, jobs } = planFindings(
-    params.findings,
+  const { base, excerpts, jobs } = planComments(
+    params.comments,
     files,
     params.walkthroughs
   );

@@ -50,12 +50,12 @@ export function FileTreeFilter() {
             Unviewed
           </MenuCheckboxItem>
           <MenuCheckboxItem
-            checked={filters.findings}
+            checked={filters.comments}
             onCheckedChange={(checked) =>
-              setFilters((prev) => ({ ...prev, findings: checked }))
+              setFilters((prev) => ({ ...prev, comments: checked }))
             }
           >
-            Findings
+            Comments
           </MenuCheckboxItem>
         </MenuGroup>
         <MenuSeparator />

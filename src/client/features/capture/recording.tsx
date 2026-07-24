@@ -15,14 +15,14 @@ import type { CaptureProps } from "./view";
 export function RecordingCapture({
   annotations,
   capture,
-  findings,
+  comments,
   refitted,
   target,
   walkthroughId,
 }: CaptureProps) {
   const replay = useRrwebReplayer(walkthroughId, capture.media);
   const { rootRef } = replay;
-  const pins = recordingPins(annotations, findings, capture);
+  const pins = recordingPins(annotations, comments, capture);
 
   useRecordingPeek(replay, pins, target);
 

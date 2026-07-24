@@ -1,12 +1,12 @@
 import { ANCHOR_KIND } from "../enums/anchor-kind";
 import type { DriftState } from "../enums/drift-state";
-import type { Anchor } from "../schemas/finding";
+import type { Anchor } from "../schemas/comment";
 import type {
   Capture,
   WalkthroughAnnotation,
   WalkthroughRange,
 } from "../schemas/walkthrough";
-import { findingLocation } from "./finding";
+import { commentLocation } from "./comment";
 
 export function rangeAnchor(
   range: WalkthroughRange
@@ -94,7 +94,7 @@ export function foldSectionAnnotations(
 
     notes.push({
       body: annotation.body,
-      location: findingLocation(annotation.anchor),
+      location: commentLocation(annotation.anchor),
     });
     if (annotation.anchor.kind === "text-span") {
       quotes.push(annotation.anchor.quote);

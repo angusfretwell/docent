@@ -1,6 +1,6 @@
 import type { DriftState } from "../enums/drift-state";
 import type { WalkthroughKind } from "../enums/walkthrough-kind";
-import type { Anchor } from "../schemas/finding";
+import type { Anchor } from "../schemas/comment";
 
 export function identityDrift(present: boolean): DriftState {
   return present ? "live" : "outdated";

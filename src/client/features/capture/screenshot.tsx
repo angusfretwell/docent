@@ -61,12 +61,12 @@ function RegionOverlay({
 export function ScreenshotCapture({
   annotations,
   capture,
-  findings,
+  comments,
   refitted,
   target,
   walkthroughId,
 }: CaptureProps) {
-  const regions = screenshotPins(annotations, findings, capture);
+  const regions = screenshotPins(annotations, comments, capture);
   const natural = capture.dims ?? capture.viewport;
   const zoom = useZoom(natural);
   const { frameRect, frameStyle, measured, scale } = zoom;

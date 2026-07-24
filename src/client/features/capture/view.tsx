@@ -1,4 +1,4 @@
-import type { FoldedFinding } from "@shared/lib/finding";
+import type { FoldedComment } from "@shared/lib/comment";
 import type { WalkthroughId } from "@shared/schemas/ids";
 import type {
   Capture,
@@ -11,7 +11,7 @@ import { ScreenshotCapture } from "./screenshot";
 export interface CaptureProps {
   annotations: readonly WalkthroughAnnotation[];
   capture: Capture;
-  findings: readonly FoldedFinding[];
+  comments: readonly FoldedComment[];
   /**
    * A counter, not a flag: asking twice must read as two requests — a reader who
    * refit, zoomed in, then asked again means it both times.

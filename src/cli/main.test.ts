@@ -5,7 +5,7 @@ import { makeTestRuntime } from "@test/runtime";
 import { Console, Effect, Runtime } from "effect";
 import { Command } from "effect/unstable/cli";
 
-import { findingCommand } from "./finding";
+import { commentCommand } from "./comment";
 import { crash } from "./main";
 import { WorkingDirectory } from "./usage";
 
@@ -21,7 +21,7 @@ async function runCli(cwd: string, argv: readonly string[]) {
   const stderr: string[] = [];
 
   const exit = await runtime.runPromise(
-    Command.runWith(findingCommand, { version: "test" })(argv).pipe(
+    Command.runWith(commentCommand, { version: "test" })(argv).pipe(
       Effect.catch(crash),
       Effect.provideService(WorkingDirectory, cwd),
       Effect.provideService(Console.Console, {

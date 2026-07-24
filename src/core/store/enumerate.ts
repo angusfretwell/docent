@@ -5,7 +5,7 @@
  * point the snapshot reader consumes).
  */
 
-import { FindingRecord } from "@shared/schemas/finding";
+import { CommentRecord } from "@shared/schemas/comment";
 import { WalkthroughSection } from "@shared/schemas/walkthrough";
 import { Effect, Schema } from "effect";
 import { FileSystem } from "effect/FileSystem";
@@ -33,9 +33,9 @@ export const listMarkdownRecordNames = Effect.fn("listMarkdownRecordNames")(
   }
 );
 
-export const listFindingIds = Effect.fn("listFindingIds")(
-  function* listFindingIds(dir: string) {
-    return startingWith(yield* listDir(dir), "fnd_");
+export const listCommentIds = Effect.fn("listCommentIds")(
+  function* listCommentIds(dir: string) {
+    return startingWith(yield* listDir(dir), "cmt_");
   }
 );
 
@@ -45,9 +45,9 @@ export const listWalkthroughIds = Effect.fn("listWalkthroughIds")(
   }
 );
 
-export function decodeFindingRecord(text: string, name: string) {
+export function decodeCommentRecord(text: string, name: string) {
   return Effect.flatMap(splitEnvelope(text), ({ body, meta }) =>
-    Schema.decodeUnknownEffect(FindingRecord)({
+    Schema.decodeUnknownEffect(CommentRecord)({
       ...meta,
       body,
       name,
@@ -56,11 +56,11 @@ export function decodeFindingRecord(text: string, name: string) {
   );
 }
 
-export const readFindingRecord = Effect.fn("readFindingRecord")(
-  function* readFindingRecord(file: string, name: string) {
+export const readCommentRecord = Effect.fn("readCommentRecord")(
+  function* readCommentRecord(file: string, name: string) {
     const fs = yield* FileSystem;
     const text = yield* fs.readFileString(file);
-    return yield* decodeFindingRecord(text, name);
+    return yield* decodeCommentRecord(text, name);
   },
   Effect.option
 );

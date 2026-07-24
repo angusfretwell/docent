@@ -136,23 +136,23 @@ describe("readReviewSnapshot", () => {
     expect(snap.changes.map((c) => c.id as string)).toEqual(["chg_002"]);
   });
 
-  test("parses findings records: envelope, anchor, body, and type", async () => {
+  test("parses comments records: envelope, anchor, body, and type", async () => {
     const root = scratchDir("docent-review-");
     await snapshot(root, "feature");
-    const fndDir = path.join(
+    const commentDir = path.join(
       root,
       ".docent",
       "reviews",
       "feature",
-      "findings",
-      "fnd_01J9GQ4W7X"
+      "comments",
+      "cmt_01J9GQ4W7X"
     );
-    mkdirSync(fndDir, { recursive: true });
+    mkdirSync(commentDir, { recursive: true });
     writeFileSync(
-      path.join(fndDir, "001-open.md"),
+      path.join(commentDir, "001-open.md"),
       [
         "---",
-        "schema: docent/finding",
+        "schema: docent/comment",
         'author: { kind: agent, id: claude-code, display: "Claude Code" }',
         "changeId: chg_001",
         "createdAt: 2026-07-10T02:14:00Z",
@@ -164,10 +164,10 @@ describe("readReviewSnapshot", () => {
       ].join("\n")
     );
     writeFileSync(
-      path.join(fndDir, "002-reply.md"),
+      path.join(commentDir, "002-reply.md"),
       [
         "---",
-        "schema: docent/finding",
+        "schema: docent/comment",
         'author: { kind: human, id: angusfretwell@me.com, display: "Angus" }',
         "changeId: chg_002",
         "createdAt: 2026-07-10T03:02:11Z",
@@ -180,12 +180,12 @@ describe("readReviewSnapshot", () => {
 
     const snap = await snapshot(root, "feature");
 
-    const finding = snap.findings.at(0);
-    if (finding === undefined) {
-      throw new Error("expected a finding");
+    const comment = snap.comments.at(0);
+    if (comment === undefined) {
+      throw new Error("expected a comment");
     }
-    expect(finding.id as string).toBe("fnd_01J9GQ4W7X");
-    expect(finding.records).toMatchObject([
+    expect(comment.id as string).toBe("cmt_01J9GQ4W7X");
+    expect(comment.records).toMatchObject([
       {
         anchor: { file: "src/x.ts", kind: "line", lines: [42, 47] },
         author: { id: "claude-code", kind: "agent" },
@@ -196,22 +196,22 @@ describe("readReviewSnapshot", () => {
     ]);
   });
 
-  test("folds the root record's anchored file for the has-findings filter", async () => {
+  test("folds the root record's anchored file for the has-comments filter", async () => {
     const root = scratchDir("docent-review-");
     await snapshot(root, "feature");
-    const fndDir = path.join(
+    const commentDir = path.join(
       root,
       ".docent",
       "reviews",
       "feature",
-      "findings",
-      "fnd_ANCHORED"
+      "comments",
+      "cmt_ANCHORED"
     );
-    mkdirSync(fndDir, { recursive: true });
+    mkdirSync(commentDir, { recursive: true });
     writeFileSync(
-      path.join(fndDir, "001-open.md"),
+      path.join(commentDir, "001-open.md"),
       `---
-schema: docent/finding
+schema: docent/comment
 anchor: { kind: line, file: src/parser/stream.ts, side: head, blobSha: 9c2a1f0, lines: [42, 47] }
 ---
 
@@ -221,30 +221,33 @@ body
 
     const snap = await snapshot(root, "feature");
 
-    expect(snap.findings[0]).toMatchObject({
+    expect(snap.comments[0]).toMatchObject({
       anchorFile: "src/parser/stream.ts",
-      id: "fnd_ANCHORED",
+      id: "cmt_ANCHORED",
     });
   });
 
-  test("degrades gracefully: a malformed record is skipped, its finding survives", async () => {
+  test("degrades gracefully: a malformed record is skipped, its comment survives", async () => {
     const root = scratchDir("docent-review-");
     await snapshot(root, "feature");
-    const fndDir = path.join(
+    const commentDir = path.join(
       root,
       ".docent",
       "reviews",
       "feature",
-      "findings",
-      "fnd_02"
+      "comments",
+      "cmt_02"
     );
-    mkdirSync(fndDir, { recursive: true });
-    writeFileSync(path.join(fndDir, "001-open.md"), "no frontmatter here\n");
+    mkdirSync(commentDir, { recursive: true });
     writeFileSync(
-      path.join(fndDir, "002-reply.md"),
+      path.join(commentDir, "001-open.md"),
+      "no frontmatter here\n"
+    );
+    writeFileSync(
+      path.join(commentDir, "002-reply.md"),
       [
         "---",
-        "schema: docent/finding",
+        "schema: docent/comment",
         'author: { kind: human, id: angusfretwell@me.com, display: "Angus" }',
         "changeId: chg_001",
         "createdAt: 2026-07-10T03:02:11Z",
@@ -257,31 +260,31 @@ body
 
     const snap = await snapshot(root, "feature");
 
-    const finding = snap.findings.at(0);
-    if (finding === undefined) {
-      throw new Error("expected a finding");
+    const comment = snap.comments.at(0);
+    if (comment === undefined) {
+      throw new Error("expected a comment");
     }
-    expect(finding.records.map((record) => record.type)).toEqual(["reply"]);
+    expect(comment.records.map((record) => record.type)).toEqual(["reply"]);
   });
 
-  test("degrades gracefully: a finding dir with an unusable name is skipped", async () => {
+  test("degrades gracefully: a comment dir with an unusable name is skipped", async () => {
     const root = scratchDir("docent-review-");
     await snapshot(root, "feature");
-    const findingsDir = path.join(
+    const commentsDir = path.join(
       root,
       ".docent",
       "reviews",
       "feature",
-      "findings"
+      "comments"
     );
-    mkdirSync(path.join(findingsDir, "fnd_"), { recursive: true });
-    const goodDir = path.join(findingsDir, "fnd_04");
+    mkdirSync(path.join(commentsDir, "cmt_"), { recursive: true });
+    const goodDir = path.join(commentsDir, "cmt_04");
     mkdirSync(goodDir, { recursive: true });
     writeFileSync(
       path.join(goodDir, "001-open.md"),
       [
         "---",
-        "schema: docent/finding",
+        "schema: docent/comment",
         "changeId: chg_001",
         "createdAt: 2026-07-10T02:14:00Z",
         "---",
@@ -293,28 +296,28 @@ body
 
     const snap = await snapshot(root, "feature");
 
-    expect(snap.findings.map((finding) => finding.id as string)).toEqual([
-      "fnd_04",
+    expect(snap.comments.map((comment) => comment.id as string)).toEqual([
+      "cmt_04",
     ]);
   });
 
   test("degrades gracefully: a record with the wrong schema is skipped", async () => {
     const root = scratchDir("docent-review-");
     await snapshot(root, "feature");
-    const fndDir = path.join(
+    const commentDir = path.join(
       root,
       ".docent",
       "reviews",
       "feature",
-      "findings",
-      "fnd_03"
+      "comments",
+      "cmt_03"
     );
-    mkdirSync(fndDir, { recursive: true });
+    mkdirSync(commentDir, { recursive: true });
     writeFileSync(
-      path.join(fndDir, "001-open.md"),
+      path.join(commentDir, "001-open.md"),
       [
         "---",
-        "schema: docent/comment",
+        "schema: docent/bogus",
         'author: { kind: human, id: angusfretwell@me.com, display: "Angus" }',
         "changeId: chg_001",
         "createdAt: 2026-07-10T02:14:00Z",
@@ -326,10 +329,10 @@ body
       ].join("\n")
     );
     writeFileSync(
-      path.join(fndDir, "002-reply.md"),
+      path.join(commentDir, "002-reply.md"),
       [
         "---",
-        "schema: docent/finding",
+        "schema: docent/comment",
         'author: { kind: human, id: angusfretwell@me.com, display: "Angus" }',
         "changeId: chg_001",
         "createdAt: 2026-07-10T03:02:11Z",
@@ -342,11 +345,11 @@ body
 
     const snap = await snapshot(root, "feature");
 
-    const finding = snap.findings.at(0);
-    if (finding === undefined) {
-      throw new Error("expected a finding");
+    const comment = snap.comments.at(0);
+    if (comment === undefined) {
+      throw new Error("expected a comment");
     }
-    expect(finding.records.map((record) => record.type)).toEqual(["reply"]);
+    expect(comment.records.map((record) => record.type)).toEqual(["reply"]);
   });
 });
 
@@ -642,7 +645,7 @@ describe("parseAnchor", () => {
 
   test("no frontmatter or no anchor yields empty", () => {
     expect(parseAnchor("just a body")).toEqual({});
-    expect(parseAnchor("---\nschema: docent/finding\n---\nbody")).toEqual({});
+    expect(parseAnchor("---\nschema: docent/comment\n---\nbody")).toEqual({});
   });
 
   test("does not leak a file key from beyond the anchor object", () => {

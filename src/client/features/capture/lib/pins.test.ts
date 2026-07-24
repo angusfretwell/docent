@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
-import type { FoldedFinding } from "@shared/lib/finding";
-import type { Anchor } from "@shared/schemas/finding";
-import type { CaptureId, FindingId } from "@shared/schemas/ids";
+import type { FoldedComment } from "@shared/lib/comment";
+import type { Anchor } from "@shared/schemas/comment";
+import type { CaptureId, CommentId } from "@shared/schemas/ids";
 import type {
   Capture,
   WalkthroughAnnotation,
@@ -13,7 +13,7 @@ import {
   annotationsFor,
   captureAnchorId,
   captureCallouts,
-  captureFindingDrift,
+  captureCommentDrift,
   recordingPins,
   screenshotPins,
 } from "./pins";
@@ -49,11 +49,11 @@ function annotation(
   return { anchor, body } as WalkthroughAnnotation;
 }
 
-function finding(anchor: FoldedFinding["anchor"], body: string): FoldedFinding {
+function comment(anchor: FoldedComment["anchor"], body: string): FoldedComment {
   return {
     anchor,
     body,
-    id: `fnd_${body}` as FindingId,
+    id: `cmt_${body}` as CommentId,
     participants: [],
     replies: [],
     status: "open",
@@ -98,24 +98,24 @@ describe("captureAnchorId", () => {
   });
 });
 
-describe("captureFindingDrift", () => {
+describe("captureCommentDrift", () => {
   const placed = new Set(["cap_1"]);
 
   test("is live when the anchor's capture is placed in a section", () => {
-    expect(captureFindingDrift(regionAnchor("cap_1"), placed)).toBe("live");
+    expect(captureCommentDrift(regionAnchor("cap_1"), placed)).toBe("live");
   });
 
   test("is outdated when the anchor's capture is no longer placed", () => {
-    expect(captureFindingDrift(regionAnchor("cap_9"), placed)).toBe("outdated");
+    expect(captureCommentDrift(regionAnchor("cap_9"), placed)).toBe("outdated");
   });
 
   test("is undefined for a non-capture anchor", () => {
-    expect(captureFindingDrift(changeAnchor, placed)).toBeUndefined();
+    expect(captureCommentDrift(changeAnchor, placed)).toBeUndefined();
   });
 });
 
 describe("screenshotPins", () => {
-  test("keeps only pins that carry a rect, numbering annotations and findings separately", () => {
+  test("keeps only pins that carry a rect, numbering annotations and comments separately", () => {
     const annotations = [
       annotation(
         regionAnchor("cap_1", [0.1, 0.1, 0.2, 0.2]),
@@ -123,14 +123,14 @@ describe("screenshotPins", () => {
       ),
       annotation(regionAnchor("cap_1"), "whole annotation"),
     ];
-    const findings = [
-      finding(
+    const comments = [
+      comment(
         regionAnchor("cap_1", [0.5, 0.5, 0.1, 0.1]),
-        "finding with a rect"
+        "comment with a rect"
       ),
     ];
 
-    const regions = screenshotPins(annotations, findings, capture("cap_1"));
+    const regions = screenshotPins(annotations, comments, capture("cap_1"));
 
     expect(regions).toEqual([
       {
@@ -139,22 +139,22 @@ describe("screenshotPins", () => {
         rect: [0.1, 0.1, 0.2, 0.2],
       },
       {
-        body: "finding with a rect",
-        label: "F1",
+        body: "comment with a rect",
+        label: "C1",
         rect: [0.5, 0.5, 0.1, 0.1],
       },
     ]);
   });
 
-  test("filters findings to the given capture, trusting annotations are already scoped to it by annotationsFor", () => {
-    const findings = [
-      finding(
+  test("filters comments to the given capture, trusting annotations are already scoped to it by annotationsFor", () => {
+    const comments = [
+      comment(
         regionAnchor("cap_other", [0.5, 0.5, 0.1, 0.1]),
         "wrong capture, filtered out"
       ),
     ];
 
-    const regions = screenshotPins([], findings, capture("cap_1"));
+    const regions = screenshotPins([], comments, capture("cap_1"));
 
     expect(regions).toEqual([]);
   });
@@ -165,9 +165,9 @@ describe("recordingPins", () => {
     const annotations = [
       annotation(timestampAnchor("cap_1", 1000, 2000), "seek annotation"),
     ];
-    const findings = [finding(timestampAnchor("cap_1"), "whole finding")];
+    const comments = [comment(timestampAnchor("cap_1"), "whole comment")];
 
-    const times = recordingPins(annotations, findings, capture("cap_1"));
+    const times = recordingPins(annotations, comments, capture("cap_1"));
 
     expect(times).toEqual([
       {
@@ -186,14 +186,14 @@ describe("captureCallouts", () => {
       annotation(regionAnchor("cap_1", [0.1, 0.1, 0.2, 0.2]), "placed"),
       annotation(regionAnchor("cap_1"), "unplaced"),
     ];
-    const findings = [finding(regionAnchor("cap_1"), "a reviewer's note")];
+    const comments = [comment(regionAnchor("cap_1"), "a reviewer's note")];
 
-    const callouts = captureCallouts(annotations, findings, capture("cap_1"));
+    const callouts = captureCallouts(annotations, comments, capture("cap_1"));
 
     expect(callouts).toEqual([
       { body: "placed", label: "A1" },
       { body: "unplaced", label: "A2" },
-      { body: "a reviewer's note", label: "F1" },
+      { body: "a reviewer's note", label: "C1" },
     ]);
   });
 

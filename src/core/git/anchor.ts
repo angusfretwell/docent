@@ -1,5 +1,5 @@
 import type { Side } from "@shared/enums/side";
-import type { Anchor } from "@shared/schemas/finding";
+import type { Anchor } from "@shared/schemas/comment";
 import { Effect } from "effect";
 
 import { resolveBlobShaAt } from "./resolve";

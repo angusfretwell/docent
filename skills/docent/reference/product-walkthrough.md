@@ -1,6 +1,6 @@
 # Authoring the product walkthrough
 
-The **editorial half** of the product pillar. Reads the Change and the **already-produced captures**, and drops the product walkthrough's sections — prose with `{{capture:i}}` interleave and pinned `annotations[]`. It **touches no browser**: capture is expensive and separable, so this half re-runs cheaply against the same captures — structure and narration iterate without re-driving anything. Driving the browser is [capture.md](capture.md); Findings belong to the review loop ([findings.md](findings.md)).
+The **editorial half** of the product pillar. Reads the Change and the **already-produced captures**, and drops the product walkthrough's sections — prose with `{{capture:i}}` interleave and pinned `annotations[]`. It **touches no browser**: capture is expensive and separable, so this half re-runs cheaply against the same captures — structure and narration iterate without re-driving anything. Driving the browser is [capture.md](capture.md); Comments belong to the review loop ([comments.md](comments.md)).
 
 The output is plain files a running `docent serve` re-renders live. The CLI is non-gating (hand-authoring identical files works too) but validates against the schemas the server renders; your work is the editorial judgment.
 
@@ -32,7 +32,7 @@ The spine is prose-primary: an ordered list of authored sections, each narration
 
 - **Group captures into sections.** A capture is atomic — one screenshot or one recording; a section composes several deliberately (uploading a file, then the validation that fires). Reference each by its `cap_` id.
 - **Order high-signal first.** Section order **is** the tour order — array position is the only rank.
-- **Annotate, don't Find.** An **annotation** is your authored callout pinned to a region of a capture — durable, not a thread, not resolvable — distinct from a reviewer's Finding. Author annotations, never Findings.
+- **Annotate, don't Find.** An **annotation** is your authored callout pinned to a region of a capture — durable, not a thread, not resolvable — distinct from a reviewer's Comment. Author annotations, never Comments.
 
 ## 4. Drop each section — captures + interleave + annotations
 
@@ -50,7 +50,7 @@ EOF
 ```
 
 - `--capture` takes `cap_` ids from the manifest's `captures[]`. Repeatable (or comma-joined).
-- `--annotation` takes one JSON callout each — **repeat the flag per annotation, never comma-join** (the JSON embeds commas). The shape is `{ "anchor": <arm>, "body": "…" }`, validated against the same `Anchor` schema Findings use. The product arms:
+- `--annotation` takes one JSON callout each — **repeat the flag per annotation, never comma-join** (the JSON embeds commas). The shape is `{ "anchor": <arm>, "body": "…" }`, validated against the same `Anchor` schema Comments use. The product arms:
 
   ```jsonc
   { "kind": "screenshot-region", "capture": "cap_a", "rect": [0.1, 0.2, 0.3, 0.1] } // rect [x,y,w,h], normalized 0–1
@@ -79,6 +79,6 @@ The tour is done when the title is set and every section is dropped in order. If
 ## Boundaries
 
 - **No browser.** This half only narrates; re-driving capture is [capture.md](capture.md)'s job.
-- **Walkthroughs only, never Findings.** Author annotations; leave Findings to the review loop.
+- **Walkthroughs only, never Comments.** Author annotations; leave Comments to the review loop.
 - **Regeneration mints a fresh `wlk_`** — never re-narrate a prior, already-authored walkthrough in place. Because `add-section` appends, author into a captures-only shell with empty `sections`; don't append onto a tour already narrated. When to regenerate is the reconcile decision in SKILL.md.
 - **Commit / push is the human's git workflow** — out of scope.

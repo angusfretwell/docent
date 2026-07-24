@@ -3,7 +3,7 @@ import { Schema } from "effect";
 import { captureKinds } from "../enums/capture-kind";
 import { sides } from "../enums/side";
 import { walkthroughKinds } from "../enums/walkthrough-kind";
-import { Anchor } from "./finding";
+import { Anchor } from "./comment";
 import { CaptureId, ChangeId, SectionId, WalkthroughId } from "./ids";
 
 /** Same coordinate as the `line` anchor arm. */
@@ -17,7 +17,7 @@ export class WalkthroughRange extends Schema.Class<WalkthroughRange>(
   side: Schema.Literals(sides),
 }) {}
 
-/** Anchor reuses the full Finding union, deliberately not narrowed to capture arms — any arm an author writes still renders. Not a resolvable thread. */
+/** Anchor reuses the full Comment union, deliberately not narrowed to capture arms — any arm an author writes still renders. Not a resolvable thread. */
 export class WalkthroughAnnotation extends Schema.Class<WalkthroughAnnotation>(
   "WalkthroughAnnotation"
 )({
