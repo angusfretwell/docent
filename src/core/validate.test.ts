@@ -3,11 +3,11 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import type { BunServices } from "@effect/platform-bun";
+import { cleanupScratchDirs, scratchDir } from "@test/fixtures.ts";
+import { makeTestRuntime } from "@test/runtime.ts";
 import type { Effect } from "effect";
 
 import { materializeFixture } from "../../scripts/prepare-fixture.ts";
-import { cleanupScratchDirs, scratchDir } from "../test-support/fixtures";
-import { makeTestRuntime } from "../test-support/runtime";
 import { resolveStateRoot, validateStateRoot } from "./validate";
 
 const runtime = makeTestRuntime();

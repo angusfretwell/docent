@@ -7,8 +7,8 @@ import {
   git,
   scratchDir,
   scratchRepo,
-} from "@test-support/fixtures";
-import { makeTestRuntime } from "@test-support/runtime";
+} from "@test/fixtures";
+import { makeTestRuntime } from "@test/runtime";
 
 import {
   resolveAuthor,

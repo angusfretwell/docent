@@ -8,7 +8,7 @@ import { BunServices } from "@effect/platform-bun";
 import { ManagedRuntime } from "effect";
 import { sum } from "radashi";
 
-import { cleanupScratchDirs, scratchDir } from "../src/test-support/fixtures";
+import { cleanupScratchDirs, scratchDir } from "../src/test/fixtures.ts";
 import { materializeFixture } from "./prepare-fixture.ts";
 
 const runtime = ManagedRuntime.make(BunServices.layer);

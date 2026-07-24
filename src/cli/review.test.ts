@@ -2,8 +2,8 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import path from "node:path";
 
-import { cleanupScratchDirs, git, scratchRepo } from "@test-support/fixtures";
-import { makeTestRuntime } from "@test-support/runtime";
+import { cleanupScratchDirs, git, scratchRepo } from "@test/fixtures";
+import { makeTestRuntime } from "@test/runtime";
 import { Console, Effect } from "effect";
 import { Command } from "effect/unstable/cli";
 

@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 
-import { cleanupScratchDirs, scratchRepo } from "@test-support/fixtures";
-import { makeTestRuntime } from "@test-support/runtime";
+import { cleanupScratchDirs, scratchRepo } from "@test/fixtures";
+import { makeTestRuntime } from "@test/runtime";
 import { Console, Effect } from "effect";
 import { Command } from "effect/unstable/cli";
 

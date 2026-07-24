@@ -4,9 +4,9 @@ import path from "node:path";
 
 import type { WalkthroughKind } from "@shared/enums/walkthrough-kind";
 import { ViewedRequest } from "@shared/schemas/review";
+import { cleanupScratchDirs, scratchDir } from "@test/fixtures";
+import { makeTestRuntime } from "@test/runtime";
 
-import { cleanupScratchDirs, scratchDir } from "../test-support/fixtures";
-import { makeTestRuntime } from "../test-support/runtime";
 import {
   appendViewedEvent,
   parseAnchor,

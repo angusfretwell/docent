@@ -7,14 +7,14 @@ import { Change, DiffError } from "@shared/schemas/change";
 import { FindingWriteResult } from "@shared/schemas/finding-write";
 import { Pending } from "@shared/schemas/pending";
 import { ReviewSnapshot } from "@shared/schemas/review";
-import { Schema } from "effect";
-
 import {
   cleanupScratchDirs,
   git,
   scratchDir,
   scratchRepo,
-} from "../test-support/fixtures";
+} from "@test/fixtures";
+import { Schema } from "effect";
+
 import { webHandler } from "./index";
 
 const disposers: (() => Promise<void>)[] = [];
