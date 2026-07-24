@@ -34,6 +34,7 @@ function parseQuery(
 ): string {
   if (typeof query !== "string") {
     const parts: string[] = [];
+
     if (query.min != null) {
       parts.push(resolveMin(query.min));
     }
@@ -46,9 +47,11 @@ function parseQuery(
     if (query.pointer === "fine") {
       parts.push("(pointer: fine)");
     }
+
     if (parts.length === 0) {
       return "(min-width: 0px)";
     }
+
     return parts.join(" and ");
   }
 
@@ -57,9 +60,11 @@ function parseQuery(
   }
 
   const parts: string[] = [];
+
   for (const segment of query.split(":")) {
     if (segment.startsWith("max-")) {
       const bp = segment.slice(4);
+
       if (bp in BREAKPOINTS) {
         parts.push(resolveMax(bp as Breakpoint));
       }
@@ -92,8 +97,10 @@ export function useMediaQuery(
       if (typeof window === "undefined") {
         return () => {};
       }
+
       const mql = window.matchMedia(mediaQuery);
       mql.addEventListener("change", callback);
+
       return () => mql.removeEventListener("change", callback);
     },
     [mediaQuery]
@@ -103,6 +110,7 @@ export function useMediaQuery(
     if (typeof window === "undefined") {
       return false;
     }
+
     return window.matchMedia(mediaQuery).matches;
   }, [mediaQuery]);
 

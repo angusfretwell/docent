@@ -28,7 +28,7 @@ import {
 import { DrawerDismissProvider } from "@client/hooks/use-drawer-dismiss";
 import { useDrift } from "@client/hooks/use-drift";
 import { useKeyPressed } from "@client/hooks/use-key-pressed";
-import { useIsMobile, useMediaQuery } from "@client/hooks/use-media-query";
+import { useIsMobile } from "@client/hooks/use-media-query";
 import { parsePatchFiles, statusForChange } from "@client/lib/diff";
 import { diffLayoutAtom, diffTreeOpenAtom } from "@client/lib/preferences";
 import { diffQueryOptions } from "@client/queries/diff";
@@ -48,6 +48,12 @@ import { useViewedState } from "./hooks/use-viewed";
 import { isGeneratedPath } from "./lib/generated";
 import { computeViewed } from "./lib/viewed";
 import { DiffTree } from "./tree";
+
+const treeToggleButtonProps = {
+  "aria-label": "Toggle file tree",
+  size: "icon-sm",
+  variant: "ghost",
+} as const;
 
 export function DiffView() {
   const { data: change } = useSuspenseQuery(diffQueryOptions);
@@ -157,15 +163,7 @@ export function DiffView() {
           <div className="px-2 shrink-0 h-11 flex items-center border-b gap-1.5 @container">
             {isMobile ? (
               <Drawer open={treeDrawerOpen} onOpenChange={setTreeDrawerOpen}>
-                <DrawerTrigger
-                  render={
-                    <Button
-                      size="icon-sm"
-                      variant="ghost"
-                      aria-label="Toggle file tree"
-                    />
-                  }
-                >
+                <DrawerTrigger render={<Button {...treeToggleButtonProps} />}>
                   <ListTree />
                 </DrawerTrigger>
                 <DrawerPopup showBar>
@@ -180,9 +178,7 @@ export function DiffView() {
               </Drawer>
             ) : (
               <Button
-                size="icon-sm"
-                variant="ghost"
-                aria-label="Toggle file tree"
+                {...treeToggleButtonProps}
                 onClick={() => setDiffTreeOpen(!diffTreeOpen)}
               >
                 <KbdHint active={isAltPressed} shortcut="[">
