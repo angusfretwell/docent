@@ -1,4 +1,4 @@
-import { Button } from "@client/components/ui/button";
+import { MenuTriggerButton } from "@client/components/menu-trigger-button";
 import {
   Menu,
   MenuCheckboxItem,
@@ -40,15 +40,7 @@ export function FindingsFilter() {
 
   return (
     <Menu>
-      <MenuTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="sm"
-            className="font-normal text-[13px]!"
-          />
-        }
-      >
+      <MenuTrigger render={<MenuTriggerButton />}>
         <MessagesSquare />
         {count} {plur("comment", count)}
       </MenuTrigger>
