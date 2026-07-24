@@ -9,11 +9,9 @@ import { useGesture } from "@use-gesture/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import type { Offset, Size, View } from "../lib/zoom-geometry";
-import { clampAxis, measure, wheelPixels } from "../lib/zoom-geometry";
+import { clampAxis, measure, wheelDelta } from "../lib/zoom-geometry";
 
 const STEP_FACTOR = 2;
-
-const WHEEL_SENSITIVITY = 0.002;
 
 const FRAME_PADDING = 0.12;
 
@@ -311,16 +309,24 @@ export function useZoom(natural: readonly [number, number]): Zoom {
         scaleTo(pinched, toStage(origin[0], origin[1]));
       },
       // A ctrl-modified wheel is the trackpad pinch, already handled by onPinch.
+      // A plain two-finger swipe pans the capture, the same as dragging it.
       onWheel: ({ event }) => {
         if (event.ctrlKey) {
           return;
         }
 
         stopAnimation();
-        scaleTo(
-          current().scale * Math.exp(-wheelPixels(event) * WHEEL_SENSITIVITY),
-          toStage(event.clientX, event.clientY)
-        );
+
+        const from = current();
+        const delta = wheelDelta(event);
+
+        commit({
+          offset: {
+            x: from.placed.x - delta.x,
+            y: from.placed.y - delta.y,
+          },
+          scale: viewRef.current.scale,
+        });
       },
     },
     {

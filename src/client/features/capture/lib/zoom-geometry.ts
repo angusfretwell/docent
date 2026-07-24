@@ -42,16 +42,19 @@ export function clampAxis(value: number, slack: number) {
 }
 
 /** Wheel deltas arrive in pixels, lines, or pages depending on the device. */
-export function wheelPixels(event: WheelEvent) {
+export function wheelDelta(event: WheelEvent): Offset {
   if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) {
-    return event.deltaY * LINE_HEIGHT;
+    return { x: event.deltaX * LINE_HEIGHT, y: event.deltaY * LINE_HEIGHT };
   }
 
   if (event.deltaMode === WheelEvent.DOM_DELTA_PAGE) {
-    return event.deltaY * LINE_HEIGHT * 10;
+    return {
+      x: event.deltaX * LINE_HEIGHT * 10,
+      y: event.deltaY * LINE_HEIGHT * 10,
+    };
   }
 
-  return event.deltaY;
+  return { x: event.deltaX, y: event.deltaY };
 }
 
 /**
