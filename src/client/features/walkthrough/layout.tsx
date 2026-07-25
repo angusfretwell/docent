@@ -106,8 +106,8 @@ export function WalkthroughLayout({
       className="h-[calc(100svh-(--spacing(12.5)))]! overflow-visible!"
     >
       <ResizablePanel
-        defaultSize="37em"
         minSize={320}
+        defaultSize="40%"
         id="prose"
         className="overflow-visible!"
       >
