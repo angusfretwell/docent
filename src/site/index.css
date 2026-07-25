@@ -1,0 +1,4 @@
+@import "tailwindcss";
+@import "shadcn/tailwind.css";
+
+@import "../client/styles/theme.css";

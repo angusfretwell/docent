@@ -35,6 +35,7 @@
       "@client/*": ["./src/client/*"],
       "@core/*": ["./src/core/*"],
       "@shared/*": ["./src/shared/*"],
+      "@site/*": ["./src/site/*"],
       "@test/*": ["./src/test/*"]
     }
   },

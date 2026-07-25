@@ -4,8 +4,10 @@
   "type": "module",
   "scripts": {
     "dev": "bun run build:worker && ./scripts/dev.ts",
-    "build": "bun run --sequential build:worker build:docent",
+    "dev:site": "bun --port 4802 src/site/index.html",
+    "build": "bun run --sequential build:worker build:docent build:site",
     "build:docent": "./scripts/build-docent.ts",
+    "build:site": "./scripts/build-site.ts",
     "build:worker": "./scripts/build-worker.ts",
     "prepare": "bun run --parallel prepare:*",
     "prepare:effect": "./scripts/prepare-effect.sh",

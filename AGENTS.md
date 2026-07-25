@@ -12,7 +12,9 @@ Don't trust your training data for any library, framework, SDK, API, or CLI tool
 
 ```
 bun run dev        # start dev server
+bun run dev:site   # start the marketing site dev server (src/site)
 bun run build      # create production build
+bun run build:site # build the marketing site to dist/site
 bun run fix        # format and auto-fix linter errors
 bun run typecheck  # run type checks
 bun run test       # run tests
