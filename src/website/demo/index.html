@@ -10,21 +10,6 @@
       content="Explore a docent review in your browser: a change's diff, guided walkthroughs of the code and the product, and a comment queue you can write to. No install, no backend."
     />
     <link rel="stylesheet" href="../../client/styles/index.css" />
-    <!-- ThemeProvider only applies the root class once React mounts, which is
-         after first paint: a dark-theme visitor would see a white flash. This
-         resolves the stored choice the same way and applies it before paint. -->
-    <script>
-      (() => {
-        const stored = localStorage.getItem("theme");
-        const system = matchMedia("(prefers-color-scheme: dark)").matches
-          ? "dark"
-          : "light";
-
-        document.documentElement.classList.add(
-          stored === "light" || stored === "dark" ? stored : system
-        );
-      })();
-    </script>
   </head>
   <body>
     <div id="root"></div>
