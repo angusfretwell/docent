@@ -262,56 +262,6 @@ describe("writeCommentRecord", () => {
     );
   });
 
-  test("edit supersedes a named record's body at fold time", async () => {
-    const root = scratchDir("docent-write-");
-    const { commentId, record } = await write(root, {
-      anchor: lineAnchor,
-      body: "the flush races",
-      op: "open",
-    });
-
-    const edit = await write(root, {
-      body: "the flush races the drain",
-      commentId,
-      edits: record,
-      op: "edit",
-    });
-
-    expect(edit.record).toBe("002-edit.md");
-    const snap = await snapshot(root);
-    const entry = snap.comments.find((comment) => comment.id === commentId);
-    const folded = foldComment(commentId, entry?.records ?? []);
-    expect(folded.body).toBe("the flush races the drain");
-  });
-
-  test("edit rewrites a reply body without changing status", async () => {
-    const root = scratchDir("docent-write-");
-    const { commentId } = await write(root, {
-      anchor: lineAnchor,
-      body: "flagged",
-      op: "open",
-    });
-    const reply = await write(root, {
-      body: "typo: fixed",
-      commentId,
-      op: "reply",
-    });
-    await write(root, { commentId, op: "action" });
-
-    await write(root, {
-      body: "Fixed the drain race.",
-      commentId,
-      edits: reply.record,
-      op: "edit",
-    });
-
-    const snap = await snapshot(root);
-    const entry = snap.comments.find((comment) => comment.id === commentId);
-    const folded = foldComment(commentId, entry?.records ?? []);
-    expect(folded.replies.at(0)?.body).toBe("Fixed the drain race.");
-    expect(folded.status).toBe("actioned");
-  });
-
   test("every record stamps the changeId current at write", async () => {
     const root = scratchDir("docent-write-");
     const { commentId } = await write(root, {

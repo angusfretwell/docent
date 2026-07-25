@@ -8,7 +8,7 @@ import { Console, Effect } from "effect";
 import { Command } from "effect/unstable/cli";
 
 import { readReviewSnapshot } from "../core/review";
-import { reviewCommand } from "./review";
+import { renameCommand } from "./rename";
 import { WorkingDirectory } from "./usage";
 
 const runtime = makeTestRuntime();
@@ -19,14 +19,14 @@ afterAll(async () => {
   cleanupScratchDirs();
 });
 
-function review(cwd: string, argv: readonly string[]) {
-  return Command.runWith(reviewCommand, { version: "test" })(argv).pipe(
+function rename(cwd: string, argv: readonly string[]) {
+  return Command.runWith(renameCommand, { version: "test" })(argv).pipe(
     Effect.provideService(WorkingDirectory, cwd)
   );
 }
 
 async function printedJson(
-  command: ReturnType<typeof review>
+  command: ReturnType<typeof rename>
 ): Promise<unknown> {
   const printed: string[] = [];
 
@@ -45,7 +45,7 @@ async function printedJson(
 }
 
 function featureRepo(): string {
-  const dir = scratchRepo("docent-review-cli-");
+  const dir = scratchRepo("docent-rename-cli-");
   git(dir, "checkout", "-b", "feature");
   writeFileSync(path.join(dir, "feature.ts"), "export const x = 1;\n");
   git(dir, "add", ".");
@@ -60,11 +60,11 @@ async function currentReview(root: string) {
   return snapshot.review;
 }
 
-describe("docent review set — end to end through git + fs", () => {
+describe("docent rename — end to end through git + fs", () => {
   test("names the change, and the Review reads back with that title", async () => {
     const repo = featureRepo();
 
-    await run(review(repo, ["set", "--title", "Palette panel"]));
+    await run(rename(repo, ["--title", "Palette panel"]));
 
     const named = await currentReview(repo);
     expect(named.title).toBe("Palette panel");
@@ -74,7 +74,7 @@ describe("docent review set — end to end through git + fs", () => {
     const repo = featureRepo();
 
     const printed = await printedJson(
-      review(repo, ["set", "--title", "Palette panel"])
+      rename(repo, ["--title", "Palette panel"])
     );
 
     expect(printed).toMatchObject({
@@ -87,10 +87,10 @@ describe("docent review set — end to end through git + fs", () => {
 
   test("renaming rewrites the title in place, keeping the Review's id", async () => {
     const repo = featureRepo();
-    await run(review(repo, ["set", "--title", "First name"]));
+    await run(rename(repo, ["--title", "First name"]));
     const minted = await currentReview(repo);
 
-    await run(review(repo, ["set", "--title", "Second name"]));
+    await run(rename(repo, ["--title", "Second name"]));
 
     expect(await currentReview(repo)).toMatchObject({
       id: minted.id,
@@ -101,7 +101,7 @@ describe("docent review set — end to end through git + fs", () => {
   test("a missing --title is a usage error", async () => {
     const repo = featureRepo();
 
-    const exit = await runtime.runPromiseExit(review(repo, ["set"]));
+    const exit = await runtime.runPromiseExit(rename(repo, []));
 
     expect(exit._tag).toBe("Failure");
   });
@@ -109,9 +109,7 @@ describe("docent review set — end to end through git + fs", () => {
   test("a blank --title is a usage error, never a nameless rename", async () => {
     const repo = featureRepo();
 
-    const error = await run(
-      review(repo, ["set", "--title", "   "]).pipe(Effect.flip)
-    );
+    const error = await run(rename(repo, ["--title", "   "]).pipe(Effect.flip));
 
     expect(error.message).toBe("--title <value> is required");
   });

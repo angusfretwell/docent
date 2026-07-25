@@ -12,7 +12,6 @@ import {
   actionComment,
   addComment,
   buildAuthor,
-  editComment,
   parseAnchorSpec,
   reopenComment,
   replyComment,
@@ -232,29 +231,5 @@ describe("write + fetch round-trip (shared write path)", () => {
     const comments = await run(listComments(repo, { status: [] }));
     const reopened = comments.find((comment) => comment.id === commentId);
     expect(reopened?.status).toBe("open");
-  });
-
-  test("edit supersedes the named record's body", async () => {
-    const repo = featureRepo();
-    const { commentId, record } = await run(
-      addComment(repo, {
-        anchor: { kind: "change" },
-        author: {},
-        body: "the flush races",
-      })
-    );
-
-    await run(
-      editComment(repo, {
-        author: {},
-        body: "the flush races the drain",
-        commentId,
-        edits: record,
-      })
-    );
-
-    const comments = await run(listComments(repo, { status: [] }));
-    const edited = comments.find((comment) => comment.id === commentId);
-    expect(edited?.body).toBe("the flush races the drain");
   });
 });

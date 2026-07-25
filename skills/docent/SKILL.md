@@ -57,7 +57,7 @@ git log --oneline origin/HEAD..HEAD    # what this branch adds (fall back to ori
 - **Name the change.** Reading the head is also where you learn what this branch _is_, so record it as the Review's title — the headline the UI renders:
 
   ```bash
-  npx -y @angusfretwell/docent review set --title "Palette panel"
+  npx -y @angusfretwell/docent rename --title "Palette panel"
   ```
 
   Keep it **short** — a few words naming the change the way a PR title does, drawn from the branch's commits, not a summary of them. Re-set it on every run: the title tracks the head, and renaming keeps the Review's id.

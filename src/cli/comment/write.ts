@@ -41,7 +41,7 @@ function parseLine(
   const match = LINE_SPEC.exec(value.trim());
   if (match?.groups === undefined) {
     return Effect.fail(
-      new CliUsageError({ reason: `bad --line: ${value} (N, N:M, or N-M)` })
+      new CliUsageError({ reason: `invalid --line: ${value} (N, N:M, or N-M)` })
     );
   }
 
@@ -203,24 +203,5 @@ export const reopenComment = Effect.fn("reopenComment")(function* reopenComment(
   return yield* commitWrite(scope, author, {
     commentId: params.commentId,
     op: "reopen",
-  });
-});
-
-export const editComment = Effect.fn("editComment")(function* editComment(
-  cwd: string,
-  params: {
-    author: AuthorOpts;
-    body: string;
-    edits: string;
-    commentId: CommentId;
-  }
-) {
-  const scope = yield* resolveChangeScope(cwd);
-  const author = yield* buildAuthor(scope.root, params.author);
-  return yield* commitWrite(scope, author, {
-    body: params.body,
-    commentId: params.commentId,
-    edits: params.edits,
-    op: "edit",
   });
 });

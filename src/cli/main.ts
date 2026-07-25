@@ -7,7 +7,7 @@ import type { EntryOptions } from "../serve";
 import { serve } from "../serve";
 import { captureCommand } from "./capture";
 import { commentCommand } from "./comment";
-import { reviewCommand } from "./review";
+import { renameCommand } from "./rename";
 import { statusCommand } from "./status";
 import { WorkingDirectory } from "./usage";
 import { validateCommand } from "./validate";
@@ -44,36 +44,36 @@ export function crash(
 }
 
 function docentCli(entry: EntryOptions) {
-  const serveHere = Effect.gen(function* serveHere() {
-    const cwd = yield* WorkingDirectory;
-    return yield* serve(entry, cwd);
-  });
-
   const serveCommand = Command.make(
     "serve",
     {
       directory: Argument.string("directory").pipe(
         Argument.optional,
-        Argument.withDescription("The repo to serve (default: this directory)")
+        Argument.withDescription(
+          "The repo to serve (default: current directory)"
+        )
       ),
     },
     (config) =>
-      Option.match(config.directory, {
-        onNone: () => serveHere,
-        onSome: (directory) => serve(entry, directory),
+      Effect.gen(function* runServe() {
+        const cwd = yield* WorkingDirectory;
+        return yield* serve(
+          entry,
+          Option.getOrElse(config.directory, () => cwd)
+        );
       })
-  ).pipe(Command.withDescription("Serve the Review's UI for a repo"));
+  ).pipe(Command.withDescription("Serve the review UI"));
 
-  return Command.make("docent", {}, () => serveHere).pipe(
+  return Command.make("docent").pipe(
     Command.withDescription(
-      "Local code review: walkthroughs, comments, and the diff"
+      "Review your agent's work with guided walkthroughs of code and product changes"
     ),
     Command.withSubcommands([
       serveCommand,
       commentCommand,
       walkthroughCommand,
       captureCommand,
-      reviewCommand,
+      renameCommand,
       validateCommand,
       statusCommand,
     ])

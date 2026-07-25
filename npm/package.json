@@ -1,7 +1,7 @@
 {
   "name": "@angusfretwell/docent",
   "version": "0.0.0",
-  "description": "Local code-review app shell — downloads and runs the docent binary.",
+  "description": "Review your agent's work with guided walkthroughs of code and product changes",
   "license": "MIT",
   "repository": {
     "type": "git",

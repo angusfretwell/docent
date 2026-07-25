@@ -11,5 +11,7 @@ export const statusCommand = Command.make("status", {}, () =>
     return yield* printJson(yield* resolveServeStatus(cwd));
   })
 ).pipe(
-  Command.withDescription("Report whether a docent server is serving this repo")
+  Command.withDescription(
+    "Check whether a docent server is running for this repo"
+  )
 );

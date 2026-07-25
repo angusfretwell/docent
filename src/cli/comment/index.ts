@@ -1,15 +1,13 @@
 import { commentStatuses } from "@shared/enums/comment-status";
 import { CommentId } from "@shared/schemas/ids";
 import { Effect, Option } from "effect";
-import { Argument, Command, Flag } from "effect/unstable/cli";
+import { Command, Flag } from "effect/unstable/cli";
 
 import { parseRecordId } from "../specs";
 import {
   commaSeparated,
   parseEnum,
   printJson,
-  refuseArguments,
-  requireText,
   resolveBody,
   WorkingDirectory,
 } from "../usage";
@@ -18,7 +16,6 @@ import type { AuthorOpts } from "./write";
 import {
   actionComment,
   addComment,
-  editComment,
   parseAnchorSpec,
   reopenComment,
   replyComment,
@@ -28,7 +25,7 @@ import {
 const authorFlags = {
   agent: Flag.string("agent").pipe(
     Flag.optional,
-    Flag.withDescription("Attribute to an agent with this slug")
+    Flag.withDescription("Attribute the comment to an agent with this slug")
   ),
   display: Flag.string("display").pipe(
     Flag.optional,
@@ -36,7 +33,7 @@ const authorFlags = {
   ),
   model: Flag.string("model").pipe(
     Flag.optional,
-    Flag.withDescription("Agent model metadata")
+    Flag.withDescription("The model of the agent attributed to the comment")
   ),
 };
 
@@ -52,11 +49,11 @@ function authorOpts(flags: AuthorFlagValues): AuthorOpts {
 
 const bodyFlag = Flag.string("body").pipe(
   Flag.optional,
-  Flag.withDescription("The record's body (omit to read it from piped stdin)")
+  Flag.withDescription("The comment's body (omit to read from STDIN)")
 );
 
 const commentFlag = Flag.string("comment").pipe(
-  Flag.withDescription("The cmt_ id to append to")
+  Flag.withDescription("The comment to append to (cmt_…)")
 );
 
 const list = Command.make(
@@ -64,20 +61,16 @@ const list = Command.make(
   {
     anchorFile: Flag.string("anchor-file").pipe(
       Flag.optional,
-      Flag.withDescription("Keep only comments anchored on this file")
-    ),
-    args: Argument.string("arg").pipe(
-      Argument.variadic(),
-      Argument.withDescription("Not accepted — every filter is a flag")
+      Flag.withDescription("Filter by comments anchored on this file")
     ),
     author: Flag.string("author").pipe(
       Flag.optional,
-      Flag.withDescription("Keep only comments this author id participated in")
+      Flag.withDescription("Filter by comments this author took part in")
     ),
     status: commaSeparated(
       Flag.string("status").pipe(
         Flag.withDescription(
-          "Keep only these statuses — repeatable or comma-joined"
+          "Filter by these statuses (comma-separated, or repeat flag)"
         )
       )
     ),
@@ -85,7 +78,6 @@ const list = Command.make(
   (config) =>
     Effect.gen(function* runList() {
       const cwd = yield* WorkingDirectory;
-      yield* refuseArguments(config.args);
       const status = yield* Effect.all(
         config.status.map((value) =>
           parseEnum("status", value, commentStatuses)
@@ -100,31 +92,31 @@ const list = Command.make(
 
       return yield* printJson({ comments });
     })
-).pipe(Command.withDescription("Read the Comment queue, filtered"));
+).pipe(Command.withDescription("List comments"));
 
 const add = Command.make(
   "add",
   {
     anchor: Flag.string("anchor").pipe(
       Flag.optional,
-      Flag.withDescription("A raw anchor arm as JSON — the escape hatch")
+      Flag.withDescription("A raw anchor as JSON")
     ),
     author: authorFlags,
     body: bodyFlag,
     change: Flag.boolean("change").pipe(
-      Flag.withDescription("Anchor on the whole Change")
+      Flag.withDescription("Anchor to the whole change")
     ),
     file: Flag.string("file").pipe(
       Flag.optional,
-      Flag.withDescription("Anchor on this file")
+      Flag.withDescription("File to anchor to")
     ),
     line: Flag.string("line").pipe(
       Flag.optional,
-      Flag.withDescription("Narrow --file to a line span: N, N:M, or N-M")
+      Flag.withDescription("Narrow --file to a line span (N, N:M, or N-M)")
     ),
     side: Flag.string("side").pipe(
       Flag.optional,
-      Flag.withDescription("Which side of the Change: base or head")
+      Flag.withDescription("Side of the change to anchor to (base or head)")
     ),
   },
   (config) =>
@@ -147,7 +139,7 @@ const add = Command.make(
         })
       );
     })
-).pipe(Command.withDescription("Mint an anchored Comment"));
+).pipe(Command.withDescription("Create a comment"));
 
 const reply = Command.make(
   "reply",
@@ -170,9 +162,7 @@ const reply = Command.make(
         })
       );
     })
-).pipe(
-  Command.withDescription("Write prose on a Comment, returning it to open")
-);
+).pipe(Command.withDescription("Reply to a comment"));
 
 const action = Command.make(
   "action",
@@ -193,7 +183,7 @@ const action = Command.make(
         })
       );
     })
-).pipe(Command.withDescription("Hand the turn back on a Comment"));
+).pipe(Command.withDescription("Mark a comment as actioned"));
 
 const resolve = Command.make(
   "resolve",
@@ -214,7 +204,7 @@ const resolve = Command.make(
         })
       );
     })
-).pipe(Command.withDescription("Close a Comment"));
+).pipe(Command.withDescription("Resolve a comment"));
 
 const reopen = Command.make(
   "reopen",
@@ -235,41 +225,9 @@ const reopen = Command.make(
         })
       );
     })
-).pipe(Command.withDescription("Return a resolved Comment to open"));
-
-const edit = Command.make(
-  "edit",
-  {
-    author: authorFlags,
-    body: bodyFlag,
-    comment: commentFlag,
-    record: Flag.string("record").pipe(
-      Flag.withDescription("The record filename whose body is superseded")
-    ),
-  },
-  (config) =>
-    Effect.gen(function* runEdit() {
-      const cwd = yield* WorkingDirectory;
-      const commentId = yield* parseRecordId(
-        "comment",
-        CommentId,
-        config.comment
-      );
-      const edits = yield* requireText("record", config.record);
-      const body = yield* resolveBody(config.body, true);
-
-      return yield* printJson(
-        yield* editComment(cwd, {
-          author: authorOpts(config.author),
-          body,
-          commentId,
-          edits,
-        })
-      );
-    })
-).pipe(Command.withDescription("Supersede an earlier record's body"));
+).pipe(Command.withDescription("Reopen a resolved comment"));
 
 export const commentCommand = Command.make("comment").pipe(
-  Command.withDescription("Read and write the Review's Comments"),
-  Command.withSubcommands([list, add, reply, action, resolve, reopen, edit])
+  Command.withDescription("Read and write the review's comments"),
+  Command.withSubcommands([list, add, reply, action, resolve, reopen])
 );

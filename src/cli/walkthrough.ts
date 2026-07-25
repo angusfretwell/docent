@@ -73,11 +73,11 @@ const create = Command.make(
   "create",
   {
     kind: Flag.choice("kind", walkthroughKinds).pipe(
-      Flag.withDescription("Which pillar this tour is: code or product")
+      Flag.withDescription("The walkthrough kind")
     ),
     title: Flag.string("title").pipe(
       Flag.optional,
-      Flag.withDescription("The tour's title — editorial, so optional")
+      Flag.withDescription("The walkthrough's title")
     ),
   },
   (config) =>
@@ -97,7 +97,9 @@ const create = Command.make(
       );
     })
 ).pipe(
-  Command.withDescription("Mint a walkthrough shell bound to the live head")
+  Command.withDescription(
+    "Create an empty walkthrough bound to the current head"
+  )
 );
 
 const addSection = Command.make(
@@ -105,25 +107,27 @@ const addSection = Command.make(
   {
     body: Flag.string("body").pipe(
       Flag.optional,
-      Flag.withDescription("Section prose (omit to read it from piped stdin)")
+      Flag.withDescription("The section's prose (omit to read from STDIN)")
     ),
     // Callouts are JSON, which embeds commas — so this one repeats without
     // the comma-splitting every other repeatable flag gets.
     callout: Flag.string("callout").pipe(
       Flag.atLeast(0),
-      Flag.withDescription("One JSON callout — repeat the flag per callout")
+      Flag.withDescription(
+        "JSON callout for the section (repeat flag for multiple)"
+      )
     ),
     capture: commaSeparated(
       Flag.string("capture").pipe(
         Flag.withDescription(
-          "A cap_ id on this tour — repeatable or comma-joined"
+          "Capture (cap_…) for the section (comma-separated, or repeat flag)"
         )
       )
     ),
     range: commaSeparated(
       Flag.string("range").pipe(
         Flag.withDescription(
-          "file:start[-end][@side] — repeatable or comma-joined"
+          "Diff range (file:start[-end][@side]) for the section (comma-separated, or repeat flag)"
         )
       )
     ),
@@ -131,7 +135,7 @@ const addSection = Command.make(
       Flag.withDescription("The section's title")
     ),
     walkthrough: Flag.string("walkthrough").pipe(
-      Flag.withDescription("The wlk_ id to append to")
+      Flag.withDescription("The walkthrough to append to (wlk_…)")
     ),
   },
   (config) =>
@@ -171,11 +175,9 @@ const addSection = Command.make(
         })
       );
     })
-).pipe(
-  Command.withDescription("Validate and append one section, in tour order")
-);
+).pipe(Command.withDescription("Append a section to a walkthrough"));
 
 export const walkthroughCommand = Command.make("walkthrough").pipe(
-  Command.withDescription("Mint and grow the Review's walkthroughs"),
+  Command.withDescription("Create or extend the review's walkthroughs"),
   Command.withSubcommands([create, addSection])
 );

@@ -71,10 +71,6 @@ Appends a resolve record → **resolved**. No body; if the close needs a reason,
 
 A later reply reopens implicitly; `reopen` is the explicit gesture without a comment. `--comment <id>` required, no body.
 
-### `docent comment edit` — supersede a record's body
-
-Appends an edit record that supersedes an earlier record's body at fold time — the append-only equivalent of an in-place edit. `--comment <id>`, `--record <name>` (the target record's filename as returned by `add`/`reply`, e.g. `002-reply.md`), and a body are all required. Editing only supersedes the body — never the anchor — and `edit` records are skipped when Status is derived.
-
 ### Attribution — metadata, never permission
 
 Every write records **who** did it; it never gates who may. By default the write is attributed to the git-config human. When you run these subcommands as an agent, pass `--agent <your-slug>` (optionally `--display`, `--model`) so the attribution reads true in the UI:
@@ -87,7 +83,7 @@ npx -y @angusfretwell/docent comment action --comment cmt_… --agent claude-cod
 ### Output shape
 
 - `comment list` → `{ "comments": [ { "id", "anchor", "body", "participants", "replies", "status" }, … ] }`
-- `add` / `reply` / `action` / `resolve` / `reopen` / `edit` → `{ "changeId": "chg_…", "commentId": "cmt_…", "record": "NNN-<type>.md" }`
+- `add` / `reply` / `action` / `resolve` / `reopen` → `{ "changeId": "chg_…", "commentId": "cmt_…", "record": "NNN-<type>.md" }`
 
 ## Reading the queue — `/docent --read`
 
