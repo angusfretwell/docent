@@ -56,7 +56,7 @@ export function App() {
               </p>
 
               <div className="flex h-14 items-center gap-2 border-2 px-4 font-mono text-[0.9em]">
-                <span className="min-w-0 flex-1">
+                <span className="min-w-0 flex-1 truncate">
                   <span aria-hidden="true" className="text-muted-foreground">
                     ${" "}
                   </span>
