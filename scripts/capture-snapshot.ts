@@ -25,8 +25,8 @@
  *
  *   bun run build:snapshot
  *
- * @see src/site/demo/snapshot.ts for the format this writes.
- * @see src/site/demo/replay-handler.ts for what consumes it.
+ * @see src/website/demo/snapshot.ts for the format this writes.
+ * @see src/website/demo/replay-handler.ts for what consumes it.
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -34,15 +34,18 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { ReviewSnapshot } from "@shared/schemas/review";
-import { replayHandler } from "@site/demo/replay-handler";
-import { requestFromKey, requestKey } from "@site/demo/snapshot";
-import type { DemoSnapshot, RecordedResponse } from "@site/demo/snapshot";
 import { Schema } from "effect";
 import { chromium } from "playwright";
 import type { Page, Response as CapturedResponse } from "playwright";
 import { alphabetical, pick } from "radashi";
 
 import { ServeAddress } from "../src/serve/address";
+import { replayHandler } from "../src/website/demo/replay-handler";
+import { requestFromKey, requestKey } from "../src/website/demo/snapshot";
+import type {
+  DemoSnapshot,
+  RecordedResponse,
+} from "../src/website/demo/snapshot";
 import { ensureDiffWorker } from "./build-worker";
 import { materializeFixture } from "./prepare-fixture";
 

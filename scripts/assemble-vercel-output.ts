@@ -3,17 +3,16 @@
 /**
  * Assemble `.vercel/output` — the Build Output API directory that
  * `vercel deploy --prebuilt` uploads — from the finished static build in
- * `dist/site`.
+ * `dist/website`.
  *
- * The deploy is prebuilt because producing `dist/site` means preparing the
+ * The deploy is prebuilt because producing `dist/website` means preparing the
  * fixture and driving a headless browser to capture the demo snapshot, which is
  * work for the CI runner rather than the host's builder. `--prebuilt` uploads
  * this directory verbatim and the platform runs no install and no build, so the
  * routing contract has to live in `config.json` here rather than in Vercel's
  * out-of-repo Project Settings.
  *
- * @see docs/deployment.md
- * @see docs/adr/0003-site-as-a-static-build-target.md
+ * @see docs/adr/0003-website-as-a-static-build-target.md
  * @see https://vercel.com/docs/build-output-api/v3/configuration
  */
 
@@ -57,7 +56,7 @@ const REQUIRED = [
 ];
 
 const root = path.join(import.meta.dir, "..");
-const dist = path.join(root, "dist", "site");
+const dist = path.join(root, "dist", "website");
 const output = path.join(root, ".vercel", "output");
 
 const checked = await Promise.all(
@@ -72,7 +71,7 @@ const missing = checked
   .map((entry) => entry.file);
 
 if (missing.length > 0) {
-  console.error(`Incomplete site build in dist/site, missing:`);
+  console.error(`Incomplete website build in dist/website, missing:`);
   for (const file of missing) {
     console.error(`  ${file}`);
   }

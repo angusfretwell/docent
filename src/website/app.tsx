@@ -1,4 +1,4 @@
-import icon from "@site/icon.svg";
+import icon from "@website/icon.svg";
 
 import { CopyButton } from "./copy-button";
 
@@ -9,7 +9,7 @@ const AUTHOR_URL = "https://github.com/angusfretwell";
 export function App() {
   return (
     <div className="mx-auto max-w-375 p-6 sm:p-12">
-      <div className="typeset typeset-site">
+      <div className="typeset typeset-website">
         <header className="flex items-center gap-2.5">
           <img src={icon} alt="Logo" className="size-7 shrink-0" />
           <span className="font-semibold">Docent</span>

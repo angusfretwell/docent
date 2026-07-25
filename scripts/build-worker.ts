@@ -12,7 +12,7 @@
  * import). The step is folded into the dev and build flows and re-runs only
  * when `@pierre/diffs` bumps.
  *
- * Run directly (`build:worker`) it always rebuilds; the dev, site-build and
+ * Run directly (`build:worker`) it always rebuilds; the dev, website-build and
  * capture flows import `ensureDiffWorker` so a bundle already on disk is reused.
  */
 

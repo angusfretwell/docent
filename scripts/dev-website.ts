@@ -1,11 +1,11 @@
 #!/usr/bin/env bun
 
 /**
- * The `bun run dev:site` runner: serves the marketing site's two pages with hot
- * reload, routed the way the deploy routes them — the landing page at `/`, the
- * demo's SPA under `/demo`.
+ * The `bun run dev:website` runner: serves the marketing website's two pages with
+ * hot reload, routed the way the deploy routes them — the landing page at `/`,
+ * the demo's SPA under `/demo`.
  *
- * The demo also needs the two files the site build copies rather than bundles:
+ * The demo also needs the two files the website build copies rather than bundles:
  * the pre-bundled diff worker, and the captured snapshot it replays. Both are
  * served off `dist/`, so previewing the demo means having run
  * `bun run build:worker` and `bun run build:snapshot` — without the snapshot
@@ -16,8 +16,8 @@
 
 import path from "node:path";
 
-import demo from "../src/site/demo/index.html";
-import landing from "../src/site/index.html";
+import demo from "../src/website/demo/index.html";
+import landing from "../src/website/index.html";
 
 const root = path.join(import.meta.dir, "..");
 const port = Number(process.env.PORT ?? 4802);
@@ -54,4 +54,4 @@ const server = Bun.serve({
   },
 });
 
-console.log(`Serving the site on ${server.url}`);
+console.log(`Serving the website on ${server.url}`);

@@ -503,7 +503,7 @@
     --typeset-flow: 1em;
   }
 
-  .typeset-site {
+  .typeset-website {
     --typeset-font-body: var(--font-sans);
     --typeset-font-heading: var(--font-heading);
     --typeset-font-mono: var(--font-mono);

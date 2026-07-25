@@ -37,39 +37,39 @@ export default defineConfig({
     typeAware: true,
   },
   // Import edges point one way — docent.ts → cli → api → core → shared, with
-  // client → shared and site → client → shared beside it
-  // (docs/adr/0002-src-layering.md, docs/adr/0003-site-as-a-static-build-target.md).
+  // client → shared and website → client → shared beside it
+  // (docs/adr/0002-src-layering.md, docs/adr/0003-website-as-a-static-build-target.md).
   // Tests are exempt: an integration test may boot a higher layer to exercise
   // its subject.
   overrides: [
     layerBoundary(
       ["src/cli/**"],
-      ["client", "site"],
+      ["client", "website"],
       "cli never imports client: the client bundle reaches the binary only through src/docent.ts"
     ),
     layerBoundary(
       ["src/api/**"],
-      ["cli", "client", "site"],
+      ["cli", "client", "website"],
       "api sits below cli: it imports core and shared only"
     ),
     layerBoundary(
       ["src/core/**"],
-      ["cli", "api", "client", "site"],
+      ["cli", "api", "client", "website"],
       "core is the bottom Bun-side layer: it imports shared only"
     ),
     layerBoundary(
       ["src/client/**"],
-      ["cli", "api", "core", "site"],
-      "client is browser-only: it imports shared only — core is Bun-side, and site is the surface built on top of it"
+      ["cli", "api", "core", "website"],
+      "client is browser-only: it imports shared only — core is Bun-side, and website is the surface built on top of it"
     ),
     layerBoundary(
-      ["src/site/**"],
+      ["src/website/**"],
       ["cli", "api", "core"],
-      "site is browser-only: it reuses client and shared code — the layers above are Bun-side"
+      "website is browser-only: it reuses client and shared code — the layers above are Bun-side"
     ),
     layerBoundary(
       ["src/shared/**"],
-      ["cli", "api", "core", "client", "site"],
+      ["cli", "api", "core", "client", "website"],
       "shared is isomorphic and browser-safe: it imports nothing above it"
     ),
     {

@@ -1,15 +1,15 @@
 #!/usr/bin/env bun
 
 /**
- * Bundle the marketing site to `dist/site` as plain static output: the landing
- * page at the root, and under `demo/` the hosted demo — the real review client
- * replaying a captured snapshot with no backend.
+ * Bundle the marketing website to `dist/website` as plain static output: the
+ * landing page at the root, and under `demo/` the hosted demo — the real review
+ * client replaying a captured snapshot with no backend.
  *
  * Like `build-docent.ts`, this goes through `Bun.build` rather than the CLI
- * because the site's stylesheet needs `bun-plugin-tailwind` to compile Tailwind
- * at bundle time, and the CLI doesn't support bundler plugins.
+ * because the website's stylesheet needs `bun-plugin-tailwind` to compile
+ * Tailwind at bundle time, and the CLI doesn't support bundler plugins.
  *
- * @see docs/adr/0003-site-as-a-static-build-target.md
+ * @see docs/adr/0003-website-as-a-static-build-target.md
  * @see scripts/assemble-vercel-output.ts for the layout the deploy expects.
  */
 
@@ -21,7 +21,7 @@ import tailwind from "bun-plugin-tailwind";
 import { ensureDiffWorker, workerBundle } from "./build-worker";
 
 const root = path.join(import.meta.dir, "..");
-const outdir = path.join(root, "dist", "site");
+const outdir = path.join(root, "dist", "website");
 const demoOutdir = path.join(outdir, "demo");
 const snapshotFile = path.join(root, "dist", "demo-snapshot.json");
 
@@ -95,9 +95,13 @@ async function copySnapshot(): Promise<void> {
 await fs.rm(outdir, { force: true, recursive: true });
 
 try {
-  await bundlePage(path.join(root, "src", "site", "index.html"), outdir, "/");
   await bundlePage(
-    path.join(root, "src", "site", "demo", "index.html"),
+    path.join(root, "src", "website", "index.html"),
+    outdir,
+    "/"
+  );
+  await bundlePage(
+    path.join(root, "src", "website", "demo", "index.html"),
     demoOutdir,
     "/demo/"
   );
@@ -105,7 +109,7 @@ try {
   await copyDiffWorker();
   await copySnapshot();
 } catch (error) {
-  console.error("Failed to bundle site:");
+  console.error("Failed to bundle website:");
   console.error(error);
   process.exit(1);
 }

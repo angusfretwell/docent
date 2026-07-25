@@ -2,7 +2,7 @@ import { trim } from "radashi";
 
 /**
  * The path the client is mounted at, read from the host document so that every
- * bundling mode — the dev server, the compiled binary, and the static site —
+ * bundling mode — the dev server, the compiled binary, and the static website —
  * configures it the same way, with no build-script coordination. Accepts
  * `/demo`, `/demo/`, and `demo` alike; absent means the root mount.
  */
