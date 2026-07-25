@@ -35,6 +35,13 @@ jobs:
 
       - run: bun install --frozen-lockfile --ignore-scripts
 
+      # bun-plugin-tailwind's peer dependency on the `bun` npm package puts a
+      # stub at node_modules/.bin/bun that --ignore-scripts leaves broken, and
+      # nested `bun` invocations in package scripts resolve to it before the
+      # setup-bun binary. Its postinstall just links the real binary from the
+      # already-installed @oven optional dependency, so run it directly.
+      - run: node node_modules/bun/install.js
+
       - name: Set version from tag
         run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version
         working-directory: npm
