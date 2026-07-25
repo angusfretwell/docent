@@ -1,11 +1,9 @@
-import { Logo } from "@client/components/logo";
-import { ThemeToggle } from "@client/components/theme-toggle";
+import icon from "@client/icon.svg";
 
 import { CopyButton } from "./copy-button";
 
 const INSTALL_COMMAND = "npx skills add angusfretwell/docent";
 const REPO_URL = "https://github.com/angusfretwell/docent";
-const DOCS_URL = `${REPO_URL}/blob/main/skills/docent/SKILL.md`;
 const AUTHOR_URL = "https://github.com/angusfretwell";
 
 export function App() {
@@ -13,14 +11,16 @@ export function App() {
     <div className="mx-auto max-w-375 p-6 sm:p-12">
       <div className="typeset typeset-site">
         <header className="flex items-center gap-2.5">
-          <Logo />
+          <img src={icon} alt="Logo" className="size-7 shrink-0" />
           <span className="font-semibold">Docent</span>
-          <div className="ml-auto flex items-center gap-3">
-            <a href={REPO_URL} rel="noreferrer" target="_blank">
-              GitHub ↗
-            </a>
-            <ThemeToggle className="-mr-2" />
-          </div>
+          <a
+            href={REPO_URL}
+            rel="noreferrer"
+            target="_blank"
+            className="ml-auto"
+          >
+            GitHub ↗
+          </a>
         </header>
 
         <main>
@@ -29,7 +29,7 @@ export function App() {
               Guided reviews
               <br />
               of your{" "}
-              <span className="-mx-[0.1em] inline-block bg-yellow-400 px-[0.1em] pb-[0.05em] leading-[0.9em] decoration-yellow-400 dark:bg-transparent dark:underline">
+              <span className="mx-[-0.1em] inline-block bg-yellow-400 px-[0.1em] pb-[0.05em] leading-[0.9em] decoration-yellow-400 dark:bg-transparent dark:underline">
                 agent&rsquo;s
               </span>{" "}
               work
@@ -55,15 +55,16 @@ export function App() {
                 Docent installs as an agent skill:
               </p>
 
-              <div className="flex min-h-14 items-center gap-2 border-2 border-foreground px-4 py-2.5 font-mono text-[0.9em] sm:min-h-16 sm:px-5">
+              <div className="flex h-14 items-center gap-2 border-2 px-4 font-mono text-[0.9em]">
                 <span className="min-w-0 flex-1">
                   <span aria-hidden="true" className="text-muted-foreground">
                     ${" "}
                   </span>
                   {INSTALL_COMMAND}
                 </span>
+
                 <CopyButton
-                  className="-mr-1 shrink-0"
+                  className="-mr-1 shrink-0 [&_svg]:size-4.5! [&_svg]:opacity-100!"
                   label="Copy install command"
                   text={INSTALL_COMMAND}
                 />
@@ -76,8 +77,8 @@ export function App() {
           </div>
         </main>
 
-        <footer className="mt-[calc(var(--typeset-flow)*2)] flex flex-wrap items-baseline gap-x-6 gap-y-1 text-[0.9em] text-muted-foreground">
-          <div>
+        <footer className="mt-[calc(var(--typeset-flow)*2)] text-[0.9em] text-muted-foreground">
+          <p>
             Built by{" "}
             <a
               className="text-foreground"
@@ -88,26 +89,7 @@ export function App() {
               Angus Fretwell
             </a>
             .
-          </div>
-
-          <nav className="flex flex-wrap gap-x-6 gap-y-1 sm:ml-auto">
-            <a
-              className="text-foreground"
-              href={REPO_URL}
-              rel="noreferrer"
-              target="_blank"
-            >
-              Repository ↗
-            </a>
-            <a
-              className="text-foreground"
-              href={DOCS_URL}
-              rel="noreferrer"
-              target="_blank"
-            >
-              Documentation ↗
-            </a>
-          </nav>
+          </p>
         </footer>
       </div>
     </div>
