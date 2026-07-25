@@ -9,7 +9,7 @@
  * the pre-bundled diff worker, and the captured snapshot it replays. Both are
  * served off `dist/`, so previewing the demo means having run
  * `bun run build:worker` and `bun run build:snapshot` — without the snapshot
- * the demo renders its missing-data message rather than the review.
+ * the demo boots to a blank page and says what to record in the console.
  *
  * @see scripts/assemble-vercel-output.ts for the routing this mirrors.
  */

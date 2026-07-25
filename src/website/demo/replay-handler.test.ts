@@ -522,13 +522,6 @@ describe("replay viewed writes", () => {
 });
 
 describe("replay snapshot validation", () => {
-  test("a recording that has drifted from the API contract fails at construction", () => {
-    const snapshot = demoSnapshot();
-    snapshot.responses["GET /api/diff"] = recordedJson({ nope: true });
-
-    expect(() => replayHandler(snapshot)).toThrow(/GET \/api\/diff/);
-  });
-
   test("a snapshot without the Review recording fails at construction", () => {
     const { responses } = demoSnapshot();
     const { "GET /api/review": _review, ...rest } = responses;

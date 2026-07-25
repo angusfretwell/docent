@@ -13,9 +13,8 @@
  * and every Walkthrough Section and capture is visited.
  *
  * It then validates its own output by constructing a `replayHandler` over it and
- * replaying every recorded request, so a capture that has drifted from the API
- * contract — or missed a surface — fails the build here rather than in a
- * visitor's browser.
+ * replaying every recorded request, so a capture that missed a surface fails the
+ * build here rather than in a visitor's browser.
  *
  * Read-only by design: a comment or a mark-viewed would append records to the
  * fixture's `.docent/` mid-tour and the capture would be of a moving target.

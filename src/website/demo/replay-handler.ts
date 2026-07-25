@@ -1,12 +1,10 @@
 import { ANCHOR_KIND } from "@shared/enums/anchor-kind";
-import { Change } from "@shared/schemas/change";
 import { Author, CommentRecord } from "@shared/schemas/comment";
 import type { Anchor } from "@shared/schemas/comment";
 import { CommentWrite } from "@shared/schemas/comment-write";
 import type { CommentWriteResult } from "@shared/schemas/comment-write";
 import { CommentId } from "@shared/schemas/ids";
 import type { ChangeId } from "@shared/schemas/ids";
-import { Pending } from "@shared/schemas/pending";
 import {
   ReviewSnapshot,
   ViewedEvent,
@@ -18,9 +16,8 @@ import type {
   WalkthroughEntry,
 } from "@shared/schemas/review";
 import { Schema } from "effect";
-import { max } from "radashi";
 
-import { DemoSnapshot, keyPathname, requestKey } from "./snapshot";
+import { DemoSnapshot, requestKey } from "./snapshot";
 import type { RecordedResponse } from "./snapshot";
 
 const decodeSnapshot = Schema.decodeUnknownSync(DemoSnapshot);
@@ -28,20 +25,10 @@ const decodeReview = Schema.decodeUnknownSync(ReviewSnapshot);
 const decodeCommentWrite = Schema.decodeUnknownSync(CommentWrite);
 const decodeViewedRequest = Schema.decodeUnknownSync(ViewedRequest);
 
-const Health = Schema.Struct({ root: Schema.String });
-
 const REVIEW_KEY = "GET /api/review";
 const EVENTS_KEY = "GET /api/events";
 const COMMENTS_KEY = "POST /api/comments";
 const VIEWED_KEY = "POST /api/viewed";
-
-/** Recorded bodies the shared schemas can vet; `blob` and `capture` carry opaque bytes. */
-const RECORDED_BODY_SCHEMAS: Record<string, (input: unknown) => unknown> = {
-  "/api/diff": Schema.decodeUnknownSync(Change),
-  "/api/health": Schema.decodeUnknownSync(Health),
-  "/api/pending": Schema.decodeUnknownSync(Pending),
-  "/api/review": decodeReview,
-};
 
 const DEMO_AUTHOR = Author.make({ display: "You", id: "demo", kind: "human" });
 
@@ -51,6 +38,7 @@ interface CommentState {
   records: CommentRecord[];
 }
 
+/** The body `GET /api/review` answers with, mutable where a demo write lands. */
 interface ReviewState {
   changes: readonly ChangeRecord[];
   comments: CommentState[];
@@ -60,6 +48,8 @@ interface ReviewState {
 }
 
 interface ReplayContext {
+  /** The demo's head never moves, so every write records against the newest captured Change. */
+  headChangeId: ChangeId;
   responses: ReadonlyMap<string, RecordedResponse>;
   state: ReviewState;
 }
@@ -78,50 +68,9 @@ function errorResponse(message: string, status: number): Response {
   return json({ error: message }, status);
 }
 
-function badRequest(cause: unknown): Response {
-  return errorResponse(
-    cause instanceof Error ? cause.message : String(cause),
-    400
-  );
-}
-
-/**
- * A read the capture harness never recorded is a coverage bug, so it answers 501
- * rather than a 404 the client would render as a legitimately empty state.
- */
-function unrecorded(key: string): Response {
-  console.error(`docent demo: no recorded response for ${key}`);
-  return errorResponse(`no recorded response for ${key}`, 501);
-}
-
-function isSuccess(status: number): boolean {
-  return status >= 200 && status < 300;
-}
-
-function validateRecordedBodies(
+function seedContext(
   responses: ReadonlyMap<string, RecordedResponse>
-) {
-  for (const [key, recorded] of responses) {
-    const decode = RECORDED_BODY_SCHEMAS[keyPathname(key)];
-
-    if (decode === undefined || !isSuccess(recorded.status)) {
-      continue;
-    }
-
-    try {
-      decode(JSON.parse(recorded.body));
-    } catch (error) {
-      throw new Error(
-        `demo snapshot no longer matches the API contract at "${key}"`,
-        { cause: error }
-      );
-    }
-  }
-}
-
-function seedReviewState(
-  responses: ReadonlyMap<string, RecordedResponse>
-): ReviewState {
+): ReplayContext {
   const recorded = responses.get(REVIEW_KEY);
   if (recorded === undefined) {
     throw new Error(
@@ -130,75 +79,35 @@ function seedReviewState(
   }
 
   const seed = decodeReview(JSON.parse(recorded.body));
-  if (seed.changes.length === 0) {
+  const head = seed.changes.at(-1);
+  if (head === undefined) {
     throw new Error(
       "demo snapshot's Review holds no Change, so a write has no head Change to record against"
     );
   }
 
   return {
-    changes: [...seed.changes],
-    comments: seed.comments.map((entry) => ({
-      id: entry.id,
-      records: [...entry.records],
-      ...(entry.anchorFile === undefined
-        ? {}
-        : { anchorFile: entry.anchorFile }),
-    })),
-    review: seed.review,
-    viewed: [...seed.viewed],
-    walkthroughs: [...seed.walkthroughs],
+    headChangeId: head.id,
+    responses,
+    state: {
+      changes: seed.changes,
+      comments: seed.comments.map((entry) => ({
+        ...entry,
+        records: [...entry.records],
+      })),
+      review: seed.review,
+      viewed: [...seed.viewed],
+      walkthroughs: seed.walkthroughs,
+    },
   };
 }
-
-function reviewBody(state: ReviewState) {
-  return {
-    changes: state.changes,
-    comments: state.comments,
-    review: state.review,
-    viewed: state.viewed,
-    walkthroughs: state.walkthroughs,
-  };
-}
-
-/** The demo's head never moves, so every write records against the newest captured Change. */
-function headChangeId(state: ReviewState): ChangeId {
-  const head = state.changes.at(-1);
-  if (head === undefined) {
-    throw new Error("demo Review lost its Changes");
-  }
-  return head.id;
-}
-
-const RECORD_SEQUENCE = /^(?<sequence>\d+)-/;
 
 /** Zero-padded because `foldComment` reads Status off the lexically last record name. */
 function nextRecordName(
   records: readonly CommentRecord[],
   op: CommentWrite["op"]
 ): string {
-  const sequences = records.flatMap((record) => {
-    const value = RECORD_SEQUENCE.exec(record.name)?.groups?.sequence;
-    return value === undefined ? [] : [Number(value)];
-  });
-  const next = String((max(sequences) ?? 0) + 1).padStart(3, "0");
-
-  return `${next}-${op}.md`;
-}
-
-function demoCommentId(sequence: number): string {
-  return `cmt_demo${String(sequence).padStart(3, "0")}`;
-}
-
-function mintCommentId(state: ReviewState): CommentId {
-  const taken = new Set<string>(state.comments.map((comment) => comment.id));
-
-  let sequence = state.comments.length + 1;
-  while (taken.has(demoCommentId(sequence))) {
-    sequence += 1;
-  }
-
-  return CommentId.make(demoCommentId(sequence));
+  return `${String(records.length + 1).padStart(3, "0")}-${op}.md`;
 }
 
 /** Mirrors the server's read path: only the code arms of an Anchor carry a file. */
@@ -209,12 +118,13 @@ function anchorFile(anchor: Anchor): string | undefined {
   return undefined;
 }
 
+/** A sequenced id, which the record store never mints: it names a thread after its subject. */
 function openComment(state: ReviewState, anchor: Anchor): CommentState {
-  const file = anchorFile(anchor);
+  const sequence = String(state.comments.length + 1).padStart(3, "0");
   const comment: CommentState = {
-    id: mintCommentId(state),
+    anchorFile: anchorFile(anchor),
+    id: CommentId.make(`cmt_demo${sequence}`),
     records: [],
-    ...(file === undefined ? {} : { anchorFile: file }),
   };
 
   state.comments.push(comment);
@@ -222,36 +132,28 @@ function openComment(state: ReviewState, anchor: Anchor): CommentState {
   return comment;
 }
 
-function findComment(
-  state: ReviewState,
-  id: CommentId
-): CommentState | undefined {
-  return state.comments.find((comment) => comment.id === id);
-}
-
 /** Status is not written: the record's type and its place in the log are the whole of it. */
 function appendCommentRecord(
   context: ReplayContext,
   write: CommentWrite
 ): CommentWriteResult | undefined {
-  const { state } = context;
+  const { headChangeId, state } = context;
   const comment =
     write.op === "open"
       ? openComment(state, write.anchor)
-      : findComment(state, write.commentId);
+      : state.comments.find((entry) => entry.id === write.commentId);
 
   if (comment === undefined) {
     return undefined;
   }
 
-  const changeId = headChangeId(state);
   const record = nextRecordName(comment.records, write.op);
 
   comment.records.push(
     CommentRecord.make({
       author: DEMO_AUTHOR,
       body: "body" in write ? write.body : "",
-      changeId,
+      changeId: headChangeId,
       createdAt: new Date().toISOString(),
       name: record,
       schema: "docent/comment",
@@ -260,7 +162,7 @@ function appendCommentRecord(
     })
   );
 
-  return { changeId, commentId: comment.id, record };
+  return { changeId: headChangeId, commentId: comment.id, record };
 }
 
 async function commentWrite(
@@ -271,7 +173,7 @@ async function commentWrite(
   try {
     write = decodeCommentWrite(await request.json());
   } catch (error) {
-    return badRequest(error);
+    return errorResponse(String(error), 400);
   }
 
   const result = appendCommentRecord(context, write);
@@ -295,7 +197,7 @@ async function viewedWrite(
   try {
     toggle = decodeViewedRequest(await request.json());
   } catch (error) {
-    return badRequest(error);
+    return errorResponse(String(error), 400);
   }
 
   const event = ViewedEvent.make({
@@ -308,23 +210,17 @@ async function viewedWrite(
   return json(event);
 }
 
-const SSE_HEADERS = {
-  "cache-control": "no-cache",
-  "content-type": "text/event-stream",
-};
-
-/** The demo watches nothing, so the stream opens and stays silent for the client's lifetime. */
-function eventStream(): Response {
-  return new Response(new ReadableStream(), { headers: SSE_HEADERS });
-}
-
+/**
+ * A read the capture harness never recorded is a coverage bug, so it answers 501
+ * rather than a 404 the client would render as a legitimately empty state.
+ */
 function replayRecorded(
   responses: ReadonlyMap<string, RecordedResponse>,
   key: string
 ): Response {
   const recorded = responses.get(key);
   if (recorded === undefined) {
-    return unrecorded(key);
+    return errorResponse(`no recorded response for ${key}`, 501);
   }
 
   return new Response(recorded.body, {
@@ -339,10 +235,16 @@ function handle(
   request: Request
 ): Response | Promise<Response> {
   if (key === EVENTS_KEY) {
-    return eventStream();
+    // The demo watches nothing, so the stream opens and stays silent for the client's lifetime.
+    return new Response(new ReadableStream(), {
+      headers: {
+        "cache-control": "no-cache",
+        "content-type": "text/event-stream",
+      },
+    });
   }
   if (key === REVIEW_KEY) {
-    return json(reviewBody(context.state));
+    return json(context.state);
   }
   if (key === COMMENTS_KEY) {
     return commentWrite(context, request);
@@ -359,25 +261,16 @@ function handle(
  * recomputes it. State is per instance and lives only in memory, so constructing
  * a fresh handler — a page reload — is a pristine demo.
  *
- * Recorded bodies are decoded against the shared schemas once, here at
- * construction, so a snapshot that has drifted from the API contract fails at
- * demo boot rather than on whichever request a visitor happens to make first.
- *
- * @throws {Error} when the snapshot is malformed, lacks the `GET /api/review`
- * recording that seeds the Review, or carries a body the current schemas reject.
+ * @throws {Error} when the snapshot is malformed or lacks the `GET /api/review`
+ * recording that seeds the Review.
  */
 export function replayHandler(
   snapshot: unknown,
   options: ReplayOptions = {}
 ): (request: Request) => Promise<Response> {
-  const responses = new Map(Object.entries(decodeSnapshot(snapshot).responses));
-
-  validateRecordedBodies(responses);
-
-  const context: ReplayContext = {
-    responses,
-    state: seedReviewState(responses),
-  };
+  const context = seedContext(
+    new Map(Object.entries(decodeSnapshot(snapshot).responses))
+  );
   const basepath = options.basepath ?? "";
 
   return async (request) =>

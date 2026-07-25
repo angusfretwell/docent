@@ -23,18 +23,11 @@ export type DemoSnapshot = typeof DemoSnapshot.Type;
 const KEY_ORIGIN = "http://demo.invalid";
 
 function withoutBasepath(pathname: string, basepath: string): string {
-  const prefix = basepath.endsWith("/") ? basepath.slice(0, -1) : basepath;
-
-  if (prefix === "" || !pathname.startsWith(prefix)) {
+  if (basepath === "" || !pathname.startsWith(basepath)) {
     return pathname;
   }
 
-  const relative = pathname.slice(prefix.length);
-  if (relative === "") {
-    return "/";
-  }
-
-  return relative.startsWith("/") ? relative : pathname;
+  return pathname.slice(basepath.length) || "/";
 }
 
 /**
@@ -59,11 +52,6 @@ function split(key: string): { method: string; target: string } {
   const separator = key.indexOf(" ");
 
   return { method: key.slice(0, separator), target: key.slice(separator + 1) };
-}
-
-/** The route a key names, without its query — what a per-route lookup keys on. */
-export function keyPathname(key: string): string {
-  return new URL(split(key).target, KEY_ORIGIN).pathname;
 }
 
 /** The inverse of `requestKey`, for replaying a recorded key back through a handler. */
