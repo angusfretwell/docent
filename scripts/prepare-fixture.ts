@@ -3,17 +3,20 @@
  * Materialize the dev fixture repo: delete and deterministically rebuild a real
  * git repo at the gitignored `.dev/` from the checked-in source under
  * `fixtures/`, so that pointing `docent serve` at it shows a rich review — a
- * diff with a Pending section, a Comments queue spanning the full state matrix
- * with drift badges, and a stale code walkthrough with the Change history lit up.
+ * two-Change diff, a Comments queue spanning every Status, and a code and a
+ * product walkthrough over the same feature.
  *
- * The toy app's three snapshot trees (`fixtures/repo/{base,change-1,change-2}`)
- * are committed in order with a pinned author/committer identity and dates, so
- * the resulting commit SHAs — and every `{{sha …}}` / `{{blob …}}` token the
+ * Palette's three snapshot trees (`fixtures/repo/{base,change-1,change-2}`) are
+ * committed in order with a pinned author/committer identity and dates, so the
+ * resulting commit SHAs — and every `{{sha …}}` / `{{blob …}}` token the
  * `.docent/` records under `fixtures/docent/` are templated with — are
- * byte-stable across machines and runs. A final uncommitted edit leaves the
- * working tree dirty so the Pending view renders.
+ * byte-stable across machines and runs.
  *
- *   bun run fixture
+ * Every record anchors to the newest Change, so nothing drifts and no
+ * walkthrough is stale: the fixture is the happy path, not the edge-case
+ * matrix. The tree is left clean, so the Pending view stays hidden.
+ *
+ *   bun run prepare:fixture
  */
 
 import {
@@ -31,7 +34,7 @@ const sourceRoot = path.join(repoRoot, "fixtures");
 const treesRoot = path.join(sourceRoot, "repo");
 const docentSource = path.join(sourceRoot, "docent");
 
-const BRANCH = "feat/panel";
+const BRANCH = "feat/export";
 
 // Pinned attribution: an identical author and committer across every commit, so
 // the commit SHAs (and the tokens resolved from them) never depend on who runs
@@ -56,20 +59,20 @@ const SNAPSHOTS: readonly Snapshot[] = [
   {
     date: "2026-07-10T01:00:00Z",
     dir: "base",
-    message: "Palette: initial static toy",
+    message: "Palette: presets and random palettes",
     ref: "base",
   },
   {
     branch: BRANCH,
     date: "2026-07-10T02:00:00Z",
     dir: "change-1",
-    message: "Palette: random color generation",
+    message: "Extract the current palette into src/state.js",
     ref: "change1",
   },
   {
     date: "2026-07-10T03:00:00Z",
     dir: "change-2",
-    message: "Palette: swatch count and history",
+    message: "Add the Export palette modal",
     ref: "change2",
   },
 ];
@@ -190,13 +193,6 @@ function materializeDocent(
   }
 }
 
-/** Append an uncommitted edit so the working tree is dirty and Pending renders. */
-function leavePendingEdit(target: string): void {
-  const stylesPath = path.join(target, "styles.css");
-  const rule = "\nbutton {\n  margin-top: 1rem;\n}\n";
-  writeFileSync(stylesPath, `${readFileSync(stylesPath, "utf-8")}${rule}`);
-}
-
 /**
  * Delete and deterministically rebuild the fixture repo at `target`, returning
  * the feature branch it opens and the resolved `ref → SHA` map. The caller owns
@@ -220,7 +216,6 @@ export function materializeFixture(target: string): {
   }
 
   materializeDocent(target, refs);
-  leavePendingEdit(target);
 
   return { branch: BRANCH, refs };
 }

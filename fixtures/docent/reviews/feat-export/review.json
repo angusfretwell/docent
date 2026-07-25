@@ -1,0 +1,7 @@
+{
+  "schema": "docent/review",
+  "id": "rev_01JZFIXTUREDEV000000000000",
+  "branch": "feat/export",
+  "base": "main",
+  "title": "Export palette"
+}
