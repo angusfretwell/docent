@@ -62,6 +62,8 @@ steps:
 
   - label: ":vercel: build"
     key: build-website
+    if: >-
+      build.pull_request.repository.fork != true && (build.branch == "main" || build.pull_request.id != null)
     depends_on:
       - check
       - typecheck
@@ -88,7 +90,7 @@ steps:
 
   - label: ":vercel: deploy"
     key: deploy-website
-    if: build.branch == "main"
+    if: build.pull_request.id == null && build.branch == "main"
     command: |
       url=$$(bunx vercel deploy --prebuilt --archive=tgz --prod)
       buildkite-agent annotate --style success --context deploy-website "[Production]($$url)"
