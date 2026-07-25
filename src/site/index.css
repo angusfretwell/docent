@@ -4,3 +4,4 @@
 @import "shadcn/tailwind.css";
 
 @import "../client/styles/theme.css";
+@import "../client/styles/typeset.css";

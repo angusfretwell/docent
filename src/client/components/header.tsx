@@ -2,17 +2,10 @@ import { Skeleton } from "@client/components/ui/skeleton";
 import { CommentsToggle } from "@client/features/comments/toggle";
 import { Suspense } from "react";
 
+import { Logo } from "./logo";
 import { Navigation } from "./navigation";
 import { ReviewMeta } from "./review-meta";
 import { Separator } from "./ui/separator";
-
-function Logo() {
-  return (
-    <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-yellow-400 font-heading font-bold text-black">
-      D.
-    </span>
-  );
-}
 
 export function Header() {
   return (
