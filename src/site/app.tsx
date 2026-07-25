@@ -1,4 +1,4 @@
-import icon from "@client/icon.svg";
+import icon from "@site/icon.svg";
 
 import { CopyButton } from "./copy-button";
 
