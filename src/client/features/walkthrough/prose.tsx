@@ -1,4 +1,4 @@
-import type { Callout } from "@client/features/walkthrough/callouts";
+import type { LabeledCallout } from "@client/features/walkthrough/callouts";
 import type { LabelTarget } from "@client/features/walkthrough/chips";
 import { sectionAnchorProps } from "@client/features/walkthrough/hooks/use-revealed-section";
 import type { WalkthroughStep } from "@client/features/walkthrough/lib/walkthrough";
@@ -6,7 +6,7 @@ import {
   stepLayout,
   targetKey,
 } from "@client/features/walkthrough/lib/walkthrough";
-import type { FoldedFinding } from "@shared/lib/finding";
+import type { FoldedComment } from "@shared/lib/comment";
 import { targetChipIndex } from "@shared/lib/walkthrough-segments";
 import type { SectionId, WalkthroughId } from "@shared/schemas/ids";
 import type { ElementContent } from "hast";
@@ -17,16 +17,16 @@ import Markdown from "react-markdown";
 
 import { WalkthroughCallouts } from "./callouts";
 import { ChipRow, TargetChip } from "./chips";
-import { WalkthroughFindings } from "./findings";
+import { WalkthroughComments } from "./comments";
 
-export type CalloutsForTarget = (key: string) => readonly Callout[];
+export type CalloutsForTarget = (key: string) => readonly LabeledCallout[];
 
-function noCallouts(): readonly Callout[] {
+function noCallouts(): readonly LabeledCallout[] {
   return [];
 }
 
 /** A stable empty default, so a section with no threads doesn't remount them. */
-const NO_FINDINGS: readonly FoldedFinding[] = [];
+const NO_COMMENTS: readonly FoldedComment[] = [];
 
 interface ChipScope {
   calloutsFor: CalloutsForTarget;
@@ -139,14 +139,14 @@ const PROSE_COMPONENTS: Components = { a: ProseLink, p: ProseParagraph };
 
 export function StepProse({
   calloutsFor = noCallouts,
-  findings = NO_FINDINGS,
+  comments = NO_COMMENTS,
   labelTarget,
   onSelect,
   step,
   walkthroughId,
 }: {
   calloutsFor?: CalloutsForTarget;
-  findings?: readonly FoldedFinding[];
+  comments?: readonly FoldedComment[];
   labelTarget: LabelTarget;
   onSelect: (key: string) => void;
   step: WalkthroughStep;
@@ -199,8 +199,8 @@ export function StepProse({
         )}
       </section>
 
-      <WalkthroughFindings
-        findings={findings}
+      <WalkthroughComments
+        comments={comments}
         sectionId={step.section.id}
         walkthroughId={walkthroughId}
       />

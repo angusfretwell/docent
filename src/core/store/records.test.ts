@@ -12,10 +12,10 @@ import {
 describe("serializeFrontmatter + recordFile + splitEnvelope", () => {
   test("round-trips an ordered field list with a flow-style nested value", async () => {
     const frontmatter = serializeFrontmatter([
-      ["schema", "docent/finding"],
+      ["schema", "docent/comment"],
       ["changeId", "chg_001"],
       ["anchor", { file: "src/x.ts", kind: "line", lines: [42, 47] }],
-      ["edits", undefined],
+      ["createdAt", undefined],
     ]);
     const file = recordFile(frontmatter, "  the flush races the mark  \n");
 
@@ -24,25 +24,25 @@ describe("serializeFrontmatter + recordFile + splitEnvelope", () => {
     expect(meta).toEqual({
       anchor: { file: "src/x.ts", kind: "line", lines: [42, 47] },
       changeId: "chg_001",
-      schema: "docent/finding",
+      schema: "docent/comment",
     });
     expect(body).toBe("the flush races the mark");
   });
 
   test("recordFile omits the body block entirely for an empty body", () => {
-    const file = recordFile("schema: docent/finding", "   \n");
+    const file = recordFile("schema: docent/comment", "   \n");
 
-    expect(file).toBe("---\nschema: docent/finding\n---\n");
+    expect(file).toBe("---\nschema: docent/comment\n---\n");
   });
 });
 
 describe("splitEnvelope", () => {
   test("tolerates CRLF line endings around the fences", async () => {
-    const file = "---\r\nschema: docent/finding\r\n---\r\nbody text\r\n";
+    const file = "---\r\nschema: docent/comment\r\n---\r\nbody text\r\n";
 
     const { body, meta } = await Effect.runPromise(splitEnvelope(file));
 
-    expect(meta).toEqual({ schema: "docent/finding" });
+    expect(meta).toEqual({ schema: "docent/comment" });
     expect(body).toBe("body text");
   });
 

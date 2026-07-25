@@ -2,9 +2,9 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
-import { foldFinding } from "@shared/lib/finding";
+import { foldComment } from "@shared/lib/comment";
 import { Change, DiffError } from "@shared/schemas/change";
-import { FindingWriteResult } from "@shared/schemas/finding-write";
+import { CommentWriteResult } from "@shared/schemas/comment-write";
 import { Pending } from "@shared/schemas/pending";
 import { ReviewSnapshot } from "@shared/schemas/review";
 import {
@@ -23,7 +23,7 @@ const decodeChange = Schema.decodeUnknownSync(Change);
 const decodeDiffError = Schema.decodeUnknownSync(DiffError);
 const decodeSnapshot = Schema.decodeUnknownSync(ReviewSnapshot);
 const decodePending = Schema.decodeUnknownSync(Pending);
-const decodeWriteResult = Schema.decodeUnknownSync(FindingWriteResult);
+const decodeWriteResult = Schema.decodeUnknownSync(CommentWriteResult);
 
 afterAll(async () => {
   await Promise.all(disposers.map((dispose) => dispose()));
@@ -90,8 +90,8 @@ function serve(repo: string): Client {
   };
 }
 
-function postFinding(client: Client, body: unknown): Promise<Response> {
-  return client.fetch("/api/findings", {
+function postComment(client: Client, body: unknown): Promise<Response> {
+  return client.fetch("/api/comments", {
     body: JSON.stringify(body),
     headers: { "content-type": "application/json" },
     method: "POST",
@@ -176,26 +176,6 @@ describe("serve routes", () => {
     const client = serve(featureRepo());
 
     const res = await client.fetch("/api/blob/not-a-sha");
-
-    expect(res.status).toBe(400);
-  });
-
-  test("GET /api/blob/:sha/size returns the blob byte size as JSON, cached forever", async () => {
-    const repo = featureRepo();
-    const client = serve(repo);
-    const sha = git(repo, "rev-parse", "HEAD:feature.txt");
-
-    const res = await client.fetch(`/api/blob/${sha}/size`);
-
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ size: "new file\n".length });
-    expect(res.headers.get("cache-control")).toMatch(/immutable/);
-  });
-
-  test("GET /api/blob/:sha/size 400s a malformed object id", async () => {
-    const client = serve(featureRepo());
-
-    const res = await client.fetch("/api/blob/not-a-sha/size");
 
     expect(res.status).toBe(400);
   });
@@ -297,34 +277,6 @@ describe("serve routes", () => {
     expect(body.patch).toContain("working.txt");
   });
 
-  test("GET /api/worktree reads live working-tree bytes, explicitly uncached", async () => {
-    const repo = featureRepo();
-    const client = serve(repo);
-    writeFileSync(path.join(repo, "feature.txt"), "edited live on disk\n");
-
-    const res = await client.fetch("/api/worktree?path=feature.txt");
-
-    expect(res.status).toBe(200);
-    expect(await res.text()).toBe("edited live on disk\n");
-    expect(res.headers.get("cache-control")).toMatch(/no-store/);
-  });
-
-  test("GET /api/worktree 400s a path that escapes the repo root", async () => {
-    const client = serve(featureRepo());
-
-    const res = await client.fetch("/api/worktree?path=../../../etc/passwd");
-
-    expect(res.status).toBe(400);
-  });
-
-  test("GET /api/worktree 404s a path that does not exist", async () => {
-    const client = serve(featureRepo());
-
-    const res = await client.fetch("/api/worktree?path=nope.txt");
-
-    expect(res.status).toBe(404);
-  });
-
   test("GET /api/health returns the repo root for liveness detection", async () => {
     const repo = featureRepo();
     const client = serve(repo);
@@ -399,10 +351,10 @@ describe("serve routes", () => {
     expect(res.status).toBe(400);
   });
 
-  test("POST /api/findings opens a Finding, minting the head's Change", async () => {
+  test("POST /api/comments opens a Comment, minting the head's Change", async () => {
     const client = serve(featureRepo());
 
-    const res = await postFinding(client, {
+    const res = await postComment(client, {
       anchor: lineAnchor,
       body: "the flush races the mark",
       op: "open",
@@ -410,7 +362,7 @@ describe("serve routes", () => {
 
     expect(res.status).toBe(200);
     const result = decodeWriteResult(await res.json());
-    expect(result.findingId).toMatch(/^fnd_/);
+    expect(result.commentId).toMatch(/^cmt_/);
     expect(result.record).toBe("001-open.md");
     expect(result.changeId as string).toBe("chg_001");
 
@@ -418,70 +370,70 @@ describe("serve routes", () => {
     expect(snap.changes.map((change) => change.id as string)).toEqual([
       "chg_001",
     ]);
-    const finding = snap.findings.find(
-      (entry) => entry.id === result.findingId
+    const comment = snap.comments.find(
+      (entry) => entry.id === result.commentId
     );
-    const folded = foldFinding(result.findingId, finding?.records ?? []);
+    const folded = foldComment(result.commentId, comment?.records ?? []);
     expect(folded.body).toBe("the flush races the mark");
     expect(folded.anchor).toMatchObject({ file: "feature.txt", kind: "line" });
-    expect(finding?.records.at(0)?.author).toMatchObject({ kind: "human" });
+    expect(comment?.records.at(0)?.author).toMatchObject({ kind: "human" });
   });
 
-  test("POST /api/findings appends a reply to an existing Finding", async () => {
+  test("POST /api/comments appends a reply to an existing Comment", async () => {
     const client = serve(featureRepo());
-    const openRes = await postFinding(client, {
+    const openRes = await postComment(client, {
       anchor: lineAnchor,
       body: "flagged",
       op: "open",
     });
     const opened = decodeWriteResult(await openRes.json());
 
-    const res = await postFinding(client, {
+    const res = await postComment(client, {
       body: "fixed",
-      findingId: opened.findingId,
+      commentId: opened.commentId,
       op: "reply",
     });
 
     expect(res.status).toBe(200);
     expect(decodeWriteResult(await res.json()).record).toBe("002-reply.md");
     const snap = await fetchReview(client);
-    const finding = snap.findings.find(
-      (entry) => entry.id === opened.findingId
+    const comment = snap.comments.find(
+      (entry) => entry.id === opened.commentId
     );
-    expect(foldFinding(opened.findingId, finding?.records ?? []).status).toBe(
+    expect(foldComment(opened.commentId, comment?.records ?? []).status).toBe(
       "open"
     );
   });
 
-  test("POST /api/findings appends an action that hands the Finding back", async () => {
+  test("POST /api/comments appends an action that hands the Comment back", async () => {
     const client = serve(featureRepo());
-    const openRes = await postFinding(client, {
+    const openRes = await postComment(client, {
       anchor: lineAnchor,
       body: "flagged",
       op: "open",
     });
     const opened = decodeWriteResult(await openRes.json());
 
-    const res = await postFinding(client, {
-      findingId: opened.findingId,
+    const res = await postComment(client, {
+      commentId: opened.commentId,
       op: "action",
     });
 
     expect(res.status).toBe(200);
     expect(decodeWriteResult(await res.json()).record).toBe("002-action.md");
     const snap = await fetchReview(client);
-    const finding = snap.findings.find(
-      (entry) => entry.id === opened.findingId
+    const comment = snap.comments.find(
+      (entry) => entry.id === opened.commentId
     );
-    expect(foldFinding(opened.findingId, finding?.records ?? []).status).toBe(
+    expect(foldComment(opened.commentId, comment?.records ?? []).status).toBe(
       "actioned"
     );
   });
 
-  test("POST /api/findings 400s a malformed body", async () => {
+  test("POST /api/comments 400s a malformed body", async () => {
     const client = serve(featureRepo());
 
-    const res = await postFinding(client, { op: "nonsense" });
+    const res = await postComment(client, { op: "nonsense" });
 
     expect(res.status).toBe(400);
   });

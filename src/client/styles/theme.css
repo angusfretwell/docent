@@ -1,23 +1,19 @@
-/*
- * The design tokens, imported by every browser surface's entry stylesheet.
- * Not an entry point itself: it expects `tailwindcss` to have been imported
- * already, since `@custom-variant` and `@theme` are Tailwind directives.
- *
- * @see docs/adr/0003-site-as-a-static-build-target.md
- */
 @import "@fontsource/ibm-plex-mono/400";
 @import "@fontsource/ibm-plex-mono/500";
 @import "@fontsource/ibm-plex-mono/600";
 @import "@fontsource/outfit/400";
 @import "@fontsource/outfit/500";
 @import "@fontsource/outfit/600";
+@import "@fontsource/inter/400";
+@import "@fontsource/inter/500";
+@import "@fontsource/inter/600";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --animate-skeleton: skeleton 2s -1s infinite linear;
-  --animate-caret-blink: 1s ease-out infinite caret-blink;
   --font-heading: "Outfit", sans-serif;
+  --font-sans: "Inter", sans-serif;
   --font-mono: "IBM Plex Mono", monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
@@ -68,21 +64,10 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
   @keyframes skeleton {
     to {
       background-position: -200% 0;
-    }
-  }
-
-  @keyframes caret-blink {
-    0%,
-    70%,
-    to {
-      opacity: 1;
-    }
-    20%,
-    50% {
-      opacity: 0;
     }
   }
 }

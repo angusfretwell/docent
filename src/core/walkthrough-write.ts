@@ -1,5 +1,5 @@
 /**
- * The Walkthrough write path over `.docent/`. Unlike Findings (append-only
+ * The Walkthrough write path over `.docent/`. Unlike Comments (append-only
  * record dirs), a walkthrough's `manifest.json` is assembled incrementally via
  * read-modify-write — safe because docent is single-user and local (sequential
  * CLI invocations, no concurrent writer to race).
@@ -7,10 +7,7 @@
 
 import type { CaptureKind } from "@shared/enums/capture-kind";
 import { CaptureId, SectionId, WalkthroughId } from "@shared/schemas/ids";
-import type {
-  WalkthroughAnnotation,
-  WalkthroughRange,
-} from "@shared/schemas/walkthrough";
+import type { Callout, WalkthroughRange } from "@shared/schemas/walkthrough";
 import {
   Capture,
   Walkthrough,
@@ -105,7 +102,7 @@ export const writeWalkthrough = Effect.fn("writeWalkthrough")(
 
 /**
  * The `sNN-` filename prefix is cosmetic — the manifest array is the
- * authoritative order. `ranges` is the code arm; `captureIds`/`annotations` the
+ * authoritative order. `ranges` is the code arm; `captureIds`/`callouts` the
  * product arm.
  */
 export const addWalkthroughSection = Effect.fn("addWalkthroughSection")(
@@ -116,7 +113,7 @@ export const addWalkthroughSection = Effect.fn("addWalkthroughSection")(
       body: string;
       ranges?: readonly WalkthroughRange[];
       captureIds?: readonly CaptureId[];
-      annotations?: readonly WalkthroughAnnotation[];
+      callouts?: readonly Callout[];
     }
   ) {
     const fs = yield* FileSystem;
@@ -135,7 +132,7 @@ export const addWalkthroughSection = Effect.fn("addWalkthroughSection")(
     const hasRanges = (params.ranges?.length ?? 0) > 0;
     const hasProduct =
       (params.captureIds?.length ?? 0) > 0 ||
-      (params.annotations?.length ?? 0) > 0;
+      (params.callouts?.length ?? 0) > 0;
     const mismatch = assertSectionArms(
       manifest.kind,
       { hasProduct, hasRanges },
@@ -155,9 +152,7 @@ export const addWalkthroughSection = Effect.fn("addWalkthroughSection")(
       ...(params.captureIds === undefined
         ? {}
         : { captures: params.captureIds }),
-      ...(params.annotations === undefined
-        ? {}
-        : { annotations: params.annotations }),
+      ...(params.callouts === undefined ? {} : { callouts: params.callouts }),
     });
 
     const filename = `s${String(manifest.sections.length + 1).padStart(2, "0")}-${slug(params.title)}.md`;
@@ -167,7 +162,7 @@ export const addWalkthroughSection = Effect.fn("addWalkthroughSection")(
       ["title", section.title],
       ["ranges", section.ranges],
       ["captures", section.captures],
-      ["annotations", section.annotations],
+      ["callouts", section.callouts],
     ]);
     yield* fs.writeFileString(
       path.join(dir, filename),

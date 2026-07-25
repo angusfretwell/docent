@@ -4,7 +4,7 @@
   "groupings": [
     {
       "title": "Review loop",
-      "description": "The skill you invoke in your own agent session to review, fix, and reconcile a branch under review — walkthrough reconciliation (`/docent`), pulling Findings (`/docent --read`), and recording outcomes (`/docent --write`).",
+      "description": "The skill you invoke in your own agent session to review, fix, and reconcile a branch under review — walkthrough reconciliation (`/docent`), pulling Comments (`/docent --read`), and recording outcomes (`/docent --write`).",
       "skills": ["docent"]
     }
   ]

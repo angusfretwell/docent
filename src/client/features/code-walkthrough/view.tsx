@@ -1,5 +1,5 @@
 import { Empty } from "@client/components/empty";
-import { useFindings } from "@client/features/findings/hooks/use-findings";
+import { useComments } from "@client/features/comments/hooks/use-comments";
 import { useActiveTarget } from "@client/features/walkthrough/hooks/use-active-target";
 import { useRevealedSection } from "@client/features/walkthrough/hooks/use-revealed-section";
 import { WalkthroughLayout } from "@client/features/walkthrough/layout";
@@ -12,13 +12,13 @@ import {
 import { StepProse } from "@client/features/walkthrough/prose";
 import { WalkthroughStaleness } from "@client/features/walkthrough/staleness";
 import { useDrift } from "@client/hooks/use-drift";
+import { commentsBySection, sectionKey } from "@client/lib/comment-sections";
 import { parsePatchFiles } from "@client/lib/diff";
-import { findingsBySection, sectionKey } from "@client/lib/finding-sections";
 import { basename } from "@client/lib/utils";
 import { diffQueryOptions } from "@client/queries/diff";
 import { reviewQueryOptions } from "@client/queries/review";
 import { latestCodeWalkthrough } from "@shared/lib/identity-drift";
-import { walkthroughStaleness } from "@shared/lib/walkthrough-annotations";
+import { walkthroughStaleness } from "@shared/lib/walkthrough-callouts";
 import type { WalkthroughId } from "@shared/schemas/ids";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Code2, FileCode, GitCompare } from "lucide-react";
@@ -30,15 +30,15 @@ export function CodeWalkthroughView() {
   const { data: change } = useSuspenseQuery(diffQueryOptions);
   const { data: review } = useSuspenseQuery(reviewQueryOptions);
 
-  const { visible } = useFindings();
+  const { visible } = useComments();
 
   const walkthrough = latestCodeWalkthrough(review.walkthroughs);
   const sections = walkthrough?.sections ?? [];
 
-  const bySection = findingsBySection(visible.map((entry) => entry.finding));
+  const bySection = commentsBySection(visible.map((entry) => entry.comment));
 
   const drift = useDrift({
-    findings: review.findings,
+    comments: review.comments,
     patch: change.patch,
     walkthroughs: review.walkthroughs,
   });
@@ -128,7 +128,7 @@ export function CodeWalkthroughView() {
 
       {steps.map((step) => (
         <StepProse
-          findings={bySection.get(sectionKey(walkthrough.id, step.section.id))}
+          comments={bySection.get(sectionKey(walkthrough.id, step.section.id))}
           key={step.section.id}
           labelTarget={labelTarget}
           onSelect={selectTarget}

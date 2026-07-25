@@ -1,4 +1,4 @@
-import type { Annotation } from "@client/lib/diff-annotations";
+import type { LineDecoration } from "@client/lib/diff-annotations";
 import { diffLayoutAtom } from "@client/lib/preferences";
 import type {
   CodeViewDiffItem,
@@ -17,8 +17,6 @@ import { useMemo } from "react";
 
 import { CodeViewHeaderPrefix } from "./header-prefix";
 
-// @pierre diffs theming is split between this block and the global stylesheet
-// `@client/styles/diffs.css`; change one, check the other.
 const DIFFS_CSS = `
   [data-diffs-header] {
     padding-inline: calc(var(--spacing) * 3);
@@ -50,21 +48,23 @@ const DIFFS_CSS = `
 `;
 
 interface AnnotatedCodeViewProps {
-  items: CodeViewItem<Annotation>[];
+  items: CodeViewItem<LineDecoration>[];
   onGutterUtilityClick?: (
     range: SelectedLineRange,
     context: {
-      item: CodeViewFileItem<Annotation> | CodeViewDiffItem<Annotation>;
+      item: CodeViewFileItem<LineDecoration> | CodeViewDiffItem<LineDecoration>;
     }
   ) => void;
   enableGutterUtility?: boolean;
   enableLineSelection?: boolean;
   onToggleItemCollapsed?: (itemId: string) => void;
-  ref: RefObject<CodeViewHandle<Annotation> | null>;
+  ref: RefObject<CodeViewHandle<LineDecoration> | null>;
   renderAnnotation?: (
-    annotation: LineAnnotation<Annotation> | DiffLineAnnotation<Annotation>
+    annotation:
+      | LineAnnotation<LineDecoration>
+      | DiffLineAnnotation<LineDecoration>
   ) => ReactNode;
-  renderHeaderMetadata?: (item: CodeViewItem<Annotation>) => ReactNode;
+  renderHeaderMetadata?: (item: CodeViewItem<LineDecoration>) => ReactNode;
 }
 
 export function AnnotatedCodeView({
@@ -79,7 +79,7 @@ export function AnnotatedCodeView({
 }: AnnotatedCodeViewProps) {
   const diffLayout = useAtomValue(diffLayoutAtom);
 
-  const options = useMemo<CodeViewOptions<Annotation>>(
+  const options = useMemo<CodeViewOptions<LineDecoration>>(
     () => ({
       diffStyle: diffLayout,
       disableVirtualizationBuffers: true,
@@ -98,7 +98,7 @@ export function AnnotatedCodeView({
     <BaseCodeView
       ref={ref}
       items={items}
-      className="diffs overflow-auto overscroll-contain"
+      className="scrollbar-thin scrollbar-thumb-foreground/20 scrollbar-track-transparent overflow-auto overscroll-contain [&_diffs-container]:scheme-light dark:[&_diffs-container]:scheme-dark"
       options={options}
       renderAnnotation={renderAnnotation}
       renderHeaderMetadata={renderHeaderMetadata}

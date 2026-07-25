@@ -2,7 +2,7 @@ import { processPatch } from "@pierre/diffs";
 import type { DriftState } from "@shared/enums/drift-state";
 import type { AnchorContext, DriftPlan } from "@shared/lib/drift";
 import { isRealObjectId } from "@shared/lib/patch";
-import type { Anchor } from "@shared/schemas/finding";
+import type { Anchor } from "@shared/schemas/comment";
 
 export interface DriftFile {
   deleted: boolean;

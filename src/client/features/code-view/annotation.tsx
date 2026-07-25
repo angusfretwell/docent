@@ -1,21 +1,21 @@
 import { Surface } from "@client/components/surface";
-import { Composer } from "@client/features/findings/composer";
-import type { FindingCompose } from "@client/features/findings/hooks/use-finding-compose";
-import { FindingThread } from "@client/features/findings/thread";
-import type { Annotation } from "@client/lib/diff-annotations";
+import { Composer } from "@client/features/comments/composer";
+import type { CommentCompose } from "@client/features/comments/hooks/use-comment-compose";
+import { CommentThread } from "@client/features/comments/thread";
+import type { LineDecoration } from "@client/lib/diff-annotations";
 
 export function CodeViewAnnotation({
   annotation,
   compose,
 }: {
-  annotation: { metadata: Annotation };
-  compose: FindingCompose;
+  annotation: { metadata: LineDecoration };
+  compose: CommentCompose;
 }) {
-  if (annotation.metadata.kind === "finding") {
+  if (annotation.metadata.kind === "comment") {
     return (
       <div className="mx-3 my-4 max-w-xl">
         <Surface className="p-4 font-sans" radius="lg">
-          <FindingThread finding={annotation.metadata.finding} />
+          <CommentThread comment={annotation.metadata.comment} />
         </Surface>
       </div>
     );

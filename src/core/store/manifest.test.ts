@@ -66,14 +66,14 @@ describe("assertSectionArms", () => {
     expect(mismatch?.id).toBe("wlk_test");
   });
 
-  test("a capture/annotation on a code tour is rejected", () => {
+  test("a capture/callout on a code tour is rejected", () => {
     const mismatch = assertSectionArms(
       "code",
       { hasProduct: true, hasRanges: false },
       "wlk_test"
     );
 
-    expect(mismatch?.arm).toBe("--capture/--annotation");
+    expect(mismatch?.arm).toBe("--capture/--callout");
     expect(mismatch?.kind).toBe("code");
   });
 

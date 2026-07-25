@@ -1,5 +1,5 @@
 import { Button } from "@client/components/ui/button";
-import type { Annotation } from "@client/lib/diff-annotations";
+import type { LineDecoration } from "@client/lib/diff-annotations";
 import type { CodeViewItem } from "@pierre/diffs";
 import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
 
@@ -7,7 +7,7 @@ export function CodeViewHeaderPrefix({
   onToggleItemCollapsed,
   item,
 }: {
-  item: CodeViewItem<Annotation>;
+  item: CodeViewItem<LineDecoration>;
   onToggleItemCollapsed: (itemId: string) => void;
 }) {
   if (item.type !== "diff") {

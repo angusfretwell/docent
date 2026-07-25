@@ -1,7 +1,20 @@
 @import "tailwindcss";
 @import "shadcn/tailwind.css";
+@plugin "tailwind-scrollbar";
 
 @import "./theme.css";
 @import "./typeset.css";
-@import "./diffs.css";
 @import "./replay.css";
+
+:root {
+  --diffs-font-family: var(--font-mono);
+  --diffs-header-font-family: var(--font-sans);
+
+  --trees-font-family-override: var(--font-sans);
+  --trees-padding-inline-override: 0;
+  --trees-scrollbar-thumb-override: color-mix(
+    in srgb,
+    var(--color-foreground) 20%,
+    transparent
+  );
+}

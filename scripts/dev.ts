@@ -34,7 +34,6 @@ const pathArgument = process.argv.at(2);
 
 const target = pathArgument ? path.resolve(pathArgument) : fixture;
 
-console.log("target", target);
 if (!fs.existsSync(workerBundle)) {
   const result = Bun.spawnSync(["bun", "build:worker"]);
 

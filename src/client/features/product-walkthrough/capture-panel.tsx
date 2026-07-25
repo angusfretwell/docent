@@ -1,11 +1,11 @@
 import { Empty } from "@client/components/empty";
 import { CaptureFrame } from "@client/features/capture/frame";
-import { annotationsFor } from "@client/features/capture/lib/pins";
+import { calloutsFor } from "@client/features/capture/lib/pins";
 import { CaptureView } from "@client/features/capture/view";
 import type { PlacedCapture } from "@client/features/walkthrough/lib/walkthrough";
 import { captureLabel } from "@client/features/walkthrough/lib/walkthrough";
 import { cn } from "@client/lib/utils";
-import type { FoldedFinding } from "@shared/lib/finding";
+import type { FoldedComment } from "@shared/lib/comment";
 import type { WalkthroughId } from "@shared/schemas/ids";
 import { Image } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -21,14 +21,14 @@ const CROSSFADE_MS = 200;
 export function ProductWalkthroughCapturePanel({
   activeKey,
   captures,
-  findings,
+  comments,
   onSelect,
   refitted,
   walkthroughId,
 }: {
   activeKey: string | undefined;
   captures: ReadonlyMap<string, PlacedCapture>;
-  findings: readonly FoldedFinding[];
+  comments: readonly FoldedComment[];
   onSelect: (key: string) => void;
   refitted: number;
   walkthroughId: WalkthroughId;
@@ -104,9 +104,9 @@ export function ProductWalkthroughCapturePanel({
           key={key}
         >
           <CaptureView
-            annotations={annotationsFor(placed.section, placed.capture.id)}
+            callouts={calloutsFor(placed.section, placed.capture.id)}
             capture={placed.capture}
-            findings={findings}
+            comments={comments}
             // A fading capture is nobody's answer, so a refit belongs to the
             // one arriving.
             refitted={fading ? 0 : refitted}

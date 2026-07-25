@@ -1,64 +1,152 @@
 :root {
-  --gap: 8px;
-  --radius: 6px;
-  --ink: #1b1b1b;
-  --muted: #6b6b6b;
-  --edge: #dcdcdc;
+  color-scheme: light dark;
+  --page: #eef0f2;
+  --card: #ffffff;
+  --ink: #1c2126;
+  --muted: #6c7780;
+  --edge: #e9ebed;
+  --pill: #f2f4f5;
+  --shadow: 0 1px 4px rgb(0 0 0 / 0.07);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #0f1214;
+    --card: #1a1f23;
+    --ink: #edf0f2;
+    --muted: #97a2aa;
+    --edge: #2e363c;
+    --pill: #262d33;
+    --shadow: 0 1px 4px rgb(0 0 0 / 0.4);
+  }
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
-  font-family: system-ui, sans-serif;
-  margin: 2rem;
+  background: var(--page);
   color: var(--ink);
-}
-
-header {
-  margin-bottom: 1.5rem;
-}
-
-h1 {
-  font-size: 1.5rem;
+  display: grid;
+  font-family: system-ui, sans-serif;
   margin: 0;
+  min-height: 100vh;
+  padding: 24px;
+  place-items: center;
 }
 
-.tagline {
-  margin: 0.25rem 0 0;
-  color: var(--muted);
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
 }
 
-#swatches {
-  display: flex;
-  gap: var(--gap);
-}
-
-.swatch {
-  width: 96px;
-  height: 96px;
-  border-radius: var(--radius);
-  display: flex;
-  align-items: flex-end;
-  padding: 8px;
-  box-sizing: border-box;
-  font-size: 0.75rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.controls {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 1.25rem;
-}
-
-button {
-  font: inherit;
-  padding: 0.5rem 1rem;
+.app {
+  background: var(--card);
   border: 1px solid var(--edge);
-  border-radius: var(--radius);
-  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: min(700px, calc(100vh - 48px));
+  padding: 18px;
+  width: min(1040px, 100%);
+}
+
+.toolbar {
+  display: flex;
+  gap: 8px;
+}
+
+.pill {
+  align-items: center;
+  background: var(--pill);
+  border: 0;
+  border-radius: 9px;
+  color: inherit;
+  display: inline-flex;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 550;
+  gap: 6px;
+  padding: 8px 14px;
+}
+
+button.pill {
   cursor: pointer;
 }
 
-button:hover {
-  border-color: var(--muted);
+button.pill:hover {
+  background: color-mix(in srgb, var(--pill) 84%, var(--ink));
+}
+
+.pill svg {
+  height: 14px;
+  width: 14px;
+}
+
+.picker {
+  padding: 0;
+  position: relative;
+}
+
+.picker svg {
+  color: var(--muted);
+  pointer-events: none;
+  position: absolute;
+  right: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.picker select {
+  appearance: none;
+  background: none;
+  border: 0;
+  border-radius: 9px;
+  color: inherit;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 550;
+  padding: 8px 32px 8px 14px;
+}
+
+.columns {
+  display: flex;
+  flex: 1;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  min-height: 0;
+  padding: 0;
+}
+
+.column {
+  align-items: flex-end;
+  border-radius: 10px;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  padding: 14px;
+}
+
+.hex {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.hex small {
+  font-size: 0.6875rem;
+  letter-spacing: 0.02em;
+  opacity: 0.72;
+}
+
+.hex b {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
 }

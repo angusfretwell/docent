@@ -1,0 +1,60 @@
+{
+  "schema": "docent/walkthrough",
+  "id": "wlk_01JZFIXTUREPROD0000000001",
+  "kind": "product",
+  "bornChangeId": "chg_002",
+  "title": "Taking a palette somewhere",
+  "sections": [
+    "s01-one-button-at-the-bottom.md",
+    "s02-one-modal-three-formats.md",
+    "s03-the-shape-figma-reads.md",
+    "s04-copying-and-the-silent-part.md"
+  ],
+  "captures": [
+    {
+      "id": "cap_01JZFIXTUREPROD00000000C1",
+      "kind": "screenshot",
+      "media": "7ef64ffda1df75a8c4958bba05fdd21c04d7eddea710d891ca23bd9579a13ccf",
+      "route": "/",
+      "title": "The Export palette button",
+      "viewport": [1280, 800],
+      "dims": [1280, 800]
+    },
+    {
+      "id": "cap_01JZFIXTUREPROD00000000C2",
+      "kind": "screenshot",
+      "media": "1507cec42256e50719668ec054c9df4dfe8d6a05f346fb59d955aa214e58733b",
+      "route": "/",
+      "title": "The modal on CSS variables",
+      "viewport": [1280, 800],
+      "dims": [1280, 800]
+    },
+    {
+      "id": "cap_01JZFIXTUREPROD00000000C3",
+      "kind": "screenshot",
+      "media": "814dd2fff0183b88d6ed4f2f154e2e1da85e78a34afccb0da091f5a8113c577c",
+      "route": "/",
+      "title": "The Figma tokens tab",
+      "viewport": [1280, 800],
+      "dims": [1280, 800]
+    },
+    {
+      "id": "cap_01JZFIXTUREPROD00000000C4",
+      "kind": "screenshot",
+      "media": "4ef971e114a64d326535f6a8bb1609acb548d4b9bcfa5e517ed0c04e2e8fea81",
+      "route": "/",
+      "title": "The button reading Copied",
+      "viewport": [1280, 800],
+      "dims": [1280, 800]
+    },
+    {
+      "id": "cap_01JZFIXTUREPROD00000000C5",
+      "kind": "recording",
+      "media": "812762899057df56b11f9fd97a38ad79df89114737c1ad60a92282748b6f0ba4",
+      "route": "/",
+      "title": "Open, switch format, copy",
+      "viewport": [1280, 800],
+      "durationMs": 7369
+    }
+  ]
+}

@@ -31,7 +31,7 @@ export function useDiffView() {
   // Drift is defined against the current Change (data-model.md §6), so it reads
   // off the branch patch even in the Pending preview.
   const drift = useDrift({
-    findings: review.findings,
+    comments: review.comments,
     patch: change.patch,
     walkthroughs: review.walkthroughs,
   });
@@ -61,11 +61,11 @@ export function useDiffView() {
   const viewed = useViewedState(fileById, viewedModel);
 
   const filters = useAtomValue(diffFiltersAtom);
-  const findingPaths = useMemo(
+  const commentPaths = useMemo(
     () =>
       new Set(
-        review.findings.flatMap((finding) =>
-          finding.anchorFile === undefined ? [] : [finding.anchorFile]
+        review.comments.flatMap((comment) =>
+          comment.anchorFile === undefined ? [] : [comment.anchorFile]
         )
       ),
     [review]
@@ -73,7 +73,7 @@ export function useDiffView() {
 
   const visibleFiles = files.filter((file) =>
     matchesFilters(filters, {
-      hasFinding: findingPaths.has(file.path),
+      hasComment: commentPaths.has(file.path),
       status: statusForChange(file.file.type),
       viewed: viewed.isViewed(file.id),
     })

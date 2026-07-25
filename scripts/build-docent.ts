@@ -1,12 +1,16 @@
 #!/usr/bin/env bun
 
 /**
- * Compile the docent binary to `dist/docent`.
+ * Compile the docent binary.
  *
- * This replaces a plain `bun build --compile` invocation because the CLI
- * doesn't support bundler plugins, and the client's stylesheet needs
+ * `Bun.build` (not a plain `bun build --compile`) because the CLI doesn't
+ * support bundler plugins, and the client's stylesheet needs
  * `bun-plugin-tailwind` to compile Tailwind at bundle time (the bunfig
  * `[serve.static]` registration only covers the dev server).
+ *
+ * Run directly (`build:docent`) it compiles for the host into `dist/docent`.
+ * `build-release.ts` imports `compileDocent` to cross-compile the per-platform
+ * release assets, so both binaries embed the same version and build config.
  */
 
 import path from "node:path";
@@ -15,10 +19,28 @@ import tailwind from "bun-plugin-tailwind";
 
 const root = path.join(import.meta.dir, "..");
 
-try {
+/**
+ * Compile `src/docent.ts` into a standalone binary. `target` cross-compiles for
+ * another platform (any `Bun.Build.CompileTarget`); omit it to build for the
+ * host. Rejects if the compile fails.
+ */
+export async function compileDocent({
+  outfile,
+  target,
+}: {
+  outfile: string;
+  target?: Bun.Build.CompileTarget;
+}) {
+  const { version } = await Bun.file(
+    path.join(root, "npm", "package.json")
+  ).json();
+
   const result = await Bun.build({
-    compile: { outfile: path.join(root, "dist", "docent") },
-    define: { "process.env.NODE_ENV": JSON.stringify("production") },
+    compile: target ? { outfile, target } : { outfile },
+    define: {
+      "process.env.DOCENT_VERSION": JSON.stringify(version),
+      "process.env.NODE_ENV": JSON.stringify("production"),
+    },
     entrypoints: [path.join(root, "src", "docent.ts")],
     minify: true,
     plugins: [tailwind],
@@ -28,13 +50,21 @@ try {
   });
 
   if (result.logs.length > 0) {
-    console.warn("Compiled docent with warnings:");
+    console.warn(`Compiled ${path.basename(outfile)} with warnings:`);
     for (const message of result.logs) {
       console.warn(message);
     }
   }
-} catch (error) {
-  console.error("Failed to compile docent:");
-  console.error(error);
-  process.exit(1);
+
+  return result;
+}
+
+if (import.meta.main) {
+  try {
+    await compileDocent({ outfile: path.join(root, "dist", "docent") });
+  } catch (error) {
+    console.error("Failed to compile docent:");
+    console.error(error);
+    process.exit(1);
+  }
 }

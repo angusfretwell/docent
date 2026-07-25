@@ -1,19 +1,27 @@
 ---
 name: docent
-description: Docent review companion for the branch under review. `/docent` reconciles the code and product walkthroughs against the head change and serves the tour; `/docent --read` pulls the Review's Findings into the session to work on; `/docent --write` records the session's review outcomes back to the Review. Use when the human asks to (re)generate, refresh, or reconcile walkthroughs, bring a stale tour up to date, pull or fetch docent review findings, or write review outcomes back to docent.
+description: Docent review companion for the branch under review. `/docent` reconciles the code and product walkthroughs against the head change and serves the tour; `/docent --read` pulls the Review's Comments into the session to work on; `/docent --write` records the session's review outcomes back to the Review. Use when the human asks to (re)generate, refresh, or reconcile walkthroughs, bring a stale tour up to date, pull or fetch docent review comments, or write review outcomes back to docent.
 ---
 
 # docent
 
-The session-side companion to the `docent` tool — a docent gives the guided tour. It assumes only a git repository, the `docent` CLI on PATH, and the tool's `.docent/` state directory at the repo root (auto-created on first write).
+The session-side companion to the `docent` tool — a docent gives the guided tour. It assumes only a git repository and the tool's `.docent/` state directory at the repo root (auto-created on first write). The `docent` CLI is reached through `npx @angusfretwell/docent`, which self-bootstraps its per-platform binary on first run — no global install needed.
 
 Dispatch on the invocation:
 
 | Invocation | Branch |
 | --- | --- |
 | `/docent` (optionally a focus or pillar scope) | **Reconcile walkthroughs** — this file, §1–§6. |
-| `/docent --read [filters]` | **Pull Findings** into the session — load [reference/findings.md](reference/findings.md), "Reading the queue". |
-| `/docent --write` | **Record outcomes** back to the Review — load [reference/findings.md](reference/findings.md), "Writing outcomes". |
+| `/docent --read [filters]` | **Pull Comments** into the session — load [reference/comments.md](reference/comments.md), "Reading the queue". |
+| `/docent --write` | **Record outcomes** back to the Review — load [reference/comments.md](reference/comments.md), "Writing outcomes". |
+
+**Capability gate — run this before any branch.** All three invocations shell out to the `docent` CLI, so first confirm the CLI can run at all:
+
+```bash
+npx -y @angusfretwell/docent --version
+```
+
+On a non-zero exit the CLI could not bootstrap. Relay the command's own stderr — it is the authority on why (`unsupported platform: …`, `download failed (NNN): …`, or Node/npx missing) — wrapped in an actionable line, e.g. `` `npx @angusfretwell/docent` couldn't run — <stderr>; ensure Node ≥18 and network access, then re-run /docent ``, and **hard-stop**. Nothing runs on a failed gate. The check is stateless — it runs every invocation, because machine capability can regress (evicted cache, Node change) and a cached "passed" would skip a check that should now fail — and cheap once the binary is cached; the `-y` also warms that cache up front, where the human is watching, rather than mid-capture.
 
 The rest of this file is the default branch: "type `/docent`, get a browser tab with the tour." The tool only ever _surfaces_ walkthrough staleness; it never auto-regenerates — the human running `/docent` is the regeneration trigger. Per pillar (**code**, **product**) you read the head Change and the pillar's latest walkthrough, decide from **existence + drift** what to do, and regenerate **only the stale or missing pillars**, each minting a fresh immutable `wlk_`. Your job is the reconcile decision; the reference files own the authoring:
 
@@ -49,7 +57,7 @@ git log --oneline origin/HEAD..HEAD    # what this branch adds (fall back to ori
 - **Name the change.** Reading the head is also where you learn what this branch _is_, so record it as the Review's title — the headline the UI renders:
 
   ```bash
-  docent review set --title "Palette panel"
+  npx -y @angusfretwell/docent rename --title "Palette panel"
   ```
 
   Keep it **short** — a few words naming the change the way a PR title does, drawn from the branch's commits, not a summary of them. Re-set it on every run: the title tracks the head, and renaming keeps the Review's id.
@@ -106,7 +114,7 @@ If the code pillar is live, skip it.
 If the product pillar is missing or stale, run the two product halves **in order** — capture first (it mints the shell), then author into it:
 
 1. **[reference/capture.md](reference/capture.md)** — re-drive capture **wholesale**: drive the served app fresh and mint a new product `wlk_*/` shell with its `captures[]` populated and `sections` empty. Individual prior captures are not reused, but content-addressing dedups byte-identical screens for free — an unchanged screen hashes to the same blob, so re-capturing costs nothing on disk. Capture consumes the app the preflight (§1) already reached, and runs AFK against the `.docent/capture.md` the preflight recorded.
-2. **[reference/product-walkthrough.md](reference/product-walkthrough.md)** — the editorial half. It reads the captures-only shell just minted, drops the sections (prose, `{{capture:i}}` interleave, pinned annotations), then sets the shell's title. It touches no browser.
+2. **[reference/product-walkthrough.md](reference/product-walkthrough.md)** — the editorial half. It reads the captures-only shell just minted, drops the sections (prose, `{{capture:i}}` interleave, pinned callouts), then sets the shell's title. It touches no browser.
 
 The result is one fresh immutable product `wlk_` for the head. If the product pillar is live, skip both — capture is expensive and deliberately separable.
 
@@ -117,20 +125,20 @@ First **report the reconcile decision** so the human sees why: which pillars reg
 Then ensure a docent server is running for this repo and open the browser. `docent serve` renders `.docent/` live and re-renders each write over SSE, so a freshly reconciled tour lands on screen the moment it exists. Check first, reuse if you can:
 
 ```bash
-docent status          # → { "serving": true, "url": "http://127.0.0.1:…/" }  or  { "serving": false }
+npx -y @angusfretwell/docent status          # → { "serving": true, "url": "http://127.0.0.1:…/" }  or  { "serving": false }
 ```
 
 - **Already serving** → reuse it; open its `url`. Never start a second server.
 - **Not serving** → start one in the background (it runs until the human stops it), poll until it answers, then open the browser. **Bound the poll** — on timeout hard stop with an actionable message:
 
   ```bash
-  docent serve >/dev/null 2>&1 &   # backgrounded; leave it running
+  npx -y @angusfretwell/docent serve >/dev/null 2>&1 &   # backgrounded; leave it running
   for _ in $(seq 50); do           # `docent serve` records its address on boot; poll it, bounded (~10s)
-    docent status | grep -q '"serving": true' && break
+    npx -y @angusfretwell/docent status | grep -q '"serving": true' && break
     sleep 0.2
   done
-  docent status | grep -q '"serving": true' || {
-    echo "docent serve did not come up within ~10s — run 'docent serve' in this repo to see the boot error, then re-run /docent" >&2
+  npx -y @angusfretwell/docent status | grep -q '"serving": true' || {
+    echo "docent serve did not come up within ~10s — run 'npx -y @angusfretwell/docent serve' in this repo to see the boot error, then re-run /docent" >&2
     exit 1
   }
   ```
@@ -141,7 +149,7 @@ Open the browser at the served `url`; the reconciled pillar's tour is on its wal
 
 - **You reconcile and dispatch; the reference files author.** The reference files own the file writes and the editorial judgment; the `docent walkthrough` / `docent capture` write path owns id minting and content-addressing. Never hand-author a walkthrough file to shortcut them.
 - **A fresh `wlk_` per regenerated pillar — never edit in place.** Regeneration mints a new immutable walkthrough bound to the head; the prior one persists.
-- **Walkthroughs and Findings are separate flows.** Reconciliation produces tours; the review → Findings loop is `--read` / `--write`.
+- **Walkthroughs and Comments are separate flows.** Reconciliation produces tours; the review → Comments loop is `--read` / `--write`.
 - **Human-invoked only.** The tool never triggers regeneration — it only surfaces staleness. Regeneration happens exactly when the human runs `/docent`.
 - **Serving the app under review is the human's workflow** — you consume it, never spawn it. Serving docent itself (§6) is different: that is docent's own process, which you may start in the background.
 - **Commit / push are the human's workflow** — out of scope.

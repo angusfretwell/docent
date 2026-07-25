@@ -1,6 +1,6 @@
 # Authoring the code walkthrough
 
-Drops the **Code walkthrough** — `walkthroughs/code/wlk_*/`, a manifest plus ordered section files whose targets are diff **ranges** narrated in prose. Code has no capture phase, so this file is the whole code pillar. You **author**, not review — you produce the tour only; Findings belong to the review loop ([findings.md](findings.md)).
+Drops the **Code walkthrough** — `walkthroughs/code/wlk_*/`, a manifest plus ordered section files whose targets are diff **ranges** narrated in prose. Code has no capture phase, so this file is the whole code pillar. You **author**, not review — you produce the tour only; Comments belong to the review loop ([comments.md](comments.md)).
 
 The output is plain files a running `docent serve` re-renders live. The CLI below is the single home for `wlk_`/`sec_` minting, lazy `bornChangeId`, and git-resolved `blobSha`, and non-gating — hand-authoring identical files re-renders just the same — but prefer it: it validates against the same schemas the server renders. Your work is the editorial judgment.
 
@@ -29,7 +29,7 @@ The ranking is your judgment, but the shape is fixed:
 ## 3. Mint the walkthrough shell
 
 ```bash
-docent walkthrough create --kind code --title "<the tour's title>"
+npx -y @angusfretwell/docent walkthrough create --kind code --title "<the tour's title>"
 #   → { "changeId": "chg_…", "walkthroughId": "wlk_…" }
 ```
 
@@ -40,7 +40,7 @@ Mints a `wlk_` id and binds `bornChangeId` to the live head, minting the Change 
 One `add-section` call per section, **in tour order** (the manifest array is the order):
 
 ```bash
-docent walkthrough add-section --walkthrough wlk_… \
+npx -y @angusfretwell/docent walkthrough add-section --walkthrough wlk_… \
   --title "Entry point & dispatch" \
   --range src/index.ts:10-24@head \
   --range src/parser.ts:40-88@head <<'EOF'
@@ -49,11 +49,11 @@ EOF
 #   → { "section": "sNN-<slug>.md", "sectionId": "sec_…", "walkthroughId": "wlk_…" }
 ```
 
-- `--range` is `file:start[-end][@side]` — e.g. `src/a.ts:40` (single line; side defaults `head`). Repeatable. Each range resolves its content-addressed **`blobSha` from git** at write time, landing in the same `line`-anchor coordinate a Finding uses, frozen to the exact bytes on its `side` — so it renders as code and deep-links into the diff.
+- `--range` is `file:start[-end][@side]` — e.g. `src/a.ts:40` (single line; side defaults `head`). Repeatable. Each range resolves its content-addressed **`blobSha` from git** at write time, landing in the same `line`-anchor coordinate a Comment uses, frozen to the exact bytes on its `side` — so it renders as code and deep-links into the diff.
 - `--title` names the **section** (required).
 - **Body** — `--body <text>`, or omit it and pipe stdin (heredoc) for multi-line prose.
 - **Literate interleave** — place `{{range:i}}` markers to narrate _between_ ranges; `i` is the range's position in the `--range` list, in the order passed. No markers ⇒ ranges render in order after the prose.
-- `--capture` / `--annotation` are the product arms; on a code walkthrough they are refused.
+- `--capture` / `--callout` are the product arms; on a code walkthrough they are refused.
 
 ## 5. Confirm it renders
 
@@ -61,6 +61,6 @@ The tour is done when every section is dropped and the manifest lists them in or
 
 ## Boundaries
 
-- **Walkthroughs only, never Findings** — the review → Findings loop is a separate flow ([findings.md](findings.md)).
+- **Walkthroughs only, never Comments** — the review → Comments loop is a separate flow ([comments.md](comments.md)).
 - **Regeneration mints a fresh `wlk_`** — never edit a prior walkthrough in place. A walkthrough is durable and immutable; a new tour for a later Change is a new `create`. When and whether to regenerate is the reconcile decision in SKILL.md, not this file's.
 - **Commit / push is the human's git workflow** — out of scope.

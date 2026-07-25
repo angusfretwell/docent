@@ -1,0 +1,15 @@
+{
+  "schema": "docent/walkthrough",
+  "id": "wlk_01JZFIXTURECODE0000000001",
+  "kind": "code",
+  "bornChangeId": "chg_002",
+  "title": "How a palette becomes a file",
+  "sections": [
+    "s01-the-palette-out-of-the-closure.md",
+    "s02-one-interface-three-serializers.md",
+    "s03-the-tailwind-and-token-shapes.md",
+    "s04-the-dialog-opened-natively.md",
+    "s05-copy-and-download-without-a-server.md",
+    "s06-what-the-export-never-touched.md"
+  ]
+}

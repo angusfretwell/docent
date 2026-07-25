@@ -26,7 +26,7 @@ describe("useDiffItems", () => {
   test("builds one item per file", () => {
     const files = parsePatchFiles(patch);
 
-    const items = useDiffItems({ composing: null, files, findings: [] });
+    const items = useDiffItems({ comments: [], composing: null, files });
 
     expect(items.map((item) => item.id)).toEqual(files.map((file) => file.id));
   });
@@ -34,7 +34,7 @@ describe("useDiffItems", () => {
   test("leaves every file expanded when no collapse predicate is given", () => {
     const files = parsePatchFiles(patch);
 
-    const items = useDiffItems({ composing: null, files, findings: [] });
+    const items = useDiffItems({ comments: [], composing: null, files });
 
     expect(items.every((item) => item.collapsed === false)).toBe(true);
   });
@@ -44,9 +44,9 @@ describe("useDiffItems", () => {
     const collapsedId = files[0]?.id;
 
     const items = useDiffItems({
+      comments: [],
       composing: null,
       files,
-      findings: [],
       isCollapsed: (itemId) => itemId === collapsedId,
     });
 

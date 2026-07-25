@@ -13,16 +13,16 @@ import type { CaptureProps } from "./view";
  * here by the same `useZoom` the screenshot arm uses.
  */
 export function RecordingCapture({
-  annotations,
+  callouts,
   capture,
-  findings,
+  comments,
   refitted,
   target,
   walkthroughId,
 }: CaptureProps) {
   const replay = useRrwebReplayer(walkthroughId, capture.media);
   const { rootRef } = replay;
-  const pins = recordingPins(annotations, findings, capture);
+  const pins = recordingPins(callouts, comments, capture);
 
   useRecordingPeek(replay, pins, target);
 

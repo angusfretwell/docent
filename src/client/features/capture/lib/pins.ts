@@ -1,12 +1,12 @@
-import type { Callout } from "@client/features/walkthrough/callouts";
+import type { LabeledCallout } from "@client/features/walkthrough/callouts";
 import { ANCHOR_KIND } from "@shared/enums/anchor-kind";
 import type { DriftState } from "@shared/enums/drift-state";
-import type { FoldedFinding } from "@shared/lib/finding";
+import type { FoldedComment } from "@shared/lib/comment";
 import { identityDrift } from "@shared/lib/identity-drift";
-import type { Anchor } from "@shared/schemas/finding";
+import type { Anchor } from "@shared/schemas/comment";
 import type {
   Capture,
-  WalkthroughAnnotation,
+  Callout,
   WalkthroughSection,
 } from "@shared/schemas/walkthrough";
 
@@ -25,7 +25,7 @@ export interface TimePin {
   toMs?: number;
 }
 
-// Derived from the Finding anchor union so it can't drift from the schema.
+// Derived from the Comment anchor union so it can't drift from the schema.
 type CaptureAnchor = Extract<
   Anchor,
   { kind: "screenshot-region" | "recording-timestamp" }
@@ -38,7 +38,7 @@ interface RawPin {
 }
 
 export function captureAnchorId(
-  anchor?: FoldedFinding["anchor"]
+  anchor?: FoldedComment["anchor"]
 ): string | undefined {
   if (
     anchor?.kind === ANCHOR_KIND.screenshotRegion ||
@@ -51,45 +51,45 @@ export function captureAnchorId(
 
 /**
  * Placement, not registry membership, is the test: a capture no section renders
- * has nowhere to pin a live Finding, so such Findings detach and surface rather
+ * has nowhere to pin a live Comment, so such Comments detach and surface rather
  * than vanish. `undefined` for a non-capture anchor.
  */
-export function captureFindingDrift(
-  anchor: FoldedFinding["anchor"],
+export function captureCommentDrift(
+  anchor: FoldedComment["anchor"],
   placedCaptureIds: ReadonlySet<string>
 ): DriftState | undefined {
   const id = captureAnchorId(anchor);
   return id === undefined ? undefined : identityDrift(placedCaptureIds.has(id));
 }
 
-/** Annotations targeting the capture (numbered `A1…`) then its Findings (`F1…`). */
+/** Callouts targeting the capture (numbered `A1…`) then its Comments (`F1…`). */
 function rawPins(
-  annotations: readonly WalkthroughAnnotation[],
-  findings: readonly FoldedFinding[],
+  callouts: readonly Callout[],
+  comments: readonly FoldedComment[],
   captureId: string,
   kind: "screenshot-region" | "recording-timestamp"
 ): RawPin[] {
   const pins: RawPin[] = [];
-  let annotationCount = 0;
-  for (const annotation of annotations) {
-    if (annotation.anchor.kind === kind) {
-      annotationCount += 1;
+  let calloutCount = 0;
+  for (const callout of callouts) {
+    if (callout.anchor.kind === kind) {
+      calloutCount += 1;
       pins.push({
-        anchor: annotation.anchor,
-        body: annotation.body,
-        label: `A${annotationCount}`,
+        anchor: callout.anchor,
+        body: callout.body,
+        label: `A${calloutCount}`,
       });
     }
   }
-  let findingCount = 0;
-  for (const finding of findings) {
-    const { anchor } = finding;
+  let commentCount = 0;
+  for (const comment of comments) {
+    const { anchor } = comment;
     if (anchor?.kind === kind && anchor.capture === captureId) {
-      findingCount += 1;
+      commentCount += 1;
       pins.push({
         anchor,
-        body: finding.body,
-        label: `F${findingCount}`,
+        body: comment.body,
+        label: `C${commentCount}`,
       });
     }
   }
@@ -103,15 +103,15 @@ function captureArm(capture: Capture) {
 }
 
 export function screenshotPins(
-  annotations: readonly WalkthroughAnnotation[],
-  findings: readonly FoldedFinding[],
+  callouts: readonly Callout[],
+  comments: readonly FoldedComment[],
   capture: Capture
 ): RegionPin[] {
   const regions: RegionPin[] = [];
 
   for (const pin of rawPins(
-    annotations,
-    findings,
+    callouts,
+    comments,
     capture.id,
     ANCHOR_KIND.screenshotRegion
   )) {
@@ -129,15 +129,15 @@ export function screenshotPins(
 }
 
 export function recordingPins(
-  annotations: readonly WalkthroughAnnotation[],
-  findings: readonly FoldedFinding[],
+  callouts: readonly Callout[],
+  comments: readonly FoldedComment[],
   capture: Capture
 ): TimePin[] {
   const times: TimePin[] = [];
 
   for (const pin of rawPins(
-    annotations,
-    findings,
+    callouts,
+    comments,
     capture.id,
     ANCHOR_KIND.recordingTimestamp
   )) {
@@ -160,24 +160,24 @@ export function recordingPins(
  * overlays — including the pins no coordinate placed, which have no overlay.
  */
 export function captureCallouts(
-  annotations: readonly WalkthroughAnnotation[],
-  findings: readonly FoldedFinding[],
+  callouts: readonly Callout[],
+  comments: readonly FoldedComment[],
   capture: Capture
-): Callout[] {
-  return rawPins(annotations, findings, capture.id, captureArm(capture)).map(
+): LabeledCallout[] {
+  return rawPins(callouts, comments, capture.id, captureArm(capture)).map(
     ({ body, label }) => ({ body, label })
   );
 }
 
 /**
- * A non-capture arm never matches a capture id here; `foldSectionAnnotations`
+ * A non-capture arm never matches a capture id here; `foldSectionCallouts`
  * surfaces those as section notes so none is dropped.
  */
-export function annotationsFor(
+export function calloutsFor(
   section: WalkthroughSection,
   captureId: string
-): WalkthroughAnnotation[] {
-  return (section.annotations ?? []).filter(
-    (annotation) => captureAnchorId(annotation.anchor) === captureId
+): Callout[] {
+  return (section.callouts ?? []).filter(
+    (callout) => captureAnchorId(callout.anchor) === captureId
   );
 }

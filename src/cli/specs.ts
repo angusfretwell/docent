@@ -17,7 +17,9 @@ export function parseRecordId<Id extends string>(
     Effect.flatMap((text) =>
       Option.match(schema.makeOption(text), {
         onNone: () =>
-          Effect.fail(new CliUsageError({ reason: `bad --${flag}: ${text}` })),
+          Effect.fail(
+            new CliUsageError({ reason: `invalid --${flag}: ${text}` })
+          ),
         onSome: (id) => Effect.succeed(id),
       })
     )
@@ -48,7 +50,7 @@ export const parseRangeSpec = Effect.fn("parseRangeSpec")(
     if (colon === -1) {
       return yield* Effect.fail(
         new CliUsageError({
-          reason: `bad --range: ${spec} (file:start[-end][@side])`,
+          reason: `invalid --range: ${spec} (file:start[-end][@side])`,
         })
       );
     }
@@ -58,7 +60,7 @@ export const parseRangeSpec = Effect.fn("parseRangeSpec")(
     if (file === "" || match?.groups === undefined) {
       return yield* Effect.fail(
         new CliUsageError({
-          reason: `bad --range: ${spec} (file:start[-end][@side])`,
+          reason: `invalid --range: ${spec} (file:start[-end][@side])`,
         })
       );
     }
@@ -82,7 +84,7 @@ export function parseDimensions(
   return match?.groups === undefined
     ? Effect.fail(
         new CliUsageError({
-          reason: `bad --${flag}: ${value} (WxH, e.g. 1280x800)`,
+          reason: `invalid --${flag}: ${value} (WxH, e.g. 1280x800)`,
         })
       )
     : Effect.succeed([Number(match.groups.width), Number(match.groups.height)]);
@@ -97,7 +99,7 @@ export function parseDurationMs(
     ? Effect.succeed(millis)
     : Effect.fail(
         new CliUsageError({
-          reason: `bad --duration-ms: ${value} (a non-negative integer)`,
+          reason: `invalid --duration-ms: ${value} (a non-negative integer)`,
         })
       );
 }

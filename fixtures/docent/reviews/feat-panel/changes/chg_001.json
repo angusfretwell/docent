@@ -1,9 +1,0 @@
-{
-  "schema": "docent/change",
-  "id": "chg_001",
-  "baseSha": "{{sha base}}",
-  "headSha": "{{sha change1}}",
-  "baseRef": "main",
-  "headRef": "feat/panel",
-  "capturedAt": "2026-07-10T02:05:00Z"
-}

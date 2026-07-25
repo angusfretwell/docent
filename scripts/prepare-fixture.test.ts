@@ -54,7 +54,7 @@ function recordCountsOnDisk(reviewDir: string) {
   }
   return {
     changes: withExtension("changes", ".json").length,
-    findingRecords: withExtension("findings", ".md").length,
+    commentRecords: withExtension("comments", ".md").length,
     viewed: withExtension("viewed", ".json").length,
     walkthroughSections: withExtension("walkthroughs", ".md").length,
     walkthroughs: walkthroughDirs(reviewDir).length,
@@ -87,7 +87,7 @@ describe("dev fixture", () => {
     const onDisk = recordCountsOnDisk(reviewDir);
     expect({
       changes: snap.changes.length,
-      findingRecords: sum(snap.findings, (finding) => finding.records.length),
+      commentRecords: sum(snap.comments, (comment) => comment.records.length),
       viewed: snap.viewed.length,
       walkthroughSections: sum(
         snap.walkthroughs,
@@ -98,7 +98,7 @@ describe("dev fixture", () => {
     // Guard against a vacuous 0 === 0 parity if the fixture ever stops emitting a
     // record kind — the walkthrough especially (a core rich-fixture element).
     expect(onDisk.changes).toBeGreaterThan(0);
-    expect(onDisk.findingRecords).toBeGreaterThan(0);
+    expect(onDisk.commentRecords).toBeGreaterThan(0);
     expect(onDisk.viewed).toBeGreaterThan(0);
     expect(onDisk.walkthroughs).toBeGreaterThan(0);
     expect(onDisk.walkthroughSections).toBeGreaterThan(0);

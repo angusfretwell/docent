@@ -7,13 +7,13 @@ import { makeTestRuntime } from "@test/runtime";
 import { Option } from "effect";
 
 import {
-  decodeFindingRecord,
+  decodeCommentRecord,
   decodeWalkthroughSection,
-  listFindingIds,
+  listCommentIds,
   listJsonRecordNames,
   listMarkdownRecordNames,
   listWalkthroughIds,
-  readFindingRecord,
+  readCommentRecord,
   readWalkthroughSection,
 } from "./enumerate";
 
@@ -60,16 +60,16 @@ describe("listMarkdownRecordNames", () => {
   });
 });
 
-describe("listFindingIds", () => {
-  test("lists only fnd_* directories, sorted", async () => {
+describe("listCommentIds", () => {
+  test("lists only cmt_* directories, sorted", async () => {
     const dir = scratchDir("docent-enumerate-");
-    mkdirSync(path.join(dir, "fnd_02"), { recursive: true });
-    mkdirSync(path.join(dir, "fnd_01"), { recursive: true });
+    mkdirSync(path.join(dir, "cmt_02"), { recursive: true });
+    mkdirSync(path.join(dir, "cmt_01"), { recursive: true });
     mkdirSync(path.join(dir, "other"), { recursive: true });
 
-    const ids = await runtime.runPromise(listFindingIds(dir));
+    const ids = await runtime.runPromise(listCommentIds(dir));
 
-    expect(ids).toEqual(["fnd_01", "fnd_02"]);
+    expect(ids).toEqual(["cmt_01", "cmt_02"]);
   });
 });
 
@@ -85,53 +85,53 @@ describe("listWalkthroughIds", () => {
   });
 });
 
-const VALID_FINDING = [
+const VALID_COMMENT = [
   "---",
-  "schema: docent/finding",
+  "schema: docent/comment",
   'author: { kind: human, id: a@b.com, display: "A" }',
   "changeId: chg_001",
   "createdAt: 2026-07-10T02:14:00Z",
   "anchor: { kind: change }",
   "---",
   "",
-  "a finding body",
+  "a comment body",
   "",
 ].join("\n");
 
-const MALFORMED_FINDING = "no frontmatter here\n";
+const MALFORMED_COMMENT = "no frontmatter here\n";
 
-describe("Finding record: decodeFindingRecord (strict) vs. readFindingRecord (best-effort)", () => {
+describe("Comment record: decodeCommentRecord (strict) vs. readCommentRecord (best-effort)", () => {
   test("both entry points decode a well-formed record the same way", async () => {
     const dir = scratchDir("docent-enumerate-");
     const file = path.join(dir, "001-open.md");
-    writeFileSync(file, VALID_FINDING);
+    writeFileSync(file, VALID_COMMENT);
 
     const strict = await runtime.runPromise(
-      decodeFindingRecord(VALID_FINDING, "001-open.md")
+      decodeCommentRecord(VALID_COMMENT, "001-open.md")
     );
     const bestEffort = await runtime.runPromise(
-      readFindingRecord(file, "001-open.md")
+      readCommentRecord(file, "001-open.md")
     );
 
     expect(strict.type).toBe("open");
     expect(Option.isSome(bestEffort) && bestEffort.value).toEqual(strict);
   });
 
-  test("decodeFindingRecord fails on a malformed record — the failure validate's oracle reports", async () => {
+  test("decodeCommentRecord fails on a malformed record — the failure validate's oracle reports", async () => {
     const exit = await runtime.runPromiseExit(
-      decodeFindingRecord(MALFORMED_FINDING, "001-open.md")
+      decodeCommentRecord(MALFORMED_COMMENT, "001-open.md")
     );
 
     expect(exit._tag).toBe("Failure");
   });
 
-  test("readFindingRecord is None on the same malformed record — review's snapshot degrades gracefully", async () => {
+  test("readCommentRecord is None on the same malformed record — review's snapshot degrades gracefully", async () => {
     const dir = scratchDir("docent-enumerate-");
     const file = path.join(dir, "001-open.md");
-    writeFileSync(file, MALFORMED_FINDING);
+    writeFileSync(file, MALFORMED_COMMENT);
 
     const result = await runtime.runPromise(
-      readFindingRecord(file, "001-open.md")
+      readCommentRecord(file, "001-open.md")
     );
 
     expect(Option.isNone(result)).toBe(true);

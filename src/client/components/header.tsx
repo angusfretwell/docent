@@ -1,5 +1,5 @@
 import { Skeleton } from "@client/components/ui/skeleton";
-import { FindingsToggle } from "@client/features/findings/toggle";
+import { CommentsToggle } from "@client/features/comments/toggle";
 import { Suspense } from "react";
 
 import { Navigation } from "./navigation";
@@ -24,7 +24,7 @@ export function Header() {
           <ReviewMeta />
         </Suspense>
         <Separator orientation="vertical" className="ml-1.5 h-4" />
-        <FindingsToggle />
+        <CommentsToggle />
       </div>
     </div>
   );

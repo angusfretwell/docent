@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { FindingId, WalkthroughId } from "@shared/schemas/ids";
+import { CommentId, WalkthroughId } from "@shared/schemas/ids";
 import { Effect } from "effect";
 
 import {
@@ -21,17 +21,17 @@ function rejection<A>(parse: Effect.Effect<A, CliUsageError>): CliUsageError {
 
 describe("parseRecordId", () => {
   test("a well-formed id parses to its branded value", () => {
-    expect(parsed(parseRecordId("finding", FindingId, " fnd_01H8 "))).toBe(
-      FindingId.make("fnd_01H8")
+    expect(parsed(parseRecordId("comment", CommentId, " cmt_01H8 "))).toBe(
+      CommentId.make("cmt_01H8")
     );
   });
 
   test("a blank or mis-prefixed id is a usage error", () => {
-    expect(rejection(parseRecordId("finding", FindingId, "  "))).toBeInstanceOf(
+    expect(rejection(parseRecordId("comment", CommentId, "  "))).toBeInstanceOf(
       CliUsageError
     );
     expect(
-      rejection(parseRecordId("walkthrough", WalkthroughId, "fnd_01H8"))
+      rejection(parseRecordId("walkthrough", WalkthroughId, "cmt_01H8"))
     ).toBeInstanceOf(CliUsageError);
   });
 });

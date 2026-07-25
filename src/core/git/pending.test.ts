@@ -1,17 +1,12 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, symlinkSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import path from "node:path";
 
 import type { PendingRange } from "@shared/enums/pending-range";
-import {
-  cleanupScratchDirs,
-  git,
-  scratchDir,
-  scratchRepo,
-} from "@test/fixtures";
+import { cleanupScratchDirs, git, scratchRepo } from "@test/fixtures";
 import { makeTestRuntime } from "@test/runtime";
 
-import { resolvePending, resolveWorktreeFile } from "./pending";
+import { resolvePending } from "./pending";
 import { resolveChange } from "./resolve";
 
 const runtime = makeTestRuntime();
@@ -141,58 +136,5 @@ describe("resolvePending", () => {
     const blobSha = git(repo, "hash-object", path.join(repo, "fresh.txt"));
     expect(blobSha).toMatch(/^[0-9a-f]{40}$/);
     expect(result.patch).toContain(blobSha);
-  });
-});
-
-describe("resolveWorktreeFile", () => {
-  function worktree(cwd: string, relPath: string) {
-    return runtime.runPromise(resolveWorktreeFile(cwd, relPath));
-  }
-
-  test("reads the live working-tree bytes for a path (uncommitted content)", async () => {
-    const repo = repoWithOneCommit();
-    writeFileSync(
-      path.join(repo, "hello.txt"),
-      "live edit not yet committed\n"
-    );
-
-    const bytes = await worktree(repo, "hello.txt");
-
-    expect(new TextDecoder().decode(bytes)).toBe(
-      "live edit not yet committed\n"
-    );
-  });
-
-  test("reads a nested path", async () => {
-    const repo = repoWithOneCommit();
-    mkdirSync(path.join(repo, "src"), { recursive: true });
-    writeFileSync(path.join(repo, "src", "app.ts"), "export const x = 1;\n");
-
-    const bytes = await worktree(repo, "src/app.ts");
-
-    expect(new TextDecoder().decode(bytes)).toBe("export const x = 1;\n");
-  });
-
-  test("rejects a path that escapes the repo root", async () => {
-    const repo = repoWithOneCommit();
-
-    await expect(worktree(repo, "../../../etc/passwd")).rejects.toThrow(
-      /path/i
-    );
-  });
-
-  test("rejects an absolute path", async () => {
-    const repo = repoWithOneCommit();
-
-    await expect(worktree(repo, "/etc/passwd")).rejects.toThrow(/path/i);
-  });
-
-  test("rejects a symlink inside the repo that points outside it", async () => {
-    const repo = repoWithOneCommit();
-    const outside = scratchDir("docent-outside-");
-    writeFileSync(path.join(outside, "secret.txt"), "top secret\n");
-    symlinkSync(path.join(outside, "secret.txt"), path.join(repo, "link.txt"));
-
-    await expect(worktree(repo, "link.txt")).rejects.toThrow(/path/i);
   });
 });

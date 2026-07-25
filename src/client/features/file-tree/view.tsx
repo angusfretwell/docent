@@ -7,22 +7,6 @@ import { useEffect, useRef } from "react";
 import { FileTreeFilter } from "./filter";
 import { FileTreeSearch } from "./search";
 
-const TREES_CSS = `
-  [data-file-tree-virtualized-scroll] {
-    overscroll-behavior: contain;
-    scrollbar-gutter: stable;
-  }
-`;
-
-const TREES_STYLES = {
-  "--trees-padding-inline": 0,
-  "--trees-scrollbar-thumb":
-    "color-mix(in srgb, var(--color-foreground) 20%, transparent)",
-  "--trees-theme-sidebar-bg": "var(--color-background)",
-  backgroundColor: "var(--color-background)",
-  paddingLeft: "6px",
-};
-
 export function FileTreeView({
   gitStatus,
   onFileClick,
@@ -44,7 +28,6 @@ export function FileTreeView({
     onSelectionChange,
     paths,
     stickyFolders: true,
-    unsafeCSS: TREES_CSS,
   });
 
   // useFileTree builds the model once from its initial options, so later
@@ -93,10 +76,13 @@ export function FileTreeView({
     return () => container.removeEventListener("click", handleClick);
   }, [onFileClick]);
 
-  const style = {
-    ...themeToTreeStyles(theme),
-    ...TREES_STYLES,
-  } as React.CSSProperties;
+  const style = themeToTreeStyles({
+    ...theme,
+    colors: {
+      ...theme.colors,
+      "sideBar.background": "var(--color-background)",
+    },
+  });
 
   return (
     <div className="flex h-full grow flex-col" ref={containerRef}>
@@ -105,7 +91,11 @@ export function FileTreeView({
         <FileTreeFilter />
       </div>
 
-      <BaseFileTree model={model} style={style} />
+      <BaseFileTree
+        model={model}
+        style={style}
+        className="overscroll-contain pl-1.5"
+      />
     </div>
   );
 }

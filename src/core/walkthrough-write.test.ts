@@ -131,14 +131,15 @@ describe("addWalkthroughSection", () => {
     );
   });
 
-  test("writes the product arm — captures and annotations", async () => {
+  test("writes the product arm — captures and callouts", async () => {
     const root = scratchDir("docent-wlk-");
     const { walkthroughId } = await create(root, "product", "Product tour");
 
     const { section } = await run(
       addWalkthroughSection({
         ...base,
-        annotations: [
+        body: "Drag a file {{capture:0}}.",
+        callouts: [
           {
             anchor: {
               capture: CaptureId.make("cap_a"),
@@ -148,7 +149,6 @@ describe("addWalkthroughSection", () => {
             body: "The upload control.",
           },
         ],
-        body: "Drag a file {{capture:0}}.",
         captureIds: [CaptureId.make("cap_a"), CaptureId.make("cap_b")],
         root,
         title: "Uploading",
@@ -162,7 +162,7 @@ describe("addWalkthroughSection", () => {
       CaptureId.make("cap_a"),
       CaptureId.make("cap_b"),
     ]);
-    expect(entry?.sections.at(0)?.annotations?.at(0)?.anchor.kind).toBe(
+    expect(entry?.sections.at(0)?.callouts?.at(0)?.anchor.kind).toBe(
       "screenshot-region"
     );
   });
@@ -208,7 +208,7 @@ describe("addWalkthroughSection", () => {
     expect(exit._tag).toBe("Failure");
   });
 
-  test("captures/annotations on a code tour are refused (wrong arm)", async () => {
+  test("captures/callouts on a code tour are refused (wrong arm)", async () => {
     const root = scratchDir("docent-wlk-");
     const { walkthroughId } = await create(root, "code", "Code tour");
 

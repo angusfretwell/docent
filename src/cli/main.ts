@@ -6,16 +6,15 @@ import { FetchHttpClient } from "effect/unstable/http";
 import type { EntryOptions } from "../serve";
 import { serve } from "../serve";
 import { captureCommand } from "./capture";
-import { findingCommand } from "./finding";
-import { installCommand } from "./install";
-import { reviewCommand } from "./review";
+import { commentCommand } from "./comment";
+import { renameCommand } from "./rename";
 import { statusCommand } from "./status";
 import { WorkingDirectory } from "./usage";
 import { validateCommand } from "./validate";
 import { walkthroughCommand } from "./walkthrough";
 
-/** The released binary is versioned by `npm/package.json`. */
-const VERSION = "0.0.0";
+/** Compiled in from `npm/package.json` by `build-docent`; the un-compiled dev binary has no version. */
+const VERSION = process.env.DOCENT_VERSION ?? "0.0.0";
 
 /** A failure whose human message has already reached stderr. */
 class Reported extends Data.TaggedError("Reported") {
@@ -25,9 +24,8 @@ class Reported extends Data.TaggedError("Reported") {
 /**
  * The re-fail is load-bearing: `process.exit` here would tear the process down
  * mid-fiber and skip every pending finalizer — the provided layers' scopes,
- * `install`'s scoped child process, `serve`'s recorded-address cleanup.
- * `runMain` instead unwinds them and lets `Runtime.defaultTeardown` pick the
- * exit code.
+ * `serve`'s recorded-address cleanup. `runMain` instead unwinds them and lets
+ * `Runtime.defaultTeardown` pick the exit code.
  *
  * A `ShowHelp` failure is re-raised untouched: the runner has already rendered
  * the help, and the error carries its own exit code through
@@ -46,38 +44,37 @@ export function crash(
 }
 
 function docentCli(entry: EntryOptions) {
-  const serveHere = Effect.gen(function* serveHere() {
-    const cwd = yield* WorkingDirectory;
-    return yield* serve(entry, cwd);
-  });
-
   const serveCommand = Command.make(
     "serve",
     {
       directory: Argument.string("directory").pipe(
         Argument.optional,
-        Argument.withDescription("The repo to serve (default: this directory)")
+        Argument.withDescription(
+          "The repo to serve (default: current directory)"
+        )
       ),
     },
     (config) =>
-      Option.match(config.directory, {
-        onNone: () => serveHere,
-        onSome: (directory) => serve(entry, directory),
+      Effect.gen(function* runServe() {
+        const cwd = yield* WorkingDirectory;
+        return yield* serve(
+          entry,
+          Option.getOrElse(config.directory, () => cwd)
+        );
       })
-  ).pipe(Command.withDescription("Serve the Review's UI for a repo"));
+  ).pipe(Command.withDescription("Serve the review UI"));
 
-  return Command.make("docent", {}, () => serveHere).pipe(
+  return Command.make("docent").pipe(
     Command.withDescription(
-      "Local code review: walkthroughs, findings, and the diff"
+      "Review your agent's work with guided walkthroughs of code and product changes"
     ),
     Command.withSubcommands([
       serveCommand,
-      findingCommand,
+      commentCommand,
       walkthroughCommand,
       captureCommand,
-      reviewCommand,
+      renameCommand,
       validateCommand,
-      installCommand,
       statusCommand,
     ])
   );

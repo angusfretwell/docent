@@ -1,6 +1,5 @@
 export const RecordType = {
   Action: "action",
-  Edit: "edit",
   Open: "open",
   Reopen: "reopen",
   Reply: "reply",

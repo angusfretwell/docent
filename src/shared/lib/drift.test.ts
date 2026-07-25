@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import type { FindingRecord } from "../schemas/finding";
+import type { CommentRecord } from "../schemas/comment";
 import {
   changeHistory,
   changeHistoryLabel,
@@ -215,9 +215,9 @@ describe("changeHistory", () => {
     kind: "agent" as const,
   };
   function record(
-    fields: Partial<Omit<FindingRecord, "changeId">> & {
+    fields: Partial<Omit<CommentRecord, "changeId">> & {
       name: string;
-      type: FindingRecord["type"];
+      type: CommentRecord["type"];
       changeId?: string;
     }
   ) {
@@ -226,9 +226,9 @@ describe("changeHistory", () => {
       body: "",
       changeId: "chg_001",
       createdAt: "2026-07-10T02:14:00Z",
-      schema: "docent/finding",
+      schema: "docent/comment",
       ...fields,
-    } as FindingRecord;
+    } as CommentRecord;
   }
 
   test("labels each milestone with the change it was authored on", () => {
@@ -258,20 +258,6 @@ describe("changeHistory", () => {
       "replied",
       "resolved",
     ]);
-  });
-
-  test("edit records are not milestones", () => {
-    const events = changeHistory([
-      record({ changeId: "chg_001", name: "001-open.md", type: "open" }),
-      record({
-        changeId: "chg_002",
-        edits: "001-open.md",
-        name: "002-edit.md",
-        type: "edit",
-      }),
-    ]);
-
-    expect(events).toEqual([{ changeId: "chg_001", verb: "opened" }]);
   });
 
   test("renders a one-line label", () => {

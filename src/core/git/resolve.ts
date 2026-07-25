@@ -1,5 +1,5 @@
 import { Change } from "@shared/schemas/change";
-import { Author } from "@shared/schemas/finding";
+import { Author } from "@shared/schemas/comment";
 import { Effect, Schema } from "effect";
 import { unique } from "radashi";
 
@@ -250,18 +250,6 @@ export const resolveBlob = Effect.fn("resolveBlob")(function* resolveBlob(
   const { root } = yield* resolveRepo(cwd);
   return yield* gitBytes(root, ["cat-file", "blob", sha]);
 });
-
-/** `git cat-file -s` reads only the object header, so it never streams a large binary. A malformed id short-circuits before git runs. */
-export const resolveBlobSize = Effect.fn("resolveBlobSize")(
-  function* resolveBlobSize(cwd: string, sha: string) {
-    if (!OBJECT_ID.test(sha)) {
-      return yield* Effect.fail(InvalidObjectId.make({ sha }));
-    }
-    const { root } = yield* resolveRepo(cwd);
-    const size = yield* git(root, ["cat-file", "-s", sha]);
-    return Math.trunc(Number(size));
-  }
-);
 
 export const resolveBlobShaAt = Effect.fn("resolveBlobShaAt")(
   function* resolveBlobShaAt(root: string, ref: string, file: string) {

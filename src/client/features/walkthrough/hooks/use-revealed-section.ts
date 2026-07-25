@@ -1,4 +1,4 @@
-import { sectionKey } from "@client/lib/finding-sections";
+import { sectionKey } from "@client/lib/comment-sections";
 import { createRevealTarget } from "@client/lib/reveal-target";
 import type { SectionId, WalkthroughId } from "@shared/schemas/ids";
 import { useAtomValue } from "jotai/react";

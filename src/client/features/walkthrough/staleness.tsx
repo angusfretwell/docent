@@ -1,5 +1,5 @@
 import { Badge } from "@client/components/ui/badge";
-import type { Staleness } from "@shared/lib/walkthrough-annotations";
+import type { Staleness } from "@shared/lib/walkthrough-callouts";
 import { ClockFading } from "lucide-react";
 import plur from "plur";
 

@@ -13,7 +13,6 @@ import { makeTestRuntime } from "@test/runtime";
 import {
   resolveAuthor,
   resolveBlob,
-  resolveBlobSize,
   resolveChange,
   resolveChangeRefs,
 } from "./resolve";
@@ -315,28 +314,5 @@ describe("resolveBlob", () => {
     const repo = repoWithOneCommit();
 
     await expect(blob(repo, "../../etc/passwd")).rejects.toThrow(/object id/i);
-  });
-});
-
-describe("resolveBlobSize", () => {
-  function size(cwd: string, sha: string) {
-    return runtime.runPromise(resolveBlobSize(cwd, sha));
-  }
-
-  test("returns the byte size of a blob without streaming its content", async () => {
-    const repo = repoWithOneCommit();
-    const raw = new Uint8Array([0x00, 0xff, 0x0a, 0x42, 0x0a, 0x01]);
-    writeFileSync(path.join(repo, "blob.bin"), raw);
-    git(repo, "add", ".");
-    git(repo, "commit", "-m", "add binary");
-    const sha = git(repo, "rev-parse", "HEAD:blob.bin");
-
-    expect(await size(repo, sha)).toBe(raw.length);
-  });
-
-  test("rejects a malformed object id before running git", async () => {
-    const repo = repoWithOneCommit();
-
-    await expect(size(repo, "../../etc/passwd")).rejects.toThrow(/object id/i);
   });
 });

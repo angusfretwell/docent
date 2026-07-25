@@ -1,8 +1,8 @@
 import { Schema } from "effect";
 
 import { walkthroughKinds } from "../enums/walkthrough-kind";
-import { FindingRecord } from "./finding";
-import { ChangeId, FindingId, ReviewId, WalkthroughId } from "./ids";
+import { CommentRecord } from "./comment";
+import { ChangeId, CommentId, ReviewId, WalkthroughId } from "./ids";
 import { Walkthrough, WalkthroughSection } from "./walkthrough";
 
 export class Review extends Schema.Class<Review>("Review")({
@@ -38,11 +38,11 @@ export class ViewedRequest extends Schema.Class<ViewedRequest>("ViewedRequest")(
   }
 ) {}
 
-export class FindingEntry extends Schema.Class<FindingEntry>("FindingEntry")({
+export class CommentEntry extends Schema.Class<CommentEntry>("CommentEntry")({
   /** Root anchor's file path — present only for `line`/`file` code arms. */
   anchorFile: Schema.optional(Schema.String),
-  id: FindingId,
-  records: Schema.Array(FindingRecord),
+  id: CommentId,
+  records: Schema.Array(CommentRecord),
 }) {}
 
 export class WalkthroughEntry extends Schema.Class<WalkthroughEntry>(
@@ -58,7 +58,7 @@ export class ReviewSnapshot extends Schema.Class<ReviewSnapshot>(
   "ReviewSnapshot"
 )({
   changes: Schema.Array(ChangeRecord),
-  findings: Schema.Array(FindingEntry),
+  comments: Schema.Array(CommentEntry),
   review: Review,
   viewed: Schema.Array(ViewedEvent),
   walkthroughs: Schema.Array(WalkthroughEntry),

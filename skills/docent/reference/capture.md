@@ -100,7 +100,7 @@ Drive the flow the way you already work — `snapshot -i` to read the page live 
 Captures register onto a **product walkthrough**, so first establish which `wlk_` you are capturing into. When the reconcile flow (SKILL.md) supplies the id, use it. Run standalone, mint a fresh shell:
 
 ```bash
-docent walkthrough create --kind product
+npx -y @angusfretwell/docent walkthrough create --kind product
 #   → { "changeId": "chg_…", "walkthroughId": "wlk_…" }
 ```
 
@@ -112,11 +112,11 @@ Register each temp media file (§5) with `docent capture add` — the single hom
 
 ```bash
 # screenshot: full-page CSS-pixel document size rides --dims
-docent capture add --walkthrough wlk_… --kind screenshot --media <tmp>.rrweb.json \
+npx -y @angusfretwell/docent capture add --walkthrough wlk_… --kind screenshot --media <tmp>.rrweb.json \
   --route /signup --viewport 1280x800 --dims 1280x2400 --title "Empty signup form"
 
 # recording: --duration-ms rides instead of --dims
-docent capture add --walkthrough wlk_… --kind recording --media <tmp>.rrweb.json \
+npx -y @angusfretwell/docent capture add --walkthrough wlk_… --kind recording --media <tmp>.rrweb.json \
   --route /signup --viewport 1280x800 --duration-ms 8200 --title "Submitting the signup"
 #   → { "captureId": "cap_…", "media": "<sha>", "registry": { … }, "walkthroughId": "wlk_…" }
 ```

@@ -1,3 +1,3 @@
-# Docent
+# Docent (work in progress)
 
 Review your agent's work with guided walkthroughs of code and product changes.

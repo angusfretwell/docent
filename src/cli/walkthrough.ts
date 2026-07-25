@@ -1,9 +1,6 @@
 import { walkthroughKinds } from "@shared/enums/walkthrough-kind";
 import { CaptureId, WalkthroughId } from "@shared/schemas/ids";
-import {
-  WalkthroughAnnotation,
-  WalkthroughRange,
-} from "@shared/schemas/walkthrough";
+import { Callout, WalkthroughRange } from "@shared/schemas/walkthrough";
 import { Effect, Option, Schema } from "effect";
 import { Command, Flag } from "effect/unstable/cli";
 
@@ -47,42 +44,40 @@ const buildRanges = Effect.fn("buildRanges")(function* buildRanges(
   );
 });
 
-const parseAnnotations = Effect.fn("parseAnnotations")(
-  function* parseAnnotations(raws: readonly string[]) {
-    return yield* Effect.forEach(
-      raws,
-      (raw) =>
-        Effect.gen(function* decode() {
-          const json = yield* Effect.try({
-            catch: () =>
-              new CliUsageError({
-                reason: `--annotation is not valid JSON: ${raw}`,
-              }),
-            try: () => JSON.parse(raw) as unknown,
-          });
-          return yield* Schema.decodeUnknownEffect(WalkthroughAnnotation)(
-            json
-          ).pipe(
-            Effect.mapError(
-              (error) =>
-                new CliUsageError({ reason: `invalid --annotation: ${error}` })
-            )
-          );
-        }),
-      { concurrency: "unbounded" }
-    );
-  }
-);
+const parseCallouts = Effect.fn("parseCallouts")(function* parseCallouts(
+  raws: readonly string[]
+) {
+  return yield* Effect.forEach(
+    raws,
+    (raw) =>
+      Effect.gen(function* decode() {
+        const json = yield* Effect.try({
+          catch: () =>
+            new CliUsageError({
+              reason: `--callout is not valid JSON: ${raw}`,
+            }),
+          try: () => JSON.parse(raw) as unknown,
+        });
+        return yield* Schema.decodeUnknownEffect(Callout)(json).pipe(
+          Effect.mapError(
+            (error) =>
+              new CliUsageError({ reason: `invalid --callout: ${error}` })
+          )
+        );
+      }),
+    { concurrency: "unbounded" }
+  );
+});
 
 const create = Command.make(
   "create",
   {
     kind: Flag.choice("kind", walkthroughKinds).pipe(
-      Flag.withDescription("Which pillar this tour is: code or product")
+      Flag.withDescription("The walkthrough kind")
     ),
     title: Flag.string("title").pipe(
       Flag.optional,
-      Flag.withDescription("The tour's title — editorial, so optional")
+      Flag.withDescription("The walkthrough's title")
     ),
   },
   (config) =>
@@ -102,33 +97,37 @@ const create = Command.make(
       );
     })
 ).pipe(
-  Command.withDescription("Mint a walkthrough shell bound to the live head")
+  Command.withDescription(
+    "Create an empty walkthrough bound to the current head"
+  )
 );
 
 const addSection = Command.make(
   "add-section",
   {
-    // Annotations are JSON, which embeds commas — so this one repeats without
-    // the comma-splitting every other repeatable flag gets.
-    annotation: Flag.string("annotation").pipe(
-      Flag.atLeast(0),
-      Flag.withDescription("One JSON callout — repeat the flag per annotation")
-    ),
     body: Flag.string("body").pipe(
       Flag.optional,
-      Flag.withDescription("Section prose (omit to read it from piped stdin)")
+      Flag.withDescription("The section's prose (omit to read from STDIN)")
+    ),
+    // Callouts are JSON, which embeds commas — so this one repeats without
+    // the comma-splitting every other repeatable flag gets.
+    callout: Flag.string("callout").pipe(
+      Flag.atLeast(0),
+      Flag.withDescription(
+        "JSON callout for the section (repeat flag for multiple)"
+      )
     ),
     capture: commaSeparated(
       Flag.string("capture").pipe(
         Flag.withDescription(
-          "A cap_ id on this tour — repeatable or comma-joined"
+          "Capture (cap_…) for the section (comma-separated, or repeat flag)"
         )
       )
     ),
     range: commaSeparated(
       Flag.string("range").pipe(
         Flag.withDescription(
-          "file:start[-end][@side] — repeatable or comma-joined"
+          "Diff range (file:start[-end][@side]) for the section (comma-separated, or repeat flag)"
         )
       )
     ),
@@ -136,7 +135,7 @@ const addSection = Command.make(
       Flag.withDescription("The section's title")
     ),
     walkthrough: Flag.string("walkthrough").pipe(
-      Flag.withDescription("The wlk_ id to append to")
+      Flag.withDescription("The walkthrough to append to (wlk_…)")
     ),
   },
   (config) =>
@@ -156,7 +155,7 @@ const addSection = Command.make(
       const specs = yield* Effect.all(
         config.range.map((value) => parseRangeSpec(value))
       );
-      const annotations = yield* parseAnnotations(config.annotation);
+      const callouts = yield* parseCallouts(config.callout);
       const body = yield* resolveBody(config.body, false);
 
       const scope = yield* resolveChangeScope(cwd);
@@ -172,15 +171,13 @@ const addSection = Command.make(
           walkthroughId,
           ...(ranges.length === 0 ? {} : { ranges }),
           ...(captureIds.length === 0 ? {} : { captureIds }),
-          ...(annotations.length === 0 ? {} : { annotations }),
+          ...(callouts.length === 0 ? {} : { callouts }),
         })
       );
     })
-).pipe(
-  Command.withDescription("Validate and append one section, in tour order")
-);
+).pipe(Command.withDescription("Append a section to a walkthrough"));
 
 export const walkthroughCommand = Command.make("walkthrough").pipe(
-  Command.withDescription("Mint and grow the Review's walkthroughs"),
+  Command.withDescription("Create or extend the review's walkthroughs"),
   Command.withSubcommands([create, addSection])
 );

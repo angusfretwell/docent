@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import type { Anchor } from "@shared/schemas/finding";
+import type { Anchor } from "@shared/schemas/comment";
 
 import {
   identityAnchorDrift,

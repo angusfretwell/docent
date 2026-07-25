@@ -17,8 +17,8 @@ function brandedId<const Brand extends string>(brand: Brand, prefix: string) {
 export const ChangeId = brandedId("ChangeId", "chg");
 export type ChangeId = typeof ChangeId.Type;
 
-export const FindingId = brandedId("FindingId", "fnd");
-export type FindingId = typeof FindingId.Type;
+export const CommentId = brandedId("CommentId", "cmt");
+export type CommentId = typeof CommentId.Type;
 
 export const WalkthroughId = brandedId("WalkthroughId", "wlk");
 export type WalkthroughId = typeof WalkthroughId.Type;
