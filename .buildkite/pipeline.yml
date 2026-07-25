@@ -3,8 +3,17 @@ cache: "/tmp/.bun-cache"
 env:
   BUN_INSTALL_CACHE_DIR: "/tmp/.bun-cache"
 
-x-plugins: &plugins
-  - mise#v1.1.3: ~
+x-vercel-deploy: &vercel_deploy
+  depends_on: build-site
+  secrets:
+    - VERCEL_TOKEN
+    - VERCEL_ORG_ID
+    - VERCEL_PROJECT_ID
+  plugins:
+    - mise#v1.1.3: ~
+    - artifacts#v1.9.4:
+        download: .vercel/output
+        compressed: .vercel/output.tgz
 
 steps:
   - label: ":oxc: check"
@@ -13,14 +22,16 @@ steps:
       bun ci
       bun run check --format=junit > junit-lint.xml
     artifact_paths: junit-check.xml
-    plugins: *plugins
+    plugins:
+      - mise#v1.1.3: ~
 
   - label: ":typescript: typecheck"
     key: typecheck
     command: |
       bun ci
       bun run typecheck
-    plugins: *plugins
+    plugins:
+      - mise#v1.1.3: ~
 
   - label: ":bun: test"
     key: test
@@ -28,7 +39,8 @@ steps:
       bun ci
       bun test --reporter=junit --reporter-outfile=junit-test.xml
     artifact_paths: junit-test.xml
-    plugins: *plugins
+    plugins:
+      - mise#v1.1.3: ~
 
   - wait: ~
     continue_on_failure: true
@@ -48,75 +60,38 @@ steps:
             type: summary
           context: test-summary
 
-  # Ship the marketing site: a push to `main` publishes production
-  # (docent.website), a pull request publishes its own preview and annotates the
-  # build with the URL. Every expensive part — the fixture, the headless
-  # snapshot capture, both bundles — runs here and the agent assembles
-  # `.vercel/output`, so `vercel deploy --prebuilt` is a plain static publish
-  # that never builds, never prepares a fixture and never starts a browser.
-  #
-  # See docs/deployment.md for the one-time Vercel project and Buildkite
-  # secrets this depends on.
-  - label: ":vercel: deploy site"
-    key: deploy-site
-    # An explicit dependency rather than position in the file: it skips the
-    # `wait` above, whose `continue_on_failure` would otherwise let a red build
-    # deploy, and it starts the moment the three gates are green instead of
-    # waiting on the summary.
+  - label: ":vercel: build"
+    key: build-site
     depends_on:
       - check
       - typecheck
       - test
-    # A fork's pull request would run its own code on an agent holding the
-    # Vercel token, which no preview is worth. The `main` arm can only be a
-    # push — a pull request build's branch is its head branch.
-    #
-    # `!= true` rather than `!`: `fork` is null outside a fork's pull request and
-    # how a bare null evaluates in a boolean position is undocumented, so the
-    # production arm would be resting on a guess.
-    if: >-
-      build.pull_request.repository.fork != true && (build.branch == "main" || build.pull_request.id != null)
-    # Ordered and one at a time per branch, so a slower older build can never
-    # land its deployment on top of a newer one.
-    concurrency_group: "docent/deploy-site/${BUILDKITE_BRANCH}"
-    concurrency: 1
-    # Scoped to this step, so the gates above never see the Vercel credentials.
-    # Needs buildkite-agent 3.106.0 or later.
-    secrets:
-      - VERCEL_TOKEN
-      - VERCEL_ORG_ID
-      - VERCEL_PROJECT_ID
-    # `bun ci` already materializes the dev fixture through the `prepare` script,
-    # and `capture:snapshot` builds its own throwaway copy, so there is no
-    # `prepare:fixture` step here. `build:worker` is explicit because both the
-    # capture's served client and the demo bundle need the worker on disk, and a
-    # missing bundle should fail as its own step.
-    #
-    # `playwright install --with-deps` shells out to apt, so the agent image has
-    # to give the job root. If it doesn't, this line is where the build stops —
-    # the fix is a custom hosted-agent image that ships chromium's shared
-    # libraries, not a workaround in the pipeline. See docs/deployment.md.
-    #
-    # `$$` defers expansion to the agent: a single `$` is interpolated away at
-    # pipeline-upload time, where none of these values exist yet.
     command: |
       bun ci
       bunx playwright install --with-deps chromium
-      bun run build:worker
-      bun run capture:snapshot
-      bun run build:site
-      bun scripts/assemble-vercel-output.ts
+      bun run --sequential build:worker build:snapshot build:site build:vercel
+    plugins:
+      - mise#v1.1.3: ~
+      - artifacts#v1.9.4:
+          upload: .vercel/output
+          compressed: .vercel/output.tgz
 
-      prod_flag=""
-      target="Preview"
+  - label: ":vercel: preview"
+    key: preview-site
+    if: build.pull_request.repository.fork != true && build.pull_request.id != null
+    command: |
+      url=$$(bunx vercel deploy --prebuilt --archive=tgz)
+      buildkite-agent annotate --style success --context preview-site "[Preview]($$url)"
+    concurrency_group: "docent/preview-site/${BUILDKITE_BRANCH}"
+    concurrency: 1
+    <<: *vercel_deploy
 
-      if [[ "$$BUILDKITE_PULL_REQUEST" == "false" ]]; then
-        prod_flag="--prod"
-        target="Production"
-      fi
-
-      url=$$(bunx vercel@57.0.0 deploy --prebuilt --archive=tgz $$prod_flag)
-
-      buildkite-agent annotate --style success --context deploy-site \
-        "$$target deployed — [landing page]($$url/) · [demo]($$url/demo/)"
-    plugins: *plugins
+  - label: ":vercel: deploy"
+    key: deploy-site
+    if: build.branch == "main"
+    command: |
+      url=$$(bunx vercel deploy --prebuilt --archive=tgz --prod)
+      buildkite-agent annotate --style success --context deploy-site "[Production]($$url)"
+    concurrency_group: "docent/deploy-site/${BUILDKITE_BRANCH}"
+    concurrency: 1
+    <<: *vercel_deploy
