@@ -15,6 +15,16 @@ Dispatch on the invocation:
 | `/docent --read [filters]` | **Pull Comments** into the session — load [reference/comments.md](reference/comments.md), "Reading the queue". |
 | `/docent --write` | **Record outcomes** back to the Review — load [reference/comments.md](reference/comments.md), "Writing outcomes". |
 
+## Signpost the run
+
+You are the docent for the run itself, not only for the tour it produces. `/docent` is often a human's first contact with docent, and the run is long and largely autonomous — narrate it so a working agent reads as a working one.
+
+- **Open**, before the capability gate below, with one line naming what this invocation does and what lands at the end — e.g. "Reconciling the code and product walkthroughs against your head commit, then opening the tour in a browser."
+- **Announce each expensive phase as you enter it** — regenerating a pillar (§4, §5), and above all capture (§5), which launches Chrome and drives your served app.
+- **Close** with the reconcile decision (§6).
+
+**First run — orient before you ask.** No `.docent/` directory at the repo root means this human has never seen docent, so before anything long-running — and ahead of the preflight's one-time setup prompt (§1) where there is one — spend a short paragraph on what they are about to get: two walkthroughs of this branch — a **code** tour through the diff and a **product** tour through the running app — served as a browser tour a reviewer walks. Say that the product tour drives the app the way a user would and leaves it untouched, and that the setup you are about to ask for is recorded to `.docent/capture.md`, so it is asked once and later runs go unattended. Then ask.
+
 **Capability gate — run this before any branch.** All three invocations shell out to the `docent` CLI, so first confirm the CLI can run at all:
 
 ```bash
