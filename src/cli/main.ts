@@ -5,6 +5,7 @@ import { FetchHttpClient } from "effect/unstable/http";
 
 import type { EntryOptions } from "../serve";
 import { serve } from "../serve";
+import { VERSION } from "../version";
 import { captureCommand } from "./capture";
 import { commentCommand } from "./comment";
 import { renameCommand } from "./rename";
@@ -12,9 +13,6 @@ import { statusCommand } from "./status";
 import { WorkingDirectory } from "./usage";
 import { validateCommand } from "./validate";
 import { walkthroughCommand } from "./walkthrough";
-
-/** Compiled in from `npm/package.json` by `build-docent`; the un-compiled dev binary has no version. */
-const VERSION = process.env.DOCENT_VERSION ?? "0.0.0";
 
 /** A failure whose human message has already reached stderr. */
 class Reported extends Data.TaggedError("Reported") {

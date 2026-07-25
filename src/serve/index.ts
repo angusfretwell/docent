@@ -5,6 +5,7 @@ import pc from "picocolors";
 
 import { webHandler } from "../api/index";
 import { resolveChange } from "../core/git";
+import { VERSION } from "../version";
 import { removeServeAddress, writeServeAddress } from "./address";
 
 export interface EntryOptions {
@@ -65,7 +66,7 @@ export const serve = Effect.fn("serve")(function* serve(
   yield* writeServeAddress(change.root, url).pipe(Effect.ignore);
 
   const root = pc.dim(`(${change.root})`);
-  yield* Console.log(pc.bold(pc.yellow(`Docent 0.1.0`)));
+  yield* Console.log(pc.bold(pc.yellow(`Docent ${VERSION}`)));
   yield* Console.log(`${change.branch} → ${change.defaultBranch} ${root}`);
   yield* Console.log(`${pc.green("✓")} Serving on ${url}`);
 
