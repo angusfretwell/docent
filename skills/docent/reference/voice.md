@@ -1,8 +1,8 @@
 # The walkthrough voice
 
-Shared by both authoring flows — [code-walkthrough.md](code-walkthrough.md) and [product-walkthrough.md](product-walkthrough.md) — so the two tours read as one tour. It owns prose only: what to select and how to mint stays with each authoring file.
+Shared by both authoring flows — [code-walkthrough.md](code-walkthrough.md) and [product-walkthrough.md](product-walkthrough.md) — so the two tours read as one tour, the mechanism [ADR 0004](../../../docs/adr/0004-docent-skill-runs-as-an-orchestrator-with-phase-subagents.md) chose over a single author for both. It owns prose only: what to select and how to mint stays with each authoring file.
 
-The reader already has the diff open beside your sentence and the screenshot above it. **The deletion test:** imagine the prose gone and only the diff or the screenshot left. If the reader loses nothing, do not write it. This is the same test [comment-standards.md](../../../docs/comment-standards.md) applies to code — a walkthrough is that document's sibling one level up, narrating a change where a comment narrates a line.
+The reader already has the diff — or the capture — open in the panel beside your sentence. **The deletion test:** imagine the prose gone and only that panel left. If the reader loses nothing, do not write it. This is the same test [comment-standards.md](../../../docs/comment-standards.md) applies to code — a walkthrough is that document's sibling one level up, narrating a change where a comment narrates a line.
 
 You are describing, never assessing. Opinions about the code belong to the review loop ([comments.md](comments.md)); a tour that grades the change has stopped being a tour.
 
@@ -17,7 +17,7 @@ You are describing, never assessing. Opinions about the code belong to the revie
 
 Each of these is prose the diff or the screenshot already carries. Write the sentence underneath it instead:
 
-- **Restating the diff** — "adds a `resolveDrift` function that returns one of three states". The reader is looking at it. Say what it is for.
+- **Restating the diff** — "adds a `reanchorRange` helper that returns one of three states". The reader is looking at it. Say what it is for.
 - **Throat-clearing** — "This section walks through…", "Let's take a look at…", "First, some context." Open on the sentence that carries information.
 - **Selling** — "elegant", "cleanly separates", "robust", "nicely handles". Praise is assessment, and assessment is the review loop's. State the mechanism and let it stand.
 - **List-shaped prose** — three bullets are three facts with the relation between them deleted, and the relation is the part worth writing. Connected sentences force you to state it.
@@ -27,7 +27,7 @@ Each of these is prose the diff or the screenshot already carries. Write the sen
 ## Shape
 
 - **A section is connected prose** — a short paragraph, two at most. No bullets, no headings inside a section.
-- **A callout is a phrase or one sentence.** It sits on the image and competes with it; anything longer is a section that landed in the wrong place.
+- **A callout is a phrase or one sentence.** It renders as one small line under the section, reached from a numbered pin on the capture — a label for a region, not a paragraph; anything longer is a section that landed in the wrong place.
 - **Interleave markers sit inside sentences.** `{{range:i}}` and `{{capture:i}}` are grammar, not appendices — a body that ends with a run of markers has made the prose a preamble and the targets a dump.
 
 ## Worked pairs
@@ -37,9 +37,10 @@ Each of these is prose the diff or the screenshot already carries. Write the sen
 ```text
 BAD
 This section walks through how drift is resolved against blob shas rather
-than line numbers. A `resolveDrift` helper is added in
-`src/shared/lib/drift.ts`, taking an anchor and a change and returning
-`live`, `shifted`, or `outdated`. The view is updated to call it. This
+than line numbers. A `planDrift` helper is added in
+`src/shared/lib/drift.ts`, taking an anchor and its file context and
+returning either a resolved state or a reanchor request. `reanchorRange`
+is added alongside it, returning `live`, `shifted`, or `outdated`. This
 cleanly separates drift calculation from rendering.
 ```
 
@@ -51,8 +52,9 @@ An anchor born on an earlier change may still point at the right lines, at
 lines that merely moved, or at bytes that no longer exist — and a reviewer
 has to be able to tell those apart before trusting the comment hanging off
 it. Comparing line numbers reports every anchor below an inserted hunk as
-shifted, so the resolution runs against the blob sha instead {{range:0}}
-and the view {{range:1}} only picks a colour.
+moved, so the blob sha decides first {{range:0}} and the search for the
+born block runs only once the bytes have actually changed {{range:1}} —
+which is what keeps `shifted` meaning the block moved, not the file.
 ```
 
 **A product section** — titled "Landing on a review":
@@ -76,18 +78,18 @@ moment they disagree, the composer opens against the line under the cursor
 half-formed objection never has to find somewhere to attach.
 ```
 
-**A callout**, pinned to the badge on a drifted comment:
+**A callout**, pinned to the `Outdated` badge on a comment whose anchor no longer resolves:
 
 ```text
 BAD
-This is the new drift badge, rendered by `DriftBadge`, which shows whether
-an anchor is live, shifted, or outdated — an elegant way to surface
-staleness at a glance.
+This is the new drift badge, rendered by `CommentsItem`, which appears once
+an anchor stops resolving against the current blob — an elegant way to
+surface staleness at a glance.
 ```
 
-Names the component the reader cannot see, restates three states the image shows, and sells.
+Names a component the reader cannot see, spends its one line on the mechanism the section already carries, and sells.
 
 ```text
 GOOD
-Shifted — the anchor moved, it did not break.
+Outdated — the lines this was written against are gone.
 ```

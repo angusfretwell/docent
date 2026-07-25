@@ -4,7 +4,7 @@ The **editorial half** of the product walkthrough. Reads the Change and the **al
 
 The output is plain files a running `docent serve` re-renders live. The CLI is non-gating (hand-authoring identical files works too) but validates against the schemas the server renders; your work is the editorial judgment.
 
-**Load [voice.md](voice.md) before you write a section body or a callout.** It owns the prose, and the code walkthrough loads the same file — that shared guide is why the two tours read as one.
+**Load [voice.md](voice.md) before you write a section body or a callout.** It owns the prose, and the code walkthrough loads the same file.
 
 ## 1. Find the captured shell — the captures you narrate over
 
@@ -61,7 +61,7 @@ EOF
 
   Each callout's `capture` must be a `cap_` id this section embeds — the CLI checks the callout's schema shape only, not that membership, so keeping it true is yours.
 
-- **Body** — `--body <text>`, or omit it and pipe stdin for multi-line prose. Place `{{capture:i}}` markers to narrate _between_ captures; `i` is the capture's position in the `--capture` list, in the order passed. No markers ⇒ captures render in order after the prose.
+- **Body** — `--body <text>`, or omit it and pipe stdin for multi-line prose. The body and every callout body follow [voice.md](voice.md). Place `{{capture:i}}` markers to narrate _between_ captures; `i` is the capture's position in the `--capture` list, in the order passed. No markers ⇒ captures render in order after the prose.
 - `--range` is the code arm; on a product walkthrough it is refused.
 
 ## 5. Set the title and confirm

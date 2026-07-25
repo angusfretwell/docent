@@ -53,7 +53,7 @@ EOF
 
 - `--range` is `file:start[-end][@side]` — e.g. `src/a.ts:40` (single line; side defaults `head`). Repeatable. Each range resolves its content-addressed **`blobSha` from git** at write time, landing in the same `line`-anchor coordinate a Comment uses, frozen to the exact bytes on its `side` — so it renders as code and deep-links into the diff.
 - `--title` names the **section** (required).
-- **Body** — `--body <text>`, or omit it and pipe stdin (heredoc) for multi-line prose.
+- **Body** — `--body <text>`, or omit it and pipe stdin (heredoc) for multi-line prose. The prose follows [voice.md](voice.md).
 - **Literate interleave** — place `{{range:i}}` markers to narrate _between_ ranges; `i` is the range's position in the `--range` list, in the order passed. No markers ⇒ ranges render in order after the prose.
 - `--capture` / `--callout` are the product arms; on a code walkthrough they are refused.
 
