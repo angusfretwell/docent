@@ -8,7 +8,7 @@
  * The demo also needs the two files the site build copies rather than bundles:
  * the pre-bundled diff worker, and the captured snapshot it replays. Both are
  * served off `dist/`, so previewing the demo means having run
- * `bun run build:worker` and `bun run capture:snapshot` — without the snapshot
+ * `bun run build:worker` and `bun run build:snapshot` — without the snapshot
  * the demo renders its missing-data message rather than the review.
  *
  * @see scripts/assemble-vercel-output.ts for the routing this mirrors.

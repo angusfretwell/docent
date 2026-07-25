@@ -84,7 +84,7 @@ async function copyDiffWorker(): Promise<void> {
 async function copySnapshot(): Promise<void> {
   if (!(await Bun.file(snapshotFile).exists())) {
     console.warn(
-      `No ${path.relative(root, snapshotFile)}, so the demo will report its data as missing. Record it with \`bun run capture:snapshot\`.`
+      `No ${path.relative(root, snapshotFile)}, so the demo will report its data as missing. Record it with \`bun run build:snapshot\`.`
     );
     return;
   }

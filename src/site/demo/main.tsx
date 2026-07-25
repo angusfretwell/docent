@@ -80,7 +80,7 @@ function MissingSnapshot() {
  */
 function reportMissingSnapshot(cause: unknown): void {
   console.error(
-    "The demo snapshot is missing or no longer matches the API contract. Record one with `bun run capture:snapshot`, then rebuild with `bun run build:site`."
+    "The demo snapshot is missing or no longer matches the API contract. Record one with `bun run build:snapshot`, then rebuild with `bun run build:site`."
   );
   console.error(cause);
 

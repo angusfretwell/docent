@@ -23,7 +23,7 @@
  * Heavy (a server plus a headless browser), so it stays out of `bun run build`
  * and `preflight`; CI runs it before the demo build.
  *
- *   bun run capture:snapshot
+ *   bun run build:snapshot
  *
  * @see src/site/demo/snapshot.ts for the format this writes.
  * @see src/site/demo/replay-handler.ts for what consumes it.
