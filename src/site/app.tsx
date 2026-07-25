@@ -1,8 +1,12 @@
 import { Logo } from "@client/components/logo";
+import { ThemeToggle } from "@client/components/theme-toggle";
 
 import { CopyButton } from "./copy-button";
 
 const INSTALL_COMMAND = "npx skills add angusfretwell/docent";
+const REPO_URL = "https://github.com/angusfretwell/docent";
+const DOCS_URL = `${REPO_URL}/blob/main/skills/docent/SKILL.md`;
+const AUTHOR_URL = "https://github.com/angusfretwell";
 
 export function App() {
   return (
@@ -11,14 +15,12 @@ export function App() {
         <header className="flex items-center gap-2.5">
           <Logo />
           <span className="font-semibold">Docent</span>
-          <a
-            href="https://github.com/angusfretwell/docent"
-            className="ml-auto"
-            rel="noreferrer"
-            target="_blank"
-          >
-            GitHub ↗
-          </a>
+          <div className="ml-auto flex items-center gap-3">
+            <a href={REPO_URL} rel="noreferrer" target="_blank">
+              GitHub ↗
+            </a>
+            <ThemeToggle className="-mr-2" />
+          </div>
         </header>
 
         <main>
@@ -53,11 +55,15 @@ export function App() {
                 Docent installs as an agent skill:
               </p>
 
-              <div className="flex h-14 items-center gap-2 border-2 border-foreground px-4 font-mono text-[0.9em] sm:h-16 sm:px-5">
-                <span className="text-muted-foreground">$</span>
-                <span className="truncate">{INSTALL_COMMAND}</span>
+              <div className="flex min-h-14 items-center gap-2 border-2 border-foreground px-4 py-2.5 font-mono text-[0.9em] sm:min-h-16 sm:px-5">
+                <span className="min-w-0 flex-1">
+                  <span aria-hidden="true" className="text-muted-foreground">
+                    ${" "}
+                  </span>
+                  {INSTALL_COMMAND}
+                </span>
                 <CopyButton
-                  className="-mr-1 ml-auto"
+                  className="-mr-1 shrink-0"
                   label="Copy install command"
                   text={INSTALL_COMMAND}
                 />
@@ -70,19 +76,38 @@ export function App() {
           </div>
         </main>
 
-        <footer className="pt-(--typeset-flow) text-[0.9em] text-muted-foreground">
-          <p>
+        <footer className="mt-[calc(var(--typeset-flow)*2)] flex flex-wrap items-baseline gap-x-6 gap-y-1 text-[0.9em] text-muted-foreground">
+          <div>
             Built by{" "}
             <a
+              className="text-foreground"
+              href={AUTHOR_URL}
               rel="noreferrer"
               target="_blank"
-              href="https://github.com/angusfretwell"
-              className="text-foreground"
             >
               Angus Fretwell
             </a>
             .
-          </p>
+          </div>
+
+          <nav className="flex flex-wrap gap-x-6 gap-y-1 sm:ml-auto">
+            <a
+              className="text-foreground"
+              href={REPO_URL}
+              rel="noreferrer"
+              target="_blank"
+            >
+              Repository ↗
+            </a>
+            <a
+              className="text-foreground"
+              href={DOCS_URL}
+              rel="noreferrer"
+              target="_blank"
+            >
+              Documentation ↗
+            </a>
+          </nav>
         </footer>
       </div>
     </div>
