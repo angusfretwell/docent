@@ -1,6 +1,7 @@
 import type { HTMLBundle } from "bun";
 import { Config, Console, Effect } from "effect";
 import open from "open";
+import pc from "picocolors";
 
 import { webHandler } from "../api/index";
 import { resolveChange } from "../core/git";
@@ -63,10 +64,10 @@ export const serve = Effect.fn("serve")(function* serve(
   // Best-effort — a serve that cannot write its address still serves.
   yield* writeServeAddress(change.root, url).pipe(Effect.ignore);
 
-  yield* Console.log(
-    `Docent: ${change.branch} → ${change.defaultBranch} @ ${change.root}`
-  );
-  yield* Console.log(`Listening on ${url}`);
+  const root = pc.dim(`(${change.root})`);
+  yield* Console.log(pc.bold(pc.yellow(`Docent 0.1.0`)));
+  yield* Console.log(`${change.branch} → ${change.defaultBranch} ${root}`);
+  yield* Console.log(`${pc.green("✓")} Serving on ${url}`);
 
   // Effect's `Stdio` service exposes the streams but not their TTY-ness, so the
   // interactive check reads `process` directly.
