@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "shadcn/tailwind.css";
+@plugin "tailwind-scrollbar";
 
 @import "@fontsource/ibm-plex-mono/400";
 @import "@fontsource/ibm-plex-mono/500";
@@ -7,17 +8,19 @@
 @import "@fontsource/outfit/400";
 @import "@fontsource/outfit/500";
 @import "@fontsource/outfit/600";
+@import "@fontsource/inter/400";
+@import "@fontsource/inter/500";
+@import "@fontsource/inter/600";
 
 @import "./typeset.css";
-@import "./diffs.css";
 @import "./replay.css";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --animate-skeleton: skeleton 2s -1s infinite linear;
-  --animate-caret-blink: 1s ease-out infinite caret-blink;
   --font-heading: "Outfit", sans-serif;
+  --font-sans: "Inter", sans-serif;
   --font-mono: "IBM Plex Mono", monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
@@ -68,21 +71,10 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
   @keyframes skeleton {
     to {
       background-position: -200% 0;
-    }
-  }
-
-  @keyframes caret-blink {
-    0%,
-    70%,
-    to {
-      opacity: 1;
-    }
-    20%,
-    50% {
-      opacity: 0;
     }
   }
 }
@@ -204,6 +196,19 @@
   --sidebar-primary: var(--color-neutral-100);
   --sidebar-primary-foreground: var(--color-neutral-800);
   --sidebar-ring: var(--color-neutral-400);
+}
+
+:root {
+  --diffs-font-family: var(--font-mono);
+  --diffs-header-font-family: var(--font-sans);
+
+  --trees-font-family-override: var(--font-sans);
+  --trees-padding-inline-override: 0;
+  --trees-scrollbar-thumb-override: color-mix(
+    in srgb,
+    var(--color-foreground) 20%,
+    transparent
+  );
 }
 
 @layer base {

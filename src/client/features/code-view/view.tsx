@@ -17,8 +17,6 @@ import { useMemo } from "react";
 
 import { CodeViewHeaderPrefix } from "./header-prefix";
 
-// @pierre diffs theming is split between this block and the global stylesheet
-// `@client/styles/diffs.css`; change one, check the other.
 const DIFFS_CSS = `
   [data-diffs-header] {
     padding-inline: calc(var(--spacing) * 3);
@@ -100,7 +98,7 @@ export function AnnotatedCodeView({
     <BaseCodeView
       ref={ref}
       items={items}
-      className="diffs overflow-auto overscroll-contain"
+      className="scrollbar-thin scrollbar-thumb-foreground/20 scrollbar-track-transparent overflow-auto overscroll-contain [&_diffs-container]:scheme-light dark:[&_diffs-container]:scheme-dark"
       options={options}
       renderAnnotation={renderAnnotation}
       renderHeaderMetadata={renderHeaderMetadata}
