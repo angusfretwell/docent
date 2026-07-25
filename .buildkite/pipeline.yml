@@ -20,11 +20,7 @@ steps:
     key: check
     command: |
       bun ci
-      # `ultracite check` prints its format pass to the same stdout oxlint writes
-      # the report to, so the report is its own run and `check` stays the gate.
-      bunx oxlint --format=junit > junit-check.xml || true
       bun run check
-    artifact_paths: junit-check.xml
     plugins:
       - mise#v1.1.3: ~
 
@@ -55,9 +51,6 @@ steps:
           inputs:
             - label: ":bun: test"
               artifact_path: junit-test.xml
-              type: junit
-            - label: ":oxc: check"
-              artifact_path: junit-check.xml
               type: junit
           formatter:
             type: summary
