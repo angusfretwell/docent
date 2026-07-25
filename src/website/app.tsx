@@ -11,7 +11,7 @@ export function App() {
     <div className="mx-auto max-w-375 p-6 sm:p-12">
       <div className="typeset typeset-website">
         <header className="flex items-center gap-2.5">
-          <img src={icon} alt="Logo" className="size-7 shrink-0" />
+          <img src={icon} alt="" className="size-7 shrink-0" />
           <span className="font-semibold">Docent</span>
           <a
             href={REPO_URL}
