@@ -59,6 +59,10 @@ async function bundlePage(
     outdir: into,
     plugins: [tailwind],
     publicPath,
+    // No `splitting: true`, for a cousin of the reason `build-docent.ts` can't
+    // split: under Bun 1.3.14's html loader it emits ~360 chunks with no
+    // imports between them and points the `<script>` at a leaf, so the demo
+    // never boots. Until that's fixed upstream the demo ships as one chunk.
     target: "browser",
   });
 

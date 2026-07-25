@@ -1,16 +1,25 @@
 import { trim } from "radashi";
 
+/** Accepts `/demo`, `/demo/`, and `demo` alike; empty content means the root mount. */
+export function resolveBasepath(content: string | null): string {
+  const path = trim(content ?? "", "/");
+
+  return path === "" ? "" : `/${path}`;
+}
+
 /**
  * The path the client is mounted at, read from the host document so that every
  * bundling mode — the dev server, the compiled binary, and the static website —
- * configures it the same way, with no build-script coordination. Accepts
- * `/demo`, `/demo/`, and `demo` alike; absent means the root mount.
+ * configures it the same way, with no build-script coordination.
  */
 function mountedAt(): string {
-  const meta = document.querySelector('meta[name="docent-basepath"]');
-  const path = trim(meta?.getAttribute("content") ?? "", "/");
+  if (typeof document === "undefined") {
+    return "";
+  }
 
-  return path === "" ? "" : `/${path}`;
+  const meta = document.querySelector('meta[name="docent-basepath"]');
+
+  return resolveBasepath(meta?.getAttribute("content") ?? null);
 }
 
 export const basepath = mountedAt();

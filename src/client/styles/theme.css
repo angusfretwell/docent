@@ -1,7 +1,7 @@
 @theme inline {
   --animate-skeleton: skeleton 2s -1s infinite linear;
-  --font-heading: "Outfit", "system-ui", sans-serif;
-  --font-sans: "Inter", "system-ui", sans-serif;
+  --font-heading: "Outfit", system-ui, sans-serif;
+  --font-sans: "Inter", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
