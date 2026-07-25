@@ -20,30 +20,34 @@ const add = Command.make(
   {
     dims: Flag.string("dims").pipe(
       Flag.optional,
-      Flag.withDescription("A screenshot's full-page pixels, WxH")
+      Flag.withDescription("A screenshot's full-page pixels (WxH)")
     ),
     durationMs: Flag.string("duration-ms").pipe(
       Flag.optional,
-      Flag.withDescription("A recording's length in milliseconds")
+      Flag.withDescription("A recording's length (ms)")
     ),
     kind: Flag.choice("kind", captureKinds).pipe(
-      Flag.withDescription("The media kind: screenshot or recording")
+      Flag.withDescription("The capture kind")
     ),
     media: Flag.string("media").pipe(
-      Flag.withDescription("Path to the media file, relative to the cwd")
+      Flag.withDescription("Path to the file, relative to this directory")
     ),
     route: Flag.string("route").pipe(
-      Flag.withDescription("The app route the capture was taken on")
+      Flag.withDescription("The application route the capture was taken on")
     ),
     title: Flag.string("title").pipe(
       Flag.optional,
-      Flag.withDescription("A short name for the captured state")
+      Flag.withDescription("A short name for the capture")
     ),
     viewport: Flag.string("viewport").pipe(
-      Flag.withDescription("The browser viewport the capture was taken at, WxH")
+      Flag.withDescription(
+        "The browser viewport the capture was taken at (WxH)"
+      )
     ),
     walkthrough: Flag.string("walkthrough").pipe(
-      Flag.withDescription("The product wlk_ id to register the capture on")
+      Flag.withDescription(
+        "The product walkthrough to register against (wlk_…)"
+      )
     ),
   },
   (config) =>
@@ -117,13 +121,9 @@ const add = Command.make(
         })
       );
     })
-).pipe(
-  Command.withDescription(
-    "Content-address a media file and register it on a product tour"
-  )
-);
+).pipe(Command.withDescription("Register a capture for a product walkthrough"));
 
 export const captureCommand = Command.make("capture").pipe(
-  Command.withDescription("Register capture media on a product walkthrough"),
+  Command.withDescription("Register screenshots and recordings"),
   Command.withSubcommands([add])
 );

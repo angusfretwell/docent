@@ -75,7 +75,6 @@ export class CommentRecord extends Schema.Class<CommentRecord>("CommentRecord")(
     body: Schema.String,
     changeId: ChangeId,
     createdAt: Schema.String,
-    edits: Schema.optional(Schema.String),
     /** The record's filename (e.g. `002-reply.md`); its lexical order is the log order. */
     name: Schema.String,
     /** Envelope discriminant; a record missing it fails to decode and is skipped. */

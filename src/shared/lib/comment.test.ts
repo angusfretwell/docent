@@ -148,50 +148,6 @@ describe("foldComment", () => {
     expect(folded.status).toBe("open");
   });
 
-  test("an edit leaves the status untouched", () => {
-    const folded = foldComment(CommentId.make("cmt_1"), [
-      record({ anchor: lineAnchor, name: "001-open.md", type: "open" }),
-      record({ name: "002-resolve.md", type: "resolve" }),
-      record({
-        body: "corrected open body",
-        edits: "001-open.md",
-        name: "003-edit.md",
-        type: "edit",
-      }),
-    ]);
-
-    expect(folded.status).toBe("resolved");
-  });
-
-  test("an edit record supersedes the named record's body", () => {
-    const folded = foldComment(CommentId.make("cmt_1"), [
-      record({
-        anchor: lineAnchor,
-        body: "original open body",
-        name: "001-open.md",
-        type: "open",
-      }),
-      record({ body: "first reply", name: "002-reply.md", type: "reply" }),
-      record({
-        body: "corrected open body",
-        edits: "001-open.md",
-        name: "003-edit.md",
-        type: "edit",
-      }),
-      record({
-        body: "corrected reply",
-        edits: "002-reply.md",
-        name: "004-edit.md",
-        type: "edit",
-      }),
-    ]);
-
-    expect(folded.body).toBe("corrected open body");
-    expect(folded.replies.map((reply) => reply.body)).toEqual([
-      "corrected reply",
-    ]);
-  });
-
   test("folds an empty record list without throwing", () => {
     const folded = foldComment(CommentId.make("cmt_1"), []);
 

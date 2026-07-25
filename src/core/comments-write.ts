@@ -16,7 +16,6 @@ function frontmatter(fields: {
   changeId: string;
   createdAt: string;
   anchor?: Anchor;
-  edits?: string;
 }): string {
   const author = {
     display: fields.author.display,
@@ -32,7 +31,6 @@ function frontmatter(fields: {
     ["changeId", fields.changeId],
     ["createdAt", fields.createdAt],
     ["anchor", fields.anchor],
-    ["edits", fields.edits],
   ];
   return serializeFrontmatter(ordered);
 }
@@ -78,7 +76,6 @@ export const writeCommentRecord = Effect.fn("writeCommentRecord")(
       changeId: change.id,
       createdAt,
       ...(write.op === "open" ? { anchor: write.anchor } : {}),
-      ...(write.op === "edit" ? { edits: write.edits } : {}),
     };
     const body = "body" in write ? write.body : "";
 

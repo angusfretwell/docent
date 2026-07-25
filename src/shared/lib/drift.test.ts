@@ -260,20 +260,6 @@ describe("changeHistory", () => {
     ]);
   });
 
-  test("edit records are not milestones", () => {
-    const events = changeHistory([
-      record({ changeId: "chg_001", name: "001-open.md", type: "open" }),
-      record({
-        changeId: "chg_002",
-        edits: "001-open.md",
-        name: "002-edit.md",
-        type: "edit",
-      }),
-    ]);
-
-    expect(events).toEqual([{ changeId: "chg_001", verb: "opened" }]);
-  });
-
   test("renders a one-line label", () => {
     expect(
       changeHistoryLabel([

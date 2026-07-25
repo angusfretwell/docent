@@ -32,21 +32,12 @@ const ReopenWrite = Schema.Struct({
   op: Schema.Literal("reopen"),
 });
 
-const EditWrite = Schema.Struct({
-  body: Schema.String,
-  commentId: CommentId,
-  /** Filename of the superseded record (e.g. `002-reply.md`), not a record id — hence a plain string. */
-  edits: Schema.String,
-  op: Schema.Literal("edit"),
-});
-
 export const CommentWrite = Schema.Union([
   OpenWrite,
   ReplyWrite,
   ActionWrite,
   ResolveWrite,
   ReopenWrite,
-  EditWrite,
 ]);
 export type CommentWrite = typeof CommentWrite.Type;
 

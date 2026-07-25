@@ -36,7 +36,9 @@ export const validateCommand = Command.make(
   {
     paths: Argument.string("path").pipe(
       Argument.variadic(),
-      Argument.withDescription("The tree to validate (default: this directory)")
+      Argument.withDescription(
+        "The tree or repo to validate (default: current directory)"
+      )
     ),
   },
   (config) =>
@@ -67,6 +69,4 @@ export const validateCommand = Command.make(
         `ok — ${report.checked} record(s) valid in ${report.stateRoot}`
       );
     })
-).pipe(
-  Command.withDescription("Decode every record in a .docent/ tree and report")
-);
+).pipe(Command.withDescription("Check the .docent/ tree for errors"));

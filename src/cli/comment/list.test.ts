@@ -170,14 +170,4 @@ describe("docent comment list — the argv surface", () => {
       "unknown --status: bogus (one of actioned, open, resolved)"
     );
   });
-
-  test("a stray positional is refused, never answered as the whole queue", async () => {
-    const repo = await seededRepo();
-
-    const error = await run(
-      commentCli(repo, ["list", "open"]).pipe(Effect.flip)
-    );
-
-    expect(error.message).toBe("unexpected argument: open");
-  });
 });

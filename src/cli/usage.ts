@@ -30,25 +30,6 @@ export function parseEnum<T extends string>(
     : Effect.succeed(allowed);
 }
 
-/**
- * `Command` drops arguments no parameter claims, which on a read command widens
- * the answer instead of rejecting it: `docent comment list open` — a plausible
- * typo for `--status open` — would return the whole queue rather than erroring.
- * A write subcommand needs no such guard; its required flags reject the stray
- * invocation first.
- */
-export function refuseArguments(
-  args: readonly string[]
-): Effect.Effect<void, CliUsageError> {
-  const stray = args.at(0);
-
-  return stray === undefined
-    ? Effect.void
-    : Effect.fail(
-        new CliUsageError({ reason: `unexpected argument: ${stray}` })
-      );
-}
-
 /** `Flag` treats a present-but-blank `--title ""` as satisfied; the write path does not — a blank id or title is never a legitimate write. */
 export function requireText(
   flag: string,

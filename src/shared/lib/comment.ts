@@ -6,7 +6,7 @@ import type { RecordType } from "../enums/record-type";
 import type { Anchor, Author, CommentRecord } from "../schemas/comment";
 import type { CommentId } from "../schemas/ids";
 
-const RECORD_STATUS: Record<Exclude<RecordType, "edit">, CommentStatus> = {
+const RECORD_STATUS: Record<RecordType, CommentStatus> = {
   action: "actioned",
   open: "open",
   reopen: "open",
@@ -40,16 +40,6 @@ export function foldComment(
     left.name.localeCompare(right.name)
   );
 
-  const edited = new Map<string, string>();
-  for (const record of ordered) {
-    if (record.type === "edit" && record.edits !== undefined) {
-      edited.set(record.edits, record.body);
-    }
-  }
-  function bodyOf(record: CommentRecord) {
-    return edited.get(record.name) ?? record.body;
-  }
-
   const root = ordered.find((record) => record.type === "open");
 
   const replies: Reply[] = [];
@@ -57,7 +47,7 @@ export function foldComment(
     if (record.type === "reply") {
       replies.push({
         author: record.author,
-        body: bodyOf(record),
+        body: record.body,
         changeId: record.changeId,
         createdAt: record.createdAt,
       });
@@ -69,15 +59,12 @@ export function foldComment(
     (author) => author.id
   );
 
-  const latest = ordered.findLast((record) => record.type !== "edit");
-  const status =
-    latest !== undefined && latest.type !== "edit"
-      ? RECORD_STATUS[latest.type]
-      : "open";
+  const latest = ordered.at(-1);
+  const status = latest === undefined ? "open" : RECORD_STATUS[latest.type];
 
   return {
     anchor: root?.anchor,
-    body: root ? bodyOf(root) : "",
+    body: root?.body ?? "",
     id,
     openedAt: root?.createdAt,
     openedBy: root?.author,
