@@ -19,13 +19,13 @@
  * @example bun run dev ~/my-repo   # against an arbitrary repo
  */
 
-import fs from "node:fs";
 import path from "node:path";
+
+import { ensureDiffWorker } from "./build-worker";
 
 const PORT = process.env.PORT ?? "4801";
 
 const root = path.join(import.meta.dir, "..");
-const workerBundle = path.join(root, "dist", "worker", "diff-worker.js");
 const entry = path.join(root, "src", "docent.ts");
 const fixture = path.join(root, ".dev");
 
@@ -34,13 +34,7 @@ const pathArgument = process.argv.at(2);
 
 const target = pathArgument ? path.resolve(pathArgument) : fixture;
 
-if (!fs.existsSync(workerBundle)) {
-  const result = Bun.spawnSync(["bun", "build:worker"]);
-
-  if (!result.success) {
-    process.exit(result.exitCode ?? 1);
-  }
-}
+await ensureDiffWorker();
 
 const server = Bun.spawn(["bun", "--watch", entry, "serve", target], {
   env: { ...process.env, PORT },

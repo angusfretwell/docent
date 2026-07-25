@@ -1,0 +1,7 @@
+@import "../client/styles/fonts.css";
+
+@import "tailwindcss";
+@import "shadcn/tailwind.css";
+
+@import "../client/styles/theme.css";
+@import "../client/styles/typeset.css";

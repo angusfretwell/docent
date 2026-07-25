@@ -1,4 +1,4 @@
-import { useCodeTheme } from "@client/hooks/use-code-theme";
+import { useCodeTheme } from "@client/hooks/use-theme";
 import { themeToTreeStyles } from "@pierre/trees";
 import type { GitStatusEntry } from "@pierre/trees";
 import { FileTree as BaseFileTree, useFileTree } from "@pierre/trees/react";

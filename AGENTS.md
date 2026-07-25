@@ -11,12 +11,14 @@ Don't trust your training data for any library, framework, SDK, API, or CLI tool
 ## Commands
 
 ```
-bun run dev        # start dev server
-bun run build      # create production build
-bun run fix        # format and auto-fix linter errors
-bun run typecheck  # run type checks
-bun run test       # run tests
-bun run preflight  # check, typecheck, test, and compile
+bun run dev             # start dev server
+bun run dev:website     # start the marketing website dev server (src/website)
+bun run build           # create production build
+bun run build:website   # build the marketing website to dist/website
+bun run fix             # format and auto-fix linter errors
+bun run typecheck       # run type checks
+bun run test            # run tests
+bun run preflight       # check, typecheck, test, and compile
 ```
 
 ## Local Effect Source

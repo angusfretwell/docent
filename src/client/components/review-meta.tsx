@@ -1,4 +1,4 @@
-import { useCodeThemeColor } from "@client/hooks/use-code-theme";
+import { useCodeThemeColor } from "@client/hooks/use-theme";
 import { patchStats } from "@client/lib/diff";
 import { diffQueryOptions } from "@client/queries/diff";
 import { reviewQueryOptions } from "@client/queries/review";

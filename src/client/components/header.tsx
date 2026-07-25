@@ -1,23 +1,16 @@
 import { Skeleton } from "@client/components/ui/skeleton";
 import { CommentsToggle } from "@client/features/comments/toggle";
+import icon from "@client/icon.svg";
 import { Suspense } from "react";
 
 import { Navigation } from "./navigation";
 import { ReviewMeta } from "./review-meta";
 import { Separator } from "./ui/separator";
 
-function Logo() {
-  return (
-    <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-yellow-400 font-heading font-bold text-black">
-      D.
-    </span>
-  );
-}
-
 export function Header() {
   return (
     <div className="flex h-11 shrink-0 items-center gap-1.5 px-1.5">
-      <Logo />
+      <img src={icon} alt="" className="size-7 shrink-0" />
       <Navigation />
       <div className="ml-auto flex min-w-0 items-center gap-1.5">
         <Suspense fallback={<Skeleton className="h-5 w-60" />}>

@@ -36,33 +36,40 @@ export default defineConfig({
   options: {
     typeAware: true,
   },
-  // Import edges point one way — docent.ts → cli → api → core → shared, and
-  // client → shared only (docs/adr/0002-src-layering.md). Tests are exempt:
-  // an integration test may boot a higher layer to exercise its subject.
+  // Import edges point one way — docent.ts → cli → api → core → shared, with
+  // client → shared and website → client → shared beside it
+  // (docs/adr/0002-src-layering.md, docs/adr/0003-website-as-a-static-build-target.md).
+  // Tests are exempt: an integration test may boot a higher layer to exercise
+  // its subject.
   overrides: [
     layerBoundary(
       ["src/cli/**"],
-      ["client"],
+      ["client", "website"],
       "cli never imports client: the client bundle reaches the binary only through src/docent.ts"
     ),
     layerBoundary(
       ["src/api/**"],
-      ["cli", "client"],
+      ["cli", "client", "website"],
       "api sits below cli: it imports core and shared only"
     ),
     layerBoundary(
       ["src/core/**"],
-      ["cli", "api", "client"],
+      ["cli", "api", "client", "website"],
       "core is the bottom Bun-side layer: it imports shared only"
     ),
     layerBoundary(
       ["src/client/**"],
+      ["cli", "api", "core", "website"],
+      "client is browser-only: it imports shared only — core is Bun-side, and website is the surface built on top of it"
+    ),
+    layerBoundary(
+      ["src/website/**"],
       ["cli", "api", "core"],
-      "client is browser-only: it imports shared only — core is Bun-side"
+      "website is browser-only: it reuses client and shared code — the layers above are Bun-side"
     ),
     layerBoundary(
       ["src/shared/**"],
-      ["cli", "api", "core", "client"],
+      ["cli", "api", "core", "client", "website"],
       "shared is isomorphic and browser-safe: it imports nothing above it"
     ),
     {
