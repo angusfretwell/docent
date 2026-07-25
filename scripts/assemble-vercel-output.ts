@@ -22,21 +22,22 @@ import path from "node:path";
 /**
  * `handle: filesystem` splits the routing phases: rules above it are evaluated
  * before the static files are consulted, rules below it only once the filesystem
- * lookup has missed. So the demo's SPA fallback cannot swallow
- * `/demo/assets/*`, `/demo/diff-worker.js` or `/demo/demo-snapshot.json`, and
- * the landing page needs no rule at all — the filesystem phase serves
- * `static/index.html` at `/`.
+ * lookup has missed. So the demo's SPA fallback cannot swallow its own bundle,
+ * `/demo/diff-worker.js` or `/demo/demo-snapshot.json`, and the landing page
+ * needs no rule at all — the filesystem phase serves `static/index.html` at `/`.
  *
- * Only content-hashed files get the immutable header; `index.html`,
- * `diff-worker.js` and `demo-snapshot.json` keep revalidating because their
- * names are stable across deploys.
+ * Only content-hashed files get the immutable header, and the website build writes
+ * them flat beside the html, so the rule matches Bun's `-[hash].[ext]` suffix
+ * rather than a directory. `index.html`, `diff-worker.js` and
+ * `demo-snapshot.json` keep revalidating because their names are stable across
+ * deploys.
  */
 const config = {
   routes: [
     {
       continue: true,
       headers: { "cache-control": "public, max-age=31536000, immutable" },
-      src: "^/(?:demo/)?assets/(.*)$",
+      src: "^/(?:demo/)?[^/]+-[a-z0-9]{8}\\.(?:css|js|svg)$",
     },
     { handle: "filesystem" },
     { check: true, dest: "/demo/index.html", src: "^/demo(?:/(.*))?$" },

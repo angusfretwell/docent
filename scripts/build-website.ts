@@ -32,8 +32,15 @@ const snapshotFile = path.join(root, "dist", "demo-snapshot.json");
  * `publicPath` is what makes the emitted asset urls absolute. Bun's HTML loader
  * writes them relative by default, and the demo's SPA fallback serves the same
  * html at every `/demo/*` url, so a relative url would resolve against whichever
- * url served it and a two-segment deep link would 404 its own bundle. The
- * `assets/` prefix is what the deploy's immutable cache-control rule matches.
+ * url served it and a two-segment deep link would 404 its own bundle.
+ *
+ * Everything then has to land beside the html rather than under an `assets/`
+ * prefix. Bun 1.3.14 builds an asset's url as `publicPath` joined with the
+ * asset's path *relative to the chunk that imports it*, which only agrees with
+ * where the file was written when that chunk sits at the root: a chunk in
+ * `assets/` points `<img src>` at `/icon-<hash>.svg` for a file written to
+ * `assets/icon-<hash>.svg`. One flat directory keeps the two in step, and the
+ * deploy's immutable cache-control rule matches the hash in the filename.
  */
 async function bundlePage(
   entrypoint: string,
@@ -45,8 +52,8 @@ async function bundlePage(
     entrypoints: [entrypoint],
     minify: true,
     naming: {
-      asset: "assets/[name]-[hash].[ext]",
-      chunk: "assets/[name]-[hash].[ext]",
+      asset: "[name]-[hash].[ext]",
+      chunk: "[name]-[hash].[ext]",
       entry: "[dir]/[name].[ext]",
     },
     outdir: into,
