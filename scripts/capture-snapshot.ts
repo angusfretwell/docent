@@ -79,6 +79,9 @@ const REPLAYED_HEADERS = ["cache-control", "content-type"];
  */
 const EVENTS_KEY = "GET /api/events";
 
+/** The read that seeds the demo, and the client's signal that it has booted. */
+const REVIEW_KEY = "GET /api/review";
+
 const decodeReview = Schema.decodeUnknownSync(ReviewSnapshot);
 const decodeServeAddress = Schema.decodeUnknownSync(ServeAddress);
 
@@ -161,6 +164,13 @@ function isRecordable(key: string): boolean {
   return key.startsWith("GET /api/") && key !== EVENTS_KEY;
 }
 
+function responseKey(response: CapturedResponse): string {
+  return requestKey({
+    method: response.request().method(),
+    url: response.url(),
+  });
+}
+
 function createRecorder(): Recorder {
   const responses = new Map<string, RecordedResponse>();
   const claimed = new Set<string>();
@@ -184,10 +194,7 @@ function createRecorder(): Recorder {
       await Promise.all(bodies);
     },
     observe: (response) => {
-      const key = requestKey({
-        method: response.request().method(),
-        url: response.url(),
-      });
+      const key = responseKey(response);
 
       if (!isRecordable(key) || claimed.has(key)) {
         return;
@@ -314,7 +321,7 @@ async function stepThroughCaptures(
 function recordedReview(
   responses: ReadonlyMap<string, RecordedResponse>
 ): ReviewSnapshot {
-  const recorded = responses.get("GET /api/review");
+  const recorded = responses.get(REVIEW_KEY);
 
   assert(
     recorded !== undefined,
@@ -335,13 +342,33 @@ function captureKeys(review: ReviewSnapshot): string[] {
   );
 }
 
+/**
+ * The one wait a fixed settle can't bound: `docent serve` bundles the client on
+ * first request, so on a cold agent the seeding read lands seconds after
+ * `domcontentloaded`. Wait on the response itself, not on a guess at how long
+ * booting takes.
+ */
+async function openClient(
+  page: Page,
+  recorder: Recorder,
+  serveUrl: string
+): Promise<void> {
+  const seeded = page.waitForResponse(
+    (response) => responseKey(response) === REVIEW_KEY,
+    { timeout: READY_TIMEOUT_MS }
+  );
+
+  await page.goto(serveUrl, { waitUntil: "domcontentloaded" });
+  await seeded;
+  await settle(page, recorder);
+}
+
 async function tour(
   page: Page,
   recorder: Recorder,
   serveUrl: string
 ): Promise<void> {
-  await page.goto(serveUrl, { waitUntil: "domcontentloaded" });
-  await settle(page, recorder);
+  await openClient(page, recorder, serveUrl);
 
   const review = recordedReview(recorder.responses);
 
@@ -372,7 +399,7 @@ function assertCoverage(snapshot: DemoSnapshot): void {
 
   const missing = [
     "GET /api/diff",
-    "GET /api/review",
+    REVIEW_KEY,
     requestKey({ method: "GET", url: "/api/pending?range=cumulative" }),
     requestKey({ method: "GET", url: "/api/pending?range=incremental" }),
     ...captureKeys(review),
