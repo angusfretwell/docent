@@ -269,6 +269,8 @@ describe("renameWalkthrough", () => {
     );
 
     expect(exit._tag).toBe("Failure");
+    const snap = await snapshot(root);
+    expect(snap.walkthroughs).toEqual([]);
   });
 });
 

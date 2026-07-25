@@ -50,6 +50,20 @@ interface WriteBase {
   base: string;
 }
 
+/** Every write to an existing walkthrough seeds the Review shell first — the walkthrough is looked up inside it, so it has to exist. */
+const loadForWrite = Effect.fn("loadForWrite")(function* loadForWrite(
+  params: WriteBase & { walkthroughId: WalkthroughId }
+) {
+  const reviewDir = reviewDirPath(params.root, params.branch);
+  yield* ensureReview({
+    base: params.base,
+    branch: params.branch,
+    reviewDir,
+    root: params.root,
+  });
+  return yield* loadWalkthrough(reviewDir, params.walkthroughId);
+});
+
 function contentSha(bytes: Uint8Array): string {
   return new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
 }
@@ -108,14 +122,7 @@ export const renameWalkthrough = Effect.fn("renameWalkthrough")(
       title: string;
     }
   ) {
-    const reviewDir = reviewDirPath(params.root, params.branch);
-    yield* ensureReview({
-      base: params.base,
-      branch: params.branch,
-      reviewDir,
-      root: params.root,
-    });
-    const loaded = yield* loadWalkthrough(reviewDir, params.walkthroughId);
+    const loaded = yield* loadForWrite(params);
 
     yield* updateManifest(loaded, (current) =>
       Walkthrough.make({ ...current, title: params.title })
@@ -144,14 +151,7 @@ export const addWalkthroughSection = Effect.fn("addWalkthroughSection")(
     const fs = yield* FileSystem;
     const path = yield* Path;
 
-    const reviewDir = reviewDirPath(params.root, params.branch);
-    yield* ensureReview({
-      base: params.base,
-      branch: params.branch,
-      reviewDir,
-      root: params.root,
-    });
-    const loaded = yield* loadWalkthrough(reviewDir, params.walkthroughId);
+    const loaded = yield* loadForWrite(params);
     const { dir, manifest } = loaded;
 
     const hasRanges = (params.ranges?.length ?? 0) > 0;
@@ -231,14 +231,7 @@ export const addWalkthroughCapture = Effect.fn("addWalkthroughCapture")(
     const fs = yield* FileSystem;
     const path = yield* Path;
 
-    const reviewDir = reviewDirPath(params.root, params.branch);
-    yield* ensureReview({
-      base: params.base,
-      branch: params.branch,
-      reviewDir,
-      root: params.root,
-    });
-    const loaded = yield* loadWalkthrough(reviewDir, params.walkthroughId);
+    const loaded = yield* loadForWrite(params);
     const { dir, manifest } = loaded;
     if (manifest.kind !== "product") {
       return yield* Effect.fail(
