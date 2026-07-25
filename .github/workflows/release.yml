@@ -5,6 +5,10 @@ name: release
 # shim. The tag is the single source of truth for the version — it is written
 # into the shim's package.json so the embedded version, the published npm
 # version, and the Release download URL the shim fetches from all line up.
+# A prerelease tag (any `-` suffix, e.g. `v0.2.0-beta.1`) marks the GitHub
+# Release as a prerelease and publishes to npm under a dist-tag named after
+# the prerelease identifier (`beta`, `alpha`, `rc`, …) so `latest` keeps
+# pointing at the last stable version.
 on:
   push:
     tags:
@@ -38,12 +42,21 @@ jobs:
       - run: bun run build:release
 
       - name: Create GitHub Release
-        run: gh release create "$GITHUB_REF_NAME" dist/release/* --title "$GITHUB_REF_NAME" --generate-notes
+        run: |
+          prerelease_flag=""
+          [[ "$GITHUB_REF_NAME" == *-* ]] && prerelease_flag="--prerelease"
+          gh release create "$GITHUB_REF_NAME" dist/release/* --title "$GITHUB_REF_NAME" --generate-notes $prerelease_flag
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish npm shim
-        run: npm publish --provenance
+        run: |
+          npm_tag="latest"
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then
+            npm_tag="${GITHUB_REF_NAME#*-}"
+            npm_tag="${npm_tag%%.*}"
+          fi
+          npm publish --provenance --tag "$npm_tag"
         working-directory: npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
