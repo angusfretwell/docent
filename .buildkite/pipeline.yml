@@ -83,7 +83,8 @@ steps:
     if: build.pull_request.repository.fork != true && build.pull_request.id != null
     command: |
       url=$$(bunx vercel deploy --prebuilt --archive=tgz)
-      buildkite-agent annotate --style success --context preview-website "[Preview]($$url)"
+      buildkite-agent annotate --style success --context preview-website \
+        "Preview deployed to [$$url]($$url)"
     concurrency_group: "docent/preview-website/${BUILDKITE_BRANCH}"
     concurrency: 1
     <<: *vercel_deploy
@@ -93,7 +94,8 @@ steps:
     if: build.pull_request.id == null && build.branch == "main"
     command: |
       url=$$(bunx vercel deploy --prebuilt --archive=tgz --prod)
-      buildkite-agent annotate --style success --context deploy-website "[Production]($$url)"
+      buildkite-agent annotate --style success --context deploy-website \
+        "Website deployed to [$$url]($$url)"
     concurrency_group: "docent/deploy-website/${BUILDKITE_BRANCH}"
     concurrency: 1
     <<: *vercel_deploy
