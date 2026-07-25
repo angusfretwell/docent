@@ -6,8 +6,6 @@ Docent is a review surface for agent-written code. Fast, beautiful diffs, walkth
 
 [Try an interactive demo →](https://docent.website/demo)
 
-Work in progress.
-
 ## Install
 
 Docent installs as an agent skill:
@@ -20,7 +18,7 @@ Run `/docent` on a branch to get started.
 
 ## How it works
 
-`/docent` reconciles two walkthroughs of the branch under review against its head commit — a **code** tour through the diff, and a **product** tour that drives your running app the way a user would — then serves them as a browser tour a reviewer walks.
+`/docent` authors two walkthroughs of the branch under review. A **code** tour through the diff, and a **product** tour that drives your running app the way a user would. Both are served as a browser tour a reviewer walks.
 
 Two more invocations close the loop:
 
@@ -31,7 +29,7 @@ Everything docent knows about a branch lives in `.docent/` at the repo root, on 
 
 ## CLI
 
-The skill drives the `docent` CLI, which downloads its per-platform binary on first run — nothing to install globally:
+The skill drives the `docent` CLI, which downloads its per-platform binary on first run. There's nothing to install globally:
 
 ```sh
 npx @angusfretwell/docent@latest serve
