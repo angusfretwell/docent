@@ -6,6 +6,9 @@ out
 dist
 *.tgz
 
+# vercel project link and assembled build output
+.vercel
+
 # code coverage
 coverage
 *.lcov
