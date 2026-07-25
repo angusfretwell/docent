@@ -10,7 +10,8 @@ import {
   PopoverPopup,
   PopoverTrigger,
 } from "@client/components/ui/popover";
-import { DrawerDismissProvider } from "@client/hooks/use-drawer-dismiss";
+import { Sheet, SheetPopup } from "@client/components/ui/sheet";
+import { DismissProvider } from "@client/hooks/use-dismiss";
 import { useKeyPressed } from "@client/hooks/use-key-pressed";
 import { useMediaQuery } from "@client/hooks/use-media-query";
 import { commentsOpenAtom } from "@client/lib/preferences";
@@ -25,7 +26,8 @@ export function CommentsToggle() {
   const [commentsOpen, setCommentsOpen] = useAtom(commentsOpenAtom);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const isMobile = useMediaQuery("max-md");
+  const isMobile = useMediaQuery("max-sm");
+  const isSmallScreen = useMediaQuery("max-md");
 
   const isAltPressed = useKeyPressed("Alt");
 
@@ -42,11 +44,42 @@ export function CommentsToggle() {
           <MessagesSquare />
         </DrawerTrigger>
         <DrawerPopup showBar>
-          <DrawerDismissProvider dismiss={() => setDrawerOpen(false)}>
+          <DismissProvider dismiss={() => setDrawerOpen(false)}>
             <CommentsPanel />
-          </DrawerDismissProvider>
+          </DismissProvider>
         </DrawerPopup>
       </Drawer>
+    );
+  }
+
+  if (isSmallScreen) {
+    return (
+      <Popover>
+        <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
+          <PopoverTrigger
+            delay={200}
+            closeDelay={600}
+            openOnHover={true}
+            onClick={(event) => {
+              event.preventBaseUIHandler();
+              setDrawerOpen(true);
+            }}
+            render={
+              <Button aria-label="Open comments" variant="ghost" size="icon" />
+            }
+          >
+            <MessagesSquare />
+          </PopoverTrigger>
+          <SheetPopup showCloseButton={false} variant="inset">
+            <DismissProvider dismiss={() => setDrawerOpen(false)}>
+              <CommentsPanel />
+            </DismissProvider>
+          </SheetPopup>
+        </Sheet>
+        <PopoverPopup className="*:data-[slot=popover-viewport]:overflow-initial max-w-md overflow-clip *:data-[slot=popover-viewport]:p-0">
+          <CommentsPanel popover />
+        </PopoverPopup>
+      </Popover>
     );
   }
 
@@ -70,7 +103,7 @@ export function CommentsToggle() {
             </Button>
           }
         />
-        <PopoverPopup className="*:data-[slot=popover-viewport]:overflow-initial w-[350px] overflow-clip *:data-[slot=popover-viewport]:p-0">
+        <PopoverPopup className="*:data-[slot=popover-viewport]:overflow-initial max-w-md overflow-clip *:data-[slot=popover-viewport]:p-0">
           <CommentsPanel popover />
         </PopoverPopup>
       </Popover>

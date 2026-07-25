@@ -6,7 +6,7 @@ import {
   CollapsibleTrigger,
 } from "@client/components/ui/collapsible";
 import { useRevealSection } from "@client/features/walkthrough/hooks/use-revealed-section";
-import { useDrawerDismiss } from "@client/hooks/use-drawer-dismiss";
+import { useDismiss } from "@client/hooks/use-dismiss";
 import { useRevealDiffItem } from "@client/lib/diff-target";
 import { cn } from "@client/lib/utils";
 import { STATUS_LABEL } from "@shared/enums/comment-status";
@@ -49,7 +49,7 @@ export function CommentsItem({
 
   const revealDiffItem = useRevealDiffItem();
   const revealSection = useRevealSection();
-  const dismissDrawer = useDrawerDismiss();
+  const dismiss = useDismiss();
 
   const isCodeSection = section?.pillar === "code";
 
@@ -78,7 +78,7 @@ export function CommentsItem({
             label="Show in diff"
             onReveal={() => {
               revealDiffItem(diffItemId);
-              dismissDrawer();
+              dismiss();
             }}
             to="/"
           />
@@ -90,7 +90,7 @@ export function CommentsItem({
             label={`Show in ${isCodeSection ? "code" : "product"} walkthrough`}
             onReveal={() => {
               revealSection(section.key);
-              dismissDrawer();
+              dismiss();
             }}
             to={isCodeSection ? "/code" : "/product"}
           />
