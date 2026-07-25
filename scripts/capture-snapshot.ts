@@ -35,7 +35,7 @@ import path from "node:path";
 
 import { ReviewSnapshot } from "@shared/schemas/review";
 import { replayHandler } from "@site/demo/replay-handler";
-import { requestKey } from "@site/demo/snapshot";
+import { requestFromKey, requestKey } from "@site/demo/snapshot";
 import type { DemoSnapshot, RecordedResponse } from "@site/demo/snapshot";
 import { Schema } from "effect";
 import { chromium } from "playwright";
@@ -43,11 +43,11 @@ import type { Page, Response as CapturedResponse } from "playwright";
 import { alphabetical, pick } from "radashi";
 
 import { ServeAddress } from "../src/serve/address";
+import { ensureDiffWorker } from "./build-worker";
 import { materializeFixture } from "./prepare-fixture";
 
 const repoRoot = path.join(import.meta.dir, "..");
 const entry = path.join(repoRoot, "src", "docent.ts");
-const workerBundle = path.join(repoRoot, "dist", "worker", "diff-worker.js");
 const output = path.join(repoRoot, "dist", "demo-snapshot.json");
 
 /**
@@ -77,9 +77,6 @@ const REPLAYED_HEADERS = ["cache-control", "content-type"];
  */
 const EVENTS_KEY = "GET /api/events";
 
-/** Origin- and basepath-relative keys need some origin to become a `Request`; it is never read. */
-const REPLAY_ORIGIN = "http://demo.invalid";
-
 const decodeReview = Schema.decodeUnknownSync(ReviewSnapshot);
 const decodeServeAddress = Schema.decodeUnknownSync(ServeAddress);
 
@@ -87,22 +84,6 @@ function assert(condition: boolean, message: string): asserts condition {
   if (!condition) {
     throw new Error(message);
   }
-}
-
-function ensureDiffWorker(): void {
-  if (existsSync(workerBundle)) {
-    return;
-  }
-
-  const built = Bun.spawnSync(["bun", "run", "build:worker"], {
-    cwd: repoRoot,
-    stdio: ["ignore", "inherit", "inherit"],
-  });
-
-  assert(
-    built.success,
-    "could not bundle the diff worker `docent serve` needs"
-  );
 }
 
 /**
@@ -411,15 +392,6 @@ function assertCoverage(snapshot: DemoSnapshot): void {
   );
 }
 
-function requestFor(key: string): Request {
-  const separator = key.indexOf(" ");
-  const target = key.slice(separator + 1);
-
-  return new Request(new URL(target, REPLAY_ORIGIN), {
-    method: key.slice(0, separator),
-  });
-}
-
 /**
  * Acceptance runs through the same seam the demo does: `replayHandler` answers
  * an unrecorded read with 501, so replaying every recorded request proves the
@@ -429,7 +401,7 @@ async function assertReplayable(snapshot: DemoSnapshot): Promise<void> {
   const handler = replayHandler(snapshot);
 
   for (const key of [EVENTS_KEY, ...Object.keys(snapshot.responses)]) {
-    const response = await handler(requestFor(key));
+    const response = await handler(requestFromKey(key));
 
     assert(response.status !== 501, `replay has no response for ${key}`);
   }
@@ -480,7 +452,7 @@ async function recordTour(): Promise<DemoSnapshot> {
   }
 }
 
-ensureDiffWorker();
+await ensureDiffWorker();
 materializeFixture(fixtureDir);
 dirtyWorktree();
 

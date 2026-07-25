@@ -341,7 +341,6 @@ describe("replay comment writes", () => {
     const opened = await openComment(client, "the flush races the mark");
 
     expect(opened.commentId as string).toMatch(/^cmt_/);
-    expect(opened.record).toBe("001-open.md");
     expect(opened.changeId as string).toBe(HEAD_CHANGE_ID);
     const snapshot = await fetchReview(client);
     const folded = foldComment(
@@ -371,13 +370,12 @@ describe("replay comment writes", () => {
   test("a reply reads back on the Comment and leaves it open", async () => {
     const client = serve();
 
-    const replied = await writeComment(client, {
+    await writeComment(client, {
       body: "still there",
       commentId: SEEDED_COMMENT_ID,
       op: "reply",
     });
 
-    expect(replied.record).toBe("002-reply.md");
     const snapshot = await fetchReview(client);
     expect(
       foldComment(

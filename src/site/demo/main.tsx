@@ -1,11 +1,13 @@
 import { setBackend } from "@client/api/backend";
 import { basepath } from "@client/lib/basepath";
+import { noop } from "radashi";
 import type { CSSProperties } from "react";
 import { createRoot } from "react-dom/client";
 
 import { replayHandler } from "./replay-handler";
 
 const snapshotUrl = `${basepath}/demo-snapshot.json`;
+const REPO_URL = "https://github.com/angusfretwell/docent";
 
 async function fetchSnapshot(): Promise<unknown> {
   const response = await fetch(snapshotUrl);
@@ -58,19 +60,28 @@ function MissingSnapshot() {
   return (
     <main style={PAGE_STYLE}>
       <div style={PANEL_STYLE}>
-        <h1 style={HEADING_STYLE}>This demo has no data</h1>
+        <h1 style={HEADING_STYLE}>This demo could not load</h1>
         <p style={BODY_STYLE}>
-          The demo replays a recorded snapshot of a docent review, and this
-          build is missing it. Record one with{" "}
-          <code style={COMMAND_STYLE}>bun run capture:snapshot</code>, then
-          rebuild with <code style={COMMAND_STYLE}>bun run build:site</code>.
+          The review it replays is missing from this build. Try again later, or{" "}
+          <a href={REPO_URL} style={COMMAND_STYLE}>
+            run docent on a branch of your own
+          </a>
+          .
         </p>
       </div>
     </main>
   );
 }
 
+/**
+ * Only a build that skipped the capture reaches this, so the fix belongs in the
+ * console where a developer will see it; the page says something a visitor can
+ * act on instead.
+ */
 function reportMissingSnapshot(cause: unknown): void {
+  console.error(
+    "The demo snapshot is missing or no longer matches the API contract. Record one with `bun run capture:snapshot`, then rebuild with `bun run build:site`."
+  );
   console.error(cause);
 
   const rootElement = document.querySelector("#root");
@@ -82,17 +93,13 @@ function reportMissingSnapshot(cause: unknown): void {
   createRoot(rootElement).render(<MissingSnapshot />);
 }
 
-/** The demo watches nothing, so there is no stream to close. */
-function unsubscribe(): void {
-  return undefined;
-}
-
 try {
   const replay = replayHandler(await fetchSnapshot(), { basepath });
 
   setBackend({
     fetch: (input, init) => replay(new Request(input, init)),
-    subscribe: () => unsubscribe,
+    // The demo watches nothing, so there is no stream to close.
+    subscribe: () => noop,
   });
 
   // Dynamic: `@client/main` renders as it evaluates, so a static import would

@@ -18,10 +18,11 @@ import path from "node:path";
 
 import tailwind from "bun-plugin-tailwind";
 
+import { ensureDiffWorker, workerBundle } from "./build-worker";
+
 const root = path.join(import.meta.dir, "..");
 const outdir = path.join(root, "dist", "site");
 const demoOutdir = path.join(outdir, "demo");
-const workerBundle = path.join(root, "dist", "worker", "diff-worker.js");
 const snapshotFile = path.join(root, "dist", "demo-snapshot.json");
 
 /**
@@ -69,16 +70,7 @@ async function bundlePage(
  * @see src/client/lib/worker-factory.ts
  */
 async function copyDiffWorker(): Promise<void> {
-  if (!(await Bun.file(workerBundle).exists())) {
-    const built = Bun.spawnSync(["bun", "run", "build:worker"], {
-      cwd: root,
-      stdio: ["ignore", "inherit", "inherit"],
-    });
-
-    if (!built.success) {
-      throw new Error("could not bundle the diff worker the demo loads");
-    }
-  }
+  await ensureDiffWorker();
 
   await fs.cp(workerBundle, path.join(demoOutdir, "diff-worker.js"));
 }

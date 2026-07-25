@@ -20,7 +20,7 @@ import type {
 import { Schema } from "effect";
 import { max } from "radashi";
 
-import { DemoSnapshot, requestKey } from "./snapshot";
+import { DemoSnapshot, keyPathname, requestKey } from "./snapshot";
 import type { RecordedResponse } from "./snapshot";
 
 const decodeSnapshot = Schema.decodeUnknownSync(DemoSnapshot);
@@ -60,14 +60,11 @@ interface ReviewState {
 }
 
 interface ReplayContext {
-  author: Author;
   responses: ReadonlyMap<string, RecordedResponse>;
   state: ReviewState;
 }
 
 export interface ReplayOptions {
-  /** Stamped on demo writes; the recorded records keep the Authors they were captured with. */
-  author?: Author;
   /** Stripped from the request path before keying, for a demo served under a prefix. */
   basepath?: string;
 }
@@ -95,12 +92,6 @@ function badRequest(cause: unknown): Response {
 function unrecorded(key: string): Response {
   console.error(`docent demo: no recorded response for ${key}`);
   return errorResponse(`no recorded response for ${key}`, 501);
-}
-
-function keyPathname(key: string): string {
-  const target = key.slice(key.indexOf(" ") + 1);
-  const query = target.indexOf("?");
-  return query === -1 ? target : target.slice(0, query);
 }
 
 function isSuccess(status: number): boolean {
@@ -258,7 +249,7 @@ function appendCommentRecord(
 
   comment.records.push(
     CommentRecord.make({
-      author: context.author,
+      author: DEMO_AUTHOR,
       body: "body" in write ? write.body : "",
       changeId,
       createdAt: new Date().toISOString(),
@@ -364,15 +355,9 @@ function handle(
 }
 
 /**
- * The browser-side stand-in for the server's `webHandler`: reads replay the
- * snapshot's recorded responses, writes mutate a Review seeded from it.
- *
- * Status is derived, never stored — a write only appends a record, and
- * `foldComment` reads Status off the latest one. Drift stays frozen as captured:
- * no demo write moves an Anchor, so nothing recomputes it.
- *
- * State is per instance and lives only in memory, so constructing a fresh
- * handler — a page reload — is a pristine demo.
+ * Drift stays frozen as captured: no demo write moves an Anchor, so nothing
+ * recomputes it. State is per instance and lives only in memory, so constructing
+ * a fresh handler — a page reload — is a pristine demo.
  *
  * Recorded bodies are decoded against the shared schemas once, here at
  * construction, so a snapshot that has drifted from the API contract fails at
@@ -390,7 +375,6 @@ export function replayHandler(
   validateRecordedBodies(responses);
 
   const context: ReplayContext = {
-    author: options.author ?? DEMO_AUTHOR,
     responses,
     state: seedReviewState(responses),
   };

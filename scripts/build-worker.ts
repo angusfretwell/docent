@@ -11,15 +11,22 @@
  * the compiled binary in prod (via `src/docent.ts`'s `with { type: "file" }`
  * import). The step is folded into the dev and build flows and re-runs only
  * when `@pierre/diffs` bumps.
+ *
+ * Run directly (`build:worker`) it always rebuilds; the dev, site-build and
+ * capture flows import `ensureDiffWorker` so a bundle already on disk is reused.
  */
 
 import path from "node:path";
 
 const root = path.join(import.meta.dir, "..");
-const entry = Bun.resolveSync("@pierre/diffs/worker/worker.js", root);
 const outdir = path.join(root, "dist", "worker");
 
-try {
+export const workerBundle = path.join(outdir, "diff-worker.js");
+
+/** Rejects if the bundle fails, so a caller never proceeds against a missing worker. */
+export async function bundleDiffWorker(): Promise<void> {
+  const entry = Bun.resolveSync("@pierre/diffs/worker/worker.js", root);
+
   const result = await Bun.build({
     entrypoints: [entry],
     minify: true,
@@ -34,8 +41,22 @@ try {
       console.warn(message);
     }
   }
-} catch (error) {
-  console.error("Failed to bundle diff worker:");
-  console.error(error);
-  process.exit(1);
+}
+
+export async function ensureDiffWorker(): Promise<void> {
+  if (await Bun.file(workerBundle).exists()) {
+    return;
+  }
+
+  await bundleDiffWorker();
+}
+
+if (import.meta.main) {
+  try {
+    await bundleDiffWorker();
+  } catch (error) {
+    console.error("Failed to bundle diff worker:");
+    console.error(error);
+    process.exit(1);
+  }
 }

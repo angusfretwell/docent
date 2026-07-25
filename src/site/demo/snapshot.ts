@@ -54,3 +54,21 @@ export function requestKey(request: {
 
   return `${request.method.toUpperCase()} ${pathname}${url.search}`;
 }
+
+function split(key: string): { method: string; target: string } {
+  const separator = key.indexOf(" ");
+
+  return { method: key.slice(0, separator), target: key.slice(separator + 1) };
+}
+
+/** The route a key names, without its query — what a per-route lookup keys on. */
+export function keyPathname(key: string): string {
+  return new URL(split(key).target, KEY_ORIGIN).pathname;
+}
+
+/** The inverse of `requestKey`, for replaying a recorded key back through a handler. */
+export function requestFromKey(key: string): Request {
+  const { method, target } = split(key);
+
+  return new Request(new URL(target, KEY_ORIGIN), { method });
+}
