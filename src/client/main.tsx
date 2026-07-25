@@ -4,9 +4,11 @@ import { createRoot } from "react-dom/client";
 
 import { Providers } from "./components/providers";
 import { Spinner } from "./components/ui/spinner";
+import { routerBasepath } from "./lib/basepath";
 import { routeTree } from "./routeTree.gen";
 
 const router = createRouter({
+  basepath: routerBasepath,
   defaultPendingComponent: () => (
     <div className="flex h-full items-center justify-center">
       <Spinner className="size-4" />
