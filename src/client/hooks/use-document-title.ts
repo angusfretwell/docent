@@ -9,6 +9,6 @@ export function useDocumentTitle(): void {
   const title = snapshot?.review.title;
 
   useEffect(() => {
-    document.title = title ? `${title} · ${APP_NAME}` : APP_NAME;
+    document.title = title ? `${title} - ${APP_NAME}` : APP_NAME;
   }, [title]);
 }
