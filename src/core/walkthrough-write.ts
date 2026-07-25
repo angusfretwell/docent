@@ -21,7 +21,7 @@ import { ensureReview } from "./review";
 import { makeId } from "./store/id";
 import { reviewDirPath } from "./store/layout";
 import {
-  appendToManifest,
+  updateManifest,
   assertSectionArms,
   loadWalkthrough,
   walkthroughDir,
@@ -100,6 +100,31 @@ export const writeWalkthrough = Effect.fn("writeWalkthrough")(
   }
 );
 
+/** A title is editorial, so a shell minted by capture is born untitled; this is the only way to name one afterwards. */
+export const renameWalkthrough = Effect.fn("renameWalkthrough")(
+  function* renameWalkthrough(
+    params: WriteBase & {
+      walkthroughId: WalkthroughId;
+      title: string;
+    }
+  ) {
+    const reviewDir = reviewDirPath(params.root, params.branch);
+    yield* ensureReview({
+      base: params.base,
+      branch: params.branch,
+      reviewDir,
+      root: params.root,
+    });
+    const loaded = yield* loadWalkthrough(reviewDir, params.walkthroughId);
+
+    yield* updateManifest(loaded, (current) =>
+      Walkthrough.make({ ...current, title: params.title })
+    );
+
+    return { title: params.title, walkthroughId: params.walkthroughId };
+  }
+);
+
 /**
  * The `sNN-` filename prefix is cosmetic — the manifest array is the
  * authoritative order. `ranges` is the code arm; `captureIds`/`callouts` the
@@ -169,7 +194,7 @@ export const addWalkthroughSection = Effect.fn("addWalkthroughSection")(
       recordFile(frontmatter, section.body)
     );
 
-    yield* appendToManifest(loaded, (current) =>
+    yield* updateManifest(loaded, (current) =>
       Walkthrough.make({
         ...current,
         sections: [...current.sections, filename],
@@ -243,7 +268,7 @@ export const addWalkthroughCapture = Effect.fn("addWalkthroughCapture")(
         : { durationMs: params.durationMs }),
     });
 
-    yield* appendToManifest(loaded, (current) =>
+    yield* updateManifest(loaded, (current) =>
       Walkthrough.make({
         ...current,
         captures: [...(current.captures ?? []), entry],

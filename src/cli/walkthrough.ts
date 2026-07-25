@@ -7,6 +7,7 @@ import { Command, Flag } from "effect/unstable/cli";
 import { resolveBlobShaAt } from "../core/git";
 import {
   addWalkthroughSection,
+  renameWalkthrough,
   writeWalkthrough,
 } from "../core/walkthrough-write";
 import type { ChangeRefs } from "../core/write-context";
@@ -102,6 +103,39 @@ const create = Command.make(
   )
 );
 
+const rename = Command.make(
+  "rename",
+  {
+    title: Flag.string("title").pipe(
+      Flag.withDescription("The walkthrough's title")
+    ),
+    walkthrough: Flag.string("walkthrough").pipe(
+      Flag.withDescription("The walkthrough to title (wlk_…)")
+    ),
+  },
+  (config) =>
+    Effect.gen(function* runRename() {
+      const cwd = yield* WorkingDirectory;
+      const walkthroughId = yield* parseRecordId(
+        "walkthrough",
+        WalkthroughId,
+        config.walkthrough
+      );
+      const title = yield* requireText("title", config.title);
+      const scope = yield* resolveChangeScope(cwd);
+
+      return yield* printJson(
+        yield* renameWalkthrough({
+          base: scope.base,
+          branch: scope.branch,
+          root: scope.root,
+          title,
+          walkthroughId,
+        })
+      );
+    })
+).pipe(Command.withDescription("Set an existing walkthrough's title"));
+
 const addSection = Command.make(
   "add-section",
   {
@@ -179,5 +213,5 @@ const addSection = Command.make(
 
 export const walkthroughCommand = Command.make("walkthrough").pipe(
   Command.withDescription("Create or extend the review's walkthroughs"),
-  Command.withSubcommands([create, addSection])
+  Command.withSubcommands([create, rename, addSection])
 );

@@ -12,7 +12,7 @@ import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 
 import {
-  appendToManifest,
+  updateManifest,
   assertSectionArms,
   loadWalkthrough,
   walkthroughDir,
@@ -138,7 +138,7 @@ describe("writeManifest", () => {
   });
 });
 
-describe("appendToManifest", () => {
+describe("updateManifest", () => {
   test("mutates and persists — a later load reflects the update", async () => {
     const root = scratchDir("docent-manifest-");
     await seed(root, "product", manifest());
@@ -148,7 +148,7 @@ describe("appendToManifest", () => {
     );
 
     const updated = await run(
-      appendToManifest(loaded, (current) =>
+      updateManifest(loaded, (current) =>
         Walkthrough.make({
           ...current,
           sections: [...current.sections, "s01-first.md"],

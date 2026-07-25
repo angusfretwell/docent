@@ -11,6 +11,7 @@ import { readReviewSnapshot } from "./review";
 import {
   addWalkthroughCapture,
   addWalkthroughSection,
+  renameWalkthrough,
   writeWalkthrough,
 } from "./walkthrough-write";
 
@@ -220,6 +221,50 @@ describe("addWalkthroughSection", () => {
         root,
         title: "T",
         walkthroughId,
+      })
+    );
+
+    expect(exit._tag).toBe("Failure");
+  });
+});
+
+describe("renameWalkthrough", () => {
+  test("titles a shell minted without one, leaving its sections alone", async () => {
+    const root = scratchDir("docent-wlk-");
+    const { walkthroughId } = await create(root, "product", "");
+    await run(
+      addWalkthroughSection({
+        ...base,
+        body: "Drag a file.",
+        root,
+        title: "Uploading",
+        walkthroughId,
+      })
+    );
+
+    await run(
+      renameWalkthrough({
+        ...base,
+        root,
+        title: "Uploading a file",
+        walkthroughId,
+      })
+    );
+
+    const entry = await walkthrough(root, walkthroughId);
+    expect(entry?.manifest?.title).toBe("Uploading a file");
+    expect(entry?.manifest?.sections).toEqual(["s01-uploading.md"]);
+  });
+
+  test("an unknown walkthrough id is an error, never a stray write", async () => {
+    const root = scratchDir("docent-wlk-");
+
+    const exit = await runtime.runPromiseExit(
+      renameWalkthrough({
+        ...base,
+        root,
+        title: "T",
+        walkthroughId: WalkthroughId.make("wlk_nope"),
       })
     );
 
