@@ -16,7 +16,7 @@ import {
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const commentsOpen = useAtomValue(commentsOpenAtom);
-  const isMobile = useMediaQuery("max-md");
+  const isSmallScreen = useMediaQuery("max-md");
 
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
     id: "main",
@@ -37,13 +37,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
           {children}
         </ResizablePanel>
 
-        {commentsOpen && !isMobile && (
+        {commentsOpen && !isSmallScreen && (
           <>
             <ResizableHandle withHandle className="w-1.5" />
             <ResizablePanel
               groupResizeBehavior="preserve-pixel-size"
               minSize={200}
-              defaultSize={350}
+              defaultSize={325}
               id="comments"
               className="overflow-visible!"
             >

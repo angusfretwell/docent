@@ -15,7 +15,7 @@ import {
   MenuTrigger,
 } from "@client/components/ui/menu";
 import { Separator } from "@client/components/ui/separator";
-import { DrawerDismissProvider } from "@client/hooks/use-drawer-dismiss";
+import { DismissProvider } from "@client/hooks/use-dismiss";
 import { useKeyPressed } from "@client/hooks/use-key-pressed";
 import { useIsMobile } from "@client/hooks/use-media-query";
 import type { DiffFile } from "@client/lib/diff";
@@ -61,9 +61,9 @@ export function DiffToolbar({
           </DrawerTrigger>
           <DrawerPopup showBar>
             <div className="relative h-svh py-2">
-              <DrawerDismissProvider dismiss={() => setTreeDrawerOpen(false)}>
+              <DismissProvider dismiss={() => setTreeDrawerOpen(false)}>
                 <DiffTree files={visibleFiles} />
-              </DrawerDismissProvider>
+              </DismissProvider>
             </div>
           </DrawerPopup>
         </Drawer>
