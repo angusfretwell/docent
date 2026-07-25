@@ -5,7 +5,7 @@ description: Docent review companion for the branch under review. `/docent` reco
 
 # docent
 
-The session-side companion to the `docent` tool — a docent gives the guided tour. It assumes only a git repository and the tool's `.docent/` state directory at the repo root (auto-created on first write). The `docent` CLI is reached through `npx @angusfretwell/docent`, which self-bootstraps its per-platform binary on first run — no global install needed.
+The session-side companion to the `docent` tool — a docent gives the guided tour. It assumes only a git repository and the tool's `.docent/` state directory at the repo root (auto-created on first write). The `docent` CLI is reached through `npx @angusfretwell/docent@latest`, which self-bootstraps its per-platform binary on first run — no global install needed.
 
 Dispatch on the invocation:
 
@@ -18,10 +18,10 @@ Dispatch on the invocation:
 **Capability gate — run this before any branch.** All three invocations shell out to the `docent` CLI, so first confirm the CLI can run at all:
 
 ```bash
-npx -y @angusfretwell/docent --version
+npx -y @angusfretwell/docent@latest --version
 ```
 
-On a non-zero exit the CLI could not bootstrap. Relay the command's own stderr — it is the authority on why (`unsupported platform: …`, `download failed (NNN): …`, or Node/npx missing) — wrapped in an actionable line, e.g. `` `npx @angusfretwell/docent` couldn't run — <stderr>; ensure Node ≥18 and network access, then re-run /docent ``, and **hard-stop**. Nothing runs on a failed gate. The check is stateless — it runs every invocation, because machine capability can regress (evicted cache, Node change) and a cached "passed" would skip a check that should now fail — and cheap once the binary is cached; the `-y` also warms that cache up front, where the human is watching, rather than mid-capture.
+On a non-zero exit the CLI could not bootstrap. Relay the command's own stderr — it is the authority on why (`unsupported platform: …`, `download failed (NNN): …`, or Node/npx missing) — wrapped in an actionable line, e.g. `` `npx @angusfretwell/docent@latest` couldn't run — <stderr>; ensure Node ≥18 and network access, then re-run /docent ``, and **hard-stop**. Nothing runs on a failed gate. The check is stateless — it runs every invocation, because machine capability can regress (evicted cache, Node change) and a cached "passed" would skip a check that should now fail — and cheap once the binary is cached; the `-y` also warms that cache up front, where the human is watching, rather than mid-capture.
 
 The rest of this file is the default branch: "type `/docent`, get a browser tab with the tour." The tool only ever _surfaces_ walkthrough staleness; it never auto-regenerates — the human running `/docent` is the regeneration trigger. Per pillar (**code**, **product**) you read the head Change and the pillar's latest walkthrough, decide from **existence + drift** what to do, and regenerate **only the stale or missing pillars**, each minting a fresh immutable `wlk_`. Your job is the reconcile decision; the reference files own the authoring:
 
@@ -57,7 +57,7 @@ git log --oneline origin/HEAD..HEAD    # what this branch adds (fall back to ori
 - **Name the change.** Reading the head is also where you learn what this branch _is_, so record it as the Review's title — the headline the UI renders:
 
   ```bash
-  npx -y @angusfretwell/docent rename --title "Palette panel"
+  npx -y @angusfretwell/docent@latest rename --title "Palette panel"
   ```
 
   Keep it **short** — a few words naming the change the way a PR title does, drawn from the branch's commits, not a summary of them. Re-set it on every run: the title tracks the head, and renaming keeps the Review's id.
@@ -125,20 +125,20 @@ First **report the reconcile decision** so the human sees why: which pillars reg
 Then ensure a docent server is running for this repo and open the browser. `docent serve` renders `.docent/` live and re-renders each write over SSE, so a freshly reconciled tour lands on screen the moment it exists. Check first, reuse if you can:
 
 ```bash
-npx -y @angusfretwell/docent status          # → { "serving": true, "url": "http://127.0.0.1:…/" }  or  { "serving": false }
+npx -y @angusfretwell/docent@latest status          # → { "serving": true, "url": "http://127.0.0.1:…/" }  or  { "serving": false }
 ```
 
 - **Already serving** → reuse it; open its `url`. Never start a second server.
 - **Not serving** → start one in the background (it runs until the human stops it), poll until it answers, then open the browser. **Bound the poll** — on timeout hard stop with an actionable message:
 
   ```bash
-  npx -y @angusfretwell/docent serve >/dev/null 2>&1 &   # backgrounded; leave it running
+  npx -y @angusfretwell/docent@latest serve >/dev/null 2>&1 &   # backgrounded; leave it running
   for _ in $(seq 50); do           # `docent serve` records its address on boot; poll it, bounded (~10s)
-    npx -y @angusfretwell/docent status | grep -q '"serving": true' && break
+    npx -y @angusfretwell/docent@latest status | grep -q '"serving": true' && break
     sleep 0.2
   done
-  npx -y @angusfretwell/docent status | grep -q '"serving": true' || {
-    echo "docent serve did not come up within ~10s — run 'npx -y @angusfretwell/docent serve' in this repo to see the boot error, then re-run /docent" >&2
+  npx -y @angusfretwell/docent@latest status | grep -q '"serving": true' || {
+    echo "docent serve did not come up within ~10s — run 'npx -y @angusfretwell/docent@latest serve' in this repo to see the boot error, then re-run /docent" >&2
     exit 1
   }
   ```
