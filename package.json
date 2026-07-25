@@ -11,6 +11,7 @@
     "build:release": "bun run --sequential build:worker build:release:binaries",
     "build:release:binaries": "./scripts/build-release.ts",
     "build:worker": "./scripts/build-worker.ts",
+    "capture:snapshot": "./scripts/capture-snapshot.ts",
     "prepare": "bun run --parallel prepare:*",
     "prepare:effect": "./scripts/prepare-effect.sh",
     "prepare:fixture": "./scripts/prepare-fixture.ts",
