@@ -1,88 +1,94 @@
-import { randomColor } from "./color.js";
-import { toText } from "./export.js";
-import { createHistory } from "./history.js";
+import { randomPalette } from "./color.js";
+import { serialize } from "./export.js";
 import { DEFAULT_PRESET, PRESET_PALETTES, presetNames } from "./presets.js";
-import { render, renderHistory } from "./render.js";
-import { loadLast, saveLast } from "./storage.js";
+import { render } from "./render.js";
+import { getFormat, getPalette, setFormat, setPalette } from "./state.js";
 
-const DEFAULT_SWATCH_COUNT = 5;
-const MAX_SWATCH_COUNT = 12;
+const TOAST_MS = 1600;
 
-const generateButton = document.getElementById("generate");
-const resetButton = document.getElementById("reset");
-const clearButton = document.getElementById("clear-history");
-const countInput = document.getElementById("count");
+const columns = document.getElementById("columns");
+const randomButton = document.getElementById("random");
 const presetSelect = document.getElementById("preset");
-const formatSelect = document.getElementById("format");
-const exportOutput = document.getElementById("export");
+const dialog = document.getElementById("export-dialog");
+const openButton = document.getElementById("export-open");
+const closeButton = document.getElementById("export-close");
+const tabs = [...document.querySelectorAll(".tab")];
+const code = document.getElementById("export-code");
+const copyButton = document.getElementById("export-copy");
+const downloadButton = document.getElementById("export-download");
+const toast = document.getElementById("export-toast");
 
-const history = createHistory();
+let toastTimer;
 
-let current = [];
-
-function fillPresets() {
-  for (const name of presetNames()) {
-    const option = document.createElement("option");
-    option.value = name;
-    option.textContent = name;
-    presetSelect.append(option);
-  }
-  presetSelect.value = DEFAULT_PRESET;
+function show(next) {
+  setPalette(next);
+  render(columns, getPalette());
 }
 
-function swatchCount() {
-  const requested = Number.parseInt(countInput.value, 10);
-  if (Number.isNaN(requested)) {
-    return DEFAULT_SWATCH_COUNT;
-  }
-  return Math.min(MAX_SWATCH_COUNT, Math.max(1, requested));
-}
+function renderExport() {
+  const format = getFormat();
+  const { filename, text } = serialize(getPalette(), format);
 
-function show(colors) {
-  current = colors;
-  render(colors);
-  exportOutput.value = toText(colors, formatSelect.value);
-  saveLast(colors);
-}
+  code.textContent = text;
+  downloadButton.textContent = `Download .${filename.split(".").at(-1)}`;
 
-function restore(index) {
-  const colors = history.at(index);
-  if (colors !== undefined) {
-    show(colors);
+  for (const tab of tabs) {
+    const selected = tab.dataset.format === format;
+    tab.setAttribute("aria-selected", String(selected));
+    if (selected) {
+      code.setAttribute("aria-labelledby", tab.id);
+    }
   }
 }
 
-function generate() {
-  const colors = [];
-  for (let index = 0; index < swatchCount(); index += 1) {
-    colors.push(randomColor());
-  }
-  history.push(colors);
-  renderHistory(history.entries(), restore);
-  show(colors);
+async function copy() {
+  const { text } = serialize(getPalette(), getFormat());
+  await navigator.clipboard.writeText(text);
+
+  toast.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toast.hidden = true;
+  }, TOAST_MS);
 }
 
-function reset() {
-  show(PRESET_PALETTES[presetSelect.value]);
+function download() {
+  const { filename, mime, text } = serialize(getPalette(), getFormat());
+  const url = URL.createObjectURL(new Blob([text], { type: mime }));
+
+  const link = document.createElement("a");
+  link.download = filename;
+  link.href = url;
+  link.click();
+
+  URL.revokeObjectURL(url);
 }
 
-function clearHistory() {
-  history.clear();
-  renderHistory(history.entries(), restore);
+presetSelect.append(...presetNames().map((name) => new Option(name, name)));
+presetSelect.value = DEFAULT_PRESET;
+
+randomButton.addEventListener("click", () => show(randomPalette()));
+presetSelect.addEventListener("change", () =>
+  show(PRESET_PALETTES[presetSelect.value])
+);
+
+openButton.addEventListener("click", () => {
+  renderExport();
+  dialog.showModal();
+});
+closeButton.addEventListener("click", () => dialog.close());
+copyButton.addEventListener("click", copy);
+downloadButton.addEventListener("click", download);
+
+for (const tab of tabs) {
+  tab.addEventListener("click", () => {
+    setFormat(tab.dataset.format);
+    renderExport();
+  });
 }
 
-fillPresets();
+dialog.addEventListener("close", () => {
+  toast.hidden = true;
+});
 
-generateButton.addEventListener("click", generate);
-resetButton.addEventListener("click", reset);
-clearButton.addEventListener("click", clearHistory);
-presetSelect.addEventListener("change", reset);
-formatSelect.addEventListener("change", () => show(current));
-countInput.addEventListener("change", generate);
-
-const restored = loadLast();
-if (restored === undefined) {
-  reset();
-} else {
-  show(restored);
-}
+show(getPalette());

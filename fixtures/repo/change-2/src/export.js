@@ -1,14 +1,45 @@
-export function toCss(colors) {
-  const declarations = colors
-    .map((color, index) => `  --swatch-${index + 1}: ${color};`)
+export function toCssVariables(palette) {
+  const declarations = palette
+    .map((hex, index) => `  --color-${index + 1}: ${hex};`)
     .join("\n");
-  return `:root {\n${declarations}\n}`;
+  return {
+    filename: "palette.css",
+    mime: "text/css",
+    text: `:root {\n${declarations}\n}\n`,
+  };
 }
 
-export function toJson(colors) {
-  return JSON.stringify({ colors }, null, 2);
+export function toTailwindTheme(palette) {
+  const declarations = palette
+    .map((hex, index) => `  --color-palette-${index + 1}: ${hex};`)
+    .join("\n");
+  return {
+    filename: "theme.css",
+    mime: "text/css",
+    text: `@import "tailwindcss";\n\n@theme {\n${declarations}\n}\n`,
+  };
 }
 
-export function toText(colors, format) {
-  return format === "json" ? toJson(colors) : toCss(colors);
+export function toFigmaTokens(palette) {
+  const tokens = Object.fromEntries(
+    palette.map((hex, index) => [
+      String(index + 1),
+      { $type: "color", $value: hex },
+    ])
+  );
+  return {
+    filename: "tokens.json",
+    mime: "application/json",
+    text: `${JSON.stringify({ palette: tokens }, null, 2)}\n`,
+  };
+}
+
+const SERIALIZERS = {
+  css: toCssVariables,
+  figma: toFigmaTokens,
+  tailwind: toTailwindTheme,
+};
+
+export function serialize(palette, format) {
+  return SERIALIZERS[format](palette);
 }
