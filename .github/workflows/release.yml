@@ -39,6 +39,13 @@ jobs:
         run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version
         working-directory: npm
 
+      # `npm/README.md` is a symlink to the repo README so the two never drift,
+      # but npm's packlist skips symlinks — replace it with a real copy so the
+      # published tarball (and the npm package page) carries it.
+      - name: Materialise the README symlink
+        run: rm -f README.md && cp ../README.md README.md
+        working-directory: npm
+
       - run: bun run --sequential build:worker build:release
 
       - name: Create GitHub Release
