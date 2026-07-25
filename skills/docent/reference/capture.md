@@ -108,7 +108,7 @@ Omit `--title`: the shell lands with an empty `title` and empty `sections` — b
 
 ## 7. Register the capture
 
-Register each temp media file (§5) with `docent capture add` — the single home for content-sha addressing and append semantics. It content-addresses the bytes into `captures/<sha>.rrweb.json` (the filename **is** the sha-256 of the bytes, which dedups byte-identical screens across rounds and freezes the exact bytes an anchor points at), issues the `cap_` id, and appends the validated `captures[]` registry entry to the manifest:
+Register each temp media file (§5) with `docent capture add` — the single home for content-sha addressing and append semantics. It content-addresses the bytes into `captures/<sha>.rrweb.json` (the filename **is** the sha-256 of the bytes, which dedups byte-identical screens across runs and freezes the exact bytes an anchor points at), issues the `cap_` id, and appends the validated `captures[]` registry entry to the manifest:
 
 ```bash
 # screenshot: full-page CSS-pixel document size rides --dims

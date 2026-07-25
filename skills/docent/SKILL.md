@@ -94,6 +94,8 @@ The Review for the current branch holds both kinds of walkthrough under:
    ls -d .docent/reviews/<branch-slug>/walkthroughs/code/wlk_*/ 2>/dev/null | sort | tail -1
    ```
 
+   Nothing back → there is no walkthrough for this head; the rest of this section has nothing to read, so go straight to §4/§5.
+
 2. **Read its `bornChangeId`** from that walkthrough's `manifest.json`, and resolve the Change it names to a head SHA:
 
    ```bash
@@ -108,14 +110,16 @@ The Review for the current branch holds both kinds of walkthrough under:
 | What you found | What you say |
 | --- | --- |
 | Nothing on this branch yet | "Writing the code and product walkthroughs for this branch." |
-| Written against an earlier commit | "The code walkthrough was written 3 commits back — writing a fresh one." |
+| Written against an earlier commit | "The code walkthrough was written 3 changes back — writing a fresh one." |
 | Written against this head | "The product walkthrough is up to date — leaving it." |
 
-Count those commits rather than making the human infer the gap, and say nothing about a first run being missing or empty — a branch with no walkthrough yet is simply a clean start:
+For the earlier-commit row, count the gap rather than making the human infer it — in **Changes**, the same unit the tour's own "N changes behind" badge counts, so the session and the screen say one number for one fact. The Changes are already on disk beside the walkthrough; count the ones recorded after its `bornChangeId`:
 
 ```bash
-git rev-list --count <that walkthrough's headSha>..HEAD
+ls .docent/reviews/<branch-slug>/changes/ | awk -v born='<born-change-id>.json' '$0 > born' | wc -l
 ```
+
+Say nothing about a first run being missing or empty — a branch with no walkthrough yet is simply a clean start.
 
 **Judged per kind**: a code walkthrough written against an earlier commit is rewritten while a product walkthrough already on the head is left alone — never rewrite one because the other fell behind, never skip one that did. Writing always produces a **new** walkthrough with a fresh `wlk_` id; the earlier one stays exactly as it was. Never edit an earlier walkthrough in place to bring it up to the head.
 

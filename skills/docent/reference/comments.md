@@ -6,7 +6,7 @@ Both drive the `docent comment` CLI, documented first below, then each flow.
 
 ## The `docent comment` CLI
 
-Run it from inside the repo under review (any subdirectory). It resolves the repo, the current branch's Review, and the Change refs — base at the merge-base, head at the branch tip — from git. It reads and writes under `.docent/reviews/<branch-slug>/`. The Review auto-creates on first use; a Change is recorded lazily on first reference. No server needs to be running.
+Run it from inside the repo under review (any subdirectory). It resolves the repo, the current branch's Review, and the Change refs — base at the merge-base, head at the branch tip — from git. It reads and writes under `.docent/reviews/<branch-slug>/`. The Review auto-creates on first use; a Change is created lazily on first reference. No server needs to be running.
 
 Every subcommand prints machine-readable JSON on stdout. Errors go to stderr and exit non-zero.
 
