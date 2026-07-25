@@ -91,13 +91,11 @@ button.pill:hover {
   position: relative;
 }
 
-.picker::after {
+.picker svg {
   color: var(--muted);
-  content: "▾";
-  font-size: 0.75rem;
   pointer-events: none;
   position: absolute;
-  right: 12px;
+  right: 11px;
   top: 50%;
   transform: translateY(-50%);
 }
