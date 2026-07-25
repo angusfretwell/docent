@@ -4,6 +4,8 @@ Drops the **Code walkthrough** — `walkthroughs/code/wlk_*/`, a manifest plus o
 
 The output is plain files a running `docent serve` re-renders live. The CLI below is the single home for issuing `wlk_`/`sec_` ids, lazy `bornChangeId`, and git-resolved `blobSha`, and non-gating — hand-authoring identical files re-renders just the same — but prefer it: it validates against the same schemas the server renders. Your work is the editorial judgment.
 
+**Load [voice.md](voice.md) before you write a section body.** It owns the prose, and the product walkthrough loads the same file — that shared guide is why the two tours read as one.
+
 ## 1. Read the Change — plain git, your own session
 
 Read the Change under review with plain `git`, straight from the local clone. Default to the **live head** of the branch; referencing it records a Change lazily when the head has none (the CLI does this on the first `create`).

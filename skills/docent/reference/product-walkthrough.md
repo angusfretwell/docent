@@ -4,6 +4,8 @@ The **editorial half** of the product walkthrough. Reads the Change and the **al
 
 The output is plain files a running `docent serve` re-renders live. The CLI is non-gating (hand-authoring identical files works too) but validates against the schemas the server renders; your work is the editorial judgment.
 
+**Load [voice.md](voice.md) before you write a section body or a callout.** It owns the prose, and the code walkthrough loads the same file — that shared guide is why the two tours read as one.
+
 ## 1. Find the captured shell — the captures you narrate over
 
 Capture runs **first** and creates the product walkthrough shell: `walkthroughs/product/wlk_*/` with its `captures[]` registry populated and `sections` still empty. You author **into that shell** — read its manifest to get the captures you have to work with:
