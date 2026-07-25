@@ -1,13 +1,16 @@
 #!/usr/bin/env bun
 
 /**
- * Bundle the marketing site to `dist/site` as plain static output.
+ * Bundle the marketing site to `dist/site` as plain static output: the landing
+ * page at the root, and under `demo/` the hosted demo — the real review client
+ * replaying a captured snapshot with no backend.
  *
  * Like `build-docent.ts`, this goes through `Bun.build` rather than the CLI
  * because the site's stylesheet needs `bun-plugin-tailwind` to compile Tailwind
  * at bundle time, and the CLI doesn't support bundler plugins.
  *
  * @see docs/adr/0003-site-as-a-static-build-target.md
+ * @see scripts/assemble-vercel-output.ts for the layout the deploy expects.
  */
 
 import fs from "node:fs/promises";
@@ -17,25 +20,98 @@ import tailwind from "bun-plugin-tailwind";
 
 const root = path.join(import.meta.dir, "..");
 const outdir = path.join(root, "dist", "site");
+const demoOutdir = path.join(outdir, "demo");
+const workerBundle = path.join(root, "dist", "worker", "diff-worker.js");
+const snapshotFile = path.join(root, "dist", "demo-snapshot.json");
 
-await fs.rm(outdir, { force: true, recursive: true });
-
-try {
+/**
+ * Two calls, not one entrypoint list: a single `Bun.build` shares one `outdir`
+ * and one `publicPath`, and the two pages need different ones.
+ *
+ * `publicPath` is what makes the emitted asset urls absolute. Bun's HTML loader
+ * writes them relative by default, and the demo's SPA fallback serves the same
+ * html at every `/demo/*` url, so a relative url would resolve against whichever
+ * url served it and a two-segment deep link would 404 its own bundle. The
+ * `assets/` prefix is what the deploy's immutable cache-control rule matches.
+ */
+async function bundlePage(
+  entrypoint: string,
+  into: string,
+  publicPath: string
+): Promise<void> {
   const result = await Bun.build({
     define: { "process.env.NODE_ENV": JSON.stringify("production") },
-    entrypoints: [path.join(root, "src", "site", "index.html")],
+    entrypoints: [entrypoint],
     minify: true,
-    outdir,
+    naming: {
+      asset: "assets/[name]-[hash].[ext]",
+      chunk: "assets/[name]-[hash].[ext]",
+      entry: "[dir]/[name].[ext]",
+    },
+    outdir: into,
     plugins: [tailwind],
+    publicPath,
     target: "browser",
   });
 
   if (result.logs.length > 0) {
-    console.warn("Bundled site with warnings:");
+    console.warn(`Bundled ${path.relative(root, entrypoint)} with warnings:`);
     for (const message of result.logs) {
       console.warn(message);
     }
   }
+}
+
+/**
+ * The worker is bundled standalone (oven-sh/bun#29478) and loaded by url, so the
+ * demo needs it as a file beside its html — without it the diff renders
+ * unhighlighted.
+ * @see src/client/lib/worker-factory.ts
+ */
+async function copyDiffWorker(): Promise<void> {
+  if (!(await Bun.file(workerBundle).exists())) {
+    const built = Bun.spawnSync(["bun", "run", "build:worker"], {
+      cwd: root,
+      stdio: ["ignore", "inherit", "inherit"],
+    });
+
+    if (!built.success) {
+      throw new Error("could not bundle the diff worker the demo loads");
+    }
+  }
+
+  await fs.cp(workerBundle, path.join(demoOutdir, "diff-worker.js"));
+}
+
+/**
+ * Fetched at runtime rather than bundled, so this build — and with it
+ * `bun run build` and preflight — stays green on a clone where nobody has run
+ * the heavy capture. A deploy missing the snapshot is caught by
+ * `assemble-vercel-output.ts`, which refuses to assemble without it.
+ */
+async function copySnapshot(): Promise<void> {
+  if (!(await Bun.file(snapshotFile).exists())) {
+    console.warn(
+      `No ${path.relative(root, snapshotFile)}, so the demo will report its data as missing. Record it with \`bun run capture:snapshot\`.`
+    );
+    return;
+  }
+
+  await fs.cp(snapshotFile, path.join(demoOutdir, "demo-snapshot.json"));
+}
+
+await fs.rm(outdir, { force: true, recursive: true });
+
+try {
+  await bundlePage(path.join(root, "src", "site", "index.html"), outdir, "/");
+  await bundlePage(
+    path.join(root, "src", "site", "demo", "index.html"),
+    demoOutdir,
+    "/demo/"
+  );
+
+  await copyDiffWorker();
+  await copySnapshot();
 } catch (error) {
   console.error("Failed to bundle site:");
   console.error(error);
