@@ -1,18 +1,18 @@
 # Authoring the product walkthrough
 
-The **editorial half** of the product pillar. Reads the Change and the **already-produced captures**, and drops the product walkthrough's sections — prose with `{{capture:i}}` interleave and pinned `callouts[]`. It **touches no browser**: capture is expensive and separable, so this half re-runs cheaply against the same captures — structure and narration iterate without re-driving anything. Driving the browser is [capture.md](capture.md); Comments belong to the review loop ([comments.md](comments.md)).
+The **editorial half** of the product walkthrough. Reads the Change and the **already-produced captures**, and drops the product walkthrough's sections — prose with `{{capture:i}}` interleave and pinned `callouts[]`. It **touches no browser**: capture is expensive and separable, so this half re-runs cheaply against the same captures — structure and narration iterate without re-driving anything. Driving the browser is [capture.md](capture.md); Comments belong to the review loop ([comments.md](comments.md)).
 
 The output is plain files a running `docent serve` re-renders live. The CLI is non-gating (hand-authoring identical files works too) but validates against the schemas the server renders; your work is the editorial judgment.
 
 ## 1. Find the captured shell — the captures you narrate over
 
-Capture runs **first** and mints the product walkthrough shell: `walkthroughs/product/wlk_*/` with its `captures[]` registry populated and `sections` still empty. You author **into that shell** — read its manifest to get the captures you have to work with:
+Capture runs **first** and creates the product walkthrough shell: `walkthroughs/product/wlk_*/` with its `captures[]` registry populated and `sections` still empty. You author **into that shell** — read its manifest to get the captures you have to work with:
 
 ```bash
 cat .docent/reviews/<branch-slug>/walkthroughs/product/wlk_*/manifest.json
 ```
 
-Take the latest product `wlk_` that has `captures[]` and empty `sections` (or the `--walkthrough` id the reconcile flow handed you). Each registry entry is `{ id: cap_…, kind, media, route, viewport, … }`; the `media` sha addresses the blob at `captures/<sha>.rrweb.json` — a screenshot holds the `[Meta, FullSnapshot]` pair, a recording the whole stream. Replay a screenshot blob, or read its serialized DOM, if you need to see what it shows before narrating it. If no such shell exists, capture has not run — see Stop conditions.
+Take the latest product `wlk_` that has `captures[]` and empty `sections` (or the `--walkthrough` id the run handed you). Each registry entry is `{ id: cap_…, kind, media, route, viewport, … }`; the `media` sha addresses the blob at `captures/<sha>.rrweb.json` — a screenshot holds the `[Meta, FullSnapshot]` pair, a recording the whole stream. Replay a screenshot blob, or read its serialized DOM, if you need to see what it shows before narrating it. If no such shell exists, capture has not run — see Stop conditions.
 
 ## 2. Read the Change and intent
 
@@ -80,5 +80,5 @@ The tour is done when the title is set and every section is dropped in order. If
 
 - **No browser.** This half only narrates; re-driving capture is [capture.md](capture.md)'s job.
 - **Walkthroughs only, never Comments.** Author Callouts; leave Comments to the review loop.
-- **Regeneration mints a fresh `wlk_`** — never re-narrate a prior, already-authored walkthrough in place. Because `add-section` appends, author into a captures-only shell with empty `sections`; don't append onto a tour already narrated. When to regenerate is the reconcile decision in SKILL.md.
+- **Every write lands a fresh `wlk_`** — never re-narrate an already-authored walkthrough in place. Because `add-section` appends, author into a captures-only shell with empty `sections`; don't append onto a tour already narrated. Whether to write one at all is SKILL.md's decision.
 - **Commit / push is the human's git workflow** — out of scope.
