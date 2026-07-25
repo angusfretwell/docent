@@ -30,35 +30,43 @@ export function Navigation() {
   return (
     <Tabs value={pathname}>
       <TabsList>
-        <TabsTab
-          nativeButton={false}
-          value="/"
-          render={<Link to="/" />}
-          className="w-8"
-        >
-          <KbdHint active={isAltPressed} shortcut="1">
+        <TabsTab nativeButton={false} value="/" render={<Link to="/" />}>
+          <KbdHint
+            active={isAltPressed}
+            shortcut="1"
+            className="-mr-0.5 -ml-1.5"
+          >
             <GitCompare />
           </KbdHint>
+          <span className="text-[13px] max-md:sr-only">Diff</span>
         </TabsTab>
         <TabsTab
-          className="w-8"
           nativeButton={false}
           value="/code"
           render={<Link to="/code" />}
         >
-          <KbdHint active={isAltPressed} shortcut="2">
+          <KbdHint
+            active={isAltPressed}
+            shortcut="2"
+            className="-mr-0.5 -ml-1.5"
+          >
             <Code2 />
           </KbdHint>
+          <span className="text-[13px] max-md:sr-only">Code</span>
         </TabsTab>
         <TabsTab
-          className="w-8"
           nativeButton={false}
           value="/product"
           render={<Link to="/product" />}
         >
-          <KbdHint active={isAltPressed} shortcut="3">
+          <KbdHint
+            active={isAltPressed}
+            shortcut="3"
+            className="-mr-0.5 -ml-1.5"
+          >
             <Pointer />
           </KbdHint>
+          <span className="text-[13px] max-md:sr-only">Product</span>
         </TabsTab>
       </TabsList>
     </Tabs>

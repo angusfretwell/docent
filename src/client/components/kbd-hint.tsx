@@ -6,10 +6,12 @@ export function KbdHint({
   active,
   children,
   shortcut,
+  className,
 }: {
+  className?: string;
   active: boolean;
   children: React.ReactNode;
   shortcut: React.ReactNode;
 }): React.ReactNode {
-  return active ? <Kbd>{shortcut}</Kbd> : children;
+  return active ? <Kbd className={className}>{shortcut}</Kbd> : children;
 }
