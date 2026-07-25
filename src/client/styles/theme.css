@@ -1,19 +1,9 @@
-@import "@fontsource/ibm-plex-mono/400";
-@import "@fontsource/ibm-plex-mono/500";
-@import "@fontsource/ibm-plex-mono/600";
-@import "@fontsource/outfit/400";
-@import "@fontsource/outfit/500";
-@import "@fontsource/outfit/600";
-@import "@fontsource/inter/400";
-@import "@fontsource/inter/500";
-@import "@fontsource/inter/600";
-
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --animate-skeleton: skeleton 2s -1s infinite linear;
-  --font-heading: "Outfit", sans-serif;
-  --font-sans: "Inter", sans-serif;
+  --font-heading: "Outfit", "system-ui", sans-serif;
+  --font-sans: "Inter", "system-ui", sans-serif;
   --font-mono: "IBM Plex Mono", monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
