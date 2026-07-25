@@ -8,8 +8,8 @@ export function App() {
       </h1>
 
       <p className="text-lg leading-relaxed text-muted-foreground">
-        A guided walkthrough of every change on your branch, with a review loop
-        that closes the findings — local, and built for agent-authored code.
+        Review your agent's work with guided walkthroughs of code and product
+        changes.
       </p>
 
       <code className="rounded-lg border bg-card px-4 py-3 text-sm text-card-foreground">
