@@ -98,8 +98,8 @@ export const writeManifest = Effect.fn("writeManifest")(function* writeManifest(
   );
 });
 
-export const appendToManifest = Effect.fn("appendToManifest")(
-  function* appendToManifest(
+export const updateManifest = Effect.fn("updateManifest")(
+  function* updateManifest(
     loaded: LoadedWalkthrough,
     mutate: (manifest: Walkthrough) => Walkthrough
   ) {

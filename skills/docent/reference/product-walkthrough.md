@@ -64,10 +64,11 @@ EOF
 
 ## 5. Set the title and confirm
 
-Give the shell its `title` — capture leaves it empty because a title is editorial. No subcommand renames the shell after `create`, so set its title directly in `manifest.json` (a plain field; the write is non-gating and `docent serve` re-renders it):
+Give the shell its `title` — capture leaves it empty because a title is editorial:
 
-```jsonc
-// manifest.json → "title": "…"
+```bash
+npx -y @angusfretwell/docent@latest walkthrough rename --walkthrough wlk_… --title "<the tour's title>"
+#   → { "title": "…", "walkthroughId": "wlk_…" }
 ```
 
 The tour is done when the title is set and every section is dropped in order. If `docent serve` is running, the Product walkthrough tab shows each section, capture, and callout pin appear live. Schemas are validated on write, so a tour that lands renders with no hand-editing.
