@@ -19,7 +19,7 @@ export function useRecordingPeek(
   const { currentMs, pause, play, playing, ready, seek, setLoop } = replay;
 
   const hovered = usePinHovered();
-  const focused = usePinFocus();
+  const { focused, serve } = usePinFocus();
 
   const peekRef = useRef<{ committed: boolean; resume: PeekResume } | null>(
     null
@@ -116,6 +116,7 @@ export function useRecordingPeek(
     }
 
     served.current = focused.nonce;
+    serve?.(focused.nonce);
 
     // A click on a callout of a recording that wasn't on the panel brings it on
     // with no pointer having reached it, so it does the seeking a dwell would.
@@ -136,5 +137,5 @@ export function useRecordingPeek(
     if (peek !== null) {
       peek.committed = true;
     }
-  }, [engage, focused, pins, ready, target]);
+  }, [engage, focused, pins, ready, serve, target]);
 }

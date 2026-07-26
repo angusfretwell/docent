@@ -85,7 +85,7 @@ export function ScreenshotCapture({
   // would re-frame on any re-render and fight a reader who has since zoomed by
   // hand. A request stands rather than expiring, so one made against a capture
   // not yet mounted is still waiting when this mounts.
-  const focused = usePinFocus();
+  const { focused, serve } = usePinFocus();
   const served = useRef(-1);
 
   useEffect(() => {
@@ -104,15 +104,17 @@ export function ScreenshotCapture({
       return;
     }
 
+    served.current = focused.nonce;
+    serve?.(focused.nonce);
+
     const pin = regions.find((region) => region.label === focused.key.label);
 
     if (pin === undefined) {
       return;
     }
 
-    served.current = focused.nonce;
     frameRect(pin.rect);
-  }, [focused, frameRect, measured, regions, target]);
+  }, [focused, frameRect, measured, regions, serve, target]);
 
   return (
     <>

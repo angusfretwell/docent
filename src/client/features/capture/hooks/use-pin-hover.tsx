@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { createContext, use, useMemo, useState } from "react";
+import { createContext, use, useCallback, useMemo, useState } from "react";
 
 /**
  * A label is only unique within its capture, so the target key it was placed
@@ -21,6 +21,7 @@ interface PinHover {
   focus: (pin: PinKey) => void;
   focused: PinFocus | undefined;
   hovered: PinKey | undefined;
+  serve: (nonce: number) => void;
   setHovered: (pin: PinKey | undefined) => void;
 }
 
@@ -30,7 +31,10 @@ const PinHoverContext = createContext<PinHover | undefined>(undefined);
  * The mark on the capture and the callout in the prose sit in different panels
  * with no common DOM ancestry, so CSS `:hover` can't reach from one to the other
  * — the pairing has to be state. `onFocus` brings on a capture that isn't
- * showing; the request stands until it mounts and serves it.
+ * showing; the request stands until it mounts and serves it, and is dropped
+ * there: a capture is unmounted whenever the reader scrolls past it, so a
+ * request left standing would frame again on the way back, over whatever the
+ * reader has done to the view since.
  */
 export function PinHoverProvider({
   children,
@@ -41,6 +45,14 @@ export function PinHoverProvider({
 }) {
   const [hovered, setHovered] = useState<PinKey | undefined>();
   const [focused, setFocused] = useState<PinFocus | undefined>();
+
+  // By nonce, so a request made while the previous one was being served isn't
+  // dropped along with it.
+  const serve = useCallback((nonce: number) => {
+    setFocused((previous) =>
+      previous?.nonce === nonce ? undefined : previous
+    );
+  }, []);
 
   const value = useMemo(
     () => ({
@@ -54,9 +66,10 @@ export function PinHoverProvider({
       },
       focused,
       hovered,
+      serve,
       setHovered,
     }),
-    [focused, hovered, onFocus]
+    [focused, hovered, onFocus, serve]
   );
 
   return <PinHoverContext value={value}>{children}</PinHoverContext>;
@@ -94,7 +107,9 @@ export function usePinHover(target: string | undefined, label: string) {
 }
 
 export function usePinFocus() {
-  return use(PinHoverContext)?.focused;
+  const context = use(PinHoverContext);
+
+  return { focused: context?.focused, serve: context?.serve };
 }
 
 export function usePinHovered() {
