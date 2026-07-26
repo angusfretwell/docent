@@ -136,7 +136,7 @@ Otherwise **dispatch a subagent** to write it. You do not write it yourself and 
 
 One general-purpose subagent, with a prompt carrying this and nothing else:
 
-- **Where its brief is** — the absolute path to `reference/code-walkthrough.md`, resolved from this skill's own directory before you dispatch (the subagent starts nowhere in particular, so a relative path resolves against the wrong place). Tell it to read the brief and follow it. **Never paste the brief into the prompt**: inlining it means you pay for every token of it too, which is the cost this split exists to remove.
+- **Where the brief lives** — this skill's own **absolute base directory**: the directory this `SKILL.md` was loaded from, which you take from the path you loaded it by. It is not your cwd — that is the repository under review — and the skill can sit in a plugin directory, `~/.claude/skills/`, or a checkout, so anything relative resolves against the wrong place. Pass the directory, not one file path: the brief reaches the shared voice guide and its siblings through it. Then tell it to read `reference/code-walkthrough.md` under that directory and follow it. **Never paste the brief into the prompt**: inlining it means you pay for every token of it too, which is the cost this split exists to remove.
 - **Where the repository is** — its absolute root, so git and the CLI run against the branch under review.
 - **The focus**, if the human gave one (§2), passed through in the human's own words.
 
@@ -182,7 +182,7 @@ Open the browser at the served `url`; the tour you just wrote is on its walkthro
 
 - **You decide and dispatch; the reference files author.** The reference files own the file writes and the editorial judgment; the `docent walkthrough` / `docent capture` write path owns ids and content-addressing. Never hand-author a walkthrough file to shortcut them.
 - **Never read the diff.** `git log` and `git diff --stat` are the most you ever see of the change; the hunks belong to §4's author, in its own context. A `git diff` in this session puts the run's largest cost back in the one place the split took it out of, and an agent holding the whole diff starts grading the change instead of running the tour.
-- **A subagent reads its own brief.** You pass a path and a repository root, never the brief's text and never the diff — and a subagent has no human, so nothing that needs asking is ever inside one. Every question for the human is settled in the preflight (§1), where the human is still there.
+- **A subagent reads its own brief.** You pass this skill's base directory and a repository root, never the brief's text and never the diff — and a subagent has no human, so nothing that needs asking is ever inside one. Every question for the human is settled in the preflight (§1), where the human is still there.
 - **Opinions about the code are not part of a tour.** What an author noticed about the change stays with the author. Only obstacles — things that made the tour less truthful — reach the human, through your closing report (§6), and none of them reach `.docent/`.
 - **A fresh `wlk_` every time — never edit one in place.** Writing produces a new immutable walkthrough bound to the head; the earlier one stays as it was.
 - **Walkthroughs and Comments are separate flows.** This flow produces tours; the review → Comments loop is `--read` / `--write`.

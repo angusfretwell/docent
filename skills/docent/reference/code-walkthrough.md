@@ -10,6 +10,7 @@ You are dispatched with this file and a repository. You read the change yourself
 
 ## What you are given
 
+- **The skill's absolute base directory** — where this brief lives: it is `<base>/reference/code-walkthrough.md`, and every file it links to, [voice.md](voice.md) first among them, is a sibling under `<base>/reference/`. Resolve them there. Your cwd is the repository under review, so a bare relative path looks for the voice guide inside somebody else's tree and comes back empty.
 - **The repository's absolute root** — run git and the CLI there. It is checked out on the branch under review, and its head is the change you are writing about.
 - **A focus, sometimes** — a path or a concern ("security") the human scoped the run to. It steers what you select and how you order it; it never decides whether you write.
 
@@ -28,7 +29,12 @@ sections:
 obstacles: none
 ```
 
-Every section you dropped, in tour order, titled exactly as it is titled in the tour. `obstacles: none` is the ordinary answer and the one you should expect to write.
+Every section you dropped, in tour order, titled exactly as it is titled in the tour. `obstacles: none` is the ordinary answer and the one you should expect to write. When there is one, it takes the same shape as `sections` — one line each, said the way it will be read aloud to the human, because it is passed on verbatim:
+
+```text
+obstacles:
+  - src/gen/schema.ts is generated, so its section points at the generator instead
+```
 
 ## 1. Read the change — plain git, your own context
 

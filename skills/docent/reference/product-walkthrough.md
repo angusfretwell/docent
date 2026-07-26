@@ -1,6 +1,6 @@
 # Authoring the product walkthrough
 
-The **editorial half** of the product walkthrough. Reads the Change and the **already-produced captures**, and drops the product walkthrough's sections — prose with `{{capture:i}}` interleave and pinned `callouts[]`. It **touches no browser**: capture is expensive and separable, so this half re-runs cheaply against the same captures — structure and narration iterate without re-driving anything. Driving the browser is [capture.md](capture.md); Comments belong to the review loop ([comments.md](comments.md)).
+The **editorial half** of the product walkthrough. Reads the **already-produced captures** and the branch's intent, and drops the product walkthrough's sections — prose with `{{capture:i}}` interleave and pinned `callouts[]`. It **touches no browser**: capture is expensive and separable, so this half re-runs cheaply against the same captures — structure and narration iterate without re-driving anything. Driving the browser is [capture.md](capture.md); Comments belong to the review loop ([comments.md](comments.md)).
 
 The output is plain files a running `docent serve` re-renders live. The CLI is non-gating (hand-authoring identical files works too) but validates against the schemas the server renders; your work is the editorial judgment.
 
