@@ -1,6 +1,7 @@
 import type { CodeViewFocus } from "@client/features/code-view/focus";
 import type { DiffFile } from "@client/lib/diff";
 import type { LineDecoration } from "@client/lib/diff-annotations";
+import { rendersLine } from "@client/lib/diff-target";
 import type {
   CodeView,
   CodeViewRenderedDiffItem,
@@ -22,6 +23,24 @@ const SETTLE_MS = 1000;
 
 function sideOf(range: WalkthroughRange): SelectionSide {
   return range.side === "base" ? "deletions" : "additions";
+}
+
+/**
+ * Whether the viewer can answer where a range sits. A partial file renders only
+ * its hunks, and asking for a line outside them extrapolates a position rather
+ * than declining, so the band would read as real while pointing nowhere near
+ * the range. Expansion resolves this by rendering the gaps, not by widening the
+ * hunks, which is why the file's own partial state has to be consulted.
+ */
+function locatable(file: DiffFile, range: WalkthroughRange): boolean {
+  if (!file.file.isPartial) {
+    return true;
+  }
+
+  return (
+    rendersLine(file.file, range.side, range.lines[0]) &&
+    rendersLine(file.file, range.side, range.lines[1])
+  );
 }
 
 /** A range's extent in the scroller's own coordinates, so it can be compared against the scroll position. */
@@ -68,7 +87,7 @@ function readTopOf(viewer: CodeView<LineDecoration>): number {
 function rangeUnderRead(
   viewer: CodeView<LineDecoration>,
   ranges: ReadonlyMap<string, WalkthroughRange>,
-  itemIds: ReadonlyMap<string, string>
+  filesByPath: ReadonlyMap<string, DiffFile>
 ): string | undefined {
   const viewTop = viewer.getScrollTop();
   const viewBottom =
@@ -85,7 +104,13 @@ function rangeUnderRead(
     }
 
     for (const [key, range] of ranges) {
-      if (itemIds.get(range.file) !== item.id) {
+      const file = filesByPath.get(range.file);
+
+      if (file === undefined || file.id !== item.id) {
+        continue;
+      }
+
+      if (!locatable(file, range)) {
         continue;
       }
 
@@ -146,7 +171,7 @@ export function useDiffAim({
 
   const latest = useRef({
     activeKey,
-    itemIds: new Map<string, string>(),
+    filesByPath: new Map<string, DiffFile>(),
     onReach,
     ranges,
     reasserted,
@@ -155,7 +180,7 @@ export function useDiffAim({
   useEffect(() => {
     latest.current = {
       activeKey,
-      itemIds: new Map(files.map((file) => [file.path, file.id])),
+      filesByPath: new Map(files.map((file) => [file.path, file])),
       onReach,
       ranges,
       reasserted,
@@ -184,15 +209,27 @@ export function useDiffAim({
   const activeRange =
     activeKey === undefined ? undefined : ranges.get(activeKey);
 
-  const targetId = files.find((file) => file.path === activeRange?.file)?.id;
+  const targetFile = files.find((file) => file.path === activeRange?.file);
+  const targetId = targetFile?.id;
   const targetLine = activeRange?.lines[0];
   const targetEndLine = activeRange?.lines[1];
   const targetSide: SelectionSide =
     activeRange === undefined ? "additions" : sideOf(activeRange);
 
+  // Expanding the file moves every row below the gap, so an aim taken while it
+  // was partial now points above where the range sits and has to be taken again.
+  const targetPartial = targetFile?.file.isPartial;
+
   useEffect(() => {
     const self = reached.current;
-    reached.current = null;
+    const sameAim =
+      self !== null && self.key === activeKey && self.reasserted === reasserted;
+
+    // Only a change of aim retires the reader's own scroll; re-aiming the same
+    // range after an expansion must still defer to where they scrolled to.
+    if (!sameAim) {
+      reached.current = null;
+    }
 
     if (
       targetId === undefined ||
@@ -202,11 +239,7 @@ export function useDiffAim({
       return;
     }
 
-    if (
-      self !== null &&
-      self.key === activeKey &&
-      self.reasserted === reasserted
-    ) {
+    if (sameAim) {
       return;
     }
 
@@ -231,6 +264,7 @@ export function useDiffAim({
     targetEndLine,
     targetId,
     targetLine,
+    targetPartial,
     targetSide,
     viewRef,
   ]);
@@ -244,7 +278,7 @@ export function useDiffAim({
       return;
     }
 
-    const key = rangeUnderRead(viewer, reading.ranges, reading.itemIds);
+    const key = rangeUnderRead(viewer, reading.ranges, reading.filesByPath);
 
     if (key === undefined || key === reading.activeKey) {
       return;

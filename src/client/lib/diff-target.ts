@@ -34,7 +34,7 @@ function fileFor(
 
 // A patch carries only its hunks, so a line outside every one of them has no row
 // to land on: the viewer resolves it to nothing, or to a row it does not mean.
-function rendersLine(
+export function rendersLine(
   fileDiff: FileDiffMetadata,
   side: Side,
   line: number
