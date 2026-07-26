@@ -3,7 +3,7 @@ import { useAtomValue } from "jotai/react";
 import type { RefObject } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { AnchorPlacement, ProseExtent } from "../lib/reading";
+import type { AnchorPlacement, ProseExtent, ProseView } from "../lib/reading";
 import { extentToRead, nudgeIntoRead, targetUnderRead } from "../lib/reading";
 
 /** Fallback for browsers that don't fire `scrollend`, and for a nudge with nowhere to travel. */
@@ -16,6 +16,14 @@ const TARGET_ATTRIBUTE = "data-walkthrough-target";
 
 export function targetAnchorProps(key: string) {
   return { "data-walkthrough-target": key };
+}
+
+function viewOf(container: HTMLElement): ProseView {
+  return {
+    height: container.clientHeight,
+    remaining:
+      container.scrollHeight - container.clientHeight - container.scrollTop,
+  };
 }
 
 function placementsIn(container: HTMLElement): AnchorPlacement[] {
@@ -108,7 +116,7 @@ export function useActiveTarget(
 
     return container === null
       ? undefined
-      : targetUnderRead(placementsIn(container), container.clientHeight);
+      : targetUnderRead(placementsIn(container), viewOf(container));
   }, [containerRef]);
 
   const commit = useCallback((key: string) => {
@@ -146,10 +154,10 @@ export function useActiveTarget(
         return;
       }
 
-      const height = container.clientHeight;
+      const view = viewOf(container);
 
       held.current = {
-        baseline: targetUnderRead(placementsIn(container), height),
+        baseline: targetUnderRead(placementsIn(container), view),
       };
 
       const anchor = container.querySelector(
@@ -160,8 +168,8 @@ export function useActiveTarget(
         return;
       }
 
-      const extent = extentToRead(extentsAround(anchor, container), height);
-      const nudge = extent === undefined ? 0 : nudgeIntoRead(extent, height);
+      const extent = extentToRead(extentsAround(anchor, container), view);
+      const nudge = extent === undefined ? 0 : nudgeIntoRead(extent, view);
 
       if (nudge === 0) {
         return;

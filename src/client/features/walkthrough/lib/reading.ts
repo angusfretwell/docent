@@ -20,8 +20,21 @@ export interface ProseExtent {
   top: number;
 }
 
-function readLineOf(height: number): number {
-  return height * READ_LINE_FRACTION;
+export interface ProseView {
+  height: number;
+  /** Travel left below the current scroll position. */
+  remaining: number;
+}
+
+/**
+ * The read line, sliding to the foot of the viewport as the prose runs out of
+ * travel: a tour's closing anchors can never be brought up to a fixed line, so
+ * one would leave them permanently unreachable.
+ */
+function readLineOf(view: ProseView): number {
+  const line = view.height * READ_LINE_FRACTION;
+
+  return line + Math.max(0, view.height - line - view.remaining);
 }
 
 /**
@@ -36,9 +49,9 @@ function readLineOf(height: number): number {
  */
 export function targetUnderRead(
   anchors: readonly AnchorPlacement[],
-  height: number
+  view: ProseView
 ): string | undefined {
-  const readLine = readLineOf(height);
+  const readLine = readLineOf(view);
 
   let reached: AnchorPlacement | undefined;
 
@@ -62,9 +75,9 @@ export function targetUnderRead(
  */
 export function extentToRead(
   extents: readonly ProseExtent[],
-  height: number
+  view: ProseView
 ): ProseExtent | undefined {
-  const room = height - HEADROOM_PX * 2;
+  const room = view.height - HEADROOM_PX * 2;
 
   return (
     extents.findLast((extent) => extent.bottom - extent.top <= room) ??
@@ -80,10 +93,10 @@ export function extentToRead(
  * headroom. A run too tall to hold whole gives up its end rather than its start,
  * which is where reading it begins.
  */
-export function nudgeIntoRead(extent: ProseExtent, height: number): number {
+export function nudgeIntoRead(extent: ProseExtent, view: ProseView): number {
   const wanted = Math.max(
-    extent.top - readLineOf(height),
-    extent.bottom - (height - HEADROOM_PX)
+    extent.top - readLineOf(view),
+    extent.bottom - (view.height - HEADROOM_PX)
   );
 
   return Math.min(Math.max(0, wanted), extent.top - HEADROOM_PX);
