@@ -1,3 +1,6 @@
+import type { Replayer } from "rrweb";
+import { ReplayerEvents } from "rrweb";
+
 export type ResolvedScheme = "dark" | "light";
 
 /**
@@ -48,10 +51,7 @@ function forceSheetScheme(sheet: CSSStyleSheet, scheme: ResolvedScheme) {
   }
 }
 
-export function applyReplayScheme(
-  iframe: HTMLIFrameElement,
-  scheme: ResolvedScheme
-) {
+function applyReplayScheme(iframe: HTMLIFrameElement, scheme: ResolvedScheme) {
   const doc = iframe.contentDocument;
 
   if (doc === null) {
@@ -63,4 +63,38 @@ export function applyReplayScheme(
   for (const sheet of doc.styleSheets) {
     forceSheetScheme(sheet, scheme);
   }
+}
+
+/**
+ * Holds the replay at `scheme` for as long as the returned teardown goes unrun.
+ *
+ * Forcing the scheme once after constructing a `Replayer` does nothing: rrweb
+ * defers the first rebuild to a timeout, so the frame is still an empty document
+ * with no stylesheets to rewrite, and the rebuild replaces the element the
+ * `color-scheme` was set on. Every moment rrweb re-supplies the captured CSS —
+ * the rebuild, a late-loading `<link>`, a lap's worth of replayed mutations —
+ * has to force it again.
+ */
+export function holdReplayScheme(replayer: Replayer, scheme: ResolvedScheme) {
+  function reapply() {
+    applyReplayScheme(replayer.iframe, scheme);
+  }
+
+  reapply();
+
+  const events = [
+    ReplayerEvents.FullsnapshotRebuilded,
+    ReplayerEvents.LoadStylesheetEnd,
+    ReplayerEvents.Finish,
+  ];
+
+  for (const event of events) {
+    replayer.on(event, reapply);
+  }
+
+  return () => {
+    for (const event of events) {
+      replayer.off(event, reapply);
+    }
+  };
 }
