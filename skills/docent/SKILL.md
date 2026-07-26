@@ -24,7 +24,7 @@ You are the docent for the run itself, not only for the tour it produces. `/doce
 - **Announce each expensive phase as you enter it** — writing a walkthrough (§4, §5), and above all capture (§5), which launches Chrome and drives your served app.
 - **Close** with the tour's table of contents and what you left alone (§6).
 
-The code walkthrough is written by a subagent (§4), and a subagent's work does not scroll past the human — no tool calls, no half-written prose, nothing at all until it returns. Between your announcement and its receipt there is silence, so the announcement has to carry the phase on its own.
+Every piece of the work runs in a subagent (§4, §5), and a subagent's work does not scroll past the human — no tool calls, no half-written prose, nothing at all until it returns. Between your announcement and its receipt there is silence, so the announcement has to carry the phase on its own.
 
 **First run — orient before you ask.** No `.docent/` directory at the repo root means this human has never seen docent, so before anything long-running — and ahead of the preflight's one-time setup prompt (§1) where there is one — spend a short paragraph on what they are about to get: two walkthroughs of this branch — a **code** tour through the diff and a **product** tour through the running app — served as a browser tour a reviewer walks. Say that the product tour drives the app the way a user would and leaves it untouched, and that the setup you are about to ask for is recorded to `.docent/capture.md`, so it is asked once and later runs go unattended. Then ask.
 
@@ -36,16 +36,16 @@ npx -y @angusfretwell/docent@latest --version
 
 On a non-zero exit the CLI could not bootstrap. Relay the command's own stderr — it is the authority on why (`unsupported platform: …`, `download failed (NNN): …`, or Node/npx missing) — wrapped in an actionable line, e.g. `` `npx @angusfretwell/docent@latest` couldn't run — <stderr>; ensure Node ≥18 and network access, then re-run /docent ``, and **hard-stop**. Nothing runs on a failed gate. The check is stateless — it runs every invocation, because machine capability can regress (evicted cache, Node change) and a cached "passed" would skip a check that should now fail — and cheap once the binary is cached; the `-y` also warms that cache up front, where the human is watching, rather than mid-capture.
 
-The rest of this file is the default branch: "type `/docent`, get a browser tab with the tour." The tool never writes a walkthrough on its own — the human running `/docent` is what starts one. For the code walkthrough and the product walkthrough alike, you read the head Change and the newest walkthrough of that kind, ask the one question in §3, and write a fresh one wherever the answer is no. Your job is that decision, the human contact around it, and the report at the end; the reference files own the authoring:
+The rest of this file is the default branch: "type `/docent`, get a browser tab with the tour." The tool never writes a walkthrough on its own — the human running `/docent` is what starts one. For the code walkthrough and the product walkthrough alike, you read the head Change and the newest walkthrough of that kind, ask the one question in §3, and write a fresh one wherever the answer is no. Your job is that decision, the human contact around it, and the report at the end; four subagents own the work, each reading its own brief:
 
 | Walkthrough | Written by |
 | --- | --- |
-| **Code** | a subagent following [reference/code-walkthrough.md](reference/code-walkthrough.md) — §4 |
-| **Product** | you, inline: [reference/capture.md](reference/capture.md) (drive the app again, wholesale) → [reference/product-walkthrough.md](reference/product-walkthrough.md) — §5 |
+| **Code** | one subagent: [reference/code-walkthrough.md](reference/code-walkthrough.md) — §4 |
+| **Product** | three, in a line: [reference/capture-plan.md](reference/capture-plan.md) (choose the screens) → [reference/capture.md](reference/capture.md) (drive the app) → [reference/product-walkthrough.md](reference/product-walkthrough.md) (write the prose) — §4, §5 |
 
 ## 1. Preflight — make sure you can drive the app
 
-The product walkthrough drives the served app in a browser, so before any authoring, front-load the one human-in-the-loop moment — establishing that the app can be driven — to the start of the run, where the human is present, rather than stalling mid-capture. Run the preflight whenever the product walkthrough is in scope (the default); skip it only when the human scoped the run to the **code walkthrough alone** (code has no capture phase, so it needs no app).
+The product walkthrough drives the served app in a browser, so before any authoring, front-load the one human-in-the-loop moment — establishing that the app can be driven — to the start of the run, where the human is present, rather than stalling mid-capture. This is the run's **only** contact with the human: the agent that drives the app cannot ask anything, so what you settle here is everything it will ever know about serving this app. Run the preflight whenever the product walkthrough is in scope (the default); skip it only when the human scoped the run to the **code walkthrough alone** (code has no capture phase, so it needs no app).
 
 **A non-empty `.docent/capture.md` short-circuits the preflight** — the runbook is the "we know how to drive the app" signal. If it exists and is non-empty, proceed straight to §2 without re-asking. This is the cheap, common case.
 
@@ -54,6 +54,8 @@ Otherwise establish drivability now:
 1. **Source the setup** — existing codebase context (README, CONTRIBUTING, `package.json` scripts, `.env.example`, in-repo agent docs), then **ask the human** (a single, one-time prompt) for whatever is left. You need the base URL / port, the viewport default, and any login/seed steps.
 2. **Verify the app actually renders** — reach the served app and confirm **real DOM**, not a connection-refused or error page. Serving the app is the human's job: either it is already up, or the human gives you the command and you run it in their session. An agent-launched server stays up and is reused by the capture in §5.
 3. **Author `.docent/capture.md`** from what you learned — follow [reference/runbook-template.md](reference/runbook-template.md) — so this run's capture, and every later run, goes AFK.
+
+A capture that finds the runbook wrong reports it as an obstacle rather than editing it, so a port that has moved or a login that no longer works surfaces in your closing report (§6) with the human there to say what the truth is — the runbook is only ever written where somebody can be asked.
 
 **If the app cannot be reached → hard stop, early**, with an actionable message (e.g. `app not reachable at <url> — is your dev server up?`), before any expensive authoring. Nothing is written on a failed preflight.
 
@@ -128,32 +130,54 @@ Say nothing about a first run being missing or empty — a branch with no walkth
 
 **Judged per kind**: a code walkthrough written against an earlier commit is rewritten while a product walkthrough already on the head is left alone — never rewrite one because the other fell behind, never skip one that did. Writing always produces a **new** walkthrough with a fresh `wlk_` id; the earlier one stays exactly as it was. Never edit an earlier walkthrough in place to bring it up to the head.
 
-## 4. Write the code walkthrough — dispatch its author
+## 4. Dispatch the two change readers — together
 
-If there is already a code walkthrough for this head, skip this section.
+§3 named the kinds you are writing. Whichever it named, their first agents go out here, in **one message**, in parallel:
 
-Otherwise **dispatch a subagent** to write it. You do not write it yourself and you do not read the diff: the hunks are the one artifact that must stay out of your context, because everything left in this file — the decision, the announcements, the report, the browser at the end — is work you cannot do well from a context spent on someone else's diff.
+| Dispatch | Sent when | Brief |
+| --- | --- | --- |
+| **Code-walkthrough author** | there is no code walkthrough for this head | `reference/code-walkthrough.md` |
+| **Capture planner** | there is no product walkthrough for this head | `reference/capture-plan.md` |
 
-One general-purpose subagent, with a prompt carrying this and nothing else:
+They run concurrently because each needs only the change and nothing from the other — at different depths, the author the hunks and the planner the file names — and because their writes cannot collide: the Change is recorded once for one base-and-head pair however many agents ask for it, and walkthrough ids are ULIDs. Sequencing them would put the human's whole wait on one queue and buy nothing.
 
-- **Where the brief lives** — this skill's own **absolute base directory**: the directory this `SKILL.md` was loaded from, which you take from the path you loaded it by. It is not your cwd — that is the repository under review — and the skill can sit in a plugin directory, `~/.claude/skills/`, or a checkout, so anything relative resolves against the wrong place. Pass the directory, not one file path: the brief reaches the shared voice guide and its siblings through it. Then tell it to read `reference/code-walkthrough.md` under that directory and follow it. **Never paste the brief into the prompt**: inlining it means you pay for every token of it too, which is the cost this split exists to remove.
+You write no walkthrough yourself and you read no diff: the hunks are the one artifact that must stay out of your context, because everything left in this file — the decision, the announcements, the report, the browser at the end — is work you cannot do well from a context spent on someone else's diff.
+
+**Every dispatch in this run — here and in §5 — is a general-purpose subagent whose prompt carries this and nothing else:**
+
+- **Where the brief lives** — this skill's own **absolute base directory**: the directory this `SKILL.md` was loaded from, which you take from the path you loaded it by. It is not your cwd — that is the repository under review — and the skill can sit in a plugin directory, `~/.claude/skills/`, or a checkout, so anything relative resolves against the wrong place. Pass the directory, not one file path: each brief reaches the shared voice guide and its siblings through it. Then name the one file under `reference/` to read and follow. **Never paste a brief into the prompt**: inlining it means you pay for every token of it too, which is the cost this split exists to remove.
 - **Where the repository is** — its absolute root, so git and the CLI run against the branch under review.
 - **The focus**, if the human gave one (§2), passed through in the human's own words.
+- **This run's handoffs**, where §5 has them — a shot list, a walkthrough id, an intent brief. Those do travel in the prompt, because they were produced this run and written down nowhere else; a brief, which is on disk under the base directory, never does.
 
-It reads the Change via git in its own context, selects and orders high-signal diff ranges, writes a fresh `walkthroughs/code/wlk_*/` bound to the head, and returns a **receipt** — the walkthrough id, its section titles in tour order, and any obstacle it hit. Hold the receipt for §6 and do not paraphrase it on the way there.
+Two receipts come back:
 
-## 5. Write the product walkthrough
+- **The code author** reads the Change via git in its own context, selects and orders high-signal diff ranges, writes a fresh `walkthroughs/code/wlk_*/` bound to the head, and hands back the walkthrough id, its section titles in tour order, and any obstacle it hit. Hold it for §6 and do not paraphrase it on the way there.
+- **The planner** hands back a short intent brief and a shot list — states to reach, never click steps — and writes nothing at all. Both halves are passed on **verbatim** in §5: the shots to the executor, the intent brief to the author. They are short by design, and a paraphrase is how the run loses the one thing they carry. The plan lives in your context until then and nowhere else; nothing about it is written to `.docent/`.
 
-If there is no product walkthrough for this head, run the two product halves **in order** — capture first (it creates the shell), then author into it:
+## 5. Write the product walkthrough — capture, then author
 
-1. **[reference/capture.md](reference/capture.md)** — drive capture **wholesale**: walk the served app fresh and write a new product `wlk_*/` shell with its `captures[]` populated and `sections` empty. Individual earlier captures are not reused, but content-addressing dedups byte-identical screens for free — an unchanged screen hashes to the same blob, so re-capturing costs nothing on disk. Capture consumes the app the preflight (§1) already reached, and runs AFK against the `.docent/capture.md` the preflight recorded.
-2. **[reference/product-walkthrough.md](reference/product-walkthrough.md)** — the editorial half. It reads the captures-only shell just written, drops the sections (prose, `{{capture:i}}` interleave, pinned callouts), then sets the shell's title. It touches no browser.
+If there is already a product walkthrough for this head, skip this section. Capture is the run's most expensive phase, which is exactly why it is separable.
 
-The result is one fresh product walkthrough for the head. If there is already one for this head, skip both — capture is expensive and deliberately separable.
+Otherwise the shot list from §4 is driven, then narrated — two dispatches, in that order, because the executor creates the shell the author writes into.
+
+**Say it before you dispatch the executor.** This is the phase that opens Chrome and drives the app the human is serving on their own machine, so it is announced rather than slipped in: name what is about to happen and how many screens it is walking. Minutes of silence while their browser moves on its own is the one place a working run reads as a runaway one.
+
+1. **The executor** — `reference/capture.md`, plus the shot list verbatim. It walks the app to each state and registers the captures onto a new product `wlk_*/` shell whose `sections` stay empty, then hands back the shell's id, each capture's id and title, and any shot it could not reach. It consumes the app the preflight (§1) already reached and runs against the `.docent/capture.md` the preflight recorded, so there is nothing here for the human to answer.
+
+   - **The cheapest capable model.** Dispatch it on the least expensive model your harness offers that can still follow a brief and drive a CLI — the work is mechanical and its token volume is the highest in the run, so this is the one phase where the model choice pays for itself. Choose by capability and never by naming a model: names date faster than anything else in this file. Where your dispatch surface offers no model choice, let it inherit and carry on — the phase still works, it just costs more.
+   - **Exactly one executor, no fan-out.** One agent walks every shot. Browser sessions are isolated but the app's backend is not, so two executors racing one dev server capture a race rather than a product — and each would re-pay the login and seeding. It takes a browser session of its own, named for this repository, so it cannot land in the human's other browser work or in a run driving another worktree.
+   - Individual earlier captures are not reused, but content-addressing dedups byte-identical screens for free — an unchanged screen hashes to the same blob, so re-capturing costs nothing on disk.
+
+2. **The author** — `reference/product-walkthrough.md`, plus the walkthrough id from the executor's receipt and the planner's intent brief verbatim. It reads the captures, drops the sections (prose, `{{capture:i}}` interleave, pinned callouts), titles the shell through the CLI, and hands back its section titles in tour order. It touches no browser, and every write it makes goes through the `docent` CLI — so where your dispatch surface can withhold file writes, withhold them.
+
+   **It gets no diff — not from you, not from git.** The captures plus two or three sentences of intent are the whole input, and that is the design: the prose comes out product-shaped, and the material that turns an author into a reviewer never reaches it. Passing "just the stat, for context" spends the phase.
+
+The result is one fresh product walkthrough for the head.
 
 ## 6. Serve and open — put the tour on screen
 
-First **read each tour back as a table of contents** — its section titles, in tour order, so the human knows what the tour covers before they open it. A count is not a table of contents: "wrote 5 sections" tells them nothing they can act on, and it is the one thing they could have guessed. The code walkthrough's titles are on §4's receipt; the product walkthrough's you already hold, having written them yourself in §5. Then name what you left alone because it was already up to date, in the words of §3, and pass on any obstacle an author reported — something that made the tour less truthful, such as a screen that errored so its capture is of the error state. Ids stay out of it — the human reads the tour, not the file tree.
+First **read each tour back as a table of contents** — its section titles, in tour order, so the human knows what the tour covers before they open it. A count is not a table of contents: "wrote 5 sections" tells them nothing they can act on, and it is the one thing they could have guessed. Both sets of titles are on receipts — the code author's from §4, the product author's from §5 — so read them as they were written rather than summarising them. Then name what you left alone because it was already up to date, in the words of §3, and pass on every obstacle a receipt carried: something that made the tour less truthful, such as a state nothing could reach, or a screen that errored so its capture is of the error state. Ids stay out of it — the human reads the tour, not the file tree.
 
 Then ensure a docent server is running for this repo and open the browser. `docent serve` renders `.docent/` live and re-renders each write over SSE, so a freshly written tour lands on screen the moment it exists. Check first, reuse if you can:
 
@@ -180,9 +204,10 @@ Open the browser at the served `url`; the tour you just wrote is on its walkthro
 
 ## Boundaries
 
-- **You decide and dispatch; the reference files author.** The reference files own the file writes and the editorial judgment; the `docent walkthrough` / `docent capture` write path owns ids and content-addressing. Never hand-author a walkthrough file to shortcut them.
-- **Never read the diff.** `git log` and `git diff --stat` are the most you ever see of the change; the hunks belong to §4's author, in its own context. A `git diff` in this session puts the run's largest cost back in the one place the split took it out of, and an agent holding the whole diff starts grading the change instead of running the tour.
-- **A subagent reads its own brief.** You pass this skill's base directory and a repository root, never the brief's text and never the diff — and a subagent has no human, so nothing that needs asking is ever inside one. Every question for the human is settled in the preflight (§1), where the human is still there.
+- **You decide and dispatch; the subagents author.** Their briefs own the file writes and the editorial judgment; the `docent walkthrough` / `docent capture` write path owns ids and content-addressing. Never hand-author a walkthrough file to shortcut them.
+- **Never read the diff.** `git log` is the most you ever see of the change; the hunks belong to §4's code author, in its own context. A `git diff` in this session puts the run's largest cost back in the one place the split took it out of, and an agent holding the whole diff starts grading the change instead of running the tour.
+- **A subagent reads its own brief.** You pass this skill's base directory, a repository root, and this run's handoffs — never a brief's text and never the diff. A subagent has no human, so nothing that needs asking is ever inside one: every question for the human is settled in the preflight (§1), where the human is still there.
+- **The shot list is ephemeral.** It exists on the planner's receipt and in the executor's prompt, and then it is gone. Nothing writes it to `.docent/`, and a later run plans afresh.
 - **Opinions about the code are not part of a tour.** What an author noticed about the change stays with the author. Only obstacles — things that made the tour less truthful — reach the human, through your closing report (§6), and none of them reach `.docent/`.
 - **A fresh `wlk_` every time — never edit one in place.** Writing produces a new immutable walkthrough bound to the head; the earlier one stays as it was.
 - **Walkthroughs and Comments are separate flows.** This flow produces tours; the review → Comments loop is `--read` / `--write`.
@@ -193,6 +218,9 @@ Open the browser at the served `url`; the tour you just wrote is on its walkthro
 ## Stop conditions
 
 - **App not reachable at preflight (§1).** Hard stop early, before any authoring, with an actionable message. Nothing is written. Re-run once the human has the dev server up.
-- **The app drops mid-capture.** Capture hard-stops when the served app can't be reached — never a silent broken capture. Report which walkthrough could not be written and why; a code walkthrough written this run still stands.
+- **The app drops mid-capture.** The executor stops rather than emitting a broken capture, and comes back with whatever it landed. Author over those captures if there are any; otherwise report which walkthrough could not be written and why. A code walkthrough written this run still stands.
 - **The code walkthrough's author comes back with no receipt (§4).** Say the code walkthrough was not written, and what came back instead. Do not read the diff and write it yourself — carry on to §5, since the two walkthroughs do not depend on each other and a run that lands one tour beats a run that lands none.
+- **The planner comes back with no shot list (§4).** There is nothing for the executor to walk, so the product walkthrough is not written this run. Say so and carry on to §6 — planning it yourself means reading the change in this context, which costs more than the tour it would save.
+- **The executor lands no captures (§5).** Do not dispatch the author: a tour of nothing is worse than no tour. Report the shots that failed, in the executor's own words.
+- **The product author comes back with no receipt (§5).** The shell and its captures are on disk with no prose over them. Say the product tour has its screens but no narration, and that re-running `/docent` writes a fresh one — never narrate it yourself from the captures, and never append onto that shell later.
 - **`docent serve` never comes up (§6).** The serve-boot poll is bounded; on timeout, hard stop with an actionable message rather than spinning forever. The walkthroughs are already written and on disk — re-run `/docent` once the server starts, or open the tour manually.
