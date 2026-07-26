@@ -53,45 +53,46 @@ Three steps, in the order §3 takes them:
 
 1. **Source the setup** — existing codebase context (README, CONTRIBUTING, `package.json` scripts, `.env.example`, in-repo agent docs), then **ask the human** (a single, one-time prompt) for whatever is left. You need the base URL / port, the viewport default, and any login/seed steps.
 2. **Author `.docent/capture.md`** from what you learned — follow [reference/runbook-template.md](reference/runbook-template.md) — so this run's capture, and every later run, goes unattended.
-3. **Check capture can run** — the runbook gives you a base URL, there is a browser to drive, and something answers on that URL. Serving the app is the human's job: either it is already up, or the runbook's start command brings it up in their session. An agent-launched server stays up and is reused by the capture in §5.
+3. **The capture gate** — with the runbook's base URL in hand, establish that there is a browser to drive and that something answers on that URL. Serving the app is the human's job: either it is already up, or the runbook's start command brings it up in their session. An agent-launched server stays up and is reused by the capture in §5.
 
 **A non-empty `.docent/capture.md` skips steps 1 and 2** — the runbook is the "we know how to drive the app" signal, so where it exists and is non-empty, read it and skip both the ask and the write. That is the cheap, common case, and it is what makes later runs unattended.
 
 **The exception is a runbook the human tells you is wrong** — a login that stopped working, a seed step that moved, whatever a previous run's closing report carried back as an obstacle. Then take steps 1 and 2 for what they name, and only that. Obstacles are never written to `.docent/`, so a runbook a capture found wrong is corrected here or not at all.
 
-**Step 3 runs on every run that is going to capture**, not only the first: §5's executor is dispatched on the strength of it, so the runbook being already on disk excuses steps 1 and 2 but never this one.
+**The gate runs on every run that is going to capture**, not only the first: §5's executor is dispatched on the strength of it, so the runbook being already on disk excuses steps 1 and 2 but never this one.
 
-**Three checks, cheapest first, and none of them opens a browser.** Driving the app is §5's executor's job, in a session of its own; all you establish here is that there is something for it to drive:
+The base URL comes free — it is in the file steps 1–2 just read or wrote — so what is left is **two checks, cheaper one first, and neither opens a browser.** Driving the app is §5's executor's job, in a session of its own; all you establish here is that there is something for it to drive. They are named rather than numbered: §1 already counts its steps, and a second numbered list beside that one is something every later reference has to disambiguate.
 
-1. **A runbook with a base URL** — the file steps 1–2 just read or wrote. Nothing to run.
-2. **A browser to drive it with** — agent-browser manages its own Chrome, so this is about the driver's install and never about the human's browser. `doctor` reports it without launching anything; `--offline --quick` keeps it local and sub-second, and `--json` gives the one check worth reading, `chrome.installed`. Read that rather than the exit code, which is `1` for any failing check and so fires on things the tour does not need.
+- **The browser check** — agent-browser manages its own Chrome, so this is about the driver's install and never about the human's browser. `doctor` reports it without launching anything; `--offline --quick` keeps it local and sub-second, and `--json` gives the one check worth reading, `chrome.installed`. Read that rather than the exit code, which is `1` for any failing check and so fires on things the tour does not need.
 
-   ```bash
-   npx -y agent-browser@latest doctor --offline --quick --json   # → checks[] with { id, status }
-   ```
+  ```bash
+  npx -y agent-browser@latest doctor --offline --quick --json   # → checks[] with { id, status }
+  ```
 
-   A missing Chrome fails this check rather than triggering a download here: installing one is minutes of silence, and the ladder below is where the slow rungs belong.
+  A missing Chrome fails this check rather than triggering a download here: installing one is minutes of silence, and the ladder below is where the slow rungs belong.
 
-3. **Something answering on the base URL** — poll it, bounded, and be lenient: **any HTTP status counts as up**, because a 404 or a 500 still means a server answered. Only a refused connection is not-up. Plain `curl` says exactly that — without `-f` it exits 0 on any response and non-zero only when nothing accepted the connection. `--max-time` is what keeps the poll bounded rather than merely repeated: a socket that accepts and then never answers would otherwise hang the run on its first iteration.
+- **The base-URL check** — poll it, bounded, and be lenient: **any HTTP status counts as up**, because a 404 or a 500 still means a server answered. Only a refused connection is not-up. Plain `curl` says exactly that — without `-f` it exits 0 on any response and non-zero only when nothing accepted the connection. `--max-time` is what keeps the poll bounded rather than merely repeated: a socket that accepts and then never answers would otherwise hang the run on its first iteration.
 
-   ```bash
-   for _ in $(seq 30); do                                   # ~15s, for a server still booting
-     curl -sS --max-time 2 -o /dev/null "<base-url>" && break
-     sleep 0.5
-   done
-   curl -sS --max-time 2 -o /dev/null "<base-url>"          # non-zero here is refused or hung
-   ```
+  ```bash
+  for _ in $(seq 30); do                                   # ~15s while nothing accepts; ~75s if a socket hangs
+    curl -sS --max-time 2 -o /dev/null "<base-url>" && break
+    sleep 0.5
+  done
+  curl -sS --max-time 2 -o /dev/null "<base-url>"          # non-zero here is refused or hung
+  ```
+
+  A booting dev server refuses in microseconds, so the ordinary wait is the sleeps alone; the worst case is the one where every attempt accepts the connection and then hangs, and `--max-time` is what bounds it.
 
 **Whether the app renders is not settled here, and it is not yours to settle.** A client-rendered app answers with an empty shell, so proving real DOM needs the browser you deliberately do not have. §5's executor opens the base URL and reads the page back before it captures anything ([reference/capture.md](reference/capture.md), "Reach the app") — a server that answers but serves an error page is caught there, once, by the agent already holding a browser.
 
-**Where the gate does not pass, send the code author out before you work the ladder.** The three checks are bounded and quick, but the rungs below are not: starting a dev server, asking the human what changed, or downloading a Chrome each cost minutes, and the code walkthrough has no stake in any of them. Where the run is writing one, dispatch it now — §4's first row, on its own — and work the ladder while it runs. The planner still waits for the outcome, so nothing is spent on a shot list a failed gate would strand.
+**Where the gate does not pass, send the code author out before you work the ladder.** Both checks are bounded and quick, but the rungs below are not: starting a dev server, asking the human what changed, or downloading a Chrome each cost minutes, and the code walkthrough has no stake in any of them. Where the run is writing one, dispatch it now — §4's first row, on its own — and work the ladder while it runs. The planner still waits for the outcome, so nothing is spent on a shot list a failed gate would strand.
 
 Then **work up from the cheapest cause** — the ordinary one is a dev server that is simply not running, with the runbook telling the truth:
 
-- **First, start what the runbook says to start.** Where it records a **Start command**, run it in the human's session and take check 3 again. The poll is what makes this rung work: a server told to start a second ago is usually still booting, and re-checking it once, immediately, reads a refused connection as an app that is down.
+- **First, start what the runbook says to start.** Where it records a **Start command**, run it in the human's session and take the base-URL check again. The poll is what makes this rung work: a server told to start a second ago is usually still booting, and re-checking it once, immediately, reads a refused connection as an app that is down.
 - **Then ask.** Where there is no start command, or the app is still not there, ask the human what changed (step 1) — and rewrite `.docent/capture.md` (step 2) **only where what they say differs from what it records**. Then check again. The preflight is the only place a wrong runbook can be corrected: a capture reports one as an obstacle and carries on, so unless a preflight rewrites it the same obstacle rides back on every run forever.
 - **A base URL the human confirms is still right with nothing answering on it is a dev server that is down.** Say that, and leave the runbook alone — overwriting a correct file loses a working setup.
-- **A missing browser has its own rung, and the runbook is not on it.** Check 2 is about this machine, so `install` is the answer and `install` is agent-browser's documented setup step. Say you are running it — it is slow and silent — then take check 2 again, and only where that fails relay what `doctor` said and go on. Never rewrite the runbook over a browser problem.
+- **A missing browser has its own rung, and the runbook is not on it.** The browser check is about this machine, so `install` is the answer and `install` is agent-browser's documented setup step. Say you are running it — it is slow and silent — then take that check again, and only where that fails relay what `doctor` said and go on. Never rewrite the runbook over a browser problem.
 
   ```bash
   npx -y agent-browser@latest install
@@ -262,7 +263,7 @@ Open the browser at the served `url`; the tour you just wrote is on its walkthro
 - **A fresh `wlk_` every time — never edit one in place.** Writing produces a new immutable walkthrough bound to the head; the earlier one stays as it was.
 - **Walkthroughs and Comments are separate flows.** This flow produces tours; the review → Comments loop is `--read` / `--write`.
 - **Human-invoked only.** The tool never writes a walkthrough on its own — it only shows how far behind the newest one is. A walkthrough is written exactly when the human runs `/docent`.
-- **Serving the app under review is the human's workflow** — you consume it, never spawn it. Serving docent itself (§6) is different: that is docent's own process, which you may start in the background.
+- **Serving the app under review is the human's workflow** — you consume it. The one exception is the rung §1's ladder stands on: where the runbook records a **Start command** and nothing is answering, you run that command, in the human's session, and the server it brings up stays up for §5. What you never do is improvise one — a start command you inferred, a port you picked, a second server beside the one already running. Serving docent itself (§6) is different again: that is docent's own process, which you may start in the background.
 - **Commit / push are the human's workflow** — out of scope.
 
 ## Stop conditions

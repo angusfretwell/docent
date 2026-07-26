@@ -36,7 +36,7 @@ obstacles: none
 ```
 
 - **`intent`** is two or three sentences: what a person can now do that they could not before, and what the change replaced. This is the author's **only** account of the branch — it reads no diff at all, so what you leave out is gone. Facts for an author, not sentences for the tour; the prose is theirs to write.
-- **Each shot carries a title, a kind, and the state to reach.** The title is the short name the capture will carry in the Review ("Empty export dialog") — a few words, not a sentence. The kind is a **screenshot** for a state worth holding still, a **recording** for a transition that only reads in motion. `hint` is optional: a route, a control's label, a precondition — whatever the files told you that saves the executor a hunt.
+- **Each shot carries a title, a kind, and the state to reach.** The title is the short name the capture will carry in the Review ("Empty export dialog") — a few words, not a sentence. The kind is a **screenshot** for a state worth holding still, a **recording** for a transition that only reads in motion. `hint` is optional: a route, a control's label, a precondition — whatever the files told you that saves the executor a hunt. It is a lead, not an instruction; the executor holds the rendered page and drops any hint the app contradicts.
 - **As many shots as the change needs and no more.** A tour is a handful of screens; a shot that shows nothing the branch touched costs a browser round-trip and earns nothing.
 - **`obstacles`** is where something that will make the tour less truthful rides back — a screen you know is behind a feature flag, a flow you could not find an entry point for. `obstacles: none` is the ordinary answer. A criticism in an obstacle's clothes is still a criticism.
 
@@ -68,6 +68,8 @@ Order high-signal first: the shot order is the order the executor drives, and it
 A shot names **where the app should be**, not how to get there: "the export dialog open with a filename entered", never "click Export, then type into the first field, then click Save".
 
 You have not seen this app render. You read its source, which is not the same thing — a control's real label, whether it sits behind a menu, what a route redirects to when nothing is seeded — and a plan of clicks written from source is confidently wrong in exactly the places that cost the executor its attempts. The executor can see the page; leave the pathfinding with the agent that has the accessibility tree in front of it.
+
+A `hint` is not a way around this. It is discardable by design — the one lead your reading turned up, offered to save a hunt — which is why it can carry a guess a `state` never should.
 
 ## Stop conditions
 

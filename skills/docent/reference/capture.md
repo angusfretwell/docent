@@ -17,7 +17,7 @@ Before driving, load its own reference — the command shapes shown here are ill
 npx -y agent-browser@latest skills get core --full   # full command reference (matches installed version)
 ```
 
-The preflight settled that a browser exists before you were dispatched ([SKILL.md](../SKILL.md), §1's capture gate), so `install` is not yours to run. Where Chrome has gone missing anyway, that is a hard stop reported as such — not a download you start mid-capture.
+The preflight settled that a browser exists before you were dispatched ([SKILL.md](../SKILL.md), "Preflight — settle how the app is served"), so `install` is not yours to run. Where Chrome has gone missing anyway, that is a hard stop reported as such — not a download you start mid-capture.
 
 ## What you are given
 
