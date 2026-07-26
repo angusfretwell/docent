@@ -9,13 +9,15 @@ Two invariants hold for every capture:
 - **Zero changes to the app under review.** rrweb is driver-injected at capture time; the app takes no code change and no runtime dependency on docent — it only has to be served and reachable.
 - **You consume a served app; you never spawn it and never stop it.** Serving is the human's dev workflow, settled before you were dispatched.
 
-The driver is **agent-browser** — system Chrome over CDP, out-of-process (you shell out to the CLI), no bundled browser. Before driving, load its own reference — the command shapes shown here are illustrative; the loaded reference is authoritative and version-matched:
+The driver is **agent-browser** — Chrome over CDP, out-of-process, reached through `npx -y agent-browser@latest`, which self-bootstraps the same way the `docent` CLI does. Assume no global install and spell the `npx` form on every call; agent-browser manages its own Chrome under `~/.agent-browser/browsers/`, so there is no system browser to find and none of this touches the human's own Chrome.
+
+Before driving, load its own reference — the command shapes shown here are illustrative; the loaded reference is authoritative and version-matched:
 
 ```bash
-agent-browser skills get core          # authoritative command reference (matches installed version)
+npx -y agent-browser@latest skills get core --full   # full command reference (matches installed version)
 ```
 
-Bring-your-own-Chrome: agent-browser drives a findable system Chrome/Chromium — docent ships no browser. With no findable Chrome, hard-stop reporting the requirement.
+The preflight settled that a browser exists before you were dispatched ([SKILL.md](../SKILL.md), §1's capture gate), so `install` is not yours to run. Where Chrome has gone missing anyway, that is a hard stop reported as such — not a download you start mid-capture.
 
 ## What you are given
 
@@ -51,9 +53,9 @@ If the runbook contradicts the app — a port that has moved, a login that no lo
 Every `agent-browser` call carries `--session <name>`, so the run cannot land in the human's own browser work or in a session another worktree is driving. `agent-browser` derives a stable name for you — run it from the repository root, whose worktree is the scope:
 
 ```bash
-session="$(agent-browser session id --scope worktree --prefix docent)"   # → docent-<hash of this worktree>
-agent-browser --session "$session" open        # about:blank first, so the viewport applies to the first paint
-agent-browser --session "$session" set viewport <w> <h>    # e.g. 1280 800
+session="$(npx -y agent-browser@latest session id --scope worktree --prefix docent)"   # → docent-<hash of this worktree>
+npx -y agent-browser@latest --session "$session" open        # about:blank first, so the viewport applies to the first paint
+npx -y agent-browser@latest --session "$session" set viewport <w> <h>    # e.g. 1280 800
 ```
 
 Pass the flag on every call — shell state does not reliably survive between commands, so an exported `AGENT_BROWSER_SESSION` can quietly stop applying halfway through a run.
@@ -67,8 +69,8 @@ Get the app to a verified-rendered state before capturing. **Never emit a broken
 - Navigate to the runbook's base URL, then read the page back: the snapshot must show the app's own elements, not an error page.
 
   ```bash
-  agent-browser --session "$session" open "<base-url>"
-  agent-browser --session "$session" snapshot -i
+  npx -y agent-browser@latest --session "$session" open "<base-url>"
+  npx -y agent-browser@latest --session "$session" snapshot -i
   ```
 
 - **On failure** → **hard stop** and report `app not reachable at <url>`. Do not capture anything, and do not go looking for the app on another port.
@@ -80,7 +82,7 @@ Get the app to a verified-rendered state before capturing. **Never emit a broken
 ```bash
 # rrweb's exports map does not expose the UMD build, so resolve the package
 # entry and take its sibling rather than asking for the subpath directly.
-cat "$(node -e 'const path=require("node:path");process.stdout.write(path.join(path.dirname(require.resolve("rrweb")),"rrweb.umd.min.cjs"))')" | agent-browser --session "$session" eval --stdin
+cat "$(node -e 'const path=require("node:path");process.stdout.write(path.join(path.dirname(require.resolve("rrweb")),"rrweb.umd.min.cjs"))')" | npx -y agent-browser@latest --session "$session" eval --stdin
 ```
 
 This resolves rrweb from wherever node can find it; if nothing resolves, install it somewhere disposable (e.g. `npm i --prefix <scratch-dir> rrweb`) and resolve from there — never add it to the app under review.
@@ -111,7 +113,7 @@ Take the shots in the order given, one at a time, and register each (§7) before
 Each shot starts with a page load, so each shot re-injects rrweb — a load wipes the last injection, and `record()` is called on the page in front of you:
 
 ```bash
-agent-browser --session "$session" open "<base-url><route you think the state lives at>"
+npx -y agent-browser@latest --session "$session" open "<base-url><route you think the state lives at>"
 # then re-inject rrweb (§4) into the page you just loaded
 ```
 
@@ -122,16 +124,16 @@ With rrweb in place, drive the way you already work — `snapshot -i` to read th
 - **Screenshot** — once the page is in the state you want, take the snapshot pair. `record()` emits `Meta` then `FullSnapshot` synchronously and returns its own stop function, so starting and immediately stopping yields exactly the still frame:
 
   ```bash
-  agent-browser --session "$session" eval "window.__evt=[]; rrweb.record({collectFonts:true,emit:event=>window.__evt.push(event),inlineImages:true})(); JSON.stringify(window.__evt.slice(0,2))" --json
+  npx -y agent-browser@latest --session "$session" eval "window.__evt=[]; rrweb.record({collectFonts:true,emit:event=>window.__evt.push(event),inlineImages:true})(); JSON.stringify(window.__evt.slice(0,2))" --json
   ```
 
   Write those two events to a `<tmp>.rrweb.json` file. Note `dims` — the **full document** size in CSS pixels, which is what the Review sizes the still to, not the viewport:
 
   ```bash
-  agent-browser --session "$session" eval "[document.documentElement.scrollWidth,document.documentElement.scrollHeight]" --json
+  npx -y agent-browser@latest --session "$session" eval "[document.documentElement.scrollWidth,document.documentElement.scrollHeight]" --json
   ```
 
-- **Recording** — start recording before driving the flow, then pull the raw rrweb event stream: `agent-browser --session "$session" eval "JSON.stringify(window.__evt)" --json` → write the events array verbatim to a `<tmp>.rrweb.json` file. Note `durationMs` (last event ts − first).
+- **Recording** — start recording before driving the flow, then pull the raw rrweb event stream: `npx -y agent-browser@latest --session "$session" eval "JSON.stringify(window.__evt)" --json` → write the events array verbatim to a `<tmp>.rrweb.json` file. Note `durationMs` (last event ts − first).
 
 ## 7. Register the capture
 
@@ -155,7 +157,7 @@ npx -y @angusfretwell/docent@latest capture add --walkthrough wlk_… --kind rec
 Close your browser session when the last shot is registered, and leave everything else exactly as you found it:
 
 ```bash
-agent-browser --session "$session" close
+npx -y agent-browser@latest --session "$session" close
 ```
 
 The app's server is never yours to stop, however it was started.
@@ -164,7 +166,7 @@ The app's server is never yours to stop, however it was started.
 
 - **App not reachable** (§3) — hard stop with the actionable message; never a silent broken capture.
 - **The app drops mid-walk** — stop, and return the receipt with the captures you did land plus the obstacle. A half-filled shell an author can narrate beats no shell at all.
-- **No findable system Chrome** — report the bring-your-own-Chrome requirement and stop.
+- **No Chrome for agent-browser to launch** — the preflight's gate established there was one, so this is it having gone since. Report what the driver said and stop; installing one is the preflight's job, not a download you start mid-capture.
 
 ## Non-goals
 

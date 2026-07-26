@@ -62,10 +62,16 @@ Three steps, in the order the run takes them:
 **Three checks, cheapest first, and none of them opens a browser.** Driving the app is §5's executor's job, in a session of its own; all you establish here is that there is something for it to drive:
 
 1. **A runbook with a base URL** — the file steps 1–2 just read or wrote. Nothing to run.
-2. **A browser to drive it with** — `agent-browser doctor` reports the Chrome it would launch without launching one. Read its **Chrome** section: `warn` and `info` lines elsewhere in the output are routine (stale state files, unset provider keys) and are not failures.
+2. **A browser to drive it with** — agent-browser manages its own Chrome, so this is about the driver's install and never about the human's browser. `doctor` reports it without launching anything; `--offline --quick` keeps it local and sub-second, and `--json` gives the one check worth reading, `chrome.installed`. Read that rather than the exit code, which is `1` for any failing check and so fires on things the tour does not need.
 
    ```bash
-   agent-browser doctor
+   npx -y agent-browser@latest doctor --offline --quick --json   # → checks[] with { id, status }
+   ```
+
+   **A missing Chrome is a download, not a dead end** — `install` is agent-browser's documented setup step. Run it, say you are (it is slow and silent), and take the check again:
+
+   ```bash
+   npx -y agent-browser@latest install
    ```
 
 3. **Something answering on the base URL** — poll it, bounded, and be lenient: **any HTTP status counts as up**, because a 404 or a 500 still means a server answered. Only a refused connection is not-up. Plain `curl` says exactly that — without `-f` it exits 0 on any response and non-zero only when nothing accepted the connection:
@@ -85,7 +91,7 @@ Three steps, in the order the run takes them:
 - **First, start what the runbook says to start.** Where it records a **Start command**, run it in the human's session and take check 3 again. The poll is what makes this rung work: a server told to start a second ago is usually still booting, and re-checking it once, immediately, reads a refused connection as an app that is down.
 - **Then ask.** Where there is no start command, or the app is still not there, ask the human what changed (step 1) — and rewrite `.docent/capture.md` (step 2) **only where what they say differs from what it records**. Then check again. The preflight is the only place a wrong runbook can be corrected: a capture reports one as an obstacle and carries on, so unless a preflight rewrites it the same obstacle rides back on every run forever.
 - **A base URL the human confirms is still right with nothing answering on it is a dev server that is down.** Say that, and leave the runbook alone — overwriting a correct file loses a working setup.
-- **A missing browser has no ladder.** Check 2 is about this machine, not about the runbook, so there is nothing to restart and nothing to ask: relay what `agent-browser doctor` said and go on. Never rewrite the runbook over it.
+- **A missing browser has its own ladder, and the runbook is not on it.** Check 2 is about this machine: `install` it, re-check, and only where that fails relay what `doctor` said and go on. Never rewrite the runbook over a browser problem.
 
 **A gate that never passes drops the product walkthrough from this run's scope; it does not end the run.** Say so in §3's narration, then carry on to §4 and §6 — the code walkthrough has no stake in the app or the browser, and a run that lands one tour beats a run that lands none. **Hard stop only where the product walkthrough was all the run had**: the human scoped it to that alone, so there is nothing else to land. Then say which check failed — `app not reachable at <url> — is your dev server up?`, or what `doctor` reported — and write nothing.
 
@@ -152,7 +158,7 @@ The Review for the current branch holds both kinds of walkthrough under:
 | A product walkthrough left with no sections by a run that stopped short | "The product walkthrough has its screens but no narration — writing a fresh one." |
 | A code walkthrough left with no sections by a run that stopped short | "The code walkthrough was started but its sections never landed — writing a fresh one." |
 | The app is not reachable, so the product walkthrough leaves scope (§1) | "Your dev server isn't answering at `<url>`, so this run writes the code walkthrough only." |
-| No browser to drive, so the product walkthrough leaves scope (§1) | "There's no Chrome here for the product tour to drive, so this run writes the code walkthrough only." |
+| No browser and none installable, so the product walkthrough leaves scope (§1) | "I couldn't get a browser for the product tour to drive — `<what doctor said>` — so this run writes the code walkthrough only." |
 
 For the earlier-commit row, count the gap rather than making the human infer it — in **Changes**, the same unit the tour's own "N changes behind" badge counts, so the session and the screen say one number for one fact. The Changes are already on disk beside the walkthrough; count the ones recorded after its `bornChangeId`:
 
