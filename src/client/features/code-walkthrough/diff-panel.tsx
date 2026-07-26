@@ -1,6 +1,7 @@
 import { Empty } from "@client/components/empty";
 import { Pane } from "@client/components/pane";
 import { CodeViewAnnotation } from "@client/features/code-view/annotation";
+import type { CodeViewFocus } from "@client/features/code-view/focus";
 import { CodeViewHeaderMetadata } from "@client/features/code-view/header-metadata";
 import { useDiffItems } from "@client/features/code-view/hooks/use-diff-items";
 import { AnnotatedCodeView } from "@client/features/code-view/view";
@@ -10,6 +11,7 @@ import type { DiffFile } from "@client/lib/diff";
 import type { LineDecoration } from "@client/lib/diff-annotations";
 import type { DriftResult } from "@client/lib/drift";
 import { inlineCommentsAtom } from "@client/lib/preferences";
+import type { SelectionSide } from "@pierre/diffs";
 import type { CodeViewHandle } from "@pierre/diffs/react";
 import type { WalkthroughRange } from "@shared/schemas/walkthrough";
 import { useAtomValue } from "jotai/react";
@@ -55,7 +57,19 @@ export function CodeWalkthroughDiffPanel({
   const targetId = targetFile?.id;
   const targetLine = activeRange?.lines[0];
   const targetEndLine = activeRange?.lines[1];
-  const targetSide = activeRange?.side === "base" ? "deletions" : "additions";
+  const targetSide: SelectionSide =
+    activeRange?.side === "base" ? "deletions" : "additions";
+
+  const focus: CodeViewFocus | null =
+    targetId === undefined ||
+    targetLine === undefined ||
+    targetEndLine === undefined
+      ? null
+      : {
+          itemId: targetId,
+          lines: [targetLine, targetEndLine],
+          side: targetSide,
+        };
 
   useEffect(() => {
     if (
@@ -63,20 +77,8 @@ export function CodeWalkthroughDiffPanel({
       targetLine === undefined ||
       targetEndLine === undefined
     ) {
-      ref.current?.clearSelectedLines();
-
       return;
     }
-
-    ref.current?.setSelectedLines({
-      id: targetId,
-      range: {
-        end: targetEndLine,
-        endSide: targetSide,
-        side: targetSide,
-        start: targetLine,
-      },
-    });
 
     ref.current?.scrollTo({
       align: "center",
@@ -102,6 +104,7 @@ export function CodeWalkthroughDiffPanel({
         disableBackground
         enableGutterUtility={!compose.composing}
         enableLineSelection={!compose.composing}
+        focus={focus}
         items={items}
         onGutterUtilityClick={(range, context) =>
           compose.selectLines({ id: context.item.id, range })

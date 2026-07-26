@@ -13,8 +13,10 @@ import { CodeView as BaseCodeView } from "@pierre/diffs/react";
 import type { CodeViewHandle } from "@pierre/diffs/react";
 import { useAtomValue } from "jotai/react";
 import type { ReactNode, RefObject } from "react";
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 
+import type { CodeViewFocus } from "./focus";
+import { FOCUS_CSS, paintFocus } from "./focus";
 import { CodeViewHeaderPrefix } from "./header-prefix";
 
 const DIFFS_CSS = `
@@ -58,6 +60,8 @@ interface AnnotatedCodeViewProps {
   enableGutterUtility?: boolean;
   enableLineSelection?: boolean;
   disableBackground?: boolean;
+  /** Lines to hold the reader's eye, dimming everything else. */
+  focus?: CodeViewFocus | null;
   onToggleItemCollapsed?: (itemId: string) => void;
   ref: RefObject<CodeViewHandle<LineDecoration> | null>;
   renderAnnotation?: (
@@ -74,6 +78,7 @@ export function AnnotatedCodeView({
   enableLineSelection,
   enableGutterUtility,
   disableBackground,
+  focus = null,
   onToggleItemCollapsed,
   ref,
   renderAnnotation,
@@ -81,6 +86,41 @@ export function AnnotatedCodeView({
 }: AnnotatedCodeViewProps) {
   const diffLayout = useAtomValue(diffLayoutAtom);
   const wordWrap = useAtomValue(wordWrapAtom);
+
+  // Read through a ref so the callback below can stay referentially stable: a
+  // new identity re-creates the options, which re-renders every item.
+  const focusRef = useRef(focus);
+
+  const handlePostRender = useCallback<
+    NonNullable<CodeViewOptions<LineDecoration>["onPostRender"]>
+  >((node, instance, phase, context) => {
+    if (phase === "unmount" || !("getLineIndex" in instance)) {
+      return;
+    }
+
+    paintFocus(node, instance, context.item.id, focusRef.current);
+  }, []);
+
+  // Keyed by value, not identity: callers build the focus inline, so depending
+  // on the object would repaint on every render of the parent.
+  const focusKey =
+    focus === null
+      ? ""
+      : `${focus.itemId}:${focus.lines.join("-")}:${focus.side}`;
+
+  // Items already on screen don't re-render when the focus moves, so they are
+  // repainted here; ones scrolling in are covered by the post-render callback.
+  useEffect(() => {
+    focusRef.current = focus;
+
+    for (const rendered of ref.current?.getInstance()?.getRenderedItems() ??
+      []) {
+      if (rendered.type === "diff") {
+        paintFocus(rendered.element, rendered.instance, rendered.id, focus);
+      }
+    }
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusKey, ref]);
 
   const options = useMemo<CodeViewOptions<LineDecoration>>(
     () => ({
@@ -91,15 +131,17 @@ export function AnnotatedCodeView({
       enableLineSelection,
       layout: { gap: 0, paddingBottom: 0, paddingTop: 0 },
       onGutterUtilityClick,
+      onPostRender: handlePostRender,
       overflow: wordWrap ? "wrap" : "scroll",
       stickyHeaders: true,
-      unsafeCSS: DIFFS_CSS,
+      unsafeCSS: `${DIFFS_CSS}\n${FOCUS_CSS}`,
     }),
     [
       diffLayout,
       disableBackground,
       enableGutterUtility,
       enableLineSelection,
+      handlePostRender,
       onGutterUtilityClick,
       wordWrap,
     ]
