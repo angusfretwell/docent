@@ -124,7 +124,7 @@ ls .docent/reviews/<branch-slug>/changes/ | awk -v born='<bornChangeId>.json' '$
 
 Say nothing about a first run being missing or empty — a branch with no walkthrough yet is simply a clean start.
 
-**Say it before any of the work starts**, in one breath covering both kinds. It is the human's only signal that the run is under way: §4's author works out of sight and §5 can drive a browser for minutes, and neither of them says anything until it is finished.
+**Say it before any of the work starts**, in one breath covering both kinds. It is the human's only signal that the run is under way: §4's author works out of sight and says nothing until it returns, and §5 can drive a browser for minutes before there is a tour to show.
 
 **Judged per kind**: a code walkthrough written against an earlier commit is rewritten while a product walkthrough already on the head is left alone — never rewrite one because the other fell behind, never skip one that did. Writing always produces a **new** walkthrough with a fresh `wlk_` id; the earlier one stays exactly as it was. Never edit an earlier walkthrough in place to bring it up to the head.
 
