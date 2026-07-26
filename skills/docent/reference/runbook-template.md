@@ -1,18 +1,18 @@
 # The `.docent/capture.md` serving runbook
 
-The runbook is the **fallback brief** the capture flow ([capture.md](capture.md)) both reads (§1, precedence rung 2) and authors (§8, first run). It is **markdown, not a config schema** — prose setup instructions carried across capture sessions so later captures don't re-ask the human. It is **not the source of truth**: it is consulted only when the knowledge isn't discoverable from codebase context.
+The runbook is what the run's preflight leaves behind and what the capture flow ([capture.md](capture.md)) reads as its setup. It is **markdown, not a config schema** — prose setup instructions carried across runs, written once while the human is present so later runs go unattended. Its existence is also the "we know how to drive the app" signal that lets a later preflight skip its one prompt.
 
 It lives at repo root: `.docent/capture.md` (an app-level property, not per-review — one app, one serving story).
 
 ## What it carries
 
-Only what a capture needs and codebase context did not already answer:
+Only what a capture needs, and stated plainly enough that an agent with no human to ask can act on it:
 
 - **Serving** — how the app is served: the command (if agent-launched) and the base URL / port.
 - **Reaching a usable state** — login steps or test credentials, and any data seeding, needed before the flow under review is walkable.
 - **Viewport default** — the app's stable capture viewport, `[width, height]` (overridable per-capture, so this is just the default).
 
-Starting route is deliberately **absent** — it is a per-capture concern the skill resolves, never a runbook property.
+Starting route is deliberately **absent** — routes are chosen per shot from the change under review, never a runbook property.
 
 ## Template
 
@@ -34,4 +34,4 @@ Starting route is deliberately **absent** — it is a per-capture concern the sk
 - Default: 1280 x 800
 ```
 
-Keep it terse and true. If a capture discovers the runbook is wrong (a changed port, a broken login), update it in the same run.
+Keep it terse and true. A capture that finds it wrong (a changed port, a broken login) reports that and stops rather than editing it, so correcting the runbook happens where the human is — the preflight.
