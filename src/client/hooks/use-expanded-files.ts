@@ -3,7 +3,7 @@ import { expansionBlobs, withBlobContents } from "@client/lib/diff";
 import { blobQueryOptions } from "@client/queries/blob";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { useQueries } from "@tanstack/react-query";
-import { unique } from "radashi";
+import { select, unique, zip } from "radashi";
 import { useMemo } from "react";
 
 // Hoisted so `useQueries` can memoize it: an inline `combine` re-runs every render.
@@ -38,11 +38,9 @@ export function useExpandedFiles(
 
   return useMemo(() => {
     const contents = new Map(
-      shas.flatMap((sha, index) => {
-        const text = texts[index];
-
-        return text === undefined ? [] : [[sha, text] as const];
-      })
+      select(zip(shas, texts), ([sha, text]) =>
+        text === undefined ? undefined : ([sha, text] as const)
+      )
     );
 
     return files.map((file) => withBlobContents(file, contents));

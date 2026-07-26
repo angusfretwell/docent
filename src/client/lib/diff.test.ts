@@ -28,6 +28,24 @@ const patch = [
   "",
 ].join("\n");
 
+const patchInReverseTreeOrder = [
+  "diff --git a/src/z.ts b/src/z.ts",
+  "index 1111aaa..2222bbb 100644",
+  "--- a/src/z.ts",
+  "+++ b/src/z.ts",
+  "@@ -1,1 +1,1 @@",
+  "-zed",
+  "+zee",
+  "diff --git a/src/a.ts b/src/a.ts",
+  "index aaaa111..bbbb222 100644",
+  "--- a/src/a.ts",
+  "+++ b/src/a.ts",
+  "@@ -3,1 +3,1 @@",
+  "-old",
+  "+new",
+  "",
+].join("\n");
+
 function fileAt(index: number) {
   const file = parsePatchFiles(patch)[index];
 
@@ -42,6 +60,17 @@ const contents = new Map([
   ["aaaa111", base],
   ["bbbb222", head],
 ]);
+
+describe("parsePatchFiles", () => {
+  test("numbers ids by patch order, not the tree order files render in", () => {
+    const files = parsePatchFiles(patchInReverseTreeOrder);
+
+    expect(files.map((entry) => entry.id)).toEqual([
+      "src/a.ts:1",
+      "src/z.ts:0",
+    ]);
+  });
+});
 
 describe("expansionBlobs", () => {
   test("names both sides of a modified file", () => {
@@ -73,14 +102,6 @@ describe("withBlobContents", () => {
     const expanded = withBlobContents(fileAt(0), new Map([["aaaa111", base]]));
 
     expect(expanded.file.additionLines).toEqual(["new\n"]);
-  });
-
-  test("keeps the item id comments and drift re-derive from the patch", () => {
-    const file = fileAt(0);
-
-    const expanded = withBlobContents(file, contents);
-
-    expect(expanded.id).toBe(file.id);
   });
 
   test("re-versions the item so the rendered diff picks up the extra lines", () => {

@@ -65,7 +65,6 @@ export function diffItemVersion(
   );
 }
 
-/** Each file's own slice of the patch, alongside what that slice parses to. */
 function splitPatch(
   patch: string
 ): { file: FileDiffMetadata; slice: string }[] {
@@ -118,18 +117,19 @@ export function parsePatchFiles(patch: string): DiffFile[] {
   return sortInTreeOrder(files);
 }
 
-/**
- * Blobs needed to render this file whole, or nothing when there is no unchanged
- * context to reach for: births, deaths, pure renames and binaries.
- */
+/** Blobs needed to render this file whole, in base-then-head order so callers can destructure the pair. */
 export function expansionBlobs({ file }: DiffFile): string[] {
   const { newObjectId, prevObjectId } = file;
 
-  return file.hunks.length === 0 ||
-    !isRealObjectId(prevObjectId) ||
-    !isRealObjectId(newObjectId)
-    ? []
-    : [prevObjectId, newObjectId];
+  const hasUnchangedContext = file.hunks.length > 0;
+  const hasBothBlobs =
+    isRealObjectId(prevObjectId) && isRealObjectId(newObjectId);
+
+  if (!hasUnchangedContext || !hasBothBlobs) {
+    return [];
+  }
+
+  return [prevObjectId, newObjectId];
 }
 
 /** Re-parses the file against both blobs, which is what lets its hunks expand. */

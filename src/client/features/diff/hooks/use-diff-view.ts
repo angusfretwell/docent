@@ -29,6 +29,7 @@ export function useDiffView() {
   const showPending = view === "pending" && pending.dirty;
 
   const patch = showPending ? pending.patch : change.patch;
+  const blobsAvailable = !showPending;
 
   // Drift is defined against the current Change (data-model.md §6), so it reads
   // off the branch patch even in the Pending preview.
@@ -39,7 +40,7 @@ export function useDiffView() {
   });
 
   const parsed = useMemo(() => parsePatchFiles(patch), [patch]);
-  const files = useExpandedFiles(parsed, !showPending);
+  const files = useExpandedFiles(parsed, blobsAvailable);
   const fileById = useMemo(
     () => new Map(files.map((file) => [file.id, file])),
     [files]
