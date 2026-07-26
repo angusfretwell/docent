@@ -1,6 +1,6 @@
 # Authoring the product walkthrough
 
-The **editorial half** of the product walkthrough. Reads the Change and the **already-produced captures**, and drops the product walkthrough's sections — prose with `{{capture:i}}` interleave and pinned `callouts[]`. It **touches no browser**: capture is expensive and separable, so this half re-runs cheaply against the same captures — structure and narration iterate without re-driving anything. Driving the browser is [capture.md](capture.md); Comments belong to the review loop ([comments.md](comments.md)).
+The **editorial half** of the product walkthrough. Reads the **already-produced captures** and the branch's intent, and drops the product walkthrough's sections — prose with `{{capture:i}}` interleave and pinned `callouts[]`. It **touches no browser**: capture is expensive and separable, so this half re-runs cheaply against the same captures — structure and narration iterate without re-driving anything. Driving the browser is [capture.md](capture.md); Comments belong to the review loop ([comments.md](comments.md)).
 
 The output is plain files a running `docent serve` re-renders live. The CLI is non-gating (hand-authoring identical files works too) but validates against the schemas the server renders; your work is the editorial judgment.
 
@@ -16,15 +16,17 @@ cat .docent/reviews/<branch-slug>/walkthroughs/product/wlk_*/manifest.json
 
 Take the latest product `wlk_` that has `captures[]` and empty `sections` (or the `--walkthrough` id the run handed you). Each registry entry is `{ id: cap_…, kind, media, route, viewport, … }`; the `media` sha addresses the blob at `captures/<sha>.rrweb.json` — a screenshot holds the `[Meta, FullSnapshot]` pair, a recording the whole stream. Replay a screenshot blob, or read its serialized DOM, if you need to see what it shows before narrating it. If no such shell exists, capture has not run — see Stop conditions.
 
-## 2. Read the Change and intent
+## 2. Read the intent — the branch, not its hunks
 
-Read the Change with plain `git`, and intent from the **branch name**, the base..head **commit messages**, and your **session context**:
+The captures are your subject; the branch tells you what the person in them was trying to do. Read intent from the **branch name**, the base..head **commit messages**, and your **session context**:
 
 ```bash
 git fetch
 git log --oneline origin/HEAD..HEAD    # fall back to origin/<default-branch> if origin/HEAD is unset
-git diff origin/HEAD...HEAD
+git diff --stat origin/HEAD...HEAD     # which files moved — names only
 ```
+
+**Never read the hunks here** ([ADR 0004](../../../docs/adr/0004-docent-skill-runs-as-an-orchestrator-with-phase-subagents.md)). A product tour written with the diff open comes out a code tour with pictures: it narrates what the change did to the source rather than what a person can now do with the app, and the code is the thing this reader can already see elsewhere. The captures carry the product; the file names are as much of the source as you need to know which one you are looking at.
 
 - **Optional focus.** A human-scoped concern steers which captures to foreground and how to order them. Default is a general reviewer's tour.
 

@@ -20,8 +20,11 @@ Dispatch on the invocation:
 You are the docent for the run itself, not only for the tour it produces. `/docent` is often a human's first contact with docent, and the run is long and largely autonomous — narrate it so a working agent reads as a working one.
 
 - **Open**, before the capability gate below, with one line naming what this invocation does and what lands at the end — e.g. "Writing the code and product walkthroughs for your head commit, then opening the tour in a browser."
+- **Say the decision the moment you have it** (§3) — which walkthroughs you are writing, which you are leaving alone — before any of the work starts, never held back for the close.
 - **Announce each expensive phase as you enter it** — writing a walkthrough (§4, §5), and above all capture (§5), which launches Chrome and drives your served app.
-- **Close** with what you wrote and what you left alone (§6).
+- **Close** with the tour's table of contents and what you left alone (§6).
+
+The code walkthrough is written by a subagent (§4), and a subagent's work does not scroll past the human — no tool calls, no half-written prose, nothing at all until it returns. Between your announcement and its receipt there is silence, so the announcement has to carry the phase on its own.
 
 **First run — orient before you ask.** No `.docent/` directory at the repo root means this human has never seen docent, so before anything long-running — and ahead of the preflight's one-time setup prompt (§1) where there is one — spend a short paragraph on what they are about to get: two walkthroughs of this branch — a **code** tour through the diff and a **product** tour through the running app — served as a browser tour a reviewer walks. Say that the product tour drives the app the way a user would and leaves it untouched, and that the setup you are about to ask for is recorded to `.docent/capture.md`, so it is asked once and later runs go unattended. Then ask.
 
@@ -33,12 +36,12 @@ npx -y @angusfretwell/docent@latest --version
 
 On a non-zero exit the CLI could not bootstrap. Relay the command's own stderr — it is the authority on why (`unsupported platform: …`, `download failed (NNN): …`, or Node/npx missing) — wrapped in an actionable line, e.g. `` `npx @angusfretwell/docent@latest` couldn't run — <stderr>; ensure Node ≥18 and network access, then re-run /docent ``, and **hard-stop**. Nothing runs on a failed gate. The check is stateless — it runs every invocation, because machine capability can regress (evicted cache, Node change) and a cached "passed" would skip a check that should now fail — and cheap once the binary is cached; the `-y` also warms that cache up front, where the human is watching, rather than mid-capture.
 
-The rest of this file is the default branch: "type `/docent`, get a browser tab with the tour." The tool never writes a walkthrough on its own — the human running `/docent` is what starts one. For the code walkthrough and the product walkthrough alike, you read the head Change and the newest walkthrough of that kind, ask the one question in §3, and write a fresh one wherever the answer is no. Your job is that decision; the reference files own the authoring:
+The rest of this file is the default branch: "type `/docent`, get a browser tab with the tour." The tool never writes a walkthrough on its own — the human running `/docent` is what starts one. For the code walkthrough and the product walkthrough alike, you read the head Change and the newest walkthrough of that kind, ask the one question in §3, and write a fresh one wherever the answer is no. Your job is that decision, the human contact around it, and the report at the end; the reference files own the authoring:
 
-| Walkthrough | Written by following |
+| Walkthrough | Written by |
 | --- | --- |
-| **Code** | [reference/code-walkthrough.md](reference/code-walkthrough.md) |
-| **Product** | [reference/capture.md](reference/capture.md) (drive the app again, wholesale) → [reference/product-walkthrough.md](reference/product-walkthrough.md) |
+| **Code** | a subagent following [reference/code-walkthrough.md](reference/code-walkthrough.md) — §4 |
+| **Product** | you, inline: [reference/capture.md](reference/capture.md) (drive the app again, wholesale) → [reference/product-walkthrough.md](reference/product-walkthrough.md) — §5 |
 
 ## 1. Preflight — make sure you can drive the app
 
@@ -121,13 +124,23 @@ ls .docent/reviews/<branch-slug>/changes/ | awk -v born='<bornChangeId>.json' '$
 
 Say nothing about a first run being missing or empty — a branch with no walkthrough yet is simply a clean start.
 
+**Say it before any of the work starts**, in one breath covering both kinds. It is the human's only signal that the run is under way: §4's author works out of sight and says nothing until it returns, and §5 can drive a browser for minutes before there is a tour to show.
+
 **Judged per kind**: a code walkthrough written against an earlier commit is rewritten while a product walkthrough already on the head is left alone — never rewrite one because the other fell behind, never skip one that did. Writing always produces a **new** walkthrough with a fresh `wlk_` id; the earlier one stays exactly as it was. Never edit an earlier walkthrough in place to bring it up to the head.
 
-## 4. Write the code walkthrough
+## 4. Write the code walkthrough — dispatch its author
 
-If there is no code walkthrough for this head, follow [reference/code-walkthrough.md](reference/code-walkthrough.md) with any focus the human gave. It reads the Change via git, selects and orders high-signal diff ranges, and writes a fresh `walkthroughs/code/wlk_*/` bound to the head. Code has no capture phase, so this single reference is the whole code walkthrough.
+If there is already a code walkthrough for this head, skip this section.
 
-If there is already one for this head, skip it.
+Otherwise **dispatch a subagent** to write it. You do not write it yourself and you do not read the diff: the hunks are the one artifact that must stay out of your context, because everything left in this file — the decision, the announcements, the report, the browser at the end — is work you cannot do well from a context spent on someone else's diff.
+
+One general-purpose subagent, with a prompt carrying this and nothing else:
+
+- **Where the brief lives** — this skill's own **absolute base directory**: the directory this `SKILL.md` was loaded from, which you take from the path you loaded it by. It is not your cwd — that is the repository under review — and the skill can sit in a plugin directory, `~/.claude/skills/`, or a checkout, so anything relative resolves against the wrong place. Pass the directory, not one file path: the brief reaches the shared voice guide and its siblings through it. Then tell it to read `reference/code-walkthrough.md` under that directory and follow it. **Never paste the brief into the prompt**: inlining it means you pay for every token of it too, which is the cost this split exists to remove.
+- **Where the repository is** — its absolute root, so git and the CLI run against the branch under review.
+- **The focus**, if the human gave one (§2), passed through in the human's own words.
+
+It reads the Change via git in its own context, selects and orders high-signal diff ranges, writes a fresh `walkthroughs/code/wlk_*/` bound to the head, and returns a **receipt** — the walkthrough id, its section titles in tour order, and any obstacle it hit. Hold the receipt for §6 and do not paraphrase it on the way there.
 
 ## 5. Write the product walkthrough
 
@@ -140,7 +153,7 @@ The result is one fresh product walkthrough for the head. If there is already on
 
 ## 6. Serve and open — put the tour on screen
 
-First **report where things stand**, in the words of §3: which walkthroughs you wrote and why, and which you left alone because they were already up to date. Ids stay out of it — the human reads the tour, not the file tree.
+First **read each tour back as a table of contents** — its section titles, in tour order, so the human knows what the tour covers before they open it. A count is not a table of contents: "wrote 5 sections" tells them nothing they can act on, and it is the one thing they could have guessed. The code walkthrough's titles are on §4's receipt; the product walkthrough's you already hold, having written them yourself in §5. Then name what you left alone because it was already up to date, in the words of §3, and pass on any obstacle an author reported — something that made the tour less truthful, such as a screen that errored so its capture is of the error state. Ids stay out of it — the human reads the tour, not the file tree.
 
 Then ensure a docent server is running for this repo and open the browser. `docent serve` renders `.docent/` live and re-renders each write over SSE, so a freshly written tour lands on screen the moment it exists. Check first, reuse if you can:
 
@@ -168,6 +181,9 @@ Open the browser at the served `url`; the tour you just wrote is on its walkthro
 ## Boundaries
 
 - **You decide and dispatch; the reference files author.** The reference files own the file writes and the editorial judgment; the `docent walkthrough` / `docent capture` write path owns ids and content-addressing. Never hand-author a walkthrough file to shortcut them.
+- **Never read the diff.** `git log` and `git diff --stat` are the most you ever see of the change; the hunks belong to §4's author, in its own context. A `git diff` in this session puts the run's largest cost back in the one place the split took it out of, and an agent holding the whole diff starts grading the change instead of running the tour.
+- **A subagent reads its own brief.** You pass this skill's base directory and a repository root, never the brief's text and never the diff — and a subagent has no human, so nothing that needs asking is ever inside one. Every question for the human is settled in the preflight (§1), where the human is still there.
+- **Opinions about the code are not part of a tour.** What an author noticed about the change stays with the author. Only obstacles — things that made the tour less truthful — reach the human, through your closing report (§6), and none of them reach `.docent/`.
 - **A fresh `wlk_` every time — never edit one in place.** Writing produces a new immutable walkthrough bound to the head; the earlier one stays as it was.
 - **Walkthroughs and Comments are separate flows.** This flow produces tours; the review → Comments loop is `--read` / `--write`.
 - **Human-invoked only.** The tool never writes a walkthrough on its own — it only shows how far behind the newest one is. A walkthrough is written exactly when the human runs `/docent`.
@@ -178,4 +194,5 @@ Open the browser at the served `url`; the tour you just wrote is on its walkthro
 
 - **App not reachable at preflight (§1).** Hard stop early, before any authoring, with an actionable message. Nothing is written. Re-run once the human has the dev server up.
 - **The app drops mid-capture.** Capture hard-stops when the served app can't be reached — never a silent broken capture. Report which walkthrough could not be written and why; a code walkthrough written this run still stands.
+- **The code walkthrough's author comes back with no receipt (§4).** Say the code walkthrough was not written, and what came back instead. Do not read the diff and write it yourself — carry on to §5, since the two walkthroughs do not depend on each other and a run that lands one tour beats a run that lands none.
 - **`docent serve` never comes up (§6).** The serve-boot poll is bounded; on timeout, hard stop with an actionable message rather than spinning forever. The walkthroughs are already written and on disk — re-run `/docent` once the server starts, or open the tour manually.
