@@ -107,6 +107,7 @@ export function ProductWalkthroughCapturePanel({
             callouts={calloutsFor(placed.section, placed.capture.id)}
             capture={placed.capture}
             comments={comments}
+            ordinal={placed.ordinal}
             // A fading capture is nobody's answer, so a refit belongs to the
             // one arriving.
             refitted={fading ? 0 : refitted}

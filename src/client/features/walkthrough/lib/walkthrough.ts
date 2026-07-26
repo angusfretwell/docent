@@ -81,35 +81,38 @@ export function rangesByKey(
 
 export interface PlacedCapture {
   capture: Capture;
+  kindOrdinal: number;
   ordinal: number;
   section: WalkthroughSection;
 }
 
 /**
  * A section referencing a capture id the registry doesn't hold contributes
- * nothing. Ordinals number each capture within its own kind, in first-reach
- * order; the same id keeps its number across placements.
+ * nothing. `ordinal` numbers the captures across the whole tour and
+ * `kindOrdinal` within its own kind, both in first-reach order; the same id
+ * keeps its numbers across placements.
  */
 export function capturesByKey(
   sections: readonly WalkthroughSection[],
   registry: readonly Capture[]
 ): Map<string, PlacedCapture> {
   const byId = new Map(registry.map((capture) => [capture.id, capture]));
-  const assigned = new Map<string, number>();
-  const counts = new Map<Capture["kind"], number>();
+  const assigned = new Map<string, { kindOrdinal: number; ordinal: number }>();
+  const kindCounts = new Map<Capture["kind"], number>();
 
-  function ordinalFor(capture: Capture): number {
+  function ordinalsFor(capture: Capture) {
     const seen = assigned.get(capture.id);
 
     if (seen !== undefined) {
       return seen;
     }
 
-    const next = (counts.get(capture.kind) ?? 0) + 1;
-    counts.set(capture.kind, next);
-    assigned.set(capture.id, next);
+    const kindOrdinal = (kindCounts.get(capture.kind) ?? 0) + 1;
+    const numbered = { kindOrdinal, ordinal: assigned.size + 1 };
+    kindCounts.set(capture.kind, kindOrdinal);
+    assigned.set(capture.id, numbered);
 
-    return next;
+    return numbered;
   }
 
   return new Map(
@@ -122,7 +125,7 @@ export function capturesByKey(
           : [
               [
                 targetKey(section.id, index),
-                { capture, ordinal: ordinalFor(capture), section },
+                { capture, ...ordinalsFor(capture), section },
               ] as const,
             ];
       })
@@ -130,8 +133,8 @@ export function capturesByKey(
   );
 }
 
-export function captureLabel({ capture, ordinal }: PlacedCapture): string {
-  return capture.title ?? `${capitalize(capture.kind)} ${ordinal}`;
+export function captureLabel({ capture, kindOrdinal }: PlacedCapture): string {
+  return capture.title ?? `${capitalize(capture.kind)} ${kindOrdinal}`;
 }
 
 /** The distinct files a code walkthrough's ranges touch, in first-reference order — the diff panel's filter and order. */

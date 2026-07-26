@@ -62,12 +62,13 @@ export function captureCommentDrift(
   return id === undefined ? undefined : identityDrift(placedCaptureIds.has(id));
 }
 
-/** Callouts targeting the capture (numbered `A1…`) then its Comments (`F1…`). */
+/** Callouts targeting the capture (numbered `<capture ordinal>.1…`) then its Comments (`C1…`). */
 function rawPins(
   callouts: readonly Callout[],
   comments: readonly FoldedComment[],
   captureId: string,
-  kind: "screenshot-region" | "recording-timestamp"
+  kind: "screenshot-region" | "recording-timestamp",
+  ordinal: number
 ): RawPin[] {
   const pins: RawPin[] = [];
   let calloutCount = 0;
@@ -77,7 +78,7 @@ function rawPins(
       pins.push({
         anchor: callout.anchor,
         body: callout.body,
-        label: `A${calloutCount}`,
+        label: `${ordinal}.${calloutCount}`,
       });
     }
   }
@@ -105,7 +106,8 @@ function captureArm(capture: Capture) {
 export function screenshotPins(
   callouts: readonly Callout[],
   comments: readonly FoldedComment[],
-  capture: Capture
+  capture: Capture,
+  ordinal: number
 ): RegionPin[] {
   const regions: RegionPin[] = [];
 
@@ -113,7 +115,8 @@ export function screenshotPins(
     callouts,
     comments,
     capture.id,
-    ANCHOR_KIND.screenshotRegion
+    ANCHOR_KIND.screenshotRegion,
+    ordinal
   )) {
     const rect =
       pin.anchor.kind === ANCHOR_KIND.screenshotRegion
@@ -131,7 +134,8 @@ export function screenshotPins(
 export function recordingPins(
   callouts: readonly Callout[],
   comments: readonly FoldedComment[],
-  capture: Capture
+  capture: Capture,
+  ordinal: number
 ): TimePin[] {
   const times: TimePin[] = [];
 
@@ -139,7 +143,8 @@ export function recordingPins(
     callouts,
     comments,
     capture.id,
-    ANCHOR_KIND.recordingTimestamp
+    ANCHOR_KIND.recordingTimestamp,
+    ordinal
   )) {
     if (pin.anchor.kind !== ANCHOR_KIND.recordingTimestamp) {
       continue;
@@ -162,11 +167,16 @@ export function recordingPins(
 export function captureCallouts(
   callouts: readonly Callout[],
   comments: readonly FoldedComment[],
-  capture: Capture
+  capture: Capture,
+  ordinal: number
 ): LabeledCallout[] {
-  return rawPins(callouts, comments, capture.id, captureArm(capture)).map(
-    ({ body, label }) => ({ body, label })
-  );
+  return rawPins(
+    callouts,
+    comments,
+    capture.id,
+    captureArm(capture),
+    ordinal
+  ).map(({ body, label }) => ({ body, label }));
 }
 
 /**

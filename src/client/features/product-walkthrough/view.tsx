@@ -76,7 +76,8 @@ export function ProductWalkthroughView() {
       : captureCallouts(
           calloutsFor(placed.section, placed.capture.id),
           comments,
-          placed.capture
+          placed.capture,
+          placed.ordinal
         );
   }
 

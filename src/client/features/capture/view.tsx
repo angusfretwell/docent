@@ -9,6 +9,8 @@ export interface CaptureProps {
   callouts: readonly Callout[];
   capture: Capture;
   comments: readonly FoldedComment[];
+  /** The capture's number across the tour — the first half of every pin label it carries. */
+  ordinal: number;
   /**
    * A counter, not a flag: asking twice must read as two requests — a reader who
    * refit, zoomed in, then asked again means it both times.

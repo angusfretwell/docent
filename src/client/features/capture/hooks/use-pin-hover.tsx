@@ -3,8 +3,8 @@ import { createContext, use, useMemo, useState } from "react";
 
 /**
  * A label is only unique within its capture, so the target key it was placed
- * under is part of the identity — otherwise `A1` in one capture's callouts would
- * light up `A1` on whatever capture the panel currently holds.
+ * under is part of the identity — otherwise `1.1` in one capture's callouts
+ * would light up `1.1` on whatever capture the panel currently holds.
  */
 export interface PinKey {
   label: string;

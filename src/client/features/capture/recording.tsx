@@ -16,13 +16,14 @@ export function RecordingCapture({
   callouts,
   capture,
   comments,
+  ordinal,
   refitted,
   target,
   walkthroughId,
 }: CaptureProps) {
   const replay = useRrwebReplayer(walkthroughId, capture.media);
   const { rootRef } = replay;
-  const pins = recordingPins(callouts, comments, capture);
+  const pins = recordingPins(callouts, comments, capture, ordinal);
 
   useRecordingPeek(replay, pins, target);
 

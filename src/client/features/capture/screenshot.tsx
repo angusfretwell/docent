@@ -62,11 +62,12 @@ export function ScreenshotCapture({
   callouts,
   capture,
   comments,
+  ordinal,
   refitted,
   target,
   walkthroughId,
 }: CaptureProps) {
-  const regions = screenshotPins(callouts, comments, capture);
+  const regions = screenshotPins(callouts, comments, capture, ordinal);
   const natural = capture.dims ?? capture.viewport;
   const zoom = useZoom(natural);
   const { frameRect, frameStyle, measured, scale } = zoom;

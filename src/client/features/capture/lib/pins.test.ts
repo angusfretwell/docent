@@ -112,7 +112,7 @@ describe("captureCommentDrift", () => {
 });
 
 describe("screenshotPins", () => {
-  test("keeps only pins that carry a rect, numbering callouts and comments separately", () => {
+  test("keeps only pins that carry a rect, numbering callouts under the capture and comments separately", () => {
     const callouts = [
       callout(
         regionAnchor("cap_1", [0.1, 0.1, 0.2, 0.2]),
@@ -127,12 +127,12 @@ describe("screenshotPins", () => {
       ),
     ];
 
-    const regions = screenshotPins(callouts, comments, capture("cap_1"));
+    const regions = screenshotPins(callouts, comments, capture("cap_1"), 1);
 
     expect(regions).toEqual([
       {
         body: "callout with a rect",
-        label: "A1",
+        label: "1.1",
         rect: [0.1, 0.1, 0.2, 0.2],
       },
       {
@@ -151,7 +151,7 @@ describe("screenshotPins", () => {
       ),
     ];
 
-    const regions = screenshotPins([], comments, capture("cap_1"));
+    const regions = screenshotPins([], comments, capture("cap_1"), 1);
 
     expect(regions).toEqual([]);
   });
@@ -164,13 +164,13 @@ describe("recordingPins", () => {
     ];
     const comments = [comment(timestampAnchor("cap_1"), "whole comment")];
 
-    const times = recordingPins(callouts, comments, capture("cap_1"));
+    const times = recordingPins(callouts, comments, capture("cap_1"), 2);
 
     expect(times).toEqual([
       {
         atMs: 1000,
         body: "seek callout",
-        label: "A1",
+        label: "2.1",
         toMs: 2000,
       },
     ]);
@@ -185,11 +185,11 @@ describe("captureCallouts", () => {
     ];
     const comments = [comment(regionAnchor("cap_1"), "a reviewer's note")];
 
-    const labeled = captureCallouts(callouts, comments, capture("cap_1"));
+    const labeled = captureCallouts(callouts, comments, capture("cap_1"), 3);
 
     expect(labeled).toEqual([
-      { body: "placed", label: "A1" },
-      { body: "unplaced", label: "A2" },
+      { body: "placed", label: "3.1" },
+      { body: "unplaced", label: "3.2" },
       { body: "a reviewer's note", label: "C1" },
     ]);
   });
@@ -200,10 +200,11 @@ describe("captureCallouts", () => {
     const labeled = captureCallouts(
       callouts,
       [],
-      capture("cap_1", "recording")
+      capture("cap_1", "recording"),
+      2
     );
 
-    expect(labeled).toEqual([{ body: "at one second", label: "A1" }]);
+    expect(labeled).toEqual([{ body: "at one second", label: "2.1" }]);
   });
 });
 

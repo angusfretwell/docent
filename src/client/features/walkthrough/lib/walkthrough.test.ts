@@ -135,6 +135,24 @@ describe("capturesByKey", () => {
     ]);
   });
 
+  test("numbers captures across the whole tour regardless of kind", () => {
+    const registry = [
+      capture("cap_shot", "screenshot"),
+      capture("cap_clip", "recording"),
+      capture("cap_shot2", "screenshot"),
+    ];
+    const sections = [
+      section({ captures: ["cap_shot", "cap_clip"], id: "sec_1" }),
+      section({ captures: ["cap_shot2", "cap_clip"], id: "sec_2" }),
+    ];
+
+    const placed = capturesByKey(sections, registry);
+
+    expect([...placed.values()].map((entry) => entry.ordinal)).toEqual([
+      1, 2, 3, 2,
+    ]);
+  });
+
   test("keeps one number for a capture the prose returns to", () => {
     const registry = [capture("cap_shot", "screenshot")];
     const sections = [
