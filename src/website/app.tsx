@@ -88,7 +88,6 @@ export function App() {
             >
               Angus Fretwell
             </a>
-            .
           </p>
         </footer>
       </div>
