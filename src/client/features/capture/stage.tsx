@@ -35,9 +35,12 @@ export function CaptureStage({
       <div
         aria-label={`${zoomed ? "Fit" : "Zoom"} ${kind}`}
         aria-pressed={zoomed}
+        // `touch-none` hands every finger to the gesture handlers rather than to
+        // the browser's own panning, and the callout is what a long press would
+        // otherwise raise over the reconstructed page.
         className={cn(
-          "absolute inset-0 touch-none overflow-hidden select-none",
-          dragging && "cursor-move"
+          "absolute inset-0 touch-none overflow-hidden overscroll-none select-none [-webkit-touch-callout:none]",
+          dragging && "cursor-grabbing"
         )}
         onKeyDown={handleKeyDown}
         role="button"
