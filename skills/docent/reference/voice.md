@@ -1,6 +1,6 @@
 # The walkthrough voice
 
-Shared by both authoring flows — [code-walkthrough.md](code-walkthrough.md) and [product-walkthrough.md](product-walkthrough.md) — so the two tours read as one tour ([ADR 0004](../../../docs/adr/0004-docent-skill-runs-as-an-orchestrator-with-phase-subagents.md)). It owns prose only: what to select and how to mint stays with each authoring file.
+Shared by both authoring flows — [code-walkthrough.md](code-walkthrough.md) and [product-walkthrough.md](product-walkthrough.md) — so the two tours read as one tour ([ADR 0004](../../../docs/adr/0004-docent-skill-runs-as-an-orchestrator-with-phase-subagents.md)). It owns prose only: what to select and how to drop it stays with each authoring file.
 
 The reader already has the diff — or the capture — open in the panel beside your sentence. **The deletion test:** imagine the prose gone and only that panel left. If the reader loses nothing, do not write it. It is [comment-standards.md](../../../docs/comment-standards.md)'s test one level up: a comment narrates a line, a walkthrough narrates a change.
 
@@ -27,7 +27,7 @@ Each of these is prose the diff or the screenshot already carries. Write the sen
 ## Shape
 
 - **A section is connected prose** — a short paragraph, two at most. No bullets, no headings inside a section.
-- **A callout is a phrase or one sentence.** It renders as one small labeled line under the paragraph that placed it, paired with a marked region on the capture — a label for that region, not a paragraph; anything longer is a section that landed in the wrong place.
+- **A callout is a phrase or one sentence.** It renders as one small labeled line under the paragraph that placed it, paired with a marked region or moment on the capture — a label for that mark, not a paragraph; anything longer is a section that landed in the wrong place.
 - **Interleave markers sit inside sentences.** `{{range:i}}` and `{{capture:i}}` are grammar, not appendices — a body that ends with a run of markers has made the prose a preamble and the targets a dump.
 
 ## Worked pairs
@@ -85,7 +85,7 @@ somewhere to attach.
 BAD
 This is the new drift badge, rendered by `CommentsItem`, which appears once
 an anchor stops resolving against the current blob — an elegant way to
-surface staleness at a glance.
+surface an out-of-date anchor at a glance.
 ```
 
 Names a component the reader cannot see, spends its one line on the mechanism the section already carries, and sells.
