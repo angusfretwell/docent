@@ -52,7 +52,7 @@ export function ChangeRangePicker() {
       >
         <GalleryHorizontalEnd />
         <span className="@max-xs:sr-only">
-          {activeView === "pending" ? "Pending changes" : "All commits"}
+          {activeView === "pending" ? "Pending changes" : "Latest change"}
         </span>
       </MenuTrigger>
       <MenuPopup align="start">
@@ -62,7 +62,7 @@ export function ChangeRangePicker() {
             <MenuRadioItem value="pending" disabled={!dirty}>
               Pending changes
             </MenuRadioItem>
-            <MenuRadioItem value="change">All commits</MenuRadioItem>
+            <MenuRadioItem value="change">Latest change</MenuRadioItem>
           </MenuRadioGroup>
         </MenuGroup>
         <MenuSeparator />
