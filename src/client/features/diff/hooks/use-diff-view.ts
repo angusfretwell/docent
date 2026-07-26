@@ -14,6 +14,7 @@ import { useMemo } from "react";
 
 import { isGeneratedPath } from "../lib/generated";
 import { computeViewed } from "../lib/viewed";
+import { useCollapsedState } from "./use-collapsed";
 import { useViewedState } from "./use-viewed";
 
 export function useDiffView() {
@@ -81,8 +82,11 @@ export function useDiffView() {
 
   const viewedCount = files.filter((file) => viewed.isViewed(file.id)).length;
 
+  const collapsed = useCollapsedState(visibleFiles, viewed);
+
   return {
     canAuthor: !showPending,
+    collapsed,
     driftFor: showPending ? undefined : (id: string) => drift.get(id),
     files,
     viewed,

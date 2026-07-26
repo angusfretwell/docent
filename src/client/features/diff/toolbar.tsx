@@ -12,18 +12,21 @@ import { useIsMobile } from "@client/hooks/use-media-query";
 import type { DiffFile } from "@client/lib/diff";
 import { diffTreeOpenAtom } from "@client/lib/preferences";
 import { useAtom } from "jotai/react";
-import { ListTree } from "lucide-react";
+import { FoldVertical, ListTree, UnfoldVertical } from "lucide-react";
 import { useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 
 import { ChangeRangePicker } from "./change-picker";
+import type { Collapsed } from "./hooks/use-collapsed";
 import { DiffTree } from "./tree";
 
 export function DiffToolbar({
+  collapsed,
   totalCount,
   viewedCount,
   visibleFiles,
 }: {
+  collapsed: Collapsed;
   totalCount: number;
   viewedCount: number;
   visibleFiles: DiffFile[];
@@ -78,6 +81,18 @@ export function DiffToolbar({
           {viewedCount}&thinsp;/&thinsp;{totalCount}{" "}
           <span className="@max-xs:sr-only">viewed</span>
         </p>
+
+        <Button
+          aria-label={
+            collapsed.allCollapsed ? "Expand all files" : "Collapse all files"
+          }
+          disabled={visibleFiles.length === 0}
+          onClick={() => collapsed.toggleAll()}
+          size="icon-sm"
+          variant="ghost"
+        >
+          {collapsed.allCollapsed ? <UnfoldVertical /> : <FoldVertical />}
+        </Button>
       </div>
     </div>
   );

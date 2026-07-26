@@ -5,6 +5,7 @@ import { useDiffItems } from "@client/features/code-view/hooks/use-diff-items";
 import { AnnotatedCodeView } from "@client/features/code-view/view";
 import { useCommentCompose } from "@client/features/comments/hooks/use-comment-compose";
 import { useComments } from "@client/features/comments/hooks/use-comments";
+import type { Collapsed } from "@client/features/diff/hooks/use-collapsed";
 import type { Viewed } from "@client/features/diff/hooks/use-viewed";
 import type { DiffFile } from "@client/lib/diff";
 import type { LineDecoration } from "@client/lib/diff-annotations";
@@ -14,17 +15,19 @@ import type { FileDiffMetadata } from "@pierre/diffs";
 import type { CodeViewHandle } from "@pierre/diffs/react";
 import { useAtomValue } from "jotai/react";
 import { GitCompare } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { flushSync } from "react-dom";
 
 export function DiffCodeView({
   canAuthor,
+  collapsed,
   driftFor,
   files,
   viewed,
 }: {
   /** Off on the read-only Pending preview: no selection, composer, or comment buttons. */
   canAuthor: boolean;
+  collapsed: Collapsed;
   /** Absent on Pending, which falls back to the sync blob-match path. */
   driftFor?: (id: string) => DriftResult | undefined;
   files: DiffFile[];
@@ -40,31 +43,21 @@ export function DiffCodeView({
     fileDiffById: (id) => files.find((entry) => entry.id === id)?.file,
   });
 
-  // Explicit collapse choices override the default, which follows viewed state:
-  // a viewed file starts collapsed.
-  const [collapsedOverrides, setCollapsedOverrides] = useState<
-    ReadonlyMap<string, boolean>
-  >(new Map());
-
-  function isCollapsed(id: string): boolean {
-    return collapsedOverrides.get(id) ?? viewed.isViewed(id);
-  }
-
   const items = useDiffItems({
     comments,
     composing: canAuthor ? compose.composing : null,
     driftFor,
     files,
-    isCollapsed,
+    isCollapsed: collapsed.isCollapsed,
   });
 
   function handleToggleItemCollapsed(itemId: string) {
     const viewer = ref.current?.getInstance();
     const itemTop = viewer?.getTopForItem(itemId);
-    const next = !isCollapsed(itemId);
+    const next = !collapsed.isCollapsed(itemId);
 
     flushSync(() => {
-      setCollapsedOverrides((prev) => new Map(prev).set(itemId, next));
+      collapsed.setCollapsed(itemId, next);
     });
 
     // Collapsing an item that starts above the viewport would yank the
@@ -78,15 +71,15 @@ export function DiffCodeView({
     const next = !viewed.isViewed(itemId);
 
     viewed.toggleViewed(itemId);
-    setCollapsedOverrides((prev) => new Map(prev).set(itemId, next));
+    collapsed.setCollapsed(itemId, next);
   }
 
   // A file-level composer renders inside the file, so opening one on a collapsed
   // file would author into something unseen. Expanding is a read, not a re-read
   // — viewed state is deliberately untouched.
   function handleCommentOnFile(itemId: string, fileDiff: FileDiffMetadata) {
-    if (isCollapsed(itemId)) {
-      setCollapsedOverrides((prev) => new Map(prev).set(itemId, false));
+    if (collapsed.isCollapsed(itemId)) {
+      collapsed.setCollapsed(itemId, false);
     }
 
     compose.commentOnFile(itemId, fileDiff);
@@ -101,14 +94,14 @@ export function DiffCodeView({
 
     // Revealing a collapsed file would scroll to a header with nothing under
     // it; expand first so the destination is the diff, not the stub.
-    if (isCollapsed(target.id)) {
+    if (collapsed.isCollapsed(target.id)) {
       flushSync(() => {
-        setCollapsedOverrides((prev) => new Map(prev).set(target.id, false));
+        collapsed.setCollapsed(target.id, false);
       });
     }
 
     ref.current?.scrollTo({ behavior: "smooth", id: target.id, type: "item" });
-    // Keyed to `target` only: listing `isCollapsed` would re-run this reveal on
+    // Keyed to `target` only: listing `collapsed` would re-run this reveal on
     // every collapse toggle, not only on a jump to a new target.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [target]);

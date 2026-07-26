@@ -18,8 +18,15 @@ import { DiffTree } from "./tree";
 const TREE_SIZE = 250;
 
 export function DiffView() {
-  const { canAuthor, driftFor, files, viewed, viewedCount, visibleFiles } =
-    useDiffView();
+  const {
+    canAuthor,
+    collapsed,
+    driftFor,
+    files,
+    viewed,
+    viewedCount,
+    visibleFiles,
+  } = useDiffView();
 
   const isMobile = useIsMobile();
   const diffTreeOpen = useAtomValue(diffTreeOpenAtom);
@@ -58,6 +65,7 @@ export function DiffView() {
       <ResizablePanel minSize={300} id="content" className="overflow-visible!">
         <Pane>
           <DiffToolbar
+            collapsed={collapsed}
             totalCount={files.length}
             viewedCount={viewedCount}
             visibleFiles={visibleFiles}
@@ -65,6 +73,7 @@ export function DiffView() {
 
           <DiffCodeView
             canAuthor={canAuthor}
+            collapsed={collapsed}
             driftFor={driftFor}
             files={visibleFiles}
             viewed={viewed}
