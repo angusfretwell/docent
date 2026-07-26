@@ -140,6 +140,7 @@ export function ProductWalkthroughView() {
 
         {steps.map((step) => (
           <StepProse
+            activeKey={activeKey}
             calloutsFor={calloutsForTarget}
             comments={bySection.get(
               sectionKey(walkthrough.id, step.section.id)

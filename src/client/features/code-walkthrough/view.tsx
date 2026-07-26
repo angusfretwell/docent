@@ -128,6 +128,7 @@ export function CodeWalkthroughView() {
 
       {steps.map((step) => (
         <StepProse
+          activeKey={activeKey}
           comments={bySection.get(sectionKey(walkthrough.id, step.section.id))}
           key={step.section.id}
           labelTarget={labelTarget}

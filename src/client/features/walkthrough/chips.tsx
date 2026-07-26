@@ -13,10 +13,12 @@ export interface TargetLabel {
 export type LabelTarget = (key: string) => TargetLabel | undefined;
 
 export function TargetChip({
+  active,
   anchorKey,
   label,
   onSelect,
 }: {
+  active: boolean;
   anchorKey: string;
   label: TargetLabel | undefined;
   onSelect: (key: string) => void;
@@ -29,6 +31,8 @@ export function TargetChip({
 
   return (
     <Badge
+      className="data-active:ring-2 data-active:ring-primary data-active:ring-offset-1 data-active:ring-offset-background"
+      data-active={active || undefined}
       data-not-typeset
       onClick={() => onSelect(anchorKey)}
       render={<button aria-label={`Show ${label.text}`} type="button" />}

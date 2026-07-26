@@ -29,6 +29,7 @@ function noCallouts(): readonly LabeledCallout[] {
 const NO_COMMENTS: readonly FoldedComment[] = [];
 
 interface ChipScope {
+  activeKey: string | undefined;
   calloutsFor: CalloutsForTarget;
   labelTarget: LabelTarget;
   onSelect: (key: string) => void;
@@ -47,10 +48,11 @@ function ScopedTargetChip({
   anchorKey: string;
   scope: ChipScope;
 }) {
-  const { labelTarget, onSelect: selectTarget } = scope;
+  const { activeKey, labelTarget, onSelect: selectTarget } = scope;
 
   return (
     <TargetChip
+      active={anchorKey === activeKey}
       anchorKey={anchorKey}
       label={labelTarget(anchorKey)}
       onSelect={selectTarget}
@@ -138,6 +140,7 @@ function ProseParagraph({
 const PROSE_COMPONENTS: Components = { a: ProseLink, p: ProseParagraph };
 
 export function StepProse({
+  activeKey,
   calloutsFor = noCallouts,
   comments = NO_COMMENTS,
   labelTarget,
@@ -145,6 +148,7 @@ export function StepProse({
   step,
   walkthroughId,
 }: {
+  activeKey: string | undefined;
   calloutsFor?: CalloutsForTarget;
   comments?: readonly FoldedComment[];
   labelTarget: LabelTarget;
@@ -154,6 +158,7 @@ export function StepProse({
 }) {
   const layout = stepLayout(step);
   const scope = {
+    activeKey,
     calloutsFor,
     labelTarget,
     onSelect,
