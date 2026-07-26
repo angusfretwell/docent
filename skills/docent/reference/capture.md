@@ -53,7 +53,7 @@ agent-browser open <url><route>
 ```
 
 - **Viewport** — the runbook default (a stable property of the app), overridable per-capture.
-- **Starting route** — a per-capture concern: the value the human gave; else inferred from the Change under review (the changed files/routes point at what to walk); else `/` as a last resort.
+- **Starting route** — a per-capture concern: the value the human gave; else inferred from the change under review — the **names** of the changed files (`git diff --stat origin/HEAD...HEAD`) and targeted reads of the user-facing ones point at what to walk, and the hunks are never needed to choose a screen; else `/` as a last resort.
 
 Both are recorded on the capture entity in §7 (`viewport`, `route`); the runbook or instruction is only their source.
 
