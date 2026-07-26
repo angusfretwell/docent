@@ -35,6 +35,10 @@ The skill drives the `docent` CLI. There's nothing to install globally:
 npx @angusfretwell/docent@latest
 ```
 
+## Acknowledgements
+
+Docent's diff surface is built on [Pierre](https://pierre.computer/)'s excellent open source [diff rendering](https://diffs.com/) and [file tree rendering](https://trees.software/) libraries.
+
 ## License
 
 MIT
