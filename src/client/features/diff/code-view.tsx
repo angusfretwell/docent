@@ -9,6 +9,7 @@ import type { Collapsed } from "@client/features/diff/hooks/use-collapsed";
 import type { Viewed } from "@client/features/diff/hooks/use-viewed";
 import type { DiffFile } from "@client/lib/diff";
 import type { LineDecoration } from "@client/lib/diff-annotations";
+import { annotationSide } from "@client/lib/diff-annotations";
 import { diffTargetAtom } from "@client/lib/diff-target";
 import type { DriftResult } from "@client/lib/drift";
 import { inlineCommentsAtom } from "@client/lib/preferences";
@@ -102,7 +103,18 @@ export function DiffCodeView({
       });
     }
 
-    ref.current?.scrollTo({ behavior: "smooth", id: target.id, type: "item" });
+    ref.current?.scrollTo(
+      target.line === undefined
+        ? { behavior: "smooth", id: target.id, type: "item" }
+        : {
+            align: "center",
+            behavior: "smooth",
+            id: target.id,
+            lineNumber: target.line.number,
+            side: annotationSide(target.line.side),
+            type: "line",
+          }
+    );
     // Keyed to `target` only: listing `collapsed` would re-run this reveal on
     // every collapse toggle, not only on a jump to a new target.
     // oxlint-disable-next-line react-hooks/exhaustive-deps

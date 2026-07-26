@@ -1,6 +1,8 @@
 import { useDrift } from "@client/hooks/use-drift";
 import { sectionKey } from "@client/lib/comment-sections";
 import { parsePatchFiles } from "@client/lib/diff";
+import type { DiffTarget } from "@client/lib/diff-target";
+import { anchorDiffTarget } from "@client/lib/diff-target";
 import { diffQueryOptions } from "@client/queries/diff";
 import { reviewQueryOptions } from "@client/queries/review";
 import { ANCHOR_KIND } from "@shared/enums/anchor-kind";
@@ -24,7 +26,7 @@ import { useCommentSurface } from "./use-comment-surface";
 
 export interface CommentListItem {
   comment: FoldedComment;
-  diffItemId?: string;
+  diffTarget?: DiffTarget;
   drift?: DriftState;
   location: string;
   section?: CommentSection;
@@ -48,15 +50,15 @@ export function useComments(): { visible: CommentListItem[] } {
     walkthroughs: review.walkthroughs,
   });
 
+  const files = useMemo(() => parsePatchFiles(patch), [patch]);
+  const anchorFileById = useMemo(
+    () => new Map(comments.map((entry) => [entry.id, entry.anchorFile])),
+    [comments]
+  );
+
   const list = useMemo(() => {
     const entries = comments;
 
-    const anchorFileById = new Map(
-      entries.map((entry) => [entry.id, entry.anchorFile])
-    );
-    const itemIdByPath = new Map(
-      parsePatchFiles(patch).map((file) => [file.path, file.id])
-    );
     const sectionTitles = new Map(
       walkthroughs.flatMap((walkthrough) =>
         walkthrough.sections.map(
@@ -156,18 +158,12 @@ export function useComments(): { visible: CommentListItem[] } {
 
     const matching = entries
       .map((entry) => foldComment(entry.id, entry.records))
-      .map((comment) => {
-        const anchorFile = anchorFileById.get(comment.id);
-
-        return {
-          comment,
-          diffItemId:
-            anchorFile === undefined ? undefined : itemIdByPath.get(anchorFile),
-          location: locationOf(comment),
-          section: sectionOf(comment),
-          surface: surfaceOf(comment),
-        };
-      })
+      .map((comment) => ({
+        comment,
+        location: locationOf(comment),
+        section: sectionOf(comment),
+        surface: surfaceOf(comment),
+      }))
       .filter((entry) =>
         matchesCommentFilters(filters, {
           status: entry.comment.status,
@@ -176,14 +172,25 @@ export function useComments(): { visible: CommentListItem[] } {
       );
 
     return { visible: orderComments(matching, surface) };
-  }, [filters, comments, patch, reviewTitle, surface, walkthroughs]);
+  }, [filters, comments, reviewTitle, surface, walkthroughs]);
 
   // Drift resolves asynchronously and hands back a fresh map each render, so it
-  // is attached outside the memo — keeping the fold/sort above it stable.
+  // and the diff target it places are attached outside the memo — keeping the
+  // fold/sort above it stable.
   const visible = list.visible.map((entry) => {
-    const state = drift.get(entry.comment.id)?.state;
+    const result = drift.get(entry.comment.id);
+    const diffTarget = anchorDiffTarget({
+      anchor: entry.comment.anchor,
+      anchorFile: anchorFileById.get(entry.comment.id),
+      drift: result,
+      files,
+    });
 
-    return state === undefined ? entry : { ...entry, drift: state };
+    return {
+      ...entry,
+      ...(diffTarget === undefined ? {} : { diffTarget }),
+      ...(result === undefined ? {} : { drift: result.state }),
+    };
   });
 
   return { visible };

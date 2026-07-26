@@ -9,7 +9,7 @@ const HEADROOM_PX = 24;
 
 const SECTION_ATTRIBUTE = "data-walkthrough-section";
 
-const sectionReveal = createRevealTarget("key");
+const sectionReveal = createRevealTarget<{ key: string }>();
 
 /** A standing reveal request, settable from any route and answered by `useRevealedSection` when the addressed tour mounts. */
 export const walkthroughTargetAtom = sectionReveal.targetAtom;
