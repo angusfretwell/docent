@@ -18,7 +18,7 @@ Run `/docent` on a branch to get started.
 
 ## How it works
 
-`/docent` authors two walkthroughs of the branch under review. A **code** tour through the diff, and a **product** tour that drives your running app the way a user would. Both are served as a browser tour a reviewer walks.
+`/docent` authors two walkthroughs of the branch under review, served together in the browser. A **code** tour through the diff, and a **product** tour that drives your running app the way a user would.
 
 Two more invocations close the loop:
 
@@ -29,13 +29,11 @@ Everything docent knows about a branch lives in `.docent/` at the repo root, on 
 
 ## CLI
 
-The skill drives the `docent` CLI, which downloads its per-platform binary on first run. There's nothing to install globally:
+The skill drives the `docent` CLI. There's nothing to install globally:
 
 ```sh
-npx @angusfretwell/docent@latest serve
+npx @angusfretwell/docent@latest
 ```
-
-`serve` renders `.docent/` live in the browser and re-renders on every write.
 
 ## License
 
