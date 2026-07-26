@@ -1,8 +1,8 @@
 # The walkthrough voice
 
-Shared by both authoring flows — [code-walkthrough.md](code-walkthrough.md) and [product-walkthrough.md](product-walkthrough.md) — so the two tours read as one tour, the mechanism [ADR 0004](../../../docs/adr/0004-docent-skill-runs-as-an-orchestrator-with-phase-subagents.md) chose over a single author for both. It owns prose only: what to select and how to mint stays with each authoring file.
+Shared by both authoring flows — [code-walkthrough.md](code-walkthrough.md) and [product-walkthrough.md](product-walkthrough.md) — so the two tours read as one tour ([ADR 0004](../../../docs/adr/0004-docent-skill-runs-as-an-orchestrator-with-phase-subagents.md)). It owns prose only: what to select and how to mint stays with each authoring file.
 
-The reader already has the diff — or the capture — open in the panel beside your sentence. **The deletion test:** imagine the prose gone and only that panel left. If the reader loses nothing, do not write it. This is the same test [comment-standards.md](../../../docs/comment-standards.md) applies to code — a walkthrough is that document's sibling one level up, narrating a change where a comment narrates a line.
+The reader already has the diff — or the capture — open in the panel beside your sentence. **The deletion test:** imagine the prose gone and only that panel left. If the reader loses nothing, do not write it. It is [comment-standards.md](../../../docs/comment-standards.md)'s test one level up: a comment narrates a line, a walkthrough narrates a change.
 
 You are describing, never assessing. Opinions about the code belong to the review loop ([comments.md](comments.md)); a tour that grades the change has stopped being a tour.
 
@@ -27,7 +27,7 @@ Each of these is prose the diff or the screenshot already carries. Write the sen
 ## Shape
 
 - **A section is connected prose** — a short paragraph, two at most. No bullets, no headings inside a section.
-- **A callout is a phrase or one sentence.** It renders as one small line under the section, reached from a numbered pin on the capture — a label for a region, not a paragraph; anything longer is a section that landed in the wrong place.
+- **A callout is a phrase or one sentence.** It renders as one small labeled line under the paragraph that placed it, paired with a marked region on the capture — a label for that region, not a paragraph; anything longer is a section that landed in the wrong place.
 - **Interleave markers sit inside sentences.** `{{range:i}}` and `{{capture:i}}` are grammar, not appendices — a body that ends with a run of markers has made the prose a preamble and the targets a dump.
 
 ## Worked pairs
@@ -61,21 +61,22 @@ which is what keeps `shifted` meaning the block moved, not the file.
 
 ```text
 BAD
-Here we can see the walkthrough tab {{capture:0}}. It shows the section
-list on the left and the diff on the right. Clicking a section scrolls the
-diff to its ranges. The comment composer is also shown {{capture:1}}.
+Here we can see the Code tab {{capture:0}}. The walkthrough is on the left
+and the diff on the right. Scrolling past a section brings its ranges up.
+The comment composer is also shown {{capture:1}}.
 ```
 
 An inventory of what is on screen, in list order, with the captures parked at the ends of their sentences.
 
 ```text
 GOOD
-A reviewer opens a branch wanting one thing first — what changed and why —
-so the tour lands them already inside it, with the first section's ranges
-scrolled into view {{capture:0}} and nothing to click to get there. The
-moment they disagree, the composer opens against the line under the cursor
-{{capture:1}}: the comment is anchored before it is written, so a
-half-formed objection never has to find somewhere to attach.
+A reviewer arriving on a branch gets the diff first, which answers what
+changed and never why — so the tour sits one tab over {{capture:0}}, and
+the first section's ranges are already framed when they get there, with
+nothing further to click. The moment they disagree, the composer opens
+against the line under the cursor {{capture:1}}: the comment is anchored
+before it is written, so a half-formed objection never has to find
+somewhere to attach.
 ```
 
 **A callout**, pinned to the `Outdated` badge on a comment whose anchor no longer resolves:
