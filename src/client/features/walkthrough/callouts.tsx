@@ -23,7 +23,7 @@ function CalloutItem({
   return (
     <li>
       <button
-        className="cursor-pointer text-start"
+        className="cursor-pointer text-start tabular-nums"
         onClick={onClick}
         onPointerEnter={onPointerEnter}
         onPointerLeave={onPointerLeave}
@@ -31,12 +31,14 @@ function CalloutItem({
       >
         <PinChip
           label={callout.label}
-          className={cn(
-            "me-[0.25em] align-[0.1em]",
-            active ? "opacity-100" : "opacity-50"
-          )}
+          className={cn("me-[0.25em] align-[-0.15em]")}
         />
-        &nbsp;<span>{callout.body}</span>
+        &nbsp;
+        <span
+          className={cn(active ? "text-foreground" : "text-muted-foreground")}
+        >
+          {callout.body}
+        </span>
       </button>
     </li>
   );
@@ -54,7 +56,7 @@ export function WalkthroughCallouts({
   }
 
   return (
-    <ul className="small list-none ps-[0.25em] text-[0.875em]">
+    <ul className="small list-none ps-[0.25em] text-[0.9em]">
       {callouts.map((callout) => (
         <CalloutItem callout={callout} key={callout.label} target={target} />
       ))}

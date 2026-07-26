@@ -1,6 +1,7 @@
 import { Badge } from "@client/components/ui/badge";
 import { targetAnchorProps } from "@client/features/walkthrough/hooks/use-active-target";
 import { cn } from "@client/lib/utils";
+import { MousePointer2 } from "lucide-react";
 import type { ReactNode } from "react";
 
 export interface TargetLabel {
@@ -57,7 +58,8 @@ export function PinChip({
   className?: string;
 }) {
   return (
-    <Badge size="sm" className={cn("tabular-nums", className)}>
+    <Badge size="sm" className={cn("z-10 tabular-nums", className)}>
+      <MousePointer2 className="fill-current opacity-100" />
       {label}
     </Badge>
   );
