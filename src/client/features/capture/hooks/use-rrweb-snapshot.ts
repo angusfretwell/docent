@@ -1,4 +1,4 @@
-import { useColorScheme } from "@client/hooks/use-theme";
+import { useResolvedTheme } from "@client/components/theme-provider";
 import { captureEventsQuery } from "@client/queries/captures";
 import type { WalkthroughId } from "@shared/schemas/ids";
 import { useQuery } from "@tanstack/react-query";
@@ -25,7 +25,7 @@ export function useRrwebSnapshot(
   const [ready, setReady] = useState(false);
   const [width, height] = dims;
 
-  const scheme = useColorScheme();
+  const scheme = useResolvedTheme();
 
   const events = useQuery(captureEventsQuery(walkthroughId, media));
   const eventStream = events.data;

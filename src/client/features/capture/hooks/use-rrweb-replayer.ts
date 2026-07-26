@@ -1,4 +1,4 @@
-import { useColorScheme } from "@client/hooks/use-theme";
+import { useResolvedTheme } from "@client/components/theme-provider";
 import { captureEventsQuery } from "@client/queries/captures";
 import type { WalkthroughId } from "@shared/schemas/ids";
 import { useQuery } from "@tanstack/react-query";
@@ -40,7 +40,7 @@ export function useRrwebReplayer(
   const rootRef = useRef<HTMLDivElement>(null);
   const replayerRef = useRef<Replayer | null>(null);
 
-  const scheme = useColorScheme();
+  const scheme = useResolvedTheme();
 
   const [currentMs, setCurrentMs] = useState(0);
   const [durationMs, setDurationMs] = useState(0);
