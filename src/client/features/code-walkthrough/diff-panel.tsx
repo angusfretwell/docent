@@ -1,7 +1,6 @@
 import { Empty } from "@client/components/empty";
 import { Pane } from "@client/components/pane";
 import { CodeViewAnnotation } from "@client/features/code-view/annotation";
-import type { CodeViewFocus } from "@client/features/code-view/focus";
 import { CodeViewHeaderMetadata } from "@client/features/code-view/header-metadata";
 import { useDiffItems } from "@client/features/code-view/hooks/use-diff-items";
 import { AnnotatedCodeView } from "@client/features/code-view/view";
@@ -11,22 +10,28 @@ import type { DiffFile } from "@client/lib/diff";
 import type { LineDecoration } from "@client/lib/diff-annotations";
 import type { DriftResult } from "@client/lib/drift";
 import { inlineCommentsAtom } from "@client/lib/preferences";
-import type { SelectionSide } from "@pierre/diffs";
 import type { CodeViewHandle } from "@pierre/diffs/react";
 import type { WalkthroughRange } from "@shared/schemas/walkthrough";
 import { useAtomValue } from "jotai/react";
 import { GitCompare } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
+
+import { useDiffAim } from "./hooks/use-diff-aim";
 
 export function CodeWalkthroughDiffPanel({
-  activeRange,
+  activeKey,
   driftFor,
   files,
+  onReach,
+  ranges,
   reasserted,
 }: {
-  activeRange: WalkthroughRange | undefined;
+  activeKey: string | undefined;
   driftFor?: (id: string) => DriftResult | undefined;
   files: DiffFile[];
+  /** Called with the target the reader has scrolled the diff to. */
+  onReach: (key: string) => void;
+  ranges: ReadonlyMap<string, WalkthroughRange>;
   reasserted: number;
 }) {
   const ref = useRef<CodeViewHandle<LineDecoration>>(null);
@@ -47,48 +52,14 @@ export function CodeWalkthroughDiffPanel({
     files,
   });
 
-  const targetFile =
-    activeRange === undefined
-      ? undefined
-      : files.find((entry) => entry.path === activeRange.file);
-
-  // Depended on as primitives so the effect fires on reaching a new range, not
-  // on every render — otherwise it fights the reader for the scroll position.
-  const targetId = targetFile?.id;
-  const targetLine = activeRange?.lines[0];
-  const targetEndLine = activeRange?.lines[1];
-  const targetSide: SelectionSide =
-    activeRange?.side === "base" ? "deletions" : "additions";
-
-  const focus: CodeViewFocus | null =
-    targetId === undefined ||
-    targetLine === undefined ||
-    targetEndLine === undefined
-      ? null
-      : {
-          itemId: targetId,
-          lines: [targetLine, targetEndLine],
-          side: targetSide,
-        };
-
-  useEffect(() => {
-    if (
-      targetId === undefined ||
-      targetLine === undefined ||
-      targetEndLine === undefined
-    ) {
-      return;
-    }
-
-    ref.current?.scrollTo({
-      align: "center",
-      behavior: "smooth-auto",
-      id: targetId,
-      lineNumber: targetLine,
-      side: targetSide,
-      type: "line",
-    });
-  }, [targetId, targetLine, targetEndLine, targetSide, reasserted]);
+  const { focus, onScroll: handleScroll } = useDiffAim({
+    activeKey,
+    files,
+    onReach,
+    ranges,
+    reasserted,
+    viewRef: ref,
+  });
 
   if (items.length === 0) {
     return (
@@ -110,6 +81,7 @@ export function CodeWalkthroughDiffPanel({
         onGutterUtilityClick={(range, context) =>
           compose.selectLines({ id: context.item.id, range })
         }
+        onScroll={handleScroll}
         ref={ref}
         renderAnnotation={(annotation) => (
           <CodeViewAnnotation annotation={annotation} compose={compose} />

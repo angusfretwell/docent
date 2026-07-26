@@ -1,3 +1,4 @@
+import { useMediaQuery } from "@client/hooks/use-media-query";
 import darkTheme from "@pierre/theme/pierre-dark-soft";
 import lightTheme from "@pierre/theme/pierre-light";
 import * as React from "react";
@@ -14,6 +15,7 @@ interface ThemeProviderProps {
 }
 
 interface ThemeProviderState {
+  resolvedTheme: ResolvedTheme;
   theme: Theme;
   setTheme: (theme: Theme) => void;
 }
@@ -97,43 +99,25 @@ export function ThemeProvider({
     [storageKey]
   );
 
-  const applyTheme = React.useCallback(
-    (nextTheme: Theme) => {
-      const root = document.documentElement;
-      const resolvedTheme =
-        nextTheme === "system" ? getSystemTheme() : nextTheme;
-      const restoreTransitions = disableTransitionOnChange
-        ? disableTransitionsTemporarily()
-        : null;
+  const systemTheme: ResolvedTheme = useMediaQuery(COLOR_SCHEME_QUERY)
+    ? "dark"
+    : "light";
 
-      root.classList.remove("light", "dark");
-      root.classList.add(resolvedTheme);
-
-      if (restoreTransitions) {
-        restoreTransitions();
-      }
-    },
-    [disableTransitionOnChange]
-  );
+  const resolvedTheme = theme === "system" ? systemTheme : theme;
 
   React.useEffect(() => {
-    applyTheme(theme);
+    const root = document.documentElement;
+    const restoreTransitions = disableTransitionOnChange
+      ? disableTransitionsTemporarily()
+      : null;
 
-    if (theme !== "system") {
-      return;
+    root.classList.remove("light", "dark");
+    root.classList.add(resolvedTheme);
+
+    if (restoreTransitions) {
+      restoreTransitions();
     }
-
-    const mediaQuery = window.matchMedia(COLOR_SCHEME_QUERY);
-    function handleChange() {
-      applyTheme("system");
-    }
-
-    mediaQuery.addEventListener("change", handleChange);
-
-    return () => {
-      mediaQuery.removeEventListener("change", handleChange);
-    };
-  }, [theme, applyTheme]);
+  }, [resolvedTheme, disableTransitionOnChange]);
 
   useHotkeys("Alt+D", () => {
     setThemeState((currentTheme) => {
@@ -171,10 +155,11 @@ export function ThemeProvider({
 
   const value = React.useMemo(
     () => ({
+      resolvedTheme,
       setTheme,
       theme,
     }),
-    [theme, setTheme]
+    [resolvedTheme, theme, setTheme]
   );
 
   return (
@@ -195,9 +180,7 @@ export function useTheme() {
 }
 
 export function useResolvedTheme() {
-  const { theme } = useTheme();
-
-  return theme === "system" ? getSystemTheme() : theme;
+  return useTheme().resolvedTheme;
 }
 
 export function useCodeTheme() {

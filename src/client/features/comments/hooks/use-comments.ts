@@ -1,16 +1,14 @@
 import { useDrift } from "@client/hooks/use-drift";
 import { sectionKey } from "@client/lib/comment-sections";
 import { parsePatchFiles } from "@client/lib/diff";
+import type { DiffTarget } from "@client/lib/diff-target";
+import { anchorDiffTarget } from "@client/lib/diff-target";
 import { diffQueryOptions } from "@client/queries/diff";
 import { reviewQueryOptions } from "@client/queries/review";
 import { ANCHOR_KIND } from "@shared/enums/anchor-kind";
 import type { DriftState } from "@shared/enums/drift-state";
 import { WalkthroughKind } from "@shared/enums/walkthrough-kind";
-import {
-  commentLocation,
-  foldComment,
-  sortFoldedComments,
-} from "@shared/lib/comment";
+import { commentLocation, foldComment } from "@shared/lib/comment";
 import type { FoldedComment } from "@shared/lib/comment";
 import {
   latestCodeWalkthrough,
@@ -22,11 +20,13 @@ import { useMemo } from "react";
 
 import type { CommentSurface } from "../lib/filters";
 import { commentFiltersAtom, matchesCommentFilters } from "../lib/filters";
+import { orderComments } from "../lib/order";
 import type { CommentSection } from "../lib/types";
+import { useCommentSurface } from "./use-comment-surface";
 
 export interface CommentListItem {
   comment: FoldedComment;
-  diffItemId?: string;
+  diffTarget?: DiffTarget;
   drift?: DriftState;
   location: string;
   section?: CommentSection;
@@ -37,6 +37,7 @@ export function useComments(): { visible: CommentListItem[] } {
   const { data: review } = useSuspenseQuery(reviewQueryOptions);
   const { data: change } = useSuspenseQuery(diffQueryOptions);
   const filters = useAtomValue(commentFiltersAtom);
+  const surface = useCommentSurface();
 
   const { comments } = review;
   const { patch } = change;
@@ -49,15 +50,15 @@ export function useComments(): { visible: CommentListItem[] } {
     walkthroughs: review.walkthroughs,
   });
 
+  const files = useMemo(() => parsePatchFiles(patch), [patch]);
+  const anchorFileById = useMemo(
+    () => new Map(comments.map((entry) => [entry.id, entry.anchorFile])),
+    [comments]
+  );
+
   const list = useMemo(() => {
     const entries = comments;
 
-    const anchorFileById = new Map(
-      entries.map((entry) => [entry.id, entry.anchorFile])
-    );
-    const itemIdByPath = new Map(
-      parsePatchFiles(patch).map((file) => [file.path, file.id])
-    );
     const sectionTitles = new Map(
       walkthroughs.flatMap((walkthrough) =>
         walkthrough.sections.map(
@@ -155,23 +156,14 @@ export function useComments(): { visible: CommentListItem[] } {
       }
     }
 
-    const folded = sortFoldedComments(
-      entries.map((entry) => foldComment(entry.id, entry.records))
-    );
-
-    const visible = folded
-      .map((comment) => {
-        const anchorFile = anchorFileById.get(comment.id);
-
-        return {
-          comment,
-          diffItemId:
-            anchorFile === undefined ? undefined : itemIdByPath.get(anchorFile),
-          location: locationOf(comment),
-          section: sectionOf(comment),
-          surface: surfaceOf(comment),
-        };
-      })
+    const matching = entries
+      .map((entry) => foldComment(entry.id, entry.records))
+      .map((comment) => ({
+        comment,
+        location: locationOf(comment),
+        section: sectionOf(comment),
+        surface: surfaceOf(comment),
+      }))
       .filter((entry) =>
         matchesCommentFilters(filters, {
           status: entry.comment.status,
@@ -179,15 +171,26 @@ export function useComments(): { visible: CommentListItem[] } {
         })
       );
 
-    return { visible };
-  }, [filters, comments, patch, reviewTitle, walkthroughs]);
+    return { visible: orderComments(matching, surface) };
+  }, [filters, comments, reviewTitle, surface, walkthroughs]);
 
   // Drift resolves asynchronously and hands back a fresh map each render, so it
-  // is attached outside the memo — keeping the fold/sort above it stable.
+  // and the diff target it places are attached outside the memo — keeping the
+  // fold/sort above it stable.
   const visible = list.visible.map((entry) => {
-    const state = drift.get(entry.comment.id)?.state;
+    const result = drift.get(entry.comment.id);
+    const diffTarget = anchorDiffTarget({
+      anchor: entry.comment.anchor,
+      anchorFile: anchorFileById.get(entry.comment.id),
+      drift: result,
+      files,
+    });
 
-    return state === undefined ? entry : { ...entry, drift: state };
+    return {
+      ...entry,
+      ...(diffTarget === undefined ? {} : { diffTarget }),
+      ...(result === undefined ? {} : { drift: result.state }),
+    };
   });
 
   return { visible };

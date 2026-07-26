@@ -7,7 +7,8 @@ import {
 } from "@client/components/ui/collapsible";
 import { useRevealSection } from "@client/features/walkthrough/hooks/use-revealed-section";
 import { useDismiss } from "@client/hooks/use-dismiss";
-import { useRevealDiffItem } from "@client/lib/diff-target";
+import type { DiffTarget } from "@client/lib/diff-target";
+import { useRevealDiffTarget } from "@client/lib/diff-target";
 import { cn } from "@client/lib/utils";
 import { STATUS_LABEL } from "@shared/enums/comment-status";
 import type { CommentStatus } from "@shared/enums/comment-status";
@@ -34,20 +35,20 @@ export const STATUS_VARIANT: Record<CommentStatus, BadgeProps["variant"]> = {
 
 export function CommentsItem({
   comment,
-  diffItemId,
+  diffTarget,
   drift,
   location,
   section,
 }: {
   comment: FoldedComment;
-  diffItemId?: string;
+  diffTarget?: DiffTarget;
   drift?: DriftState;
   location: string;
   section?: CommentSection;
 }) {
   const [open, setOpen] = useState(true);
 
-  const revealDiffItem = useRevealDiffItem();
+  const revealDiffTarget = useRevealDiffTarget();
   const revealSection = useRevealSection();
   const dismiss = useDismiss();
 
@@ -72,12 +73,12 @@ export function CommentsItem({
 
         <span className="min-w-0 truncate text-[13px]">{location}</span>
 
-        {diffItemId === undefined ? null : (
+        {diffTarget === undefined ? null : (
           <CommentLink
             icon={<GitCompare />}
             label="Show in diff"
             onReveal={() => {
-              revealDiffItem(diffItemId);
+              revealDiffTarget(diffTarget);
               dismiss();
             }}
             to="/"
@@ -89,7 +90,7 @@ export function CommentsItem({
             icon={isCodeSection ? <Code2 /> : <Pointer />}
             label={`Show in ${isCodeSection ? "code" : "product"} walkthrough`}
             onReveal={() => {
-              revealSection(section.key);
+              revealSection({ key: section.key });
               dismiss();
             }}
             to={isCodeSection ? "/code" : "/product"}

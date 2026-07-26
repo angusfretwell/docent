@@ -9,37 +9,31 @@ import { atom } from "jotai";
 import { useSetAtom } from "jotai/react";
 import { useCallback } from "react";
 
-export type RevealRequest<Field extends string> = Record<Field, string> & {
-  token: number;
-};
+export type RevealRequest<Target extends object> = Target & { token: number };
 
-export function nextReveal<Field extends string>(
-  field: Field,
-  value: string,
-  previous: RevealRequest<Field> | null
-): RevealRequest<Field> {
-  return {
-    ...({ [field]: value } as Record<Field, string>),
-    token: (previous?.token ?? 0) + 1,
-  };
+export function nextReveal<Target extends object>(
+  target: Target,
+  previous: RevealRequest<Target> | null
+): RevealRequest<Target> {
+  return { ...target, token: (previous?.token ?? 0) + 1 };
 }
 
-export interface RevealTarget<Field extends string> {
-  targetAtom: PrimitiveAtom<RevealRequest<Field> | null>;
-  useReveal: () => (value: string) => void;
+export interface RevealTarget<Target extends object> {
+  targetAtom: PrimitiveAtom<RevealRequest<Target> | null>;
+  useReveal: () => (target: Target) => void;
 }
 
-export function createRevealTarget<Field extends string>(
-  field: Field
-): RevealTarget<Field> {
-  const targetAtom = atom<RevealRequest<Field> | null>(null);
+export function createRevealTarget<
+  Target extends object,
+>(): RevealTarget<Target> {
+  const targetAtom = atom<RevealRequest<Target> | null>(null);
 
   function useReveal() {
     const setTarget = useSetAtom(targetAtom);
 
     return useCallback(
-      (value: string) => {
-        setTarget((previous) => nextReveal(field, value, previous));
+      (target: Target) => {
+        setTarget((previous) => nextReveal(target, previous));
       },
       [setTarget]
     );

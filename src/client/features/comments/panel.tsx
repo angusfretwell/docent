@@ -24,11 +24,11 @@ export function CommentsPanel({ popover }: { popover?: boolean }) {
               "*:data-[slot=scroll-area-viewport]:max-h-[calc(var(--available-height)-(--spacing(11)))]"
           )}
         >
-          {visible.map(({ comment, diffItemId, drift, location, section }) => (
+          {visible.map(({ comment, diffTarget, drift, location, section }) => (
             <CommentsItem
               key={comment.id}
               comment={comment}
-              diffItemId={diffItemId}
+              diffTarget={diffTarget}
               drift={drift}
               location={location}
               section={section}

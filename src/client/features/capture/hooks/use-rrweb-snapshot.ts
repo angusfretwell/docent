@@ -3,10 +3,10 @@ import { captureEventsQuery } from "@client/queries/captures";
 import type { WalkthroughId } from "@shared/schemas/ids";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import type { eventWithTime } from "rrweb";
-import { Replayer } from "rrweb";
+import type { eventWithTime, Replayer } from "rrweb";
 
-import { applyReplayScheme } from "../lib/replay-scheme";
+import { sealedReplayer } from "../lib/replay-focus";
+import { holdReplayScheme } from "../lib/replay-scheme";
 
 export interface RrwebSnapshot {
   failed: boolean;
@@ -35,7 +35,7 @@ export function useRrwebSnapshot(
       return;
     }
 
-    const replayer = new Replayer(eventStream as eventWithTime[], {
+    const replayer = sealedReplayer(eventStream as eventWithTime[], {
       mouseTail: false,
       root: rootRef.current,
       speed: 1,
@@ -46,7 +46,6 @@ export function useRrwebSnapshot(
     // without racing its resize handling.
     replayer.iframe.style.width = `${width}px`;
     replayer.iframe.style.height = `${height}px`;
-    applyReplayScheme(replayer.iframe, scheme);
     setReady(true);
 
     return () => {
@@ -54,15 +53,17 @@ export function useRrwebSnapshot(
       replayerRef.current = null;
       setReady(false);
     };
-    // `scheme` is applied by the effect below, not a rebuild trigger.
-    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [eventStream, height, width]);
 
   useEffect(() => {
-    if (replayerRef.current !== null) {
-      applyReplayScheme(replayerRef.current.iframe, scheme);
+    const replayer = replayerRef.current;
+
+    if (!ready || replayer === null) {
+      return;
     }
-  }, [scheme, ready]);
+
+    return holdReplayScheme(replayer, scheme);
+  }, [ready, scheme]);
 
   return { failed: events.isError, ready, rootRef };
 }

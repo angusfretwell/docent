@@ -9,20 +9,19 @@ import { useGesture } from "@use-gesture/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import type { Offset, Size, View } from "../lib/zoom-geometry";
-import { clampAxis, measure, wheelDelta } from "../lib/zoom-geometry";
-
-const STEP_FACTOR = 2;
+import { measure, wheelDelta } from "../lib/zoom-geometry";
 
 const FRAME_PADDING = 0.12;
 
 const ZOOM_DURATION_MS = 300;
 
-const GLIDE_DECAY_MS = 150;
+const DOUBLE_TAP_MS = 300;
 
-const GLIDE_FLOOR = 0.02;
+/** How far a press may travel and still count as a tap rather than a pan. */
+const TAP_SLOP = 5;
 
-/** Capped so a stalled tab's long frame doesn't teleport the glide. */
-const MAX_FRAME_MS = 64;
+/** How far apart two taps may land and still read as one double tap. */
+const DOUBLE_TAP_SLOP = 16;
 
 export interface Zoom {
   dragging: boolean;
@@ -34,10 +33,7 @@ export interface Zoom {
   refit: () => void;
   /** Reconstructed DOM is scaled by transform to stay vector-sharp, so callers need the factor. */
   scale: number;
-  stageProps: {
-    onDoubleClick: (event: React.MouseEvent<HTMLElement>) => void;
-    ref: React.RefObject<HTMLDivElement | null>;
-  };
+  stageProps: { ref: React.RefObject<HTMLDivElement | null> };
   toggle: () => void;
   zoomable: boolean;
   zoomed: boolean;
@@ -46,8 +42,6 @@ export interface Zoom {
 /** @param natural - the image's own pixel size, `[width, height]`. */
 export function useZoom(natural: readonly [number, number]): Zoom {
   const stageRef = useRef<HTMLDivElement>(null);
-  // One slot for both the glide and the zoom tween, so starting either — or any
-  // direct gesture — cancels whatever was already running.
   const animation = useRef<number | null>(null);
   const reduceMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
 
@@ -59,6 +53,9 @@ export function useZoom(natural: readonly [number, number]): Zoom {
   const viewRef = useRef<View>({ offset: { x: 0, y: 0 }, scale: 0 });
   const [view, setView] = useState<View>({ offset: { x: 0, y: 0 }, scale: 0 });
   const [dragging, setDragging] = useState(false);
+
+  const pinching = useRef(false);
+  const tapped = useRef<{ at: number; x: number; y: number } | null>(null);
 
   useLayoutEffect(() => {
     const element = stageRef.current;
@@ -109,59 +106,28 @@ export function useZoom(natural: readonly [number, number]): Zoom {
     }
   }
 
-  function startGlide(velocity: Offset) {
-    stopAnimation();
+  function centre(): Offset {
+    return { x: sizeRef.current.width / 2, y: sizeRef.current.height / 2 };
+  }
 
-    let previous = performance.now();
-    let speedX = velocity.x;
-    let speedY = velocity.y;
+  function toStage(clientX: number, clientY: number): Offset {
+    const rect = stageRef.current?.getBoundingClientRect();
 
-    function step(now: number) {
-      const elapsed = Math.min(now - previous, MAX_FRAME_MS);
-      previous = now;
-
-      const decay = Math.exp(-elapsed / GLIDE_DECAY_MS);
-      speedX *= decay;
-      speedY *= decay;
-
-      const from = current();
-      const travelledX = from.placed.x + speedX * elapsed;
-      const travelledY = from.placed.y + speedY * elapsed;
-      const nextX = clampAxis(travelledX, from.slackX);
-      const nextY = clampAxis(travelledY, from.slackY);
-
-      // An edge absorbs the glide rather than pressing on invisibly.
-      if (nextX !== travelledX) {
-        speedX = 0;
-      }
-      if (nextY !== travelledY) {
-        speedY = 0;
-      }
-
-      commit({ offset: { x: nextX, y: nextY }, scale: viewRef.current.scale });
-
-      if (Math.hypot(speedX, speedY) < GLIDE_FLOOR) {
-        animation.current = null;
-        return;
-      }
-
-      animation.current = requestAnimationFrame(step);
-    }
-
-    animation.current = requestAnimationFrame(step);
+    return { x: clientX - (rect?.left ?? 0), y: clientY - (rect?.top ?? 0) };
   }
 
   /**
    * Rescale about a stage-relative anchor, holding the image point under it
-   * still. Below the fitted scale it recentres, so zooming out can't strand the
-   * frame off-centre.
+   * still. `was` is where that anchor sat on the previous event, so two fingers
+   * pan the capture as they pinch it. Below the fitted scale it recentres, so
+   * zooming out can't strand the frame off-centre.
    */
-  function scaleTo(next: number, anchor: Offset) {
+  function scaleTo(next: number, anchor: Offset, was: Offset) {
     const from = current();
     const target = Math.min(Math.max(next, from.fitScale), from.maxScale);
 
-    const imageX = (anchor.x - from.placed.x) / from.scale;
-    const imageY = (anchor.y - from.placed.y) / from.scale;
+    const imageX = (was.x - from.placed.x) / from.scale;
+    const imageY = (was.y - from.placed.y) / from.scale;
 
     commit({
       offset: {
@@ -225,6 +191,32 @@ export function useZoom(natural: readonly [number, number]): Zoom {
     });
   }
 
+  /** A scale under the fitting one clamps to it, so 0 asks for the whole capture, centred. */
+  function toggleAt(anchor: Offset) {
+    const from = current();
+
+    animateTo(from.scale > from.fitScale ? 0 : from.stepScale, anchor);
+  }
+
+  /**
+   * `dblclick` never arrives from a finger, so the second activation is counted
+   * here for every pointer alike rather than left to the browser for some.
+   */
+  function registerTap(x: number, y: number) {
+    const now = performance.now();
+    const previous = tapped.current;
+    const repeat =
+      previous !== null &&
+      now - previous.at < DOUBLE_TAP_MS &&
+      Math.hypot(x - previous.x, y - previous.y) < DOUBLE_TAP_SLOP;
+
+    tapped.current = repeat ? null : { at: now, x, y };
+
+    if (repeat) {
+      toggleAt(toStage(x, y));
+    }
+  }
+
   /**
    * The rect is normalized to the capture (0..1), the same coordinate the
    * overlays use, so a pin can hand its own rect over.
@@ -262,19 +254,23 @@ export function useZoom(natural: readonly [number, number]): Zoom {
     });
   }
 
-  function toStage(clientX: number, clientY: number): Offset {
-    const rect = stageRef.current?.getBoundingClientRect();
-
-    return { x: clientX - (rect?.left ?? 0), y: clientY - (rect?.top ?? 0) };
-  }
-
   useGesture(
     {
-      onDrag: ({ direction, first, last, memo, movement, tap, velocity }) => {
+      onDrag: ({ first, last, memo, movement, tap, xy }) => {
         // A tap still arrives as the gesture's final event with moves filtered
         // out, so there is no `memo` to carry and nothing to pan.
         if (tap) {
+          registerTap(xy[0], xy[1]);
           return;
+        }
+
+        // Two fingers down is a pinch, which pans on its own account. The origin
+        // is re-seated as it goes, so lifting back to one finger carries on from
+        // wherever the pinch left the capture.
+        if (pinching.current) {
+          const held = current().placed;
+
+          return { x: held.x - movement[0], y: held.y - movement[1] };
         }
 
         // `filterTaps` holds the gesture back until the press has travelled, so
@@ -293,10 +289,6 @@ export function useZoom(natural: readonly [number, number]): Zoom {
 
         if (last) {
           setDragging(false);
-          startGlide({
-            x: velocity[0] * direction[0],
-            y: velocity[1] * direction[1],
-          });
         }
 
         return origin;
@@ -304,9 +296,21 @@ export function useZoom(natural: readonly [number, number]): Zoom {
       onDragStart: stopAnimation,
       // Trackpad and touch pinch both land here; `origin` is the touch midpoint,
       // or the cursor for a trackpad ctrl+wheel.
-      onPinch: ({ offset: [pinched], origin }) => {
-        stopAnimation();
-        scaleTo(pinched, toStage(origin[0], origin[1]));
+      onPinch: ({ first, last, memo, offset: [pinched], origin }) => {
+        const anchor = toStage(origin[0], origin[1]);
+
+        if (first) {
+          stopAnimation();
+          pinching.current = true;
+        }
+
+        scaleTo(pinched, anchor, memo ?? anchor);
+
+        if (last) {
+          pinching.current = false;
+        }
+
+        return anchor;
       },
       // A ctrl-modified wheel is the trackpad pinch, already handled by onPinch.
       // A plain two-finger swipe pans the capture, the same as dragging it.
@@ -330,13 +334,13 @@ export function useZoom(natural: readonly [number, number]): Zoom {
       },
     },
     {
-      // Only wheel and pinch cancel their events. Cancelling the drag's
-      // `pointerdown` would suppress the compatibility mouse events the browser
-      // builds `dblclick` from, taking the double-click zoom with it.
-      drag: { filterTaps: true },
+      drag: { filterTaps: true, tapsThreshold: TAP_SLOP },
       eventOptions: { passive: false },
       pinch: {
         from: () => [current().scale, 0],
+        // Touch events rather than pointer events: only a cancelled `touchmove`
+        // stops iOS Safari taking a two-finger gesture for its own page zoom.
+        pointer: { touch: true },
         preventDefault: true,
         scaleBounds: () => {
           const limits = current();
@@ -349,8 +353,6 @@ export function useZoom(natural: readonly [number, number]): Zoom {
     }
   );
 
-  const zoomed = geometry.scale > geometry.fitScale;
-
   return {
     dragging,
     frameRect,
@@ -361,32 +363,11 @@ export function useZoom(natural: readonly [number, number]): Zoom {
       width: geometry.width,
     },
     measured: size.width > 0 && size.height > 0,
-    // A scale under the fitting one clamps to it, so 0 asks for the whole
-    // capture, centred.
-    refit: () => animateTo(0, { x: size.width / 2, y: size.height / 2 }),
+    refit: () => animateTo(0, centre()),
     scale: geometry.scale,
-    stageProps: {
-      onDoubleClick: (event) => {
-        const from = current();
-        // A held modifier steps back out, like a map's double-click.
-        const factor =
-          event.altKey || event.shiftKey ? 1 / STEP_FACTOR : STEP_FACTOR;
-        const base =
-          from.scale > from.fitScale ? from.scale : from.stepScale / factor;
-
-        animateTo(base * factor, toStage(event.clientX, event.clientY));
-      },
-      ref: stageRef,
-    },
-    toggle: () => {
-      const from = current();
-
-      animateTo(zoomed ? 0 : from.stepScale, {
-        x: size.width / 2,
-        y: size.height / 2,
-      });
-    },
+    stageProps: { ref: stageRef },
+    toggle: () => toggleAt(centre()),
     zoomable: geometry.stepScale > geometry.fitScale,
-    zoomed,
+    zoomed: geometry.scale > geometry.fitScale,
   };
 }
