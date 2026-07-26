@@ -1,70 +1,103 @@
-# Capturing the product walkthrough
+# Driving the product walkthrough's captures
 
-Records a **served, reachable** app into capture blobs and their `captures[]` registry entries — the capture half of the product walkthrough, separable from authoring (which touches no browser, [product-walkthrough.md](product-walkthrough.md)). You **drive**, not author — you produce captures only.
+Walks a **served, reachable** app to each state on a shot list and records it — the capture half of the product walkthrough. You are the executor: the shots were chosen for you ([capture-plan.md](capture-plan.md)) and the prose is written after you ([product-walkthrough.md](product-walkthrough.md)). You **drive**, not author — you produce captures only.
+
+The work here is deliberately mechanical: every judgment call about what is worth showing was made before you were dispatched. Reaching a named state is the one thing you decide, and you decide it from the page in front of you.
 
 Two invariants hold for every capture:
 
 - **Zero changes to the app under review.** rrweb is driver-injected at capture time; the app takes no code change and no runtime dependency on docent — it only has to be served and reachable.
-- **You consume a served app; you never spawn it.** Serving is the human's dev workflow. Either it is already running, or the human gives you the command and you run it in their session.
+- **You consume a served app; you never spawn it and never stop it.** Serving is the human's dev workflow, settled before you were dispatched.
 
-The driver is **agent-browser** — system Chrome over CDP, out-of-process (you shell out to the CLI), no bundled browser. Before driving, load its own reference — the command shapes shown here are illustrative; the loaded reference is authoritative and version-matched:
+The driver is **agent-browser** — Chrome over CDP, out-of-process, reached through `npx -y agent-browser@latest`, which self-bootstraps the same way the `docent` CLI does. Assume no global install and spell the `npx` form on every call; agent-browser manages its own Chrome under `~/.agent-browser/browsers/`, so there is no system browser to find and none of this touches the human's own Chrome.
+
+Before driving, load its own reference — the command shapes shown here are illustrative; the loaded reference is authoritative and version-matched:
 
 ```bash
-agent-browser skills get core          # authoritative command reference (matches installed version)
+npx -y agent-browser@latest skills get core --full   # full command reference (matches installed version)
 ```
 
-Bring-your-own-Chrome: agent-browser drives a findable system Chrome/Chromium — docent ships no browser. With no findable Chrome, hard-stop reporting the requirement.
+The preflight settled that a browser exists before you were dispatched ([SKILL.md](../SKILL.md), "Preflight — settle how the app is served"), so `install` is not yours to run. Where Chrome has gone missing anyway, that is a hard stop reported as such — not a download you start mid-capture.
 
-## 1. Source the setup — precedence, then AFK
+## What you are given
 
-Gather the setup knowledge a capture needs — base URL / port, viewport default, and any login or data-seeding steps — in this **precedence** order, stopping at the first that answers:
+- **The skill's absolute base directory** — where this brief lives: it is `<base>/reference/capture.md`, and every file it links to is a sibling under `<base>/reference/`. Resolve them there. Your cwd is the repository under review, so a bare relative path looks inside somebody else's tree and comes back empty.
+- **The repository's absolute root** — run the CLI there, and find the runbook at `.docent/capture.md` under it.
+- **The shot list** — an ordered set of states to reach, each with a title, a kind (screenshot or recording), and sometimes a hint. It arrives in your prompt because it was produced this run and written down nowhere else.
 
-1. **Existing codebase context** — README, CONTRIBUTING, `package.json` scripts, `.env.example`, in-repo agent docs.
-2. **The `.docent/capture.md` runbook** — the fallback brief (see [runbook-template.md](runbook-template.md) for its shape).
-3. **Ask the human** — a single, one-time prompt.
+## What you return
 
-When setup is discoverable in 1 or 2, run **AFK** — no prompt. The human-in-the-loop prompt fires only at rung 3; whatever you learn there, author into the runbook at the end (§8) so later captures don't re-ask.
+A receipt, not prose. It names the shell you filled and every capture in it, and it is what tells the run which shots the tour is missing:
 
-**Done when** you hold: the base URL, the viewport default, and the steps to reach a usable app state (login, seed).
+```text
+walkthrough: wlk_01J…
+captures:
+  1. cap_01J… — Export before the dialog (screenshot)
+  2. cap_01J… — Naming the export (recording)
+obstacles:
+  - "Export with an invalid name" was unreachable — the dialog accepted every name I tried
+```
 
-## 2. Reach the app — the readiness gate
+An **obstacle** is anything that made the tour less truthful: a shot you could not reach, a screen that errored so its capture is of the error state, a runbook claim that turned out wrong. Say each one the way it will be read aloud to the human, because it is passed on verbatim. `obstacles: none` is the ordinary answer. What you think of the app or the code is not an obstacle and is not reported.
+
+## 1. Read the runbook — your setup, already settled
+
+`.docent/capture.md` at the repository root is the serving runbook: base URL, viewport default, and the login or seeding steps that reach a usable state (see [runbook-template.md](runbook-template.md) for its shape). It was authored by the run before you were dispatched, so treat it as **input** — you neither add to it nor correct it.
+
+**Done when** you hold the base URL, the viewport default, and the steps to a usable app state.
+
+If the runbook contradicts the app — a port that has moved, a login that no longer works — that is an obstacle you report, not a puzzle you solve: you have no human to ask and no mandate to guess a replacement.
+
+## 2. Take your own browser session
+
+Every `agent-browser` call carries `--session <name>`, so the run cannot land in the human's own browser work or in a session another worktree is driving. `agent-browser` derives a stable name for you — run it from the repository root, whose worktree is the scope:
+
+```bash
+session="$(npx -y agent-browser@latest session id --scope worktree --prefix docent)"   # → docent-<hash of this worktree>
+npx -y agent-browser@latest --session "$session" open        # about:blank first, so the viewport applies to the first paint
+npx -y agent-browser@latest --session "$session" set viewport <w> <h>    # e.g. 1280 800
+```
+
+Pass the flag on every call — shell state does not reliably survive between commands, so an exported `AGENT_BROWSER_SESSION` can quietly stop applying halfway through a run.
+
+Set the viewport **before** navigating, so the app's first paint is already at the frame you capture: the runbook's default, overridden only where a shot asks for a different frame.
+
+## 3. Reach the app — the reach check
 
 Get the app to a verified-rendered state before capturing. **Never emit a broken capture silently** — a connection-refused or error page must fail loudly, not become a screenshot.
 
-- **Already-running server** (human booted it) → navigate to the starting route (§3) and verify **real DOM** rendered: `agent-browser snapshot -i` shows the app's actual elements, not an error page.
-- **Agent-launched server** (you ran the command in the human's session) → poll the base URL until it responds — **any HTTP status** counts as up (a 404 or 500 still means the server answered); only a refused connection is not-up. Poll under an overall timeout, then hard stop if it never answers:
+- Navigate to the runbook's base URL, then read the page back: the snapshot must show the app's own elements, not an error page.
 
   ```bash
-  for _ in $(seq 1 100); do curl -s -o /dev/null --max-time 2 <url> && break; sleep 0.2; done
+  npx -y agent-browser@latest --session "$session" open "<base-url>"
+  npx -y agent-browser@latest --session "$session" snapshot -i
   ```
 
-  `curl -s` (no `-f`) exits 0 on any HTTP response and non-zero only on a failed connection — exactly the gate needed. Once it answers, navigate and verify real DOM as above.
+- **On failure** → **hard stop** and report `app not reachable at <url>`. Do not capture anything, and do not go looking for the app on another port.
 
-- **On failure** → **hard stop** with an actionable message, e.g. `app not reachable at <url> — is your dev server up?`. Do not proceed to capture.
+## 4. Create the walkthrough shell
 
-## 3. Stage viewport and route
-
-Launch Chrome, set the viewport **before** navigating (so it frames the first paint), then open the route:
+Captures register onto a **product walkthrough**, so establish which `wlk_` you are capturing into before the first shot. Nobody hands you one — you create it, and its id is the first line of your receipt:
 
 ```bash
-agent-browser open                     # about:blank first, so viewport applies to the capture
-agent-browser set viewport <w> <h>     # e.g. 1280 800
-agent-browser open <url><route>
+npx -y @angusfretwell/docent@latest walkthrough create --kind product
+#   → { "changeId": "chg_…", "walkthroughId": "wlk_…" }
 ```
 
-- **Viewport** — the runbook default (a stable property of the app), overridable per-capture.
-- **Starting route** — a per-capture concern: the value the human gave; else inferred from the change under review — the **names** of the changed files (`git diff --stat origin/HEAD...HEAD`) and targeted reads of the user-facing ones point at what to walk, and the hunks are never needed to choose a screen; else `/` as a last resort.
+Omit `--title`: the shell lands with an empty `title` and empty `sections` — both are editorial, which the authoring half fills — you author nothing. The CLI binds `bornChangeId` to the live head's Change, recording the Change lazily if the head has none.
 
-Both are recorded on the capture entity in §7 (`viewport`, `route`); the runbook or instruction is only their source.
+It is minted here, after §3 and not before it, so a run that hard-stops on an unreachable app leaves no empty shell behind it.
 
-## 4. Inject rrweb
+### Injecting rrweb — once per page load
 
-**Both** capture kinds are rrweb event streams — a screenshot is a DOM snapshot, not a raster, so it stays sharp at any zoom when the Review renders it. Inject rrweb by driver eval:
+Not a step of its own: a page load wipes the last injection, so this runs again for every load §5 makes, immediately after it.
+
+**Both** capture kinds are rrweb event streams — a screenshot is a DOM snapshot, not a raster, so it stays sharp at any zoom when the Review renders it. Inject it by driver eval:
 
 ```bash
 # rrweb's exports map does not expose the UMD build, so resolve the package
 # entry and take its sibling rather than asking for the subpath directly.
-cat "$(node -e 'const p=require("node:path");process.stdout.write(p.join(p.dirname(require.resolve("rrweb")),"rrweb.umd.min.cjs"))')" | agent-browser eval --stdin
+cat "$(node -e 'const path=require("node:path");process.stdout.write(path.join(path.dirname(require.resolve("rrweb")),"rrweb.umd.min.cjs"))')" | npx -y agent-browser@latest --session "$session" eval --stdin
 ```
 
 This resolves rrweb from wherever node can find it; if nothing resolves, install it somewhere disposable (e.g. `npm i --prefix <scratch-dir> rrweb`) and resolve from there — never add it to the app under review.
@@ -77,36 +110,48 @@ rrweb.record({ collectFonts: true, emit, inlineImages: true });
 
 Stylesheets are inlined by default; images and fonts are **not** — without those two options a replay months later shows holes where the app's assets used to be. The cost is blob size, which is the right trade for an immutable artifact.
 
-## 5. Drive and capture
+## 5. Walk the shot list — in order, bounded
 
-Drive the flow the way you already work — `snapshot -i` to read the page live (accessibility tree, element refs, disabled states visible), act on what you see, re-snapshot after any DOM change. Refs expire on navigation; re-snapshot.
+Take the shots in the order given, one at a time, and register each (§6) before moving on, so a shot you cannot reach costs only itself.
 
+Each shot starts with a page load, so each shot re-injects rrweb, and `record()` is called on the page in front of you:
+
+```bash
+npx -y agent-browser@latest --session "$session" open "<base-url><route you think the state lives at>"
+# then re-inject rrweb ("Injecting rrweb", above) into the page you just loaded
+```
+
+With rrweb in place, drive the way you already work — `snapshot -i` to read the page live (accessibility tree, element refs, disabled states visible), act on what you see, re-snapshot after any DOM change. Refs expire on navigation; re-snapshot, and re-inject rrweb after any navigation you make mid-shot. A shot's hint is a lead, not an instruction — the page overrules it.
+
+- **Three attempts per shot, then record it unreachable and move to the next.** An attempt is one honest run at the state: navigate, drive, look. On the third failure, name that shot in `obstacles` and go on to the next one. The budget is the point — grinding on a state the app will not produce burns the run on full accessibility trees and lands no tour at all, and the shot list has other shots that will work.
+- **Reach the state you were given, or report it missing.** Where two paths lead to the same state, take either. Where the state itself is not there, that is the obstacle — never substitute a different screen that looks similar, and never invent a shot the plan did not ask for. A capture that is not the state it claims to be is worse than a shot the tour is honestly missing, because the author cannot tell.
 - **Screenshot** — once the page is in the state you want, take the snapshot pair. `record()` emits `Meta` then `FullSnapshot` synchronously and returns its own stop function, so starting and immediately stopping yields exactly the still frame:
 
   ```bash
-  agent-browser eval "window.__evt=[]; rrweb.record({collectFonts:true,emit:e=>window.__evt.push(e),inlineImages:true})(); JSON.stringify(window.__evt.slice(0,2))" --json
+  npx -y agent-browser@latest --session "$session" eval "window.__evt=[]; rrweb.record({collectFonts:true,emit:event=>window.__evt.push(event),inlineImages:true})(); JSON.stringify(window.__evt.slice(0,2))" --json
   ```
 
   Write those two events to a `<tmp>.rrweb.json` file. Note `dims` — the **full document** size in CSS pixels, which is what the Review sizes the still to, not the viewport:
 
   ```bash
-  agent-browser eval "[document.documentElement.scrollWidth,document.documentElement.scrollHeight]" --json
+  npx -y agent-browser@latest --session "$session" eval "[document.documentElement.scrollWidth,document.documentElement.scrollHeight]" --json
   ```
 
-- **Recording** — start recording before driving the flow, then pull the raw rrweb event stream: `agent-browser eval "JSON.stringify(window.__evt)" --json` → write the events array verbatim to a `<tmp>.rrweb.json` file. Note `durationMs` (last event ts − first).
+- **Recording** — the same call **without the trailing `()`**, so the stop function is left uncalled and the recorder keeps emitting. Start it on the page the flow begins on, before you touch anything:
 
-## 6. Create the walkthrough shell
+  ```bash
+  npx -y agent-browser@latest --session "$session" eval "window.__evt=[]; rrweb.record({collectFonts:true,emit:event=>window.__evt.push(event),inlineImages:true}); window.__evt.length" --json
+  ```
 
-Captures register onto a **product walkthrough**, so first establish which `wlk_` you are capturing into. When the run (SKILL.md) supplies the id, use it. Run standalone, create a fresh shell:
+  Then drive the flow and pull the raw stream:
 
-```bash
-npx -y @angusfretwell/docent@latest walkthrough create --kind product
-#   → { "changeId": "chg_…", "walkthroughId": "wlk_…" }
-```
+  ```bash
+  npx -y agent-browser@latest --session "$session" eval "JSON.stringify(window.__evt)" --json
+  ```
 
-Omit `--title`: the shell lands with an empty `title` and empty `sections` — both are editorial, which the authoring half fills — you author nothing. The CLI binds `bornChangeId` to the live head's Change, recording the Change lazily if the head has none.
+  Write the events array verbatim to a `<tmp>.rrweb.json` file. Note `durationMs` (last event ts − first). A navigation mid-flow wipes both the recorder and `window.__evt`, so a recording is one page's flow — reach the starting state first, then start recording.
 
-## 7. Register the capture
+## 6. Register the capture
 
 Register each temp media file (§5) with `docent capture add` — the single home for content-sha addressing and append semantics. It content-addresses the bytes into `captures/<sha>.rrweb.json` (the filename **is** the sha-256 of the bytes, which dedups byte-identical screens across runs and freezes the exact bytes an anchor points at), issues the `cap_` id, and appends the validated `captures[]` registry entry to the manifest:
 
@@ -121,19 +166,28 @@ npx -y @angusfretwell/docent@latest capture add --walkthrough wlk_… --kind rec
 #   → { "captureId": "cap_…", "media": "<sha>", "registry": { … }, "walkthroughId": "wlk_…" }
 ```
 
-`--dims` is for screenshots and `--duration-ms` for recordings; the mismatch is refused, as is any capture on a code walkthrough. `--media` is a file path read relative to the cwd. `--route` and `--viewport` record the §3 staging on the capture entity. `--title` is a **short descriptive name for the state you just captured** ("Empty signup form") — the Review shows it in place of the generic "Screenshot 1" / "Recording 1". It is naming what you produced, not authoring prose: a few words, not a sentence; the section narrative stays the authoring half's job. Technically optional (an untitled capture falls back to its ordinal), but always pass one. All captures are born against the walkthrough's `bornChangeId`. The CLI is non-gating (the files stay plain and hand-writable), but prefer it: it validates against the same schemas the server renders.
+`--dims` is for screenshots and `--duration-ms` for recordings; the mismatch is refused, as is any capture on a code walkthrough. `--media` is a file path read relative to the cwd. `--route` and `--viewport` record where you actually were, which is what the Review shows. `--title` is the shot's title from the plan — a short descriptive name for the state ("Empty signup form"), shown in place of the generic "Screenshot 1" / "Recording 1". Always pass the plan's title, unchanged: a capture that is not the state its title claims is an obstacle on your receipt, never a retitle, because a retitled capture makes that gap invisible to the author. All captures are born against the walkthrough's `bornChangeId`. The CLI is non-gating (the files stay plain and hand-writable), but prefer it: it validates against the same schemas the server renders.
 
-## 8. First-run: author the runbook
+## 7. Teardown
 
-If the setup required asking the human (precedence rung 3), write what you learned to `.docent/capture.md` so later captures run AFK. Follow [runbook-template.md](runbook-template.md). If a runbook already existed and was correct, leave it; if you discovered it was wrong (e.g. the port changed), update it.
+Close your browser session when the last shot is registered, and leave everything else exactly as you found it:
 
-## 9. Teardown — only what it started
+```bash
+npx -y agent-browser@latest --session "$session" close
+```
 
-- **Human-run server** → never stopped. It is theirs.
-- **Agent-launched server** → reused across every capture in the session (capture is expensive), then stopped when the capture work is done.
-- Close the browser session when finished: `agent-browser close`.
+The app's server is never yours to stop, however it was started.
 
 ## Stop conditions
 
-- **App not reachable** (§2) — hard stop with the actionable message; never a silent broken capture.
-- **No findable system Chrome** — report the bring-your-own-Chrome requirement and stop.
+- **App not reachable** (§3) — hard stop with the actionable message; never a silent broken capture.
+- **The app drops mid-walk** — stop, and return the receipt with the captures you did land plus the obstacle. A half-filled shell an author can narrate beats no shell at all.
+- **No Chrome for agent-browser to launch** — the preflight's gate established there was one, so this is it having gone since. Report what the driver said and stop; installing one is the preflight's job, not a download you start mid-capture.
+
+## Non-goals
+
+- **Nothing editorial.** No titles you invented, no `walkthrough rename`, no sections, no callouts — the shell's `title` and `sections` stay empty for the authoring half.
+- **No subagents of your own.** You are the run's only executor: the browser sessions would be isolated but the app's backend is not, so two of you racing one dev server capture a race rather than a product.
+- **No re-planning.** The shot list is not a starting point to improve on. A screen you noticed and nobody asked for is not a shot.
+- **No git writes and no runbook writes.** No commits, no pushes, no working-tree edits; the runbook is input.
+- **No questions.** You have no human to ask. Where this brief leaves something to judgment, judge it and move.

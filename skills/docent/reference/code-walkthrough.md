@@ -41,10 +41,11 @@ obstacles:
 Read the change under review with plain `git`, straight from the local clone. Default to the **live head** of the branch; referencing it records a Change lazily when the head has none (the CLI does this on the first `create`).
 
 ```bash
-git fetch
 git log --oneline origin/HEAD..HEAD    # what this branch adds (fall back to origin/<default-branch> if origin/HEAD is unset)
 git diff origin/HEAD...HEAD            # the change — three-dot, head against the merge-base
 ```
+
+**Don't fetch.** The run fetched before it dispatched you, and it dispatched you alongside another agent reading the same clone — a second fetch buys nothing and can contend on the clone's ref locks.
 
 You are the only agent in the run that reads the hunks, which is why you exist as your own context. Read **intent** from three sources: the **branch name**, the base..head **commit messages**, and the diff itself.
 
