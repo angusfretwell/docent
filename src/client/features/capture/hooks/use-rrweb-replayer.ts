@@ -3,10 +3,10 @@ import { captureEventsQuery } from "@client/queries/captures";
 import type { WalkthroughId } from "@shared/schemas/ids";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { eventWithTime } from "rrweb";
-import { Replayer, ReplayerEvents } from "rrweb";
+import type { eventWithTime, Replayer } from "rrweb";
+import { ReplayerEvents } from "rrweb";
 
-import { sealReplay } from "../lib/replay-focus";
+import { sealedReplayer } from "../lib/replay-focus";
 import { holdReplayScheme } from "../lib/replay-scheme";
 
 export interface RrwebReplayer {
@@ -156,14 +156,13 @@ export function useRrwebReplayer(
       return;
     }
 
-    const replayer = new Replayer(eventStream as eventWithTime[], {
+    const replayer = sealedReplayer(eventStream as eventWithTime[], {
       mouseTail: false,
       root: rootRef.current,
       skipInactive: false,
       speed: 1,
     });
     replayerRef.current = replayer;
-    sealReplay(replayer);
 
     setPosition(0);
     setDurationMs(replayer.getMetaData().totalTime);
