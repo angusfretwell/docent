@@ -96,6 +96,7 @@ export function CodeWalkthroughDiffPanel({
   return (
     <Pane>
       <AnnotatedCodeView
+        disableBackground
         enableGutterUtility={!compose.composing}
         enableLineSelection={!compose.composing}
         items={items}

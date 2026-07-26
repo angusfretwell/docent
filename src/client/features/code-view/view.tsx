@@ -57,6 +57,7 @@ interface AnnotatedCodeViewProps {
   ) => void;
   enableGutterUtility?: boolean;
   enableLineSelection?: boolean;
+  disableBackground?: boolean;
   onToggleItemCollapsed?: (itemId: string) => void;
   ref: RefObject<CodeViewHandle<LineDecoration> | null>;
   renderAnnotation?: (
@@ -72,6 +73,7 @@ export function AnnotatedCodeView({
   onGutterUtilityClick,
   enableLineSelection,
   enableGutterUtility,
+  disableBackground,
   onToggleItemCollapsed,
   ref,
   renderAnnotation,
@@ -82,6 +84,7 @@ export function AnnotatedCodeView({
   const options = useMemo<CodeViewOptions<LineDecoration>>(
     () => ({
       diffStyle: diffLayout,
+      disableBackground,
       disableVirtualizationBuffers: true,
       enableGutterUtility,
       enableLineSelection,
@@ -91,7 +94,13 @@ export function AnnotatedCodeView({
       stickyHeaders: true,
       unsafeCSS: DIFFS_CSS,
     }),
-    [diffLayout, enableGutterUtility, enableLineSelection, onGutterUtilityClick]
+    [
+      diffLayout,
+      disableBackground,
+      enableGutterUtility,
+      enableLineSelection,
+      onGutterUtilityClick,
+    ]
   );
 
   return (
