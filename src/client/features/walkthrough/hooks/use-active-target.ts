@@ -231,6 +231,13 @@ export function useActiveTarget(
         return;
       }
 
+      // The opening reading has nothing to settle out of, and dwelling on it
+      // leaves the pane empty for as long as it takes.
+      if (active.current === null) {
+        commit(reading);
+        return;
+      }
+
       // A reading already waiting out its dwell keeps its timer, so a scroll that
       // never pauses still lands rather than deferring itself indefinitely.
       if (reading === pending.current) {
