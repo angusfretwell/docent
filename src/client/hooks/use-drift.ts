@@ -1,4 +1,3 @@
-import { fetchBlobText } from "@client/lib/blobs";
 import type {
   DriftFile,
   DriftResult,
@@ -6,6 +5,7 @@ import type {
   ReanchorJob,
 } from "@client/lib/drift";
 import { anchorContext, indexDiffFiles, triagePlan } from "@client/lib/drift";
+import { blobQueryOptions } from "@client/queries/blob";
 import { foldComment } from "@shared/lib/comment";
 import {
   excerptLines,
@@ -16,12 +16,14 @@ import {
 import { identityAnchorDrift } from "@shared/lib/identity-drift";
 import type { Anchor } from "@shared/schemas/comment";
 import type { CommentEntry, WalkthroughEntry } from "@shared/schemas/review";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 export function useReanchor(
   jobs: readonly ReanchorJob[],
   excerpts: readonly ExcerptJob[]
 ): ReadonlyMap<string, DriftResult> {
+  const queryClient = useQueryClient();
   const [resolved, setResolved] = useState<ReadonlyMap<string, DriftResult>>(
     new Map()
   );
@@ -41,8 +43,8 @@ export function useReanchor(
     async function reanchor(job: ReanchorJob) {
       try {
         const [bornText, currentText] = await Promise.all([
-          fetchBlobText(job.bornSha),
-          fetchBlobText(job.currentSha),
+          queryClient.ensureQueryData(blobQueryOptions(job.bornSha)),
+          queryClient.ensureQueryData(blobQueryOptions(job.currentSha)),
         ]);
         const result = reanchorRange(
           splitLines(bornText),
@@ -62,7 +64,9 @@ export function useReanchor(
     }
     async function excerpt(job: ExcerptJob) {
       try {
-        const bornText = await fetchBlobText(job.bornSha);
+        const bornText = await queryClient.ensureQueryData(
+          blobQueryOptions(job.bornSha)
+        );
         publish(job.id, {
           bornText: excerptLines(bornText, job.range),
           lines: job.range,
