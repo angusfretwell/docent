@@ -46,10 +46,10 @@ An obstacle is something that made the tour **less truthful** — a capture that
 Capture runs **first** and leaves the product walkthrough shell: `walkthroughs/product/wlk_*/` with its `captures[]` registry populated and `sections` still empty. You author **into that shell** — read its manifest to get the captures you have to work with:
 
 ```bash
-cat .docent/reviews/*/walkthroughs/product/<the id you were given>/manifest.json
+cat .docent/reviews/<branch-slug>/walkthroughs/product/<the id you were given>/manifest.json
 ```
 
-The id is the one you were handed, and only that one — the branch may hold earlier product walkthroughs, already narrated, that are none of your business. Each registry entry is `{ id: cap_…, kind, media, route, viewport, title, … }`; the `media` sha addresses the blob at `captures/<sha>.rrweb.json` — a screenshot holds the `[Meta, FullSnapshot]` pair, a recording the whole stream. **Look at what you are narrating**: replay a screenshot blob or read its serialized DOM. A title tells you what the executor meant to capture; the blob is what it got, and the gap between those two is where a section goes wrong. If no such shell exists, capture has not run — see Stop conditions.
+`<branch-slug>` is the checked-out branch name with slashes turned to dashes. The id is the one you were handed, and only that one — the branch may hold earlier product walkthroughs, already narrated, that are none of your business. Each registry entry is `{ id: cap_…, kind, media, route, viewport, title, … }`; the `media` sha addresses the blob at `captures/<sha>.rrweb.json` — a screenshot holds the `[Meta, FullSnapshot]` pair, a recording the whole stream. **Look at what you are narrating**: replay a screenshot blob or read its serialized DOM. A title tells you what the executor meant to capture; the blob is what it got, and the gap between those two is where a section goes wrong. If no such shell exists, capture has not run — see Stop conditions.
 
 ## 2. Group, order, and narrate — the editorial call
 

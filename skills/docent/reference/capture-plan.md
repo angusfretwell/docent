@@ -69,6 +69,13 @@ A shot names **where the app should be**, not how to get there: "the export dial
 
 You have not seen this app render. You read its source, which is not the same thing — a control's real label, whether it sits behind a menu, what a route redirects to when nothing is seeded — and a plan of clicks written from source is confidently wrong in exactly the places that cost the executor its attempts. The executor can see the page; leave the pathfinding with the agent that has the accessibility tree in front of it.
 
+## Stop conditions
+
+- **Nothing in the change a person can see** — a refactor, a build change, docs, backend work with no surface. Return `shots:` empty with the reason on `obstacles`, and no `intent`. There is no product tour of a change with no screens, and an empty shot list says so in one line; padding it with screens the branch did not touch spends the executor's whole run on a tour that shows nothing.
+- **User-facing work whose screens you cannot place** — the files say something rendered but you cannot tell where a person meets it. Same answer: empty `shots:`, the reason on `obstacles`. Guessing routes for the executor to fail against is worse than saying you could not find them, because a failed shot costs three attempts to learn what you already knew.
+
+Either way the run reads the empty list, writes no product walkthrough, and says so in its closing report — you do not need to raise it any louder than the receipt.
+
 ## Non-goals
 
 - **No browser.** You never open one, never drive one, never look at a rendered page. Driving is [capture.md](capture.md)'s whole job.

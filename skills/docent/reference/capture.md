@@ -62,7 +62,7 @@ Pass the flag on every call — shell state does not reliably survive between co
 
 Set the viewport **before** navigating, so the app's first paint is already at the frame you capture: the runbook's default, overridden only where a shot asks for a different frame.
 
-## 3. Reach the app — the readiness gate
+## 3. Reach the app — the reach check
 
 Get the app to a verified-rendered state before capturing. **Never emit a broken capture silently** — a connection-refused or error page must fail loudly, not become a screenshot.
 
@@ -75,9 +75,24 @@ Get the app to a verified-rendered state before capturing. **Never emit a broken
 
 - **On failure** → **hard stop** and report `app not reachable at <url>`. Do not capture anything, and do not go looking for the app on another port.
 
-## 4. Inject rrweb
+## 4. Create the walkthrough shell
 
-**Both** capture kinds are rrweb event streams — a screenshot is a DOM snapshot, not a raster, so it stays sharp at any zoom when the Review renders it. Inject rrweb by driver eval, after every page load — this command is what §6's loop re-runs per shot:
+Captures register onto a **product walkthrough**, so establish which `wlk_` you are capturing into before the first shot. Nobody hands you one — you create it, and its id is the first line of your receipt:
+
+```bash
+npx -y @angusfretwell/docent@latest walkthrough create --kind product
+#   → { "changeId": "chg_…", "walkthroughId": "wlk_…" }
+```
+
+Omit `--title`: the shell lands with an empty `title` and empty `sections` — both are editorial, which the authoring half fills — you author nothing. The CLI binds `bornChangeId` to the live head's Change, recording the Change lazily if the head has none.
+
+It is minted here, after §3 and not before it, so a run that hard-stops on an unreachable app leaves no empty shell behind it.
+
+### Injecting rrweb — once per page load
+
+Not a step of its own: a page load wipes the last injection, so this runs again for every load §5 makes, immediately after it.
+
+**Both** capture kinds are rrweb event streams — a screenshot is a DOM snapshot, not a raster, so it stays sharp at any zoom when the Review renders it. Inject it by driver eval:
 
 ```bash
 # rrweb's exports map does not expose the UMD build, so resolve the package
@@ -95,26 +110,15 @@ rrweb.record({ collectFonts: true, emit, inlineImages: true });
 
 Stylesheets are inlined by default; images and fonts are **not** — without those two options a replay months later shows holes where the app's assets used to be. The cost is blob size, which is the right trade for an immutable artifact.
 
-## 5. Create the walkthrough shell
+## 5. Walk the shot list — in order, bounded
 
-Captures register onto a **product walkthrough**, so establish which `wlk_` you are capturing into before the first shot. Nobody hands you one — you create it, and its id is the first line of your receipt:
+Take the shots in the order given, one at a time, and register each (§6) before moving on, so a shot you cannot reach costs only itself.
 
-```bash
-npx -y @angusfretwell/docent@latest walkthrough create --kind product
-#   → { "changeId": "chg_…", "walkthroughId": "wlk_…" }
-```
-
-Omit `--title`: the shell lands with an empty `title` and empty `sections` — both are editorial, which the authoring half fills — you author nothing. The CLI binds `bornChangeId` to the live head's Change, recording the Change lazily if the head has none.
-
-## 6. Walk the shot list — in order, bounded
-
-Take the shots in the order given, one at a time, and register each (§7) before moving on, so a shot you cannot reach costs only itself.
-
-Each shot starts with a page load, so each shot re-injects rrweb — a load wipes the last injection, and `record()` is called on the page in front of you:
+Each shot starts with a page load, so each shot re-injects rrweb, and `record()` is called on the page in front of you:
 
 ```bash
 npx -y agent-browser@latest --session "$session" open "<base-url><route you think the state lives at>"
-# then re-inject rrweb (§4) into the page you just loaded
+# then re-inject rrweb ("Injecting rrweb", above) into the page you just loaded
 ```
 
 With rrweb in place, drive the way you already work — `snapshot -i` to read the page live (accessibility tree, element refs, disabled states visible), act on what you see, re-snapshot after any DOM change. Refs expire on navigation; re-snapshot, and re-inject rrweb after any navigation you make mid-shot. A shot's hint is a lead, not an instruction — the page overrules it.
@@ -133,11 +137,23 @@ With rrweb in place, drive the way you already work — `snapshot -i` to read th
   npx -y agent-browser@latest --session "$session" eval "[document.documentElement.scrollWidth,document.documentElement.scrollHeight]" --json
   ```
 
-- **Recording** — start recording before driving the flow, then pull the raw rrweb event stream: `npx -y agent-browser@latest --session "$session" eval "JSON.stringify(window.__evt)" --json` → write the events array verbatim to a `<tmp>.rrweb.json` file. Note `durationMs` (last event ts − first).
+- **Recording** — the same call **without the trailing `()`**, so the stop function is left uncalled and the recorder keeps emitting. Start it on the page the flow begins on, before you touch anything:
 
-## 7. Register the capture
+  ```bash
+  npx -y agent-browser@latest --session "$session" eval "window.__evt=[]; rrweb.record({collectFonts:true,emit:event=>window.__evt.push(event),inlineImages:true}); window.__evt.length" --json
+  ```
 
-Register each temp media file (§6) with `docent capture add` — the single home for content-sha addressing and append semantics. It content-addresses the bytes into `captures/<sha>.rrweb.json` (the filename **is** the sha-256 of the bytes, which dedups byte-identical screens across runs and freezes the exact bytes an anchor points at), issues the `cap_` id, and appends the validated `captures[]` registry entry to the manifest:
+  Then drive the flow and pull the raw stream:
+
+  ```bash
+  npx -y agent-browser@latest --session "$session" eval "JSON.stringify(window.__evt)" --json
+  ```
+
+  Write the events array verbatim to a `<tmp>.rrweb.json` file. Note `durationMs` (last event ts − first). A navigation mid-flow wipes both the recorder and `window.__evt`, so a recording is one page's flow — reach the starting state first, then start recording.
+
+## 6. Register the capture
+
+Register each temp media file (§5) with `docent capture add` — the single home for content-sha addressing and append semantics. It content-addresses the bytes into `captures/<sha>.rrweb.json` (the filename **is** the sha-256 of the bytes, which dedups byte-identical screens across runs and freezes the exact bytes an anchor points at), issues the `cap_` id, and appends the validated `captures[]` registry entry to the manifest:
 
 ```bash
 # screenshot: full-page CSS-pixel document size rides --dims
@@ -152,7 +168,7 @@ npx -y @angusfretwell/docent@latest capture add --walkthrough wlk_… --kind rec
 
 `--dims` is for screenshots and `--duration-ms` for recordings; the mismatch is refused, as is any capture on a code walkthrough. `--media` is a file path read relative to the cwd. `--route` and `--viewport` record where you actually were, which is what the Review shows. `--title` is the shot's title from the plan — a short descriptive name for the state ("Empty signup form"), shown in place of the generic "Screenshot 1" / "Recording 1". Always pass the plan's title, unchanged: a capture that is not the state its title claims is an obstacle on your receipt, never a retitle, because a retitled capture makes that gap invisible to the author. All captures are born against the walkthrough's `bornChangeId`. The CLI is non-gating (the files stay plain and hand-writable), but prefer it: it validates against the same schemas the server renders.
 
-## 8. Teardown
+## 7. Teardown
 
 Close your browser session when the last shot is registered, and leave everything else exactly as you found it:
 
