@@ -43,10 +43,11 @@ obstacles: none
 ## 1. Read the change — its shape, not its hunks
 
 ```bash
-git fetch
 git log --oneline origin/HEAD..HEAD    # what this branch adds (fall back to origin/<default-branch> if origin/HEAD is unset)
 git diff --stat origin/HEAD...HEAD     # which files moved, and by how much — names, not hunks
 ```
+
+**Don't fetch.** The run fetched before it dispatched you, and it dispatched you alongside another agent reading the same clone — a second fetch buys nothing and can contend on the clone's ref locks.
 
 Then **read the user-facing files themselves**, targeted: the routes, screens, and components the stat named. Reading a file whole tells you what renders; a hunk tells you what one line became, which is the code walkthrough's subject and not yours. The full diff is the one thing you never ask for — it is the largest artifact in the run, another agent is already holding it, and it cannot answer the only question you have, which is what a person sees.
 

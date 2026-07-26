@@ -46,26 +46,26 @@ An **obstacle** is anything that made the tour less truthful: a shot you could n
 
 If the runbook contradicts the app — a port that has moved, a login that no longer works — that is an obstacle you report, not a puzzle you solve: you have no human to ask and no mandate to guess a replacement.
 
-## 2. Reach the app — the readiness gate
+## 2. Take your own browser session
 
-Get the app to a verified-rendered state before capturing. **Never emit a broken capture silently** — a connection-refused or error page must fail loudly, not become a screenshot.
-
-- Navigate to the base URL and verify **real DOM** rendered: `agent-browser snapshot -i` shows the app's actual elements, not an error page.
-- **On failure** → **hard stop** and report `app not reachable at <url>`. Do not capture anything, and do not go looking for the app on another port.
-
-## 3. Take your own browser session
-
-Every `agent-browser` call carries `--session <name>`, with a name derived from this repository so the run cannot land in the human's own browser work or in a session another worktree is driving:
+Every `agent-browser` call carries `--session <name>`, so the run cannot land in the human's own browser work or in a session another worktree is driving. `agent-browser` derives a stable name for you — run it from the repository root, whose worktree is the scope:
 
 ```bash
-session="docent-$(git -C <repo-root> rev-parse --abbrev-ref HEAD | tr / -)-$(printf %s <repo-root> | shasum | cut -c1-8)"
+session="$(agent-browser session id --scope worktree --prefix docent)"   # → docent-<hash of this worktree>
 agent-browser --session "$session" open        # about:blank first, so the viewport applies to the first paint
 agent-browser --session "$session" set viewport <w> <h>    # e.g. 1280 800
 ```
 
-The branch keeps the name readable and the path hash keeps two worktrees of the same branch apart. Pass the flag on every call — shell state does not reliably survive between commands, so an exported `AGENT_BROWSER_SESSION` can quietly stop applying halfway through a run.
+Pass the flag on every call — shell state does not reliably survive between commands, so an exported `AGENT_BROWSER_SESSION` can quietly stop applying halfway through a run.
 
-Set the viewport **before** navigating: the runbook's default, overridden only where a shot asks for a different frame.
+Set the viewport **before** navigating, so the app's first paint is already at the frame you capture: the runbook's default, overridden only where a shot asks for a different frame.
+
+## 3. Reach the app — the readiness gate
+
+Get the app to a verified-rendered state before capturing. **Never emit a broken capture silently** — a connection-refused or error page must fail loudly, not become a screenshot.
+
+- Navigate to the base URL and verify **real DOM** rendered: `agent-browser --session "$session" snapshot -i` shows the app's actual elements, not an error page.
+- **On failure** → **hard stop** and report `app not reachable at <url>`. Do not capture anything, and do not go looking for the app on another port.
 
 ## 4. Inject rrweb
 
@@ -89,7 +89,7 @@ Stylesheets are inlined by default; images and fonts are **not** — without tho
 
 ## 5. Create the walkthrough shell
 
-Captures register onto a **product walkthrough**, so establish which `wlk_` you are capturing into before the first shot. When the run supplies the id, use it. Otherwise create a fresh shell:
+Captures register onto a **product walkthrough**, so establish which `wlk_` you are capturing into before the first shot. Nobody hands you one — you create it, and its id is the first line of your receipt:
 
 ```bash
 npx -y @angusfretwell/docent@latest walkthrough create --kind product
@@ -135,7 +135,7 @@ npx -y @angusfretwell/docent@latest capture add --walkthrough wlk_… --kind rec
 #   → { "captureId": "cap_…", "media": "<sha>", "registry": { … }, "walkthroughId": "wlk_…" }
 ```
 
-`--dims` is for screenshots and `--duration-ms` for recordings; the mismatch is refused, as is any capture on a code walkthrough. `--media` is a file path read relative to the cwd. `--route` and `--viewport` record where you actually were, which is what the Review shows. `--title` is the shot's title from the plan — a short descriptive name for the state ("Empty signup form"), shown in place of the generic "Screenshot 1" / "Recording 1". Keep the plan's title where the state matches it, and say what you actually captured where it doesn't. Always pass one, though an untitled capture falls back to its ordinal. All captures are born against the walkthrough's `bornChangeId`. The CLI is non-gating (the files stay plain and hand-writable), but prefer it: it validates against the same schemas the server renders.
+`--dims` is for screenshots and `--duration-ms` for recordings; the mismatch is refused, as is any capture on a code walkthrough. `--media` is a file path read relative to the cwd. `--route` and `--viewport` record where you actually were, which is what the Review shows. `--title` is the shot's title from the plan — a short descriptive name for the state ("Empty signup form"), shown in place of the generic "Screenshot 1" / "Recording 1". Always pass the plan's title, unchanged: a capture that is not the state its title claims is an obstacle on your receipt, never a retitle, because a retitled capture makes that gap invisible to the author. All captures are born against the walkthrough's `bornChangeId`. The CLI is non-gating (the files stay plain and hand-writable), but prefer it: it validates against the same schemas the server renders.
 
 ## 8. Teardown
 
@@ -149,7 +149,7 @@ The app's server is never yours to stop, however it was started.
 
 ## Stop conditions
 
-- **App not reachable** (§2) — hard stop with the actionable message; never a silent broken capture.
+- **App not reachable** (§3) — hard stop with the actionable message; never a silent broken capture.
 - **The app drops mid-walk** — stop, and return the receipt with the captures you did land plus the obstacle. A half-filled shell an author can narrate beats no shell at all.
 - **No findable system Chrome** — report the bring-your-own-Chrome requirement and stop.
 

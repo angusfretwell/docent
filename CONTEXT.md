@@ -30,6 +30,12 @@ An interactive, local-first tool for reviewing code changes — especially agent
 
 **Capture**: A content-addressed media artifact anchored in a Product walkthrough — a screenshot or a recording of the running app at a route and viewport. Carries Callouts pinned to its regions or timestamps. _Avoid_: Screenshot (only one of its two kinds), Snapshot, Media
 
+**Shot**: One state of the running app that a Product walkthrough's plan asks for — "the export dialog open with a filename entered". Named as a state to reach, never as the steps to reach it: the plan is written from the change by an agent that has never seen the app render, so the pathfinding belongs to the agent driving the browser. An ordered **shot list** is the plan, and each Shot becomes at most one Capture — the ones nothing can reach come back as Obstacles instead. Ephemeral, never persisted; pinned by [ADR 0004](docs/adr/0004-docent-skill-runs-as-an-orchestrator-with-phase-subagents.md). _Avoid_: Step, Scenario, Screenshot (a Shot is what was asked for; a Capture is what came back)
+
+**Intent brief**: Two or three sentences on what a change lets a person do and what it replaced, written for whoever narrates the Product walkthrough — and their only account of the branch, because that author reads no diff at all. Facts for an author, not prose for the tour. Ephemeral, like the shot list it rides with. _Avoid_: Summary, Description, Synopsis, Brief (unqualified — that is an agent's instructions)
+
+**Obstacle**: Anything that made a Walkthrough less truthful — a Shot nothing could reach, a screen that errored so its Capture holds the error state, a capture runbook claim that turned out wrong. Reported by whichever agent hit it and passed to the human in the run's closing report, never written to `.docent/` and never a Comment. An opinion about the change is not an Obstacle, however plainly the code invited it. _Avoid_: Error, Failure, Blocker, Finding (the pre-rename name for Comment)
+
 **Callout**: A walkthrough author's prose pinned to a target — a region or timestamp of a Capture, or a diff range — inside a Section. Fixed narration, not a conversation: no Status and no replies, unlike a Comment. Held on the Section. _Avoid_: Annotation, Note, Pin (its rendered marker)
 
 ### Conversations

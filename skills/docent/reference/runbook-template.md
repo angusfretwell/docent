@@ -34,4 +34,4 @@ Starting route is deliberately **absent** — routes are chosen per shot from th
 - Default: 1280 x 800
 ```
 
-Keep it terse and true. A capture that finds it wrong (a changed port, a broken login) reports that and stops rather than editing it, so correcting the runbook happens where the human is — the preflight.
+Keep it terse and true. A capture that finds it wrong (a changed port, a broken login) reports that as an obstacle and carries on rather than editing it: correcting the runbook happens where somebody can be asked what the truth is, which is the preflight, and the preflight rewrites it whenever it cannot reach the app at the base URL recorded here.
