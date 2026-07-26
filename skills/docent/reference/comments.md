@@ -6,11 +6,11 @@ Both drive the `docent comment` CLI, documented first below, then each flow.
 
 ## The `docent comment` CLI
 
-Run it from inside the repo under review (any subdirectory). It resolves the repo, the current branch's Review, and the Change refs — base at the merge-base, head at the branch tip — from git. It reads and writes under `.docent/reviews/<branch-slug>/`. The Review auto-creates on first use; a Change mints lazily on first reference. No server needs to be running.
+Run it from inside the repo under review (any subdirectory). It resolves the repo, the current branch's Review, and the Change refs — base at the merge-base, head at the branch tip — from git. It reads and writes under `.docent/reviews/<branch-slug>/`. The Review auto-creates on first use; a Change is created lazily on first reference. No server needs to be running.
 
 Every subcommand prints machine-readable JSON on stdout. Errors go to stderr and exit non-zero.
 
-**Non-gating** — the files under `.docent/` stay plain and directly writable; the CLI is the canonical, convenient path (ULID minting, anchor construction with git-resolved content `blobSha`, append semantics, Status derivation), never a lock. A running `docent serve` fs-watches every write, CLI-made or direct, and re-renders live over SSE, so each record is visible in the UI as it lands. Prefer the CLI: it validates against the same schema the server uses. Hand-authoring is the fallback when it isn't available.
+**Non-gating** — the files under `.docent/` stay plain and directly writable; the CLI is the canonical, convenient path (ULID ids, anchor construction with git-resolved content `blobSha`, append semantics, Status derivation), never a lock. A running `docent serve` fs-watches every write, CLI-made or direct, and re-renders live over SSE, so each record is visible in the UI as it lands. Prefer the CLI: it validates against the same schema the server uses. Hand-authoring is the fallback when it isn't available.
 
 ### `docent comment list` — fetch
 
@@ -39,7 +39,7 @@ Filters (all optional, AND-combined): `--status` (any-of), `--anchor-file` (the 
 
 ### `docent comment add` — write a fresh Comment
 
-Mints an anchored Comment, born **open**. Requires an anchor and a body.
+Writes an anchored Comment, born **open**. Requires an anchor and a body.
 
 ```bash
 npx -y @angusfretwell/docent@latest comment add --change --body "The error path is never tested."                 # whole-change note
@@ -125,7 +125,7 @@ Record what the session produced into the Review. The outcomes come from whateve
 
 3. **Replies and hand-backs — how a fixer's turn ended.** When the session addressed a Comment, end the turn with two records: a `reply` explaining what happened, then an `action` handing it back. All three outcomes — fixed, declined, blocked-on-a-question — record the same way; the difference belongs in the reply prose. **Always write the `action`.** The one case where a bare reply _is_ right: a **re-comment** — the session looked at a claimed fix and found it wrong or incomplete; leaving it open is the point.
 
-4. **Resolves — fixes that hold.** When the session **verified** a fix against head and it holds, `reply` the evidence, then `resolve`. Housekeeping resolves (a duplicate, a stale Comment) are fine too, with a reply giving the reason.
+4. **Resolves — fixes that hold.** When the session **verified** a fix against head and it holds, `reply` the evidence, then `resolve`. Housekeeping resolves (a duplicate, a Comment that no longer applies) are fine too, with a reply giving the reason.
 
    **Fixer ≠ resolver, by prose.** One flow carries the full write vocabulary, so the discipline is yours: don't resolve a Comment this same turn handed back with `action`. A fix and the verification that closes it are different passes — leave it **actioned** for a later pass that genuinely re-checked the fix against head. Leave other actioned Comments alone unless the session genuinely verified, answered, or decided them.
 

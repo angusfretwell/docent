@@ -1,12 +1,12 @@
 # Authoring the code walkthrough
 
-Drops the **Code walkthrough** — `walkthroughs/code/wlk_*/`, a manifest plus ordered section files whose targets are diff **ranges** narrated in prose. Code has no capture phase, so this file is the whole code pillar. You **author**, not review — you produce the tour only; Comments belong to the review loop ([comments.md](comments.md)).
+Drops the **Code walkthrough** — `walkthroughs/code/wlk_*/`, a manifest plus ordered section files whose targets are diff **ranges** narrated in prose. Code has no capture phase, so this file is the whole code walkthrough. You **author**, not review — you produce the tour only; Comments belong to the review loop ([comments.md](comments.md)).
 
-The output is plain files a running `docent serve` re-renders live. The CLI below is the single home for `wlk_`/`sec_` minting, lazy `bornChangeId`, and git-resolved `blobSha`, and non-gating — hand-authoring identical files re-renders just the same — but prefer it: it validates against the same schemas the server renders. Your work is the editorial judgment.
+The output is plain files a running `docent serve` re-renders live. The CLI below is the single home for issuing `wlk_`/`sec_` ids, lazy `bornChangeId`, and git-resolved `blobSha`, and non-gating — hand-authoring identical files re-renders just the same — but prefer it: it validates against the same schemas the server renders. Your work is the editorial judgment.
 
 ## 1. Read the Change — plain git, your own session
 
-Read the Change under review with plain `git`, straight from the local clone. Default to the **live head** of the branch; referencing it mints a Change lazily when the head has none (the CLI does this on the first `create`).
+Read the Change under review with plain `git`, straight from the local clone. Default to the **live head** of the branch; referencing it records a Change lazily when the head has none (the CLI does this on the first `create`).
 
 ```bash
 git fetch
@@ -26,14 +26,14 @@ The ranking is your judgment, but the shape is fixed:
 - **Group into sections.** Each section is one step of the tour — a titled idea carrying the ranges that make it (an entry point, a dispatch path). A section may span files.
 - **Order high-signal first.** Section order **is** the tour order — array position is the only rank.
 
-## 3. Mint the walkthrough shell
+## 3. Create the walkthrough shell
 
 ```bash
 npx -y @angusfretwell/docent@latest walkthrough create --kind code --title "<the tour's title>"
 #   → { "changeId": "chg_…", "walkthroughId": "wlk_…" }
 ```
 
-Mints a `wlk_` id and binds `bornChangeId` to the live head, minting the Change if the head has none. Hold the returned `walkthroughId` for the sections.
+Issues a `wlk_` id and binds `bornChangeId` to the live head, recording the Change if the head has none. Hold the returned `walkthroughId` for the sections.
 
 ## 4. Drop each section — ranges + literate narration
 
@@ -62,5 +62,5 @@ The tour is done when every section is dropped and the manifest lists them in or
 ## Boundaries
 
 - **Walkthroughs only, never Comments** — the review → Comments loop is a separate flow ([comments.md](comments.md)).
-- **Regeneration mints a fresh `wlk_`** — never edit a prior walkthrough in place. A walkthrough is durable and immutable; a new tour for a later Change is a new `create`. When and whether to regenerate is the reconcile decision in SKILL.md, not this file's.
+- **Every write lands a fresh `wlk_`** — never edit an earlier walkthrough in place. A walkthrough is durable and immutable; a new tour for a later Change is a new `create`. Whether to write one at all is SKILL.md's decision, not this file's.
 - **Commit / push is the human's git workflow** — out of scope.
