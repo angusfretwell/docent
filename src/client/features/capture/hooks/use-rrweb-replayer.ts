@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { eventWithTime } from "rrweb";
 import { Replayer, ReplayerEvents } from "rrweb";
 
+import { sealReplay } from "../lib/replay-focus";
 import { holdReplayScheme } from "../lib/replay-scheme";
 
 export interface RrwebReplayer {
@@ -162,6 +163,7 @@ export function useRrwebReplayer(
       speed: 1,
     });
     replayerRef.current = replayer;
+    sealReplay(replayer);
 
     setPosition(0);
     setDurationMs(replayer.getMetaData().totalTime);

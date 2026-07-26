@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import type { eventWithTime } from "rrweb";
 import { Replayer } from "rrweb";
 
+import { sealReplay } from "../lib/replay-focus";
 import { holdReplayScheme } from "../lib/replay-scheme";
 
 export interface RrwebSnapshot {
@@ -46,6 +47,7 @@ export function useRrwebSnapshot(
     // without racing its resize handling.
     replayer.iframe.style.width = `${width}px`;
     replayer.iframe.style.height = `${height}px`;
+    sealReplay(replayer);
     setReady(true);
 
     return () => {
