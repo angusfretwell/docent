@@ -5,6 +5,7 @@ import { Suspense } from "react";
 
 import { Navigation } from "./navigation";
 import { ReviewMeta } from "./review-meta";
+import { Settings } from "./settings";
 import { Separator } from "./ui/separator";
 
 export function Header() {
@@ -17,7 +18,10 @@ export function Header() {
           <ReviewMeta />
         </Suspense>
         <Separator orientation="vertical" className="ml-1.5 h-4" />
-        <CommentsToggle />
+        <div className="flex items-center gap-0.5">
+          <Settings />
+          <CommentsToggle />
+        </div>
       </div>
     </div>
   );

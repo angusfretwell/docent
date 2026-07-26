@@ -1,3 +1,5 @@
+import { autoScrollAtom } from "@client/lib/preferences";
+import { useAtomValue } from "jotai/react";
 import type { RefObject } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -65,6 +67,9 @@ export interface ActiveTarget {
 /**
  * `resetKey` re-observes when the rendered tour changes: switching walkthroughs
  * replaces every anchor, so the previous reading no longer refers to anything.
+ *
+ * Reading the prose only moves the target pane while auto-scroll is on; the two
+ * explicit moves always answer, since the reader asked for them by name.
  */
 export function useActiveTarget(
   containerRef: RefObject<HTMLElement | null>,
@@ -76,6 +81,15 @@ export function useActiveTarget(
   // how a jump tells the measuring to keep quiet until it lands.
   const arriving = useRef(false);
   const arrive = useRef<(() => void) | null>(null);
+
+  // A ref, not a dependency: re-running the effect would clear the active target,
+  // so toggling auto-scroll mid-tour would blank the pane it governs.
+  const autoScroll = useAtomValue(autoScrollAtom);
+  const following = useRef(autoScroll);
+
+  useEffect(() => {
+    following.current = autoScroll;
+  }, [autoScroll]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -120,6 +134,13 @@ export function useActiveTarget(
       showing = new Set(showingNow);
 
       if (arrived.length === 0 || arriving.current) {
+        return;
+      }
+
+      // Opening the tour is where the pane starts, not somewhere reading carried
+      // it, so auto-scroll only governs what comes after — off from the first
+      // frame would otherwise leave the pane with nothing in it.
+      if (opened && !following.current) {
         return;
       }
 

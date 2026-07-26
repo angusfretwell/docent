@@ -5,6 +5,7 @@ import {
   ResizablePanelGroup,
 } from "@client/components/ui/resizable";
 import { useIsMobile } from "@client/hooks/use-media-query";
+import { useResettablePanel } from "@client/hooks/use-panel-reset";
 import { diffTreeOpenAtom } from "@client/lib/preferences";
 import { useAtomValue } from "jotai/react";
 import { useDefaultLayout } from "react-resizable-panels";
@@ -14,12 +15,15 @@ import { useDiffView } from "./hooks/use-diff-view";
 import { DiffToolbar } from "./toolbar";
 import { DiffTree } from "./tree";
 
+const TREE_SIZE = 250;
+
 export function DiffView() {
   const { canAuthor, driftFor, files, viewed, viewedCount, visibleFiles } =
     useDiffView();
 
   const isMobile = useIsMobile();
   const diffTreeOpen = useAtomValue(diffTreeOpenAtom);
+  const treePanelRef = useResettablePanel(TREE_SIZE);
 
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
     id: "diff",
@@ -36,9 +40,10 @@ export function DiffView() {
       {diffTreeOpen && !isMobile && (
         <>
           <ResizablePanel
-            defaultSize={250}
+            defaultSize={TREE_SIZE}
             minSize={200}
             id="tree"
+            panelRef={treePanelRef}
             groupResizeBehavior="preserve-pixel-size"
             className="overflow-visible!"
           >

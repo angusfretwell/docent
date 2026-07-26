@@ -6,12 +6,15 @@ import {
 import { ScrollArea } from "@client/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTab } from "@client/components/ui/tabs";
 import { useIsMobile } from "@client/hooks/use-media-query";
+import { useResettablePanel } from "@client/hooks/use-panel-reset";
 import { cn } from "@client/lib/utils";
 import { BookOpenText } from "lucide-react";
 import type { ReactNode, RefObject } from "react";
 import { useDefaultLayout } from "react-resizable-panels";
 
 export type WalkthroughPane = "prose" | "target";
+
+const PROSE_SIZE = "40%";
 
 export function WalkthroughLayout({
   children,
@@ -33,6 +36,7 @@ export function WalkthroughLayout({
   targetLabel?: string;
 }) {
   const isMobile = useIsMobile();
+  const prosePanelRef = useResettablePanel(PROSE_SIZE);
 
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
     id,
@@ -107,8 +111,9 @@ export function WalkthroughLayout({
     >
       <ResizablePanel
         minSize={320}
-        defaultSize="40%"
+        defaultSize={PROSE_SIZE}
         id="prose"
+        panelRef={prosePanelRef}
         className="overflow-visible!"
       >
         {prose}

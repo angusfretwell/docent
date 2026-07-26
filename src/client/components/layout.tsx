@@ -1,6 +1,7 @@
 import { Skeleton } from "@client/components/ui/skeleton";
 import { CommentsPanel } from "@client/features/comments/panel";
 import { useMediaQuery } from "@client/hooks/use-media-query";
+import { useResettablePanel } from "@client/hooks/use-panel-reset";
 import { commentsOpenAtom } from "@client/lib/preferences";
 import { useAtomValue } from "jotai/react";
 import { Suspense } from "react";
@@ -14,9 +15,12 @@ import {
   ResizablePanelGroup,
 } from "./ui/resizable";
 
+const COMMENTS_SIZE = 325;
+
 export function Layout({ children }: { children: React.ReactNode }) {
   const commentsOpen = useAtomValue(commentsOpenAtom);
   const isSmallScreen = useMediaQuery("max-md");
+  const commentsPanelRef = useResettablePanel(COMMENTS_SIZE);
 
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
     id: "main",
@@ -43,8 +47,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <ResizablePanel
               groupResizeBehavior="preserve-pixel-size"
               minSize={200}
-              defaultSize={325}
+              defaultSize={COMMENTS_SIZE}
               id="comments"
+              panelRef={commentsPanelRef}
               className="overflow-visible!"
             >
               <Suspense
