@@ -1,5 +1,10 @@
 import { useResetPanels } from "@client/hooks/use-panel-reset";
-import { autoScrollAtom, diffLayoutAtom } from "@client/lib/preferences";
+import {
+  autoScrollAtom,
+  diffLayoutAtom,
+  inlineCommentsAtom,
+  wordWrapAtom,
+} from "@client/lib/preferences";
 import { useAtom } from "jotai";
 import { SettingsIcon } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -24,18 +29,20 @@ import {
 } from "./ui/menu";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
 
-// option-c - toggle inline comments
-// option-d - toggle color scheme
-// option-l - toggle diff layout
-
 export function Settings() {
   const [autoScroll, setAutoScroll] = useAtom(autoScrollAtom);
   const [diffLayout, setDiffLayout] = useAtom(diffLayoutAtom);
+  const [inlineComments, setInlineComments] = useAtom(inlineCommentsAtom);
+  const [wordWrap, setWordWrap] = useAtom(wordWrapAtom);
   const { theme, setTheme } = useTheme();
 
   const resetPanels = useResetPanels();
 
   useHotkeys("Alt+R", resetPanels);
+  useHotkeys("Alt+C", () => setInlineComments((current) => !current));
+  useHotkeys("Alt+L", () =>
+    setDiffLayout((current) => (current === "unified" ? "split" : "unified"))
+  );
 
   return (
     <Menu>
@@ -83,29 +90,24 @@ export function Settings() {
                 <MenuRadioItem value="split">Split</MenuRadioItem>
               </MenuRadioGroup>
               <MenuSeparator />
-              <MenuCheckboxItem defaultChecked variant="switch">
+              <MenuCheckboxItem
+                checked={inlineComments}
+                onCheckedChange={setInlineComments}
+                variant="switch"
+              >
                 Inline Comments
+              </MenuCheckboxItem>
+              <MenuCheckboxItem
+                checked={wordWrap}
+                onCheckedChange={setWordWrap}
+                variant="switch"
+              >
+                Word Wrap
               </MenuCheckboxItem>
             </MenuGroup>
           </MenuSubPopup>
         </MenuSub>
 
-        {/* <MenuGroup>
-          <MenuGroupLabel>Diff layout</MenuGroupLabel>
-          <MenuRadioGroup value={diffLayout} onValueChange={setDiffLayout}>
-            <MenuRadioItem value="unified">Unified</MenuRadioItem>
-            <MenuRadioItem value="split">Split</MenuRadioItem>
-          </MenuRadioGroup>
-        </MenuGroup>
-        <MenuSeparator />
-        <MenuGroup>
-          <MenuGroupLabel>Color scheme</MenuGroupLabel>
-          <MenuRadioGroup>
-            <MenuRadioItem value="system">System</MenuRadioItem>
-            <MenuRadioItem value="light">Light</MenuRadioItem>
-            <MenuRadioItem value="dark">Dark</MenuRadioItem>
-          </MenuRadioGroup>
-        </MenuGroup> */}
         <MenuSeparator />
         <MenuGroup>
           <MenuItem onClick={resetPanels}>

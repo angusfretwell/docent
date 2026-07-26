@@ -9,8 +9,10 @@ import { useComments } from "@client/features/comments/hooks/use-comments";
 import type { DiffFile } from "@client/lib/diff";
 import type { LineDecoration } from "@client/lib/diff-annotations";
 import type { DriftResult } from "@client/lib/drift";
+import { inlineCommentsAtom } from "@client/lib/preferences";
 import type { CodeViewHandle } from "@pierre/diffs/react";
 import type { WalkthroughRange } from "@shared/schemas/walkthrough";
+import { useAtomValue } from "jotai/react";
 import { GitCompare } from "lucide-react";
 import { useEffect, useRef } from "react";
 
@@ -28,7 +30,8 @@ export function CodeWalkthroughDiffPanel({
   const ref = useRef<CodeViewHandle<LineDecoration>>(null);
 
   const { visible } = useComments();
-  const comments = visible.map((entry) => entry.comment);
+  const inlineComments = useAtomValue(inlineCommentsAtom);
+  const comments = inlineComments ? visible.map((entry) => entry.comment) : [];
 
   const compose = useCommentCompose({
     codeRef: ref,

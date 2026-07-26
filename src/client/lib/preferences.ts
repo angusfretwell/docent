@@ -11,3 +11,8 @@ export const diffLayoutAtom = atomWithStorage<"unified" | "split">(
 );
 
 export const diffTreeOpenAtom = atomWithStorage("diffTreeOpen", true);
+
+/** Whether comment threads render against their anchored line, or panel-only. */
+export const inlineCommentsAtom = atomWithStorage("inlineComments", true);
+
+export const wordWrapAtom = atomWithStorage("wordWrap", false);

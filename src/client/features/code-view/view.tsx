@@ -1,5 +1,5 @@
 import type { LineDecoration } from "@client/lib/diff-annotations";
-import { diffLayoutAtom } from "@client/lib/preferences";
+import { diffLayoutAtom, wordWrapAtom } from "@client/lib/preferences";
 import type {
   CodeViewDiffItem,
   CodeViewFileItem,
@@ -80,6 +80,7 @@ export function AnnotatedCodeView({
   renderHeaderMetadata,
 }: AnnotatedCodeViewProps) {
   const diffLayout = useAtomValue(diffLayoutAtom);
+  const wordWrap = useAtomValue(wordWrapAtom);
 
   const options = useMemo<CodeViewOptions<LineDecoration>>(
     () => ({
@@ -90,7 +91,7 @@ export function AnnotatedCodeView({
       enableLineSelection,
       layout: { gap: 0, paddingBottom: 0, paddingTop: 0 },
       onGutterUtilityClick,
-      overflow: "wrap",
+      overflow: wordWrap ? "wrap" : "scroll",
       stickyHeaders: true,
       unsafeCSS: DIFFS_CSS,
     }),
@@ -100,6 +101,7 @@ export function AnnotatedCodeView({
       enableGutterUtility,
       enableLineSelection,
       onGutterUtilityClick,
+      wordWrap,
     ]
   );
 

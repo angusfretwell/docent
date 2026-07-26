@@ -11,6 +11,7 @@ import type { DiffFile } from "@client/lib/diff";
 import type { LineDecoration } from "@client/lib/diff-annotations";
 import { diffTargetAtom } from "@client/lib/diff-target";
 import type { DriftResult } from "@client/lib/drift";
+import { inlineCommentsAtom } from "@client/lib/preferences";
 import type { FileDiffMetadata } from "@pierre/diffs";
 import type { CodeViewHandle } from "@pierre/diffs/react";
 import { useAtomValue } from "jotai/react";
@@ -36,7 +37,8 @@ export function DiffCodeView({
   const ref = useRef<CodeViewHandle<LineDecoration>>(null);
 
   const { visible } = useComments();
-  const comments = visible.map((entry) => entry.comment);
+  const inlineComments = useAtomValue(inlineCommentsAtom);
+  const comments = inlineComments ? visible.map((entry) => entry.comment) : [];
 
   const compose = useCommentCompose({
     codeRef: ref,
