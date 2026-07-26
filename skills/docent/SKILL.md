@@ -20,7 +20,7 @@ Dispatch on the invocation:
 You are the docent for the run itself, not only for the tour it produces. `/docent` is often a human's first contact with docent, and the run is long and largely autonomous — narrate it so a working agent reads as a working one.
 
 - **Open**, before the capability gate below, with one line naming what this invocation does and what lands at the end — e.g. "Writing the code and product walkthroughs for your head commit, then opening the tour in a browser."
-- **Say the decision the moment you have it** (§3) — which walkthroughs you are writing, which you are leaving alone — before any of the work starts, never held back for the close.
+- **Say the decision the moment you have it** (§3) — which walkthroughs you are writing, which you are leaving alone, and any this run cannot reach the app for — before any of the work starts, never held back for the close.
 - **Announce each expensive phase as you enter it** — writing a walkthrough (§4, §5), and above all capture (§5), which launches Chrome and drives your served app.
 - **Close** with the tour's table of contents and what you left alone (§6).
 
@@ -43,21 +43,29 @@ The rest of this file is the default branch: "type `/docent`, get a browser tab 
 | **Code** | one subagent: [reference/code-walkthrough.md](reference/code-walkthrough.md) — §4 |
 | **Product** | three, in a line: [reference/capture-plan.md](reference/capture-plan.md) (choose the screens) → [reference/capture.md](reference/capture.md) (drive the app) → [reference/product-walkthrough.md](reference/product-walkthrough.md) (write the prose) — §4, §5 |
 
-## 1. Preflight — make sure you can drive the app
+## 1. Preflight — settle how the app is served
 
-The product walkthrough drives the served app in a browser, so before any authoring, front-load the one human-in-the-loop moment — establishing that the app can be driven — to the start of the run, where the human is present, rather than stalling mid-capture. This is the run's **only** contact with the human: the agent that drives the app cannot ask anything, so what you settle here is everything it will ever know about serving this app. Run the preflight whenever the product walkthrough is in scope (the default); skip it only when the human scoped the run to the **code walkthrough alone** (code has no capture phase, so it needs no app).
+The product walkthrough drives the served app in a browser, so before any authoring, front-load the one human-in-the-loop moment — settling how this app is served — to the start of the run, where the human is present, rather than stalling mid-capture. This is the run's **only** contact with the human: the agent that drives the app cannot ask anything, so what you settle here is everything it will ever know about serving this app. The preflight serves the product walkthrough alone; skip it entirely when the human scoped the run to the **code walkthrough alone** (code has no capture phase, so it needs no app).
 
-Three steps, of which the middle one runs every time:
+Three steps, in the order the run takes them:
 
 1. **Source the setup** — existing codebase context (README, CONTRIBUTING, `package.json` scripts, `.env.example`, in-repo agent docs), then **ask the human** (a single, one-time prompt) for whatever is left. You need the base URL / port, the viewport default, and any login/seed steps.
-2. **Verify the app actually renders** — reach the served app and confirm **real DOM**, not a connection-refused or error page. Serving the app is the human's job: either it is already up, or the human gives you the command and you run it in their session. An agent-launched server stays up and is reused by the capture in §5.
-3. **Author `.docent/capture.md`** from what you learned — follow [reference/runbook-template.md](reference/runbook-template.md) — so this run's capture, and every later run, goes AFK.
+2. **Author `.docent/capture.md`** from what you learned — follow [reference/runbook-template.md](reference/runbook-template.md) — so this run's capture, and every later run, goes AFK.
+3. **Check the app actually renders** — reach the served app at the runbook's base URL and confirm **real DOM**, not a connection-refused or error page. Serving the app is the human's job: either it is already up, or the runbook's start command brings it up in their session. An agent-launched server stays up and is reused by the capture in §5.
 
-**A non-empty `.docent/capture.md` skips steps 1 and 3** — the runbook is the "we know how to drive the app" signal, so where it exists and is non-empty, read it and skip both the ask and the write. That is the cheap, common case. **Step 2 is never skipped.** It is the run's only proof the app is up, and §5's executor is dispatched on the strength of it; deferring it means unreachability surfaces after the code walkthrough and the plan have both been paid for.
+**A non-empty `.docent/capture.md` skips steps 1 and 2** — the runbook is the "we know how to drive the app" signal, so where it exists and is non-empty, read it and skip both the ask and the write. That is the cheap, common case, and it is what makes later runs unattended.
 
-**Where step 2 cannot reach the app at the runbook's own base URL, the runbook is what is wrong** — a port that moved, a start command that no longer works. Take the full path: ask (step 1), rewrite `.docent/capture.md` (step 3), and verify again. Here is the only place that correction can happen: a capture reports a wrong runbook as an obstacle and carries on, so unless the next preflight rewrites it, the same obstacle rides back on every run forever.
+**The exception is a runbook the human tells you is wrong** — a login that stopped working, a seed step that moved, whatever a previous run's closing report carried back as an obstacle. Then take steps 1 and 2 for what they name, and only that. Obstacles are never written to `.docent/`, so a runbook a capture found wrong is corrected here or not at all.
 
-**If the app still cannot be reached → hard stop, early**, with an actionable message (e.g. `app not reachable at <url> — is your dev server up?`), before any expensive authoring. Nothing is written on a failed preflight.
+**The render check (step 3) runs on every run that is going to capture**, not only the first: it is the run's only proof the app is up, and §5's executor is dispatched on the strength of it. **Take it in §3**, once the decision names the product walkthrough as one you are writing and while nothing has been dispatched yet — a product walkthrough already on this head means §5 never opens a browser, so a run with nothing to capture has no business demanding a dev server, and a run that will capture learns the app is down before the code walkthrough or the plan has been paid for.
+
+**Where the check cannot reach the app, work up from the cheapest cause** — the ordinary one is a dev server that is simply not running, with the runbook telling the truth:
+
+- **First, start what the runbook says to start.** Where it records a **Start command**, run it in the human's session and check again.
+- **Then ask.** Where there is no start command, or the app is still not there, ask the human what changed (step 1) — and rewrite `.docent/capture.md` (step 2) **only where what they say differs from what it records**. Then check again. The preflight is the only place a wrong runbook can be corrected: a capture reports one as an obstacle and carries on, so unless a preflight rewrites it the same obstacle rides back on every run forever.
+- **A base URL the human confirms is still right with nothing answering on it is a dev server that is down.** Say that, and leave the runbook alone — overwriting a correct file loses a working setup.
+
+**A check that never passes drops the product walkthrough from this run's scope; it does not end the run.** Say so in §3's narration, then carry on to §4 and §6 — the code walkthrough has no stake in the app, and a run that lands one tour beats a run that lands none. **Hard stop only where the product walkthrough was all the run had**: the human scoped it to that alone, so there is nothing else to land. Then say `app not reachable at <url> — is your dev server up?` and write nothing.
 
 ## 2. Read the head
 
@@ -119,7 +127,9 @@ The Review for the current branch holds both kinds of walkthrough under:
 | Nothing on this branch yet | "Writing the code and product walkthroughs for this branch." |
 | Written against an earlier commit | "The code walkthrough was written N changes back — writing a fresh one." |
 | Written against this head | "The product walkthrough is up to date — leaving it." |
-| Left with no sections by a run that stopped short | "The product walkthrough has its screens but no narration — writing a fresh one." |
+| A product walkthrough left with no sections by a run that stopped short | "The product walkthrough has its screens but no narration — writing a fresh one." |
+| A code walkthrough left with no sections by a run that stopped short | "The code walkthrough was started but its sections never landed — writing a fresh one." |
+| The app is not reachable, so the product walkthrough leaves scope (§1) | "Your dev server isn't answering at `<url>`, so this run writes the code walkthrough only." |
 
 For the earlier-commit row, count the gap rather than making the human infer it — in **Changes**, the same unit the tour's own "N changes behind" badge counts, so the session and the screen say one number for one fact. The Changes are already on disk beside the walkthrough; count the ones recorded after its `bornChangeId`:
 
@@ -128,6 +138,8 @@ ls .docent/reviews/<branch-slug>/changes/ | awk -v born='<bornChangeId>.json' '$
 ```
 
 Say nothing about a first run being missing or empty — a branch with no walkthrough yet is simply a clean start.
+
+**Take the render check before you speak.** Where the answer names the product walkthrough as one you are writing, this is where the preflight's render check belongs (§1) — the last moment before §4 spends anything on a run whose app is down, and a check worth nothing where §5 is already going to be skipped. Its outcome is part of the decision: an app that cannot be reached drops the product walkthrough from scope, which is the last row of the table.
 
 **Say it before any of the work starts**, in one breath covering both kinds. It is the human's only signal that the run is under way: §4's agents work out of sight and say nothing until they return, and §5 can drive a browser for minutes before there is a tour to show.
 
@@ -160,13 +172,13 @@ Two receipts come back:
 
 ## 5. Write the product walkthrough — capture, then author
 
-If there is already a product walkthrough for this head, skip this section. Capture is the run's most expensive phase, which is exactly why it is separable.
+Skip this section where §3 left the product walkthrough out of scope — one already written for this head, or an app the render check could not reach. Capture is the run's most expensive phase, which is exactly why it is separable.
 
 Otherwise the shot list from §4 is driven, then narrated — two dispatches, in that order, because the executor creates the shell the author writes into.
 
 **Say it before you dispatch the executor.** This is the phase that opens Chrome and drives the app the human is serving on their own machine, so it is announced rather than slipped in: name what is about to happen and how many screens it is walking. Minutes of silence while their browser moves on its own is the one place a working run reads as a runaway one.
 
-1. **The executor** — `reference/capture.md`, plus the shot list verbatim. It walks the app to each state and registers the captures onto a new product `wlk_*/` shell whose `sections` stay empty, then hands back the shell's id, each capture's id and title, and any shot it could not reach. It consumes the app the preflight (§1) reached this run and runs against the `.docent/capture.md` the preflight left in place, so there is nothing here for the human to answer.
+1. **The executor** — `reference/capture.md`, plus the shot list verbatim. It walks the app to each state and registers the captures onto a new product `wlk_*/` shell whose `sections` stay empty, then hands back the shell's id, each capture's id and title, and any shot it could not reach. It consumes the app the render check reached in §3 and runs against the `.docent/capture.md` the preflight (§1) left in place, so there is nothing here for the human to answer.
 
    - **The cheapest capable model.** Dispatch it on the least expensive model your harness offers that can still follow a brief and drive a CLI — the work is mechanical and its token volume is the highest in the run, so this is the one phase where the model choice pays for itself. Choose by capability and never by naming a model: names date faster than anything else in this file. Where your dispatch surface offers no model choice, let it inherit and carry on — the phase still works, it just costs more.
    - **Exactly one executor, no fan-out.** One agent walks every shot. Browser sessions are isolated but the app's backend is not, so two executors racing one dev server capture a race rather than a product — and each would re-pay the login and seeding. It takes a browser session of its own, named for this worktree, so it cannot land in the human's other browser work or in a run driving another worktree.
@@ -220,7 +232,7 @@ Open the browser at the served `url`; the tour you just wrote is on its walkthro
 
 ## Stop conditions
 
-- **App not reachable at preflight (§1).** Hard stop early, before any authoring, with an actionable message. Nothing is written. Re-run once the human has the dev server up.
+- **App not reachable at the render check (§1, taken in §3).** Not a stop where anything else is still in play: the product walkthrough leaves the run's scope, §4's code author carries on, and §6 still serves and opens the tour. Hard stop only where the human scoped the run to the product walkthrough alone — then nothing is written, and they re-run once the dev server is up.
 - **The app drops mid-capture.** The executor stops rather than emitting a broken capture, and comes back with whatever it landed. Author over those captures if there are any; otherwise report which walkthrough could not be written and why. A code walkthrough written this run still stands.
 - **The code walkthrough's author comes back with no receipt (§4).** Say the code walkthrough was not written, and what came back instead. Do not read the diff and write it yourself — carry on to §5, since the two walkthroughs do not depend on each other and a run that lands one tour beats a run that lands none.
 - **The planner comes back with no shot list (§4).** There is nothing for the executor to walk, so the product walkthrough is not written this run. Say so and carry on to §6 — planning it yourself means reading the change in this context, which costs more than the tour it would save.

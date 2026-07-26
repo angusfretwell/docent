@@ -25,18 +25,18 @@ intent: The export button used to download immediately with a generated name.
 shots:
   1. Export before the dialog — screenshot
      state: a review open at the toolbar, nothing exported yet
-     hints: /reviews/<any id>; the toolbar's Export button
+     hint: /reviews/<any id>; the toolbar's Export button
   2. Naming the export — recording
      state: the export dialog open, a filename typed, confirm pressed through
        to the file landing
-     hints: the confirm button is disabled while the field is empty
+     hint: the confirm button is disabled while the field is empty
   3. Export with an invalid name — screenshot
      state: the dialog showing the validation message for a name it refuses
 obstacles: none
 ```
 
 - **`intent`** is two or three sentences: what a person can now do that they could not before, and what the change replaced. This is the author's **only** account of the branch — it reads no diff at all, so what you leave out is gone. Facts for an author, not sentences for the tour; the prose is theirs to write.
-- **Each shot carries a title, a kind, and the state to reach.** The title is the short name the capture will carry in the Review ("Empty export dialog") — a few words, not a sentence. The kind is a **screenshot** for a state worth holding still, a **recording** for a transition that only reads in motion. `hints` is optional: a route, a control's label, a precondition — whatever the files told you that saves the executor a hunt.
+- **Each shot carries a title, a kind, and the state to reach.** The title is the short name the capture will carry in the Review ("Empty export dialog") — a few words, not a sentence. The kind is a **screenshot** for a state worth holding still, a **recording** for a transition that only reads in motion. `hint` is optional: a route, a control's label, a precondition — whatever the files told you that saves the executor a hunt.
 - **As many shots as the change needs and no more.** A tour is a handful of screens; a shot that shows nothing the branch touched costs a browser round-trip and earns nothing.
 - **`obstacles`** is where something that will make the tour less truthful rides back — a screen you know is behind a feature flag, a flow you could not find an entry point for. `obstacles: none` is the ordinary answer. A criticism in an obstacle's clothes is still a criticism.
 

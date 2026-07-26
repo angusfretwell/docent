@@ -109,6 +109,6 @@ The tour is done when the title is set and every section is dropped in order. If
 - **No browser.** This half only narrates; driving is [capture.md](capture.md)'s job, and re-driving is the run's call, not yours.
 - **No file writes.** Every write you make goes through the `docent` CLI — `add-section` and `rename` — so a walkthrough file is never hand-authored.
 - **Walkthroughs only, never Comments.** Author Callouts; leave Comments to the review loop.
-- **Every write lands a fresh `wlk_`** — never re-narrate an already-authored walkthrough in place. Because `add-section` appends, author into a captures-only shell with empty `sections`; don't append onto a tour already narrated.
+- **Only ever author into the captures-only shell you were handed** — never re-narrate a tour that already has sections. `add-section` appends, so authoring onto a narrated walkthrough grows it rather than replacing it; a fresh one is the run's to create, never yours.
 - **Not your decision whether to write.** You were dispatched because there is no product walkthrough for this head; that call was already made. Committing is the human's git workflow, and out of scope.
 - **No questions.** You have no human to ask. Where this brief leaves something to judgment, judge it and move.

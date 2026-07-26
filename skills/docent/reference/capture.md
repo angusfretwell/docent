@@ -64,17 +64,23 @@ Set the viewport **before** navigating, so the app's first paint is already at t
 
 Get the app to a verified-rendered state before capturing. **Never emit a broken capture silently** — a connection-refused or error page must fail loudly, not become a screenshot.
 
-- Navigate to the base URL and verify **real DOM** rendered: `agent-browser --session "$session" snapshot -i` shows the app's actual elements, not an error page.
+- Navigate to the runbook's base URL, then read the page back: the snapshot must show the app's own elements, not an error page.
+
+  ```bash
+  agent-browser --session "$session" open "<base-url>"
+  agent-browser --session "$session" snapshot -i
+  ```
+
 - **On failure** → **hard stop** and report `app not reachable at <url>`. Do not capture anything, and do not go looking for the app on another port.
 
 ## 4. Inject rrweb
 
-**Both** capture kinds are rrweb event streams — a screenshot is a DOM snapshot, not a raster, so it stays sharp at any zoom when the Review renders it. Inject rrweb by driver eval, after each page load:
+**Both** capture kinds are rrweb event streams — a screenshot is a DOM snapshot, not a raster, so it stays sharp at any zoom when the Review renders it. Inject rrweb by driver eval, after every page load — this command is what §6's loop re-runs per shot:
 
 ```bash
 # rrweb's exports map does not expose the UMD build, so resolve the package
 # entry and take its sibling rather than asking for the subpath directly.
-cat "$(node -e 'const p=require("node:path");process.stdout.write(p.join(p.dirname(require.resolve("rrweb")),"rrweb.umd.min.cjs"))')" | agent-browser --session "$session" eval --stdin
+cat "$(node -e 'const path=require("node:path");process.stdout.write(path.join(path.dirname(require.resolve("rrweb")),"rrweb.umd.min.cjs"))')" | agent-browser --session "$session" eval --stdin
 ```
 
 This resolves rrweb from wherever node can find it; if nothing resolves, install it somewhere disposable (e.g. `npm i --prefix <scratch-dir> rrweb`) and resolve from there — never add it to the app under review.
@@ -102,14 +108,21 @@ Omit `--title`: the shell lands with an empty `title` and empty `sections` — b
 
 Take the shots in the order given, one at a time, and register each (§7) before moving on, so a shot you cannot reach costs only itself.
 
-For each shot: navigate to where you think the state lives, then drive the way you already work — `snapshot -i` to read the page live (accessibility tree, element refs, disabled states visible), act on what you see, re-snapshot after any DOM change. Refs expire on navigation; re-snapshot. A shot's hint is a lead, not an instruction — the page overrules it.
+Each shot starts with a page load, so each shot re-injects rrweb — a load wipes the last injection, and `record()` is called on the page in front of you:
+
+```bash
+agent-browser --session "$session" open "<base-url><route you think the state lives at>"
+# then re-inject rrweb (§4) into the page you just loaded
+```
+
+With rrweb in place, drive the way you already work — `snapshot -i` to read the page live (accessibility tree, element refs, disabled states visible), act on what you see, re-snapshot after any DOM change. Refs expire on navigation; re-snapshot, and re-inject rrweb after any navigation you make mid-shot. A shot's hint is a lead, not an instruction — the page overrules it.
 
 - **Three attempts per shot, then record it unreachable and move to the next.** An attempt is one honest run at the state: navigate, drive, look. On the third failure, name that shot in `obstacles` and go on to the next one. The budget is the point — grinding on a state the app will not produce burns the run on full accessibility trees and lands no tour at all, and the shot list has other shots that will work.
-- **Reach the state you were given, or report it missing.** Where two paths lead to the same state, take either. Where the state itself is not there, that is the finding — never substitute a different screen that looks similar, and never invent a shot the plan did not ask for. A capture that is not the state it claims to be is worse than a shot the tour is honestly missing, because the author cannot tell.
+- **Reach the state you were given, or report it missing.** Where two paths lead to the same state, take either. Where the state itself is not there, that is the obstacle — never substitute a different screen that looks similar, and never invent a shot the plan did not ask for. A capture that is not the state it claims to be is worse than a shot the tour is honestly missing, because the author cannot tell.
 - **Screenshot** — once the page is in the state you want, take the snapshot pair. `record()` emits `Meta` then `FullSnapshot` synchronously and returns its own stop function, so starting and immediately stopping yields exactly the still frame:
 
   ```bash
-  agent-browser --session "$session" eval "window.__evt=[]; rrweb.record({collectFonts:true,emit:e=>window.__evt.push(e),inlineImages:true})(); JSON.stringify(window.__evt.slice(0,2))" --json
+  agent-browser --session "$session" eval "window.__evt=[]; rrweb.record({collectFonts:true,emit:event=>window.__evt.push(event),inlineImages:true})(); JSON.stringify(window.__evt.slice(0,2))" --json
   ```
 
   Write those two events to a `<tmp>.rrweb.json` file. Note `dims` — the **full document** size in CSS pixels, which is what the Review sizes the still to, not the viewport:
