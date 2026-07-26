@@ -104,6 +104,7 @@ export function CodeWalkthroughDiffPanel({
         disableBackground
         enableGutterUtility={!compose.composing}
         enableLineSelection={!compose.composing}
+        expandUnchanged
         focus={focus}
         items={items}
         onGutterUtilityClick={(range, context) =>

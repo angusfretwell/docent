@@ -1,7 +1,8 @@
 import type { ChangeTypes, FileDiffMetadata } from "@pierre/diffs";
-import { processPatch } from "@pierre/diffs";
+import { processFile } from "@pierre/diffs";
 import type { GitStatus } from "@pierre/trees";
 import { prepareFileTreeInput } from "@pierre/trees";
+import { isRealObjectId, parsePatchBlocks } from "@shared/lib/patch";
 
 const ChangeTypeGitStatus: Record<ChangeTypes, GitStatus> = {
   change: "modified",
@@ -25,6 +26,8 @@ export interface DiffFile {
   blobSha: string;
   file: FileDiffMetadata;
   id: string;
+  /** This file's slice of the patch, so it can be re-parsed against both blobs. */
+  patch: string;
   path: string;
 }
 
@@ -58,8 +61,25 @@ export function diffItemVersion(
   annotationsKey = ""
 ): number {
   return stringHash(
-    `${blobSha}:${file.prevObjectId ?? ""}:${collapsed ? 1 : 0}:${annotationsKey}`
+    `${blobSha}:${file.prevObjectId ?? ""}:${file.isPartial ? 1 : 0}:${collapsed ? 1 : 0}:${annotationsKey}`
   );
+}
+
+/** Each file's own slice of the patch, alongside what that slice parses to. */
+function splitPatch(
+  patch: string
+): { file: FileDiffMetadata; slice: string }[] {
+  const files: { file: FileDiffMetadata; slice: string }[] = [];
+
+  for (const slice of parsePatchBlocks(patch)) {
+    const file = processFile(slice, { isGitDiff: true });
+
+    if (file !== undefined) {
+      files.push({ file, slice });
+    }
+  }
+
+  return files;
 }
 
 export function patchStats(patch: string): {
@@ -69,7 +89,7 @@ export function patchStats(patch: string): {
   let additions = 0;
   let deletions = 0;
 
-  for (const file of processPatch(patch).files) {
+  for (const { file } of splitPatch(patch)) {
     for (const hunk of file.hunks) {
       additions += hunk.additionLines;
       deletions += hunk.deletionLines;
@@ -79,17 +99,59 @@ export function patchStats(patch: string): {
   return { additions, deletions };
 }
 
+// The worker pool primes and reuses syntax-highlight results keyed by `cacheKey`; without it every file re-highlights on scroll.
+function highlightKey(file: FileDiffMetadata): string {
+  const sides = `${file.prevObjectId ?? ""}:${file.newObjectId ?? ""}`;
+
+  return `${file.name}:${sides}:${file.isPartial ? "hunks" : "whole"}`;
+}
+
 export function parsePatchFiles(patch: string): DiffFile[] {
-  const files = processPatch(patch).files.map((file, index) => ({
+  const files = splitPatch(patch).map(({ file, slice }, index) => ({
     blobSha: file.newObjectId ?? file.prevObjectId ?? "",
-    // The worker pool primes and reuses syntax-highlight results keyed by `cacheKey`; without it every file re-highlights on scroll.
-    file: {
-      ...file,
-      cacheKey: `${file.name}:${file.prevObjectId ?? ""}:${file.newObjectId ?? ""}`,
-    },
+    file: { ...file, cacheKey: highlightKey(file) },
     id: itemId(file.name, index),
+    patch: slice,
     path: file.name,
   }));
 
   return sortInTreeOrder(files);
+}
+
+/**
+ * Blobs needed to render this file whole, or nothing when there is no unchanged
+ * context to reach for: births, deaths, pure renames and binaries.
+ */
+export function expansionBlobs({ file }: DiffFile): string[] {
+  const { newObjectId, prevObjectId } = file;
+
+  return file.hunks.length === 0 ||
+    !isRealObjectId(prevObjectId) ||
+    !isRealObjectId(newObjectId)
+    ? []
+    : [prevObjectId, newObjectId];
+}
+
+/** Re-parses the file against both blobs, which is what lets its hunks expand. */
+export function withBlobContents(
+  entry: DiffFile,
+  contents: ReadonlyMap<string, string>
+): DiffFile {
+  const [base, head] = expansionBlobs(entry);
+  const oldContents = base === undefined ? undefined : contents.get(base);
+  const newContents = head === undefined ? undefined : contents.get(head);
+
+  if (oldContents === undefined || newContents === undefined) {
+    return entry;
+  }
+
+  const file = processFile(entry.patch, {
+    isGitDiff: true,
+    newFile: { contents: newContents, name: entry.path },
+    oldFile: { contents: oldContents, name: entry.path },
+  });
+
+  return file === undefined
+    ? entry
+    : { ...entry, file: { ...file, cacheKey: highlightKey(file) } };
 }

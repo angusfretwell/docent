@@ -3,6 +3,7 @@ import {
   matchesFilters,
 } from "@client/features/file-tree/lib/filters";
 import { useDrift } from "@client/hooks/use-drift";
+import { useExpandedFiles } from "@client/hooks/use-expanded-files";
 import { parsePatchFiles, statusForChange } from "@client/lib/diff";
 import { diffQueryOptions } from "@client/queries/diff";
 import { pendingQueryOptions } from "@client/queries/pending";
@@ -37,7 +38,8 @@ export function useDiffView() {
     walkthroughs: review.walkthroughs,
   });
 
-  const files = useMemo(() => parsePatchFiles(patch), [patch]);
+  const parsed = useMemo(() => parsePatchFiles(patch), [patch]);
+  const files = useExpandedFiles(parsed, !showPending);
   const fileById = useMemo(
     () => new Map(files.map((file) => [file.id, file])),
     [files]
