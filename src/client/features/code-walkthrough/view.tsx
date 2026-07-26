@@ -120,7 +120,7 @@ export function CodeWalkthroughView() {
       targetIcon={<GitCompare />}
       targetLabel="Diff"
     >
-      <h1 className="text-balance">
+      <h1 className="font-heading text-[2em] text-balance">
         {walkthrough.manifest?.title ?? "Code walkthrough"}
       </h1>
 

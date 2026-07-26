@@ -131,7 +131,7 @@ export function ProductWalkthroughView() {
         targetIcon={<MonitorSmartphone />}
         targetLabel="Preview"
       >
-        <h1 className="text-balance">
+        <h1 className="font-heading text-[2em] text-balance">
           {walkthrough.manifest?.title ?? "Product walkthrough"}
         </h1>
 

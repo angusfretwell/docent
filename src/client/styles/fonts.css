@@ -1,4 +1,1 @@
-/* One webfont request for both browser surfaces: `theme.css` names these
-   families in `--font-heading`/`--font-sans`/`--font-mono`, so a surface that
-   imports the tokens without the faces falls back to system fonts. */
-@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Outfit:wght@100..900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Domine:wght@400..700&family=Geist+Mono:ital,wght@0,100..900;1,100..900&family=Geist:ital,wght@0,100..900;1,100..900&display=swap");

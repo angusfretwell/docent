@@ -2,9 +2,9 @@
 
 @theme inline {
   --animate-skeleton: skeleton 2s -1s infinite linear;
-  --font-heading: "Outfit", system-ui, sans-serif;
-  --font-sans: "Inter", system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", monospace;
+  --font-heading: "Domine", system-ui, sans-serif;
+  --font-sans: "Geist", system-ui, sans-serif;
+  --font-mono: "Geist Mono", monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
   --color-sidebar-primary: var(--sidebar-primary);

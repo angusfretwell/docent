@@ -487,7 +487,7 @@
 @layer components {
   .typeset-walkthrough {
     --typeset-font-body: var(--font-sans);
-    --typeset-font-heading: var(--font-heading);
+    --typeset-font-heading: var(--font-sans);
     --typeset-font-mono: var(--font-mono);
     --typeset-size: 15px;
     --typeset-leading: 1.75;
