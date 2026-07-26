@@ -59,7 +59,7 @@ export function PinChip({
 }) {
   return (
     <Badge size="sm" className={cn("z-10 tabular-nums", className)}>
-      <MousePointer2 className="fill-current opacity-100" />
+      <MousePointer2 className="fill-current" />
       {label}
     </Badge>
   );
