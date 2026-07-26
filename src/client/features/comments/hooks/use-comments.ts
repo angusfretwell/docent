@@ -6,11 +6,7 @@ import { reviewQueryOptions } from "@client/queries/review";
 import { ANCHOR_KIND } from "@shared/enums/anchor-kind";
 import type { DriftState } from "@shared/enums/drift-state";
 import { WalkthroughKind } from "@shared/enums/walkthrough-kind";
-import {
-  commentLocation,
-  foldComment,
-  sortFoldedComments,
-} from "@shared/lib/comment";
+import { commentLocation, foldComment } from "@shared/lib/comment";
 import type { FoldedComment } from "@shared/lib/comment";
 import {
   latestCodeWalkthrough,
@@ -22,7 +18,9 @@ import { useMemo } from "react";
 
 import type { CommentSurface } from "../lib/filters";
 import { commentFiltersAtom, matchesCommentFilters } from "../lib/filters";
+import { orderComments } from "../lib/order";
 import type { CommentSection } from "../lib/types";
+import { useCommentSurface } from "./use-comment-surface";
 
 export interface CommentListItem {
   comment: FoldedComment;
@@ -37,6 +35,7 @@ export function useComments(): { visible: CommentListItem[] } {
   const { data: review } = useSuspenseQuery(reviewQueryOptions);
   const { data: change } = useSuspenseQuery(diffQueryOptions);
   const filters = useAtomValue(commentFiltersAtom);
+  const surface = useCommentSurface();
 
   const { comments } = review;
   const { patch } = change;
@@ -155,11 +154,8 @@ export function useComments(): { visible: CommentListItem[] } {
       }
     }
 
-    const folded = sortFoldedComments(
-      entries.map((entry) => foldComment(entry.id, entry.records))
-    );
-
-    const visible = folded
+    const matching = entries
+      .map((entry) => foldComment(entry.id, entry.records))
       .map((comment) => {
         const anchorFile = anchorFileById.get(comment.id);
 
@@ -179,8 +175,8 @@ export function useComments(): { visible: CommentListItem[] } {
         })
       );
 
-    return { visible };
-  }, [filters, comments, patch, reviewTitle, walkthroughs]);
+    return { visible: orderComments(matching, surface) };
+  }, [filters, comments, patch, reviewTitle, surface, walkthroughs]);
 
   // Drift resolves asynchronously and hands back a fresh map each render, so it
   // is attached outside the memo — keeping the fold/sort above it stable.
