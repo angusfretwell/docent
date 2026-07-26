@@ -34,4 +34,4 @@ Starting route is deliberately **absent** — it is a per-capture concern the sk
 - Default: 1280 x 800
 ```
 
-Keep it terse and true. If a capture discovers the runbook is stale (a changed port, a broken login), update it in the same run.
+Keep it terse and true. If a capture discovers the runbook is wrong (a changed port, a broken login), update it in the same run.

@@ -175,6 +175,66 @@ describe("docent walkthrough — end to end through git + fs", () => {
     expect(section?.callouts?.at(0)?.anchor.kind).toBe("screenshot-region");
   });
 
+  test("rename titles a shell that capture minted untitled", async () => {
+    const repo = featureRepo();
+    await run(walkthrough(repo, ["create", "--kind", "product"]));
+    const walkthroughId = await currentWalkthroughId(repo);
+
+    await run(
+      walkthrough(repo, [
+        "rename",
+        "--walkthrough",
+        walkthroughId,
+        "--title",
+        "Uploading a file",
+      ])
+    );
+
+    const entry = await onlyWalkthrough(repo);
+    expect(entry?.manifest?.title).toBe("Uploading a file");
+  });
+
+  test("a blank --title is refused, leaving the title untouched", async () => {
+    const repo = featureRepo();
+    await run(
+      walkthrough(repo, ["create", "--kind", "code", "--title", "Tour"])
+    );
+    const walkthroughId = await currentWalkthroughId(repo);
+
+    const exit = await runtime.runPromiseExit(
+      walkthrough(repo, [
+        "rename",
+        "--walkthrough",
+        walkthroughId,
+        "--title",
+        "   ",
+      ])
+    );
+
+    const entry = await onlyWalkthrough(repo);
+    expect(exit._tag).toBe("Failure");
+    expect(entry?.manifest?.title).toBe("Tour");
+  });
+
+  test("renaming an unknown walkthrough fails with a message naming the id", async () => {
+    const repo = featureRepo();
+
+    const exit = await runtime.runPromiseExit(
+      walkthrough(repo, [
+        "rename",
+        "--walkthrough",
+        "wlk_nope",
+        "--title",
+        "Anything",
+      ])
+    );
+
+    expect(exit._tag).toBe("Failure");
+    expect(String(exit._tag === "Failure" ? exit.cause : "")).toContain(
+      "wlk_nope"
+    );
+  });
+
   test("an unknown subcommand fails, never a stray write", async () => {
     const repo = featureRepo();
 

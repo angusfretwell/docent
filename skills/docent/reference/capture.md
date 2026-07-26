@@ -1,6 +1,6 @@
 # Capturing the product walkthrough
 
-Records a **served, reachable** app into capture blobs and their `captures[]` registry entries — the capture half of the product pillar, separable from authoring (which touches no browser, [product-walkthrough.md](product-walkthrough.md)). You **drive**, not author — you produce captures only.
+Records a **served, reachable** app into capture blobs and their `captures[]` registry entries — the capture half of the product walkthrough, separable from authoring (which touches no browser, [product-walkthrough.md](product-walkthrough.md)). You **drive**, not author — you produce captures only.
 
 Two invariants hold for every capture:
 
@@ -79,7 +79,7 @@ Stylesheets are inlined by default; images and fonts are **not** — without tho
 
 ## 5. Drive and capture
 
-Drive the flow the way you already work — `snapshot -i` to read the page live (accessibility tree, element refs, disabled states visible), act on what you see, re-snapshot after any DOM change. Refs go stale on navigation; re-snapshot.
+Drive the flow the way you already work — `snapshot -i` to read the page live (accessibility tree, element refs, disabled states visible), act on what you see, re-snapshot after any DOM change. Refs expire on navigation; re-snapshot.
 
 - **Screenshot** — once the page is in the state you want, take the snapshot pair. `record()` emits `Meta` then `FullSnapshot` synchronously and returns its own stop function, so starting and immediately stopping yields exactly the still frame:
 
@@ -95,20 +95,20 @@ Drive the flow the way you already work — `snapshot -i` to read the page live 
 
 - **Recording** — start recording before driving the flow, then pull the raw rrweb event stream: `agent-browser eval "JSON.stringify(window.__evt)" --json` → write the events array verbatim to a `<tmp>.rrweb.json` file. Note `durationMs` (last event ts − first).
 
-## 6. Mint the walkthrough shell
+## 6. Create the walkthrough shell
 
-Captures register onto a **product walkthrough**, so first establish which `wlk_` you are capturing into. When the reconcile flow (SKILL.md) supplies the id, use it. Run standalone, mint a fresh shell:
+Captures register onto a **product walkthrough**, so first establish which `wlk_` you are capturing into. When the run (SKILL.md) supplies the id, use it. Run standalone, create a fresh shell:
 
 ```bash
 npx -y @angusfretwell/docent@latest walkthrough create --kind product
 #   → { "changeId": "chg_…", "walkthroughId": "wlk_…" }
 ```
 
-Omit `--title`: the shell mints with an empty `title` and empty `sections` — both are editorial, which the authoring half fills — you author nothing. The CLI binds `bornChangeId` to the live head's Change, minting the Change lazily if the head has none.
+Omit `--title`: the shell lands with an empty `title` and empty `sections` — both are editorial, which the authoring half fills — you author nothing. The CLI binds `bornChangeId` to the live head's Change, recording the Change lazily if the head has none.
 
 ## 7. Register the capture
 
-Register each temp media file (§5) with `docent capture add` — the single home for content-sha minting and append semantics. It content-addresses the bytes into `captures/<sha>.rrweb.json` (the filename **is** the sha-256 of the bytes, which dedups byte-identical screens across rounds and freezes the exact bytes an anchor points at), mints the `cap_` id, and appends the validated `captures[]` registry entry to the manifest:
+Register each temp media file (§5) with `docent capture add` — the single home for content-sha addressing and append semantics. It content-addresses the bytes into `captures/<sha>.rrweb.json` (the filename **is** the sha-256 of the bytes, which dedups byte-identical screens across runs and freezes the exact bytes an anchor points at), issues the `cap_` id, and appends the validated `captures[]` registry entry to the manifest:
 
 ```bash
 # screenshot: full-page CSS-pixel document size rides --dims
@@ -125,7 +125,7 @@ npx -y @angusfretwell/docent@latest capture add --walkthrough wlk_… --kind rec
 
 ## 8. First-run: author the runbook
 
-If the setup required asking the human (precedence rung 3), write what you learned to `.docent/capture.md` so later captures run AFK. Follow [runbook-template.md](runbook-template.md). If a runbook already existed and was correct, leave it; if you discovered it was stale (e.g. the port changed), update it.
+If the setup required asking the human (precedence rung 3), write what you learned to `.docent/capture.md` so later captures run AFK. Follow [runbook-template.md](runbook-template.md). If a runbook already existed and was correct, leave it; if you discovered it was wrong (e.g. the port changed), update it.
 
 ## 9. Teardown — only what it started
 
