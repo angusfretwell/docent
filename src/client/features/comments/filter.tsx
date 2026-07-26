@@ -89,7 +89,7 @@ export function CommentsFilter() {
           disabled={isDefaultFilters(filters)}
           onClick={() => setFilters(DEFAULT_FILTERS)}
         >
-          Reset filters
+          Reset Filters
         </MenuItem>
       </MenuPopup>
     </Menu>

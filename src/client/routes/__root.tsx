@@ -19,5 +19,9 @@ function RootComponent() {
 
 export const Route = createRootRoute({
   component: RootComponent,
-  errorComponent: ErrorComponent,
+  errorComponent: (props) => (
+    <div className="h-svh p-2">
+      <ErrorComponent {...props} />
+    </div>
+  ),
 });

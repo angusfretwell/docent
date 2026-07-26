@@ -32,7 +32,7 @@ function CalloutItem({
         <PinChip
           label={callout.label}
           className={cn(
-            "me-[0.5em] align-[0.1em]",
+            "me-[0.25em] align-[0.1em]",
             active ? "opacity-100" : "opacity-50"
           )}
         />

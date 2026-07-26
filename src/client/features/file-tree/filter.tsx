@@ -40,7 +40,7 @@ export function FileTreeFilter() {
       />
       <MenuPopup align="end">
         <MenuGroup>
-          <MenuGroupLabel>Filter files</MenuGroupLabel>
+          <MenuGroupLabel>Filter</MenuGroupLabel>
           <MenuCheckboxItem
             checked={filters.unviewed}
             onCheckedChange={(checked) =>
@@ -60,7 +60,7 @@ export function FileTreeFilter() {
         </MenuGroup>
         <MenuSeparator />
         <MenuGroup>
-          <MenuGroupLabel>Git status</MenuGroupLabel>
+          <MenuGroupLabel>Status</MenuGroupLabel>
           {STATUS_FILTERS.map(({ label, status }) => (
             <MenuCheckboxItem
               checked={filters.statuses.has(status)}
@@ -79,7 +79,7 @@ export function FileTreeFilter() {
             onClick={() => setFilters(EMPTY_FILTERS)}
             disabled={filters === EMPTY_FILTERS}
           >
-            Clear filters
+            Clear Filters
           </MenuItem>
         </MenuGroup>
       </MenuPopup>
