@@ -45,7 +45,10 @@ export function CodeWalkthroughView() {
 
   const proseRef = useRef<HTMLDivElement>(null);
   const tourId = walkthrough?.id ?? ("" as WalkthroughId);
-  const { activeKey, pinTarget } = useActiveTarget(proseRef, tourId);
+  const { activeKey, pinTarget, reachTarget } = useActiveTarget(
+    proseRef,
+    tourId
+  );
   const [reasserted, setReasserted] = useState(0);
   const [pane, setPane] = useState<WalkthroughPane>("prose");
 
@@ -109,11 +112,11 @@ export function CodeWalkthroughView() {
       proseRef={proseRef}
       target={
         <CodeWalkthroughDiffPanel
-          activeRange={
-            activeKey === undefined ? undefined : ranges.get(activeKey)
-          }
+          activeKey={activeKey}
           driftFor={(id) => drift.get(id)}
           files={files}
+          onReach={reachTarget}
+          ranges={ranges}
           reasserted={reasserted}
         />
       }

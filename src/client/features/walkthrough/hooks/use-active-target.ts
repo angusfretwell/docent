@@ -60,16 +60,19 @@ export interface ActiveTarget {
   activeKey: string | undefined;
   /** Show a target without moving the prose. */
   pinTarget: (key: string) => void;
-  /** Show a target and scroll the prose to meet it; anchors passed on the way don't become active. */
+  /** Step to a target the reader named in the target pane; the prose follows while auto-scroll is on, and anchors passed on the way don't become active. */
   jumpToTarget: (key: string) => void;
+  /** Report where reading the target pane has arrived; nothing moves while auto-scroll is off. */
+  reachTarget: (key: string) => void;
 }
 
 /**
  * `resetKey` re-observes when the rendered tour changes: switching walkthroughs
  * replaces every anchor, so the previous reading no longer refers to anything.
  *
- * Reading the prose only moves the target pane while auto-scroll is on; the two
- * explicit moves always answer, since the reader asked for them by name.
+ * Auto-scroll governs both directions of reading: with it off neither pane
+ * carries the other, and stepping the target pane by hand leaves the prose where
+ * the reader left it.
  */
 export function useActiveTarget(
   containerRef: RefObject<HTMLElement | null>,
@@ -194,7 +197,7 @@ export function useActiveTarget(
 
       setActiveKey(key);
 
-      if (container !== null) {
+      if (container !== null && following.current) {
         arrive.current?.();
         scrollTargetIntoRead(container, key);
       }
@@ -202,5 +205,16 @@ export function useActiveTarget(
     [containerRef]
   );
 
-  return { activeKey, jumpToTarget, pinTarget };
+  const reachTarget = useCallback(
+    (key: string) => {
+      if (!following.current) {
+        return;
+      }
+
+      jumpToTarget(key);
+    },
+    [jumpToTarget]
+  );
+
+  return { activeKey, jumpToTarget, pinTarget, reachTarget };
 }

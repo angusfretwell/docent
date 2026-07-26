@@ -10,7 +10,7 @@ import type {
   SelectedLineRange,
 } from "@pierre/diffs";
 import { CodeView as BaseCodeView } from "@pierre/diffs/react";
-import type { CodeViewHandle } from "@pierre/diffs/react";
+import type { CodeViewHandle, CodeViewProps } from "@pierre/diffs/react";
 import { useAtomValue } from "jotai/react";
 import type { ReactNode, RefObject } from "react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
@@ -62,6 +62,7 @@ interface AnnotatedCodeViewProps {
   disableBackground?: boolean;
   /** Lines to hold the reader's eye, dimming everything else. */
   focus?: CodeViewFocus | null;
+  onScroll?: CodeViewProps<LineDecoration>["onScroll"];
   onToggleItemCollapsed?: (itemId: string) => void;
   ref: RefObject<CodeViewHandle<LineDecoration> | null>;
   renderAnnotation?: (
@@ -79,6 +80,7 @@ export function AnnotatedCodeView({
   enableGutterUtility,
   disableBackground,
   focus = null,
+  onScroll,
   onToggleItemCollapsed,
   ref,
   renderAnnotation,
@@ -152,6 +154,7 @@ export function AnnotatedCodeView({
       ref={ref}
       items={items}
       className="scrollbar-thin scrollbar-thumb-foreground/20 scrollbar-track-transparent overflow-auto overscroll-contain [&_diffs-container]:scheme-light dark:[&_diffs-container]:scheme-dark"
+      onScroll={onScroll}
       options={options}
       renderAnnotation={renderAnnotation}
       renderHeaderMetadata={renderHeaderMetadata}
