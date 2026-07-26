@@ -22,6 +22,7 @@ import {
   MenuSubTrigger,
   MenuTrigger,
 } from "./ui/menu";
+import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
 
 // option-c - toggle inline comments
 // option-d - toggle color scheme
@@ -38,13 +39,20 @@ export function Settings() {
 
   return (
     <Menu>
-      <MenuTrigger
-        render={
-          <Button variant="ghost" size="icon" aria-label="Diff settings" />
-        }
-      >
-        <SettingsIcon />
-      </MenuTrigger>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <MenuTrigger
+              render={
+                <Button variant="ghost" size="icon" aria-label="Settings" />
+              }
+            >
+              <SettingsIcon />
+            </MenuTrigger>
+          }
+        />
+        <TooltipPopup>Settings</TooltipPopup>
+      </Tooltip>
       <MenuPopup align="end">
         <MenuGroup>
           <MenuGroupLabel>Color Scheme</MenuGroupLabel>

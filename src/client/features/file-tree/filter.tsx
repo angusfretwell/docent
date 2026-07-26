@@ -9,6 +9,11 @@ import {
   MenuCheckboxItem,
   MenuItem,
 } from "@client/components/ui/menu";
+import {
+  Tooltip,
+  TooltipPopup,
+  TooltipTrigger,
+} from "@client/components/ui/tooltip";
 import type { GitStatus } from "@pierre/trees";
 import { useAtom } from "jotai/react";
 import { ListFilter } from "lucide-react";
@@ -31,13 +36,24 @@ export function FileTreeFilter() {
 
   return (
     <Menu>
-      <MenuTrigger
-        render={
-          <Button variant="outline" size="icon-sm" aria-label="Filter files">
-            <ListFilter />
-          </Button>
-        }
-      />
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <MenuTrigger
+              render={
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  aria-label="Filter files"
+                >
+                  <ListFilter />
+                </Button>
+              }
+            />
+          }
+        />
+        <TooltipPopup>Filter files</TooltipPopup>
+      </Tooltip>
       <MenuPopup align="end">
         <MenuGroup>
           <MenuGroupLabel>Filter</MenuGroupLabel>

@@ -1,5 +1,10 @@
 import { Button } from "@client/components/ui/button";
 import { Checkbox } from "@client/components/ui/checkbox";
+import {
+  Tooltip,
+  TooltipPopup,
+  TooltipTrigger,
+} from "@client/components/ui/tooltip";
 import { MessageCircleCode } from "lucide-react";
 
 export function CodeViewHeaderMetadata({
@@ -14,14 +19,21 @@ export function CodeViewHeaderMetadata({
   return (
     <div className="flex items-center gap-1">
       {onComment && (
-        <Button
-          size="icon-xs"
-          variant="outline"
-          onClick={onComment}
-          aria-label="Comment on file"
-        >
-          <MessageCircleCode />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                size="icon-xs"
+                variant="outline"
+                onClick={onComment}
+                aria-label="Add comment"
+              >
+                <MessageCircleCode />
+              </Button>
+            }
+          />
+          <TooltipPopup>Add comment</TooltipPopup>
+        </Tooltip>
       )}
 
       {onToggleViewed && (

@@ -11,6 +11,11 @@ import {
   PopoverTrigger,
 } from "@client/components/ui/popover";
 import { Sheet, SheetPopup } from "@client/components/ui/sheet";
+import {
+  Tooltip,
+  TooltipPopup,
+  TooltipTrigger,
+} from "@client/components/ui/tooltip";
 import { DismissProvider } from "@client/hooks/use-dismiss";
 import { useKeyPressed } from "@client/hooks/use-key-pressed";
 import { useMediaQuery } from "@client/hooks/use-media-query";
@@ -111,15 +116,22 @@ export function CommentsToggle() {
   }
 
   return (
-    <Button
-      aria-label="Close comments"
-      variant="ghost"
-      size="icon"
-      onClick={() => setCommentsOpen(false)}
-    >
-      <KbdHint active={isAltPressed} shortcut="]">
-        <PanelRightClose />
-      </KbdHint>
-    </Button>
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            aria-label="Hide comments"
+            variant="ghost"
+            size="icon"
+            onClick={() => setCommentsOpen(false)}
+          >
+            <KbdHint active={isAltPressed} shortcut="]">
+              <PanelRightClose />
+            </KbdHint>
+          </Button>
+        }
+      />
+      <TooltipPopup>Hide comments</TooltipPopup>
+    </Tooltip>
   );
 }

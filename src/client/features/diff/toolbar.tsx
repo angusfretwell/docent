@@ -6,6 +6,11 @@ import {
   DrawerTrigger,
 } from "@client/components/ui/drawer";
 import { Separator } from "@client/components/ui/separator";
+import {
+  Tooltip,
+  TooltipPopup,
+  TooltipTrigger,
+} from "@client/components/ui/tooltip";
 import { DismissProvider } from "@client/hooks/use-dismiss";
 import { useKeyPressed } from "@client/hooks/use-key-pressed";
 import { useIsMobile } from "@client/hooks/use-media-query";
@@ -39,6 +44,11 @@ export function DiffToolbar({
   const isAltPressed = useKeyPressed("Alt");
   useHotkeys("Alt + BracketLeft", () => setDiffTreeOpen(!diffTreeOpen));
 
+  const treeLabel = diffTreeOpen ? "Hide file tree" : "Show file tree";
+  const collapseLabel = collapsed.allCollapsed
+    ? "Expand all files"
+    : "Collapse all files";
+
   return (
     <div className="@container flex h-11 shrink-0 items-center gap-1.5 border-b px-2">
       {isMobile ? (
@@ -63,16 +73,23 @@ export function DiffToolbar({
           </DrawerPopup>
         </Drawer>
       ) : (
-        <Button
-          aria-label="Toggle file tree"
-          size="icon-sm"
-          variant="ghost"
-          onClick={() => setDiffTreeOpen(!diffTreeOpen)}
-        >
-          <KbdHint active={isAltPressed} shortcut="[">
-            <ListTree />
-          </KbdHint>
-        </Button>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                aria-label={treeLabel}
+                size="icon-sm"
+                variant="ghost"
+                onClick={() => setDiffTreeOpen(!diffTreeOpen)}
+              >
+                <KbdHint active={isAltPressed} shortcut="[">
+                  <ListTree />
+                </KbdHint>
+              </Button>
+            }
+          />
+          <TooltipPopup>{treeLabel}</TooltipPopup>
+        </Tooltip>
       )}
       <Separator orientation="vertical" className="h-4" />
       <ChangeRangePicker />
@@ -82,17 +99,22 @@ export function DiffToolbar({
           <span className="@max-xs:sr-only">viewed</span>
         </p>
 
-        <Button
-          aria-label={
-            collapsed.allCollapsed ? "Expand all files" : "Collapse all files"
-          }
-          disabled={visibleFiles.length === 0}
-          onClick={() => collapsed.toggleAll()}
-          size="icon-sm"
-          variant="ghost"
-        >
-          {collapsed.allCollapsed ? <UnfoldVertical /> : <FoldVertical />}
-        </Button>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                aria-label={collapseLabel}
+                disabled={visibleFiles.length === 0}
+                onClick={() => collapsed.toggleAll()}
+                size="icon-sm"
+                variant="ghost"
+              >
+                {collapsed.allCollapsed ? <UnfoldVertical /> : <FoldVertical />}
+              </Button>
+            }
+          />
+          <TooltipPopup>{collapseLabel}</TooltipPopup>
+        </Tooltip>
       </div>
     </div>
   );
