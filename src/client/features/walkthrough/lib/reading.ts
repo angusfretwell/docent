@@ -5,12 +5,18 @@
  */
 const READ_LINE_FRACTION = 1 / 3;
 
-/** Clearance for an anchor pulled back down into view, so it doesn't sit flush against the top edge. */
+/** Clearance at either end of the viewport, so prose brought into view doesn't sit flush against an edge. */
 const HEADROOM_PX = 24;
 
 export interface AnchorPlacement {
   key: string;
   /** Offset from the top of the prose viewport, negative once scrolled past. */
+  top: number;
+}
+
+/** A run of prose in the viewport's own coordinates: an anchor's paragraph, its section, or the anchor itself. */
+export interface ProseExtent {
+  bottom: number;
   top: number;
 }
 
@@ -49,22 +55,36 @@ export function targetUnderRead(
 }
 
 /**
- * How far the prose has to move for an anchor to be worth reading from, as a
- * delta on the scroll position: to the read line when it sits below, to the
- * headroom when it sits above, and nowhere at all in between — anything already
- * in that band is on screen with its prose, so moving it only costs the reader
- * their place.
+ * The most prose around an anchor that the viewport can hold whole — its section
+ * when the section fits, its paragraph when it doesn't — given the anchor's
+ * enclosing runs from innermost outwards. Landing on a bare anchor drops the
+ * reader mid-thought: the sentence that introduces it is the point of arriving.
  */
-export function nudgeIntoRead(top: number, height: number): number {
-  const readLine = readLineOf(height);
+export function extentToRead(
+  extents: readonly ProseExtent[],
+  height: number
+): ProseExtent | undefined {
+  const room = height - HEADROOM_PX * 2;
 
-  if (top > readLine) {
-    return top - readLine;
-  }
+  return (
+    extents.findLast((extent) => extent.bottom - extent.top <= room) ??
+    extents[0]
+  );
+}
 
-  if (top < HEADROOM_PX) {
-    return top - HEADROOM_PX;
-  }
+/**
+ * How far the prose has to move for a run of it to be worth reading from, as a
+ * delta on the scroll position. It travels no further than it must: none at all
+ * while the run is already on screen below the headroom, up until the run's start
+ * meets the read line or its end clears the foot, down until the start meets the
+ * headroom. A run too tall to hold whole gives up its end rather than its start,
+ * which is where reading it begins.
+ */
+export function nudgeIntoRead(extent: ProseExtent, height: number): number {
+  const wanted = Math.max(
+    extent.top - readLineOf(height),
+    extent.bottom - (height - HEADROOM_PX)
+  );
 
-  return 0;
+  return Math.min(Math.max(0, wanted), extent.top - HEADROOM_PX);
 }

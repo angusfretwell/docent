@@ -3,8 +3,8 @@ import { useAtomValue } from "jotai/react";
 import type { RefObject } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { AnchorPlacement } from "../lib/reading";
-import { nudgeIntoRead, targetUnderRead } from "../lib/reading";
+import type { AnchorPlacement, ProseExtent } from "../lib/reading";
+import { extentToRead, nudgeIntoRead, targetUnderRead } from "../lib/reading";
 
 /** Fallback for browsers that don't fire `scrollend`, and for a nudge with nowhere to travel. */
 const SETTLE_MS = 700;
@@ -30,6 +30,29 @@ function placementsIn(container: HTMLElement): AnchorPlacement[] {
         : [{ key, top: anchor.getBoundingClientRect().top - view.top }];
     }
   );
+}
+
+/**
+ * The anchor and everything enclosing it, innermost first: its paragraph or chip
+ * row, then its section, then the column they all sit in. Where to stop is left
+ * to what the viewport can hold — the outer wrappers span the whole tour, so they
+ * are never a run anything could be read from.
+ */
+function extentsAround(anchor: Element, container: HTMLElement): ProseExtent[] {
+  const view = container.getBoundingClientRect();
+  const extents: ProseExtent[] = [];
+
+  for (
+    let node: Element | null = anchor;
+    node !== null && node !== container;
+    node = node.parentElement
+  ) {
+    const rect = node.getBoundingClientRect();
+
+    extents.push({ bottom: rect.bottom - view.top, top: rect.top - view.top });
+  }
+
+  return extents;
 }
 
 export interface ActiveTarget {
@@ -123,16 +146,22 @@ export function useActiveTarget(
         return;
       }
 
-      const placements = placementsIn(container);
       const height = container.clientHeight;
-      const placement = placements.find((candidate) => candidate.key === key);
 
-      held.current = { baseline: targetUnderRead(placements, height) };
+      held.current = {
+        baseline: targetUnderRead(placementsIn(container), height),
+      };
 
-      const nudge =
-        follow && placement !== undefined
-          ? nudgeIntoRead(placement.top, height)
-          : 0;
+      const anchor = container.querySelector(
+        `[${TARGET_ATTRIBUTE}="${CSS.escape(key)}"]`
+      );
+
+      if (!follow || anchor === null) {
+        return;
+      }
+
+      const extent = extentToRead(extentsAround(anchor, container), height);
+      const nudge = extent === undefined ? 0 : nudgeIntoRead(extent, height);
 
       if (nudge === 0) {
         return;

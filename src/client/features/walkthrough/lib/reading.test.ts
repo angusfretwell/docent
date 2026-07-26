@@ -1,11 +1,15 @@
 import { describe, expect, test } from "bun:test";
 
-import { nudgeIntoRead, targetUnderRead } from "./reading";
+import { extentToRead, nudgeIntoRead, targetUnderRead } from "./reading";
 
 const HEIGHT = 900;
 
 function anchor(key: string, top: number) {
   return { key, top };
+}
+
+function extent(top: number, bottom: number) {
+  return { bottom, top };
 }
 
 describe("targetUnderRead", () => {
@@ -52,22 +56,60 @@ describe("targetUnderRead", () => {
   });
 });
 
+describe("extentToRead", () => {
+  test("reads from the widest run the viewport can hold whole", () => {
+    const chosen = extentToRead(
+      [extent(300, 320), extent(240, 420), extent(100, 700)],
+      HEIGHT
+    );
+
+    expect(chosen).toEqual(extent(100, 700));
+  });
+
+  test("falls back to the paragraph when the section is too tall", () => {
+    const chosen = extentToRead(
+      [extent(300, 320), extent(240, 420), extent(-600, 1400)],
+      HEIGHT
+    );
+
+    expect(chosen).toEqual(extent(240, 420));
+  });
+
+  test("reads from the anchor itself when nothing around it fits", () => {
+    const chosen = extentToRead([extent(300, 320), extent(-800, 2000)], HEIGHT);
+
+    expect(chosen).toEqual(extent(300, 320));
+  });
+});
+
 describe("nudgeIntoRead", () => {
-  test("leaves the prose where it is for an anchor already in the band", () => {
-    const nudge = nudgeIntoRead(200, HEIGHT);
+  test("leaves the prose where it is for a run already read from", () => {
+    const nudge = nudgeIntoRead(extent(200, 500), HEIGHT);
 
     expect(nudge).toBe(0);
   });
 
-  test("pulls an anchor below the read line up to it", () => {
-    const nudge = nudgeIntoRead(500, HEIGHT);
+  test("pulls a run starting below the read line up to it", () => {
+    const nudge = nudgeIntoRead(extent(500, 700), HEIGHT);
 
     expect(nudge).toBe(200);
   });
 
-  test("pushes an anchor scrolled off the top back down to the headroom", () => {
-    const nudge = nudgeIntoRead(-176, HEIGHT);
+  test("pushes a run scrolled off the top back down to the headroom", () => {
+    const nudge = nudgeIntoRead(extent(-176, 200), HEIGHT);
 
     expect(nudge).toBe(-200);
+  });
+
+  test("brings a run's end into view rather than only its start", () => {
+    const nudge = nudgeIntoRead(extent(250, 1000), HEIGHT);
+
+    expect(nudge).toBe(124);
+  });
+
+  test("keeps a run too tall to hold whole starting at the headroom", () => {
+    const nudge = nudgeIntoRead(extent(250, 2000), HEIGHT);
+
+    expect(nudge).toBe(226);
   });
 });
