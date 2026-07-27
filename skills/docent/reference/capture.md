@@ -108,7 +108,7 @@ rrweb takes a full snapshot on `record()`, so inject-after-load is sufficient. R
 rrweb.record({ collectFonts: true, emit, inlineImages: true });
 ```
 
-Stylesheets are inlined by default; images and fonts are **not** — without those two options a replay months later shows holes where the app's assets used to be. The cost is blob size, which is the right trade for an immutable artifact.
+Both options cover what only the page can reach: `inlineImages` reads `<img>` bitmaps through a canvas, which catches images served from a `blob:` URL that exists nowhere but that tab, and `collectFonts` catches fonts the page built through the `FontFace` constructor. Neither touches `@font-face` rules or CSS `url()` — `capture add` fetches those and rewrites them to `data:` URIs when it registers the stream (§6), so leave them to it and never hand-edit a stream to patch an asset.
 
 ## 5. Walk the shot list — in order, bounded
 
@@ -153,7 +153,7 @@ With rrweb in place, drive the way you already work — `snapshot -i` to read th
 
 ## 6. Register the capture
 
-Register each temp media file (§5) with `docent capture add` — the single home for content-sha addressing and append semantics. It content-addresses the bytes into `captures/<sha>.rrweb.json` (the filename **is** the sha-256 of the bytes, which dedups byte-identical screens across runs and freezes the exact bytes an anchor points at), issues the `cap_` id, and appends the validated `captures[]` registry entry to the manifest:
+Register each temp media file (§5) with `docent capture add` — the single home for asset inlining, content-sha addressing and append semantics. It fetches every asset the stream still points at (fonts, images, sheets rrweb could not read) and rewrites each to a `data:` URI, content-addresses the resulting bytes into `captures/<sha>.rrweb.json` (the filename **is** the sha-256 of the bytes, which dedups byte-identical screens across runs and freezes the exact bytes an anchor points at), issues the `cap_` id, and appends the validated `captures[]` registry entry to the manifest:
 
 ```bash
 # screenshot: full-page CSS-pixel document size rides --dims
@@ -163,8 +163,10 @@ npx -y @angusfretwell/docent@latest capture add --walkthrough wlk_… --kind scr
 # recording: --duration-ms rides instead of --dims
 npx -y @angusfretwell/docent@latest capture add --walkthrough wlk_… --kind recording --media <tmp>.rrweb.json \
   --route /signup --viewport 1280x1280 --duration-ms 8200 --title "Submitting the signup"
-#   → { "captureId": "cap_…", "media": "<sha>", "registry": { … }, "walkthroughId": "wlk_…" }
+#   → { "assets": { "bytes": 241060, "inlined": 12, "skipped": [] }, "captureId": "cap_…", "media": "<sha>", "registry": { … }, "walkthroughId": "wlk_…" }
 ```
+
+`assets` is the inlining receipt. Registration never fails over an asset: anything unreachable is left as the URL it was and named in `skipped`. A capture that comes back with `skipped` entries replays with holes in it, so report that as an obstacle — the URL and the reason, verbatim.
 
 `--dims` is for screenshots and `--duration-ms` for recordings; the mismatch is refused, as is any capture on a code walkthrough. `--media` is a file path read relative to the cwd. `--route` and `--viewport` record where you actually were, which is what the Review shows. `--title` is the shot's title from the plan — a short descriptive name for the state ("Empty signup form"), shown in place of the generic "Screenshot 1" / "Recording 1". Always pass the plan's title, unchanged: a capture that is not the state its title claims is an obstacle on your receipt, never a retitle, because a retitled capture makes that gap invisible to the author. All captures are born against the walkthrough's `bornChangeId`. The CLI is non-gating (the files stay plain and hand-writable), but prefer it: it validates against the same schemas the server renders.
 

@@ -5,6 +5,7 @@ import { FileSystem } from "effect/FileSystem";
 import { Path } from "effect/Path";
 import { Command, Flag } from "effect/unstable/cli";
 
+import { inlineCaptureAssets } from "../core/capture-assets";
 import { addWalkthroughCapture } from "../core/walkthrough-write";
 import { resolveChangeScope } from "../core/write-context";
 import { parseDimensions, parseDurationMs, parseRecordId } from "./specs";
@@ -105,21 +106,25 @@ const add = Command.make(
         );
       const scope = yield* resolveChangeScope(cwd);
 
-      return yield* printJson(
-        yield* addWalkthroughCapture({
-          base: scope.base,
-          branch: scope.branch,
-          kind: config.kind,
-          media,
-          root: scope.root,
-          route,
-          viewport,
-          walkthroughId,
-          ...(title === undefined || title === "" ? {} : { title }),
-          ...(dims === undefined ? {} : { dims }),
-          ...(durationMs === undefined ? {} : { durationMs }),
-        })
-      );
+      /* Before the sha is taken, so the blob docent freezes is the self-contained
+         one — an asset fetched later would be a different capture. */
+      const inlined = yield* inlineCaptureAssets(media);
+
+      const registered = yield* addWalkthroughCapture({
+        base: scope.base,
+        branch: scope.branch,
+        kind: config.kind,
+        media: inlined.media,
+        root: scope.root,
+        route,
+        viewport,
+        walkthroughId,
+        ...(title === undefined || title === "" ? {} : { title }),
+        ...(dims === undefined ? {} : { dims }),
+        ...(durationMs === undefined ? {} : { durationMs }),
+      });
+
+      return yield* printJson({ ...registered, assets: inlined.report });
     })
 ).pipe(Command.withDescription("Register a capture for a product walkthrough"));
 

@@ -28,7 +28,7 @@ An interactive, local-first tool for reviewing code changes — especially agent
 
 **Section**: One step of a Walkthrough: a titled unit of prose interleaved with its targets — diff ranges for a Code walkthrough, Callouts on Captures for a Product one. The unit a Comment anchors to, via the `walkthrough-section` Anchor. _Avoid_: Step, Slide
 
-**Capture**: A content-addressed media artifact anchored in a Product walkthrough — a screenshot or a recording of the running app at a route and viewport. Carries Callouts pinned to its regions or timestamps. _Avoid_: Screenshot (only one of its two kinds), Snapshot, Media
+**Capture**: A content-addressed media artifact anchored in a Product walkthrough — a screenshot or a recording of the running app at a route and viewport. Carries Callouts pinned to its regions or timestamps. Self-contained by the time it is addressed: registration fetches every asset the rrweb stream still points at into a `data:` URI, because the Review replays on its own origin, where the app's fonts are CORS failures while it is served and 404s once it is not. _Avoid_: Screenshot (only one of its two kinds), Snapshot, Media
 
 **Runbook**: The record of how to serve the app a Product walkthrough captures — base URL, viewport default, and the login or seeding steps that reach a usable state. Lives at `.docent/capture.md`, and is one of the two things under `.docent/` that travel with the repo (see Review), so a machine that has never run docent still knows how to drive the app. Settled with the human once and read as input thereafter: the agent that drives reports a Runbook that no longer matches the app as an Obstacle rather than correcting it, since it has nobody to confirm the truth with. _Avoid_: Config, Setup, Recipe, Playbook
 

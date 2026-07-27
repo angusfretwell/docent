@@ -174,6 +174,75 @@ describe("docent capture add — end to end", () => {
     expect(entry?.manifest?.captures ?? []).toHaveLength(0);
   });
 
+  test("the stored blob carries the app's assets, not urls into it", async () => {
+    const font = new Uint8Array([119, 79, 70, 50, 9]);
+    const server = Bun.serve({
+      fetch: () =>
+        new Response(font, { headers: { "content-type": "font/woff2" } }),
+      port: 0,
+    });
+    const { root, walkthroughId } = await productRepo();
+    const media = "styled.rrweb.json";
+    writeFileSync(
+      path.join(root, media),
+      JSON.stringify([
+        { data: { href: `http://localhost:${server.port}/` }, type: 4 },
+        {
+          data: {
+            node: {
+              attributes: {
+                _cssText: `@font-face{src:url("http://localhost:${server.port}/f.woff2")}`,
+              },
+              childNodes: [],
+              id: 3,
+              tagName: "style",
+              type: 2,
+            },
+          },
+          type: 2,
+        },
+      ])
+    );
+
+    await run(
+      capture(root, [
+        "add",
+        "--walkthrough",
+        walkthroughId,
+        "--kind",
+        "screenshot",
+        "--media",
+        media,
+        "--route",
+        "/",
+        "--viewport",
+        "1280x800",
+        "--dims",
+        "1280x800",
+      ])
+    );
+    server.stop(true);
+
+    const entry = await onlyWalkthrough(root);
+    const blob = await Bun.file(
+      path.join(
+        root,
+        ".docent",
+        "reviews",
+        "feature",
+        "walkthroughs",
+        "product",
+        walkthroughId,
+        "captures",
+        `${entry?.manifest?.captures?.at(0)?.media}.rrweb.json`
+      )
+    ).text();
+    expect(blob).toContain(
+      `data:font/woff2;base64,${Buffer.from(font).toString("base64")}`
+    );
+    expect(blob).not.toContain("f.woff2");
+  });
+
   test("a missing media file is a usage error", async () => {
     const { root, walkthroughId } = await productRepo();
 
