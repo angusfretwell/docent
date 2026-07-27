@@ -2,7 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 
 import { cleanupScratchDirs, scratchRepo } from "@test/fixtures";
 import { makeTestRuntime } from "@test/runtime";
-import { Console, Effect } from "effect";
+import { Console, Effect, Exit } from "effect";
 import { Command } from "effect/unstable/cli";
 
 import { webHandler } from "../api";
@@ -30,23 +30,25 @@ function status(cwd: string, argv: readonly string[]) {
   );
 }
 
-async function printedJson(
+async function runStatus(
   command: ReturnType<typeof status>
-): Promise<unknown> {
+): Promise<{ json: unknown; failed: boolean }> {
   const printed: string[] = [];
 
-  await run(
-    command.pipe(
-      Effect.provideService(Console.Console, {
-        ...globalThis.console,
-        log: (...args: unknown[]) => {
-          printed.push(args.join(" "));
-        },
-      })
+  const exit = await run(
+    Effect.exit(
+      command.pipe(
+        Effect.provideService(Console.Console, {
+          ...globalThis.console,
+          log: (...args: unknown[]) => {
+            printed.push(args.join(" "));
+          },
+        })
+      )
     )
   );
 
-  return JSON.parse(printed.join("\n"));
+  return { failed: Exit.isFailure(exit), json: JSON.parse(printed.join("\n")) };
 }
 
 function serveDocent(repo: string): string {
@@ -67,9 +69,17 @@ describe("docent status — end to end against a real server", () => {
   test("prints not-serving when no server has recorded an address", async () => {
     const repo = scratchRepo("docent-status-cli-");
 
-    const printed = await printedJson(status(repo, []));
+    const { json } = await runStatus(status(repo, []));
 
-    expect(printed).toEqual({ serving: false });
+    expect(json).toEqual({ serving: false });
+  });
+
+  test("fails when no server is running, so a caller can poll on the exit code", async () => {
+    const repo = scratchRepo("docent-status-cli-");
+
+    const { failed } = await runStatus(status(repo, []));
+
+    expect(failed).toBe(true);
   });
 
   test("prints the live server's url when one is serving this repo", async () => {
@@ -77,8 +87,18 @@ describe("docent status — end to end against a real server", () => {
     const url = serveDocent(repo);
     await run(writeServeAddress(repo, url));
 
-    const printed = await printedJson(status(repo, []));
+    const { json } = await runStatus(status(repo, []));
 
-    expect(printed).toEqual({ serving: true, url });
+    expect(json).toEqual({ serving: true, url });
+  });
+
+  test("succeeds when a server is serving this repo", async () => {
+    const repo = scratchRepo("docent-status-cli-");
+    const url = serveDocent(repo);
+    await run(writeServeAddress(repo, url));
+
+    const { failed } = await runStatus(status(repo, []));
+
+    expect(failed).toBe(false);
   });
 });
