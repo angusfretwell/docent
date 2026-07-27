@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { cleanupScratchDirs, git, scratchRepo } from "@test/fixtures";
 import { makeTestRuntime } from "@test/runtime";
-import { Effect } from "effect";
+import { Console, Effect } from "effect";
 import { Command } from "effect/unstable/cli";
 
 import { readReviewSnapshot } from "../core/review";
@@ -47,6 +47,32 @@ async function onlyWalkthrough(root: string) {
 async function currentWalkthroughId(root: string): Promise<string> {
   const entry = await onlyWalkthrough(root);
   return entry?.id ?? "";
+}
+
+async function statusJson(repo: string) {
+  const printed: string[] = [];
+
+  await run(
+    walkthrough(repo, ["status"]).pipe(
+      Effect.provideService(Console.Console, {
+        ...globalThis.console,
+        log: (...args: unknown[]) => {
+          printed.push(args.join(" "));
+        },
+      })
+    )
+  );
+
+  return JSON.parse(printed.join("\n")) as {
+    head: string;
+    code: { state: string; changesBehind: number; walkthroughId?: string };
+    product: { state: string; changesBehind: number; walkthroughId?: string };
+  };
+}
+
+async function tourFor(repo: string, kind: string): Promise<string> {
+  await run(walkthrough(repo, ["create", "--kind", kind, "--title", "Tour"]));
+  return await currentWalkthroughId(repo);
 }
 
 describe("docent walkthrough — end to end through git + fs", () => {
@@ -269,5 +295,86 @@ describe("docent walkthrough — end to end through git + fs", () => {
     const entry = await onlyWalkthrough(repo);
     expect(exit._tag).toBe("Failure");
     expect(entry?.sections).toHaveLength(0);
+  });
+});
+
+describe("docent walkthrough status — is there a walkthrough for this head?", () => {
+  test("both kinds are absent on a branch nothing has been written for", async () => {
+    const repo = featureRepo();
+
+    const status = await statusJson(repo);
+
+    expect(status.code.state).toBe("absent");
+    expect(status.product.state).toBe("absent");
+  });
+
+  test("a narrated walkthrough on the live head reads as current", async () => {
+    const repo = featureRepo();
+    const walkthroughId = await tourFor(repo, "code");
+    await run(
+      walkthrough(repo, [
+        "add-section",
+        "--walkthrough",
+        walkthroughId,
+        "--title",
+        "Entry point",
+        "--body",
+        "The values live here.",
+      ])
+    );
+
+    const status = await statusJson(repo);
+
+    expect(status.code).toEqual({
+      changesBehind: 0,
+      state: "current",
+      walkthroughId,
+    });
+  });
+
+  test("a shell whose sections never landed reads as empty, not current", async () => {
+    const repo = featureRepo();
+    const walkthroughId = await tourFor(repo, "product");
+
+    const status = await statusJson(repo);
+
+    expect(status.product).toEqual({
+      changesBehind: 0,
+      state: "empty",
+      walkthroughId,
+    });
+  });
+
+  test("a commit landing after the walkthrough leaves it stale by one Change", async () => {
+    const repo = featureRepo();
+    const walkthroughId = await tourFor(repo, "code");
+    writeFileSync(path.join(repo, "feature.ts"), "export const x = 3;\n");
+    git(repo, "commit", "-am", "change the value");
+
+    const status = await statusJson(repo);
+
+    expect(status.code).toEqual({
+      changesBehind: 1,
+      state: "stale",
+      walkthroughId,
+    });
+  });
+
+  test("the head it judged against is reported alongside", async () => {
+    const repo = featureRepo();
+
+    const status = await statusJson(repo);
+
+    expect(status.head).toBe(git(repo, "rev-parse", "HEAD"));
+  });
+
+  test("each kind is judged on its own", async () => {
+    const repo = featureRepo();
+    await tourFor(repo, "code");
+
+    const status = await statusJson(repo);
+
+    expect(status.code.state).toBe("empty");
+    expect(status.product.state).toBe("absent");
   });
 });

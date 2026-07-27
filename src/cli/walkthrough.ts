@@ -1,10 +1,12 @@
 import { walkthroughKinds } from "@shared/enums/walkthrough-kind";
+import { walkthroughStatuses } from "@shared/lib/walkthrough-status";
 import { CaptureId, WalkthroughId } from "@shared/schemas/ids";
 import { Callout, WalkthroughRange } from "@shared/schemas/walkthrough";
 import { Effect, Option, Schema } from "effect";
 import { Command, Flag } from "effect/unstable/cli";
 
 import { resolveBlobShaAt } from "../core/git";
+import { readReviewSnapshot } from "../core/review";
 import {
   addWalkthroughSection,
   renameWalkthrough,
@@ -211,7 +213,32 @@ const addSection = Command.make(
     })
 ).pipe(Command.withDescription("Append a section to a walkthrough"));
 
+const status = Command.make("status", {}, () =>
+  Effect.gen(function* runStatus() {
+    const cwd = yield* WorkingDirectory;
+    const scope = yield* resolveChangeScope(cwd);
+    const snapshot = yield* readReviewSnapshot({
+      base: scope.base,
+      branch: scope.branch,
+      root: scope.root,
+    });
+
+    return yield* printJson({
+      head: scope.refs.headSha,
+      ...walkthroughStatuses({
+        changes: snapshot.changes,
+        headSha: scope.refs.headSha,
+        walkthroughs: snapshot.walkthroughs,
+      }),
+    });
+  })
+).pipe(
+  Command.withDescription(
+    "Report each kind's newest walkthrough against the current head"
+  )
+);
+
 export const walkthroughCommand = Command.make("walkthrough").pipe(
   Command.withDescription("Create or extend the review's walkthroughs"),
-  Command.withSubcommands([create, rename, addSection])
+  Command.withSubcommands([create, rename, addSection, status])
 );
