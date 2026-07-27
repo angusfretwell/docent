@@ -51,6 +51,10 @@ const server = Bun.serve({
       path.join(root, "dist", "worker", "diff-worker.js"),
       "text/javascript; charset=utf-8"
     ),
+    "/og.png": fileRoute(
+      path.join(root, "src", "website", "og.png"),
+      "image/png"
+    ),
   },
 });
 

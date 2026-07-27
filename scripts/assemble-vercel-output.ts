@@ -28,7 +28,7 @@ import path from "node:path";
  *
  * Only content-hashed files get the immutable header, and the website build writes
  * them flat beside the html, so the rule matches Bun's `-[hash].[ext]` suffix
- * rather than a directory. `index.html`, `diff-worker.js` and
+ * rather than a directory. `index.html`, `og.png`, `diff-worker.js` and
  * `demo-snapshot.json` keep revalidating because their names are stable across
  * deploys.
  */
@@ -51,6 +51,7 @@ const config = {
  */
 const REQUIRED = [
   "index.html",
+  "og.png",
   "demo/index.html",
   "demo/diff-worker.js",
   "demo/demo-snapshot.json",

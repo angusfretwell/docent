@@ -1,8 +1,8 @@
 # AGENTS.md
 
-## Pre-release
+## Alpha
 
-This project is pre-release with no external users. Breaking changes are fine: don't version schemas, write migrations, keep backwards-compatible shims, or deprecate gradually — change things in place. Stale local state (e.g. old `.docent/` records) can simply be deleted and re-minted.
+This project is released and may have external users, but it's alpha and breaking changes are still acceptable. Don't version schemas, write migrations, keep backwards-compatible shims, or deprecate gradually — change things in place. Stale local state (e.g. old `.docent/` records) can simply be deleted and re-minted. Call out user-visible breakage in the commit or PR description so it can reach the release notes.
 
 ## Libraries and tools
 

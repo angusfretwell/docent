@@ -8,6 +8,10 @@ Docent is a review surface for agent-written code. Fast, beautiful diffs, walkth
 
 ## Install
 
+<!-- prettier-ignore -->
+> [!NOTE]
+> Docent is released and usable, but under active development. Expect rough edges and breaking changes between versions.
+
 Docent installs as an agent skill:
 
 ```sh

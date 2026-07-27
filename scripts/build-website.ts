@@ -23,6 +23,7 @@ import { ensureDiffWorker, workerBundle } from "./build-worker";
 const root = path.join(import.meta.dir, "..");
 const outdir = path.join(root, "dist", "website");
 const demoOutdir = path.join(outdir, "demo");
+const ogImage = path.join(outdir, "og.png");
 const snapshotFile = path.join(root, "dist", "demo-snapshot.json");
 
 /**
@@ -87,6 +88,16 @@ async function copyDiffWorker(): Promise<void> {
 }
 
 /**
+ * Copied rather than bundled: Bun's html loader rewrites `href`/`src`, but not
+ * `<meta content>`, so an og image left to the bundler is dropped from the
+ * output. The name stays unhashed because the tag has to name it by absolute
+ * url — crawlers don't resolve relative ones — and the html can't learn a hash.
+ */
+async function copyOgImage(): Promise<void> {
+  await fs.cp(path.join(root, "src", "website", "og.png"), ogImage);
+}
+
+/**
  * Fetched at runtime rather than bundled, so this build — and with it
  * `bun run build` and preflight — stays green on a clone where nobody has run
  * the heavy capture. A deploy missing the snapshot is caught by
@@ -118,6 +129,7 @@ try {
   );
 
   await copyDiffWorker();
+  await copyOgImage();
   await copySnapshot();
 } catch (error) {
   console.error("Failed to bundle website:");
