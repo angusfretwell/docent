@@ -21,7 +21,7 @@ The preflight settled that a browser exists before you were dispatched ([SKILL.m
 
 ## What you are given
 
-- **The skill's absolute base directory** — where this brief lives: it is `<base>/reference/capture.md`, and every file it links to is a sibling under `<base>/reference/`. Resolve them there. Your cwd is the repository under review, so a bare relative path looks inside somebody else's tree and comes back empty.
+- **The skill's absolute base directory** — where this brief lives: it is `<base>/reference/capture.md`, every file it links to is a sibling under `<base>/reference/`, and the scripts it calls are under `<base>/scripts/`. Resolve them there. Your cwd is the repository under review, so a bare relative path looks inside somebody else's tree and comes back empty.
 - **The repository's absolute root** — run the CLI there, and find the runbook at `.docent/capture.md` under it.
 - **The shot list** — an ordered set of states to reach, each with a title, a kind (screenshot or recording), and sometimes a hint. It arrives in your prompt because it was produced this run and written down nowhere else.
 
@@ -88,68 +88,40 @@ Omit `--title`: the shell lands with an empty `title` and empty `sections` — b
 
 It is minted here, after §3 and not before it, so a run that hard-stops on an unreachable app leaves no empty shell behind it.
 
-### Injecting rrweb — once per page load
-
-Not a step of its own: a page load wipes the last injection, so this runs again for every load §5 makes, immediately after it.
-
-**Both** capture kinds are rrweb event streams — a screenshot is a DOM snapshot, not a raster, so it stays sharp at any zoom when the Review renders it. Inject it by driver eval:
-
-```bash
-# rrweb's exports map does not expose the UMD build, so resolve the package
-# entry and take its sibling rather than asking for the subpath directly.
-cat "$(node -e 'const path=require("node:path");process.stdout.write(path.join(path.dirname(require.resolve("rrweb")),"rrweb.umd.min.cjs"))')" | npx -y agent-browser@latest --session "$session" eval --stdin
-```
-
-This resolves rrweb from wherever node can find it; if nothing resolves, install it somewhere disposable (e.g. `npm i --prefix <scratch-dir> rrweb`) and resolve from there — never add it to the app under review.
-
-rrweb takes a full snapshot on `record()`, so inject-after-load is sufficient. Record with assets inlined, so a capture stays readable after the dev server is gone:
-
-```js
-rrweb.record({ collectFonts: true, emit, inlineImages: true });
-```
-
-Both options cover what only the page can reach: `inlineImages` reads `<img>` bitmaps through a canvas, which catches images served from a `blob:` URL that exists nowhere but that tab, and `collectFonts` catches fonts the page built through the `FontFace` constructor. Neither touches `@font-face` rules or CSS `url()` — `capture add` fetches those and rewrites them to `data:` URIs when it registers the stream (§6), so leave them to it and never hand-edit a stream to patch an asset.
-
 ## 5. Walk the shot list — in order, bounded
 
 Take the shots in the order given, one at a time, and register each (§6) before moving on, so a shot you cannot reach costs only itself.
 
-Each shot starts with a page load, so each shot re-injects rrweb, and `record()` is called on the page in front of you:
+**Both** capture kinds are rrweb event streams — a screenshot is a DOM snapshot, not a raster, so it stays sharp at any zoom when the Review renders it. Three scripts under `<base>/scripts/` produce them, and each injects the recorder itself, so nothing about rrweb is yours to remember.
+
+Each shot starts with a page load:
 
 ```bash
 npx -y agent-browser@latest --session "$session" open "<base-url><route you think the state lives at>"
-# then re-inject rrweb ("Injecting rrweb", above) into the page you just loaded
 ```
 
-With rrweb in place, drive the way you already work — `snapshot -i` to read the page live (accessibility tree, element refs, disabled states visible), act on what you see, re-snapshot after any DOM change. Refs expire on navigation; re-snapshot, and re-inject rrweb after any navigation you make mid-shot. A shot's hint is a lead, not an instruction — the page overrules it.
+Then drive the way you already work — `snapshot -i` to read the page live (accessibility tree, element refs, disabled states visible), act on what you see, re-snapshot after any DOM change. Refs expire on navigation; re-snapshot. A shot's hint is a lead, not an instruction — the page overrules it.
 
 - **Three attempts per shot, then record it unreachable and move to the next.** An attempt is one honest run at the state: navigate, drive, look. On the third failure, name that shot in `obstacles` and go on to the next one. The budget is the point — grinding on a state the app will not produce burns the run on full accessibility trees and lands no tour at all, and the shot list has other shots that will work.
 - **Reach the state you were given, or report it missing.** Where two paths lead to the same state, take either. Where the state itself is not there, that is the obstacle — never substitute a different screen that looks similar, and never invent a shot the plan did not ask for. A capture that is not the state it claims to be is worse than a shot the tour is honestly missing, because the author cannot tell.
-- **Screenshot** — once the page is in the state you want, take the snapshot pair. `record()` emits `Meta` then `FullSnapshot` synchronously and returns its own stop function, so starting and immediately stopping yields exactly the still frame:
+- **Screenshot** — once the page is in the state you want:
 
   ```bash
-  npx -y agent-browser@latest --session "$session" eval "window.__evt=[]; rrweb.record({collectFonts:true,emit:event=>window.__evt.push(event),inlineImages:true})(); JSON.stringify(window.__evt.slice(0,2))" --json
+  sh <base>/scripts/shoot-screenshot.sh "$session" <tmp>.rrweb.json
+  #   → {"dims":"1280x2400"}
   ```
 
-  Write those two events to a `<tmp>.rrweb.json` file. Note `dims` — the **full document** size in CSS pixels, which is what the Review sizes the still to, not the viewport:
+  `dims` is the **full document** size in CSS pixels, which is what the Review sizes the still to rather than the viewport. It rides `--dims` (§6) unchanged.
+
+- **Recording** — start on the page the flow begins on, before you touch anything:
 
   ```bash
-  npx -y agent-browser@latest --session "$session" eval "[document.documentElement.scrollWidth,document.documentElement.scrollHeight]" --json
+  sh <base>/scripts/record-start.sh "$session"   # then drive the flow
+  sh <base>/scripts/record-stop.sh "$session" <tmp>.rrweb.json
+  #   → {"durationMs":8200}
   ```
 
-- **Recording** — the same call **without the trailing `()`**, so the stop function is left uncalled and the recorder keeps emitting. Start it on the page the flow begins on, before you touch anything:
-
-  ```bash
-  npx -y agent-browser@latest --session "$session" eval "window.__evt=[]; rrweb.record({collectFonts:true,emit:event=>window.__evt.push(event),inlineImages:true}); window.__evt.length" --json
-  ```
-
-  Then drive the flow and pull the raw stream:
-
-  ```bash
-  npx -y agent-browser@latest --session "$session" eval "JSON.stringify(window.__evt)" --json
-  ```
-
-  Write the events array verbatim to a `<tmp>.rrweb.json` file. Note `durationMs` (last event ts − first). A navigation mid-flow wipes both the recorder and `window.__evt`, so a recording is one page's flow — reach the starting state first, then start recording.
+  **A recording is one page's flow.** A navigation mid-flow wipes both the recorder and everything it had emitted, and `record-stop.sh` fails rather than writing a stream missing its opening snapshot — so reach the starting state first, then start recording.
 
 ## 6. Register the capture
 
@@ -166,7 +138,7 @@ npx -y @angusfretwell/docent@latest capture add --walkthrough wlk_… --kind rec
 #   → { "assets": { "bytes": 241060, "inlined": 12, "skipped": [] }, "captureId": "cap_…", "media": "<sha>", "registry": { … }, "walkthroughId": "wlk_…" }
 ```
 
-`assets` is the inlining receipt. Registration never fails over an asset: anything unreachable is left as the URL it was and named in `skipped`. A capture that comes back with `skipped` entries replays with holes in it, so report that as an obstacle — the URL and the reason, verbatim.
+`assets` is the inlining receipt. Registration never fails over an asset: anything unreachable is left as the URL it was and named in `skipped`. A capture that comes back with `skipped` entries replays with holes in it, so report that as an obstacle — the URL and the reason, verbatim. Never hand-edit a stream to patch an asset: this is the one place that rewriting happens, and a stream you touched no longer hashes to the bytes the registry recorded.
 
 `--dims` is for screenshots and `--duration-ms` for recordings; the mismatch is refused, as is any capture on a code walkthrough. `--media` is a file path read relative to the cwd. `--route` and `--viewport` record where you actually were, which is what the Review shows. `--title` is the shot's title from the plan — a short descriptive name for the state ("Empty signup form"), shown in place of the generic "Screenshot 1" / "Recording 1". Always pass the plan's title, unchanged: a capture that is not the state its title claims is an obstacle on your receipt, never a retitle, because a retitled capture makes that gap invisible to the author. All captures are born against the walkthrough's `bornChangeId`. The CLI is non-gating (the files stay plain and hand-writable), but prefer it: it validates against the same schemas the server renders.
 

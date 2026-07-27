@@ -63,27 +63,19 @@ Three steps, in the order §3 takes them:
 
 **The gate runs on every run that is going to capture**, not only the first: §5's executor is dispatched on the strength of it, so the runbook being already on disk excuses steps 1 and 2 but never this one.
 
-The base URL comes free — it is in the file steps 1–2 just read or wrote — so what is left is **two checks, cheaper one first, and neither opens a browser.** Driving the app is §5's executor's job, in a session of its own; all you establish here is that there is something for it to drive. They are named rather than numbered: §1 already counts its steps, and a second numbered list beside that one is something every later reference has to disambiguate.
+The base URL comes free — it is in the file steps 1–2 just read or wrote — so what is left is one call, which runs both checks and **opens no browser.** Driving the app is §5's executor's job, in a session of its own; all you establish here is that there is something for it to drive.
 
-- **The browser check** — agent-browser manages its own Chrome, so this is about the driver's install and never about the human's browser. `doctor` reports it without launching anything; `--offline --quick` keeps it local and sub-second, and `--json` gives the one check worth reading, `chrome.installed`. Read that rather than the exit code, which is `1` for any failing check and so fires on things the tour does not need.
+```bash
+sh <base>/scripts/capture-gate.sh "<base-url>"
+#   → {"browser":"ok|missing","url":"up|down","detail":"…"}
+```
 
-  ```bash
-  npx -y agent-browser@latest doctor --offline --quick --json   # → checks[] with { id, status }
-  ```
+`<base>` is this skill's absolute base directory — the directory this file was loaded from, the same one every subagent is passed (§4).
 
-  A missing Chrome fails this check rather than triggering a download here: installing one is minutes of silence, and the ladder below is where the slow rungs belong.
-
-- **The base-URL check** — poll it, bounded, and be lenient: **any HTTP status counts as up**, because a 404 or a 500 still means a server answered. Only a refused connection is not-up. Plain `curl` says exactly that — without `-f` it exits 0 on any response and non-zero only when nothing accepted the connection. `--max-time` is what keeps the poll bounded rather than merely repeated: a socket that accepts and then never answers would otherwise hang the run on its first iteration.
-
-  ```bash
-  for _ in $(seq 30); do                                   # ~15s while nothing accepts; ~75s if a socket hangs
-    curl -sS --max-time 2 -o /dev/null "<base-url>" && break
-    sleep 0.5
-  done
-  curl -sS --max-time 2 -o /dev/null "<base-url>"          # non-zero here is refused or hung
-  ```
-
-  A booting dev server refuses in microseconds, so the ordinary wait is the sleeps alone; the worst case is the one where every attempt accepts the connection and then hangs, and `--max-time` is what bounds it.
+- **The JSON is the answer, not the exit code.** A gate that did not pass still exits zero: which of the two checks failed is what picks the rung below, so it has to be read rather than branched on.
+- **`detail` is why each failing check failed**, written to be read aloud — it is what §3's narration table relays for a browser it could not get.
+- **`url: up` is deliberately lenient: any HTTP status counts.** A 404 or a 500 still means a server answered, and only a refused connection is not-up. Whether the app is any good is §5's to establish, not yours.
+- **A missing Chrome fails the browser check rather than triggering a download here.** Installing one is minutes of silence, and the ladder below is where the slow rungs belong.
 
 **Whether the app renders is not settled here, and it is not yours to settle.** A client-rendered app answers with an empty shell, so proving real DOM needs the browser you deliberately do not have. §5's executor opens the base URL and reads the page back before it captures anything ([reference/capture.md](reference/capture.md), "Reach the app") — a server that answers but serves an error page is caught there, once, by the agent already holding a browser.
 
@@ -91,16 +83,16 @@ The base URL comes free — it is in the file steps 1–2 just read or wrote —
 
 Then **work up from the cheapest cause** — the ordinary one is a dev server that is simply not running, with the runbook telling the truth:
 
-- **First, start what the runbook says to start.** Where it records a **Start command**, run it in the human's session and take the base-URL check again. The poll is what makes this rung work: a server told to start a second ago is usually still booting, and re-checking it once, immediately, reads a refused connection as an app that is down.
+- **First, start what the runbook says to start.** Where it records a **Start command**, run it in the human's session and take the gate again. Its poll is what makes this rung work: a server told to start a second ago is usually still booting, and re-checking it once, immediately, reads a refused connection as an app that is down.
 - **Then ask.** Where there is no start command, or the app is still not there, ask the human what changed (step 1) — and rewrite `.docent/capture.md` (step 2) **only where what they say differs from what it records**. Then check again. The preflight is the only place a wrong runbook can be corrected: a capture reports one as an obstacle and carries on, so unless a preflight rewrites it the same obstacle rides back on every run forever.
 - **A base URL the human confirms is still right with nothing answering on it is a dev server that is down.** Say that, and leave the runbook alone — overwriting a correct file loses a working setup.
-- **A missing browser has its own rung, and the runbook is not on it.** The browser check is about this machine, so `install` is the answer and `install` is agent-browser's documented setup step. Say you are running it — it is slow and silent — then take that check again, and only where that fails relay what `doctor` said and go on. Never rewrite the runbook over a browser problem.
+- **A missing browser has its own rung, and the runbook is not on it.** `browser: missing` is about this machine, so `install` is the answer and `install` is agent-browser's documented setup step. Say you are running it — it is slow and silent — then take the gate again, and only where that fails relay its `detail` and go on. Never rewrite the runbook over a browser problem.
 
   ```bash
   npx -y agent-browser@latest install
   ```
 
-**A gate that never passes drops the product walkthrough from this run's scope; it does not end the run.** Say so in §3's narration, then carry on to §4 and §6 — the code walkthrough has no stake in the app or the browser, and a run that lands one tour beats a run that lands none. **Hard stop only where the product walkthrough was all the run had**: the human scoped it to that alone, so there is nothing else to land. Then say which check failed — `app not reachable at <url> — is your dev server up?`, or what `doctor` reported — and write nothing.
+**A gate that never passes drops the product walkthrough from this run's scope; it does not end the run.** Say so in §3's narration, then carry on to §4 and §6 — the code walkthrough has no stake in the app or the browser, and a run that lands one tour beats a run that lands none. **Hard stop only where the product walkthrough was all the run had**: the human scoped it to that alone, so there is nothing else to land. Then say which check failed — `app not reachable at <url> — is your dev server up?`, or the gate's `detail` — and write nothing.
 
 ## 2. Read the head
 
@@ -126,52 +118,37 @@ git log --oneline origin/HEAD..HEAD    # what this branch adds (fall back to ori
 
 ## 3. Decide — is there a walkthrough for this head?
 
-The Review for the current branch holds both kinds of walkthrough under:
-
-```
-.docent/reviews/<branch-slug>/
-  changes/                       # the append-only Change log — chg_NNN.json, each with a frozen headSha
-  walkthroughs/
-    code/    wlk_<ulid>/manifest.json
-    product/ wlk_<ulid>/manifest.json
-```
-
-`<branch-slug>` is the current branch name with slashes → dashes; glob it if unsure. Ask the question once per kind:
-
-1. **Find the newest walkthrough** — the greatest `wlk_` ULID (ULIDs sort lexicographically by creation time):
-
-   ```bash
-   ls -d .docent/reviews/<branch-slug>/walkthroughs/code/wlk_*/ 2>/dev/null | sort | tail -1
-   ```
-
-   Nothing back → there is no walkthrough for this head; steps 2–3 have nothing to read, so take the first row of the table below and go to §4/§5.
-
-2. **Read its `bornChangeId` and its `sections`** from that walkthrough's `manifest.json`, and resolve the Change it names to a head SHA:
-
-   ```bash
-   cat .docent/reviews/<branch-slug>/walkthroughs/code/wlk_<ulid>/manifest.json   # → bornChangeId, sections
-   cat .docent/reviews/<branch-slug>/changes/<bornChangeId>.json                  # → headSha
-   ```
-
-3. **Compare that `headSha` to the current head, and require `sections` to be non-empty.** Both true → there is a walkthrough for this head. No walkthrough at all, one written against an earlier commit, or one whose `sections` is empty → there is not. An empty `sections` is a run that stopped before its prose landed (see Stop conditions), and a shell with no narration is not a tour — this clause is what makes re-running `/docent` fill it.
-
-**Yes, leave it alone; no, write one.** That is the whole decision, and there is no second filter: write every kind whose answer is no. What differs between the answers is only how you say it, and the reason belongs in the narration, not in the decision:
-
-| What you found | What you say |
-| --- | --- |
-| Nothing on this branch yet | "Writing the code and product walkthroughs for this branch." |
-| Written against an earlier commit | "The code walkthrough was written N changes back — writing a fresh one." |
-| Written against this head | "The product walkthrough is up to date — leaving it." |
-| A product walkthrough left with no sections by a run that stopped short | "The product walkthrough has its screens but no narration — writing a fresh one." |
-| A code walkthrough left with no sections by a run that stopped short | "The code walkthrough was started but its sections never landed — writing a fresh one." |
-| The app is not reachable, so the product walkthrough leaves scope (§1) | "Your dev server isn't answering at `<url>`, so this run writes the code walkthrough only." |
-| No browser and none installable, so the product walkthrough leaves scope (§1) | "I couldn't get a browser for the product tour to drive — `<what doctor said>` — so this run writes the code walkthrough only." |
-
-For the earlier-commit row, count the gap rather than making the human infer it — in **Changes**, the same unit the tour's own "N changes behind" badge counts, so the session and the screen say one number for one fact. The Changes are already on disk beside the walkthrough; count the ones recorded after its `bornChangeId`:
+One command answers it for both kinds, against the newest walkthrough of each:
 
 ```bash
-ls .docent/reviews/<branch-slug>/changes/ | awk -v born='<bornChangeId>.json' '$0 > born' | wc -l
+npx -y @angusfretwell/docent@latest walkthrough status
+#   → { "head": "<sha>", "code": { "state": …, "changesBehind": N }, "product": { … } }
 ```
+
+Each kind comes back in one of four states:
+
+| State | What it means |
+| --- | --- |
+| `absent` | no walkthrough of that kind on this branch |
+| `stale` | the newest one was written against an earlier commit, `changesBehind` Changes ago |
+| `empty` | written against this head, but its `sections` never landed |
+| `current` | written against this head, with narration in it |
+
+`empty` is a run that stopped before its prose landed (see Stop conditions), and a shell with no narration is not a tour — that state is what makes re-running `/docent` fill it.
+
+**`current`, leave it alone; anything else, write one.** That is the whole decision, and there is no second filter: write every kind whose state is not `current`. What differs between the states is only how you say it, and the reason belongs in the narration, not in the decision:
+
+| What came back | What you say |
+| --- | --- |
+| Both `absent` | "Writing the code and product walkthroughs for this branch." |
+| `code` is `stale` | "The code walkthrough was written N changes back — writing a fresh one." |
+| `product` is `current` | "The product walkthrough is up to date — leaving it." |
+| `product` is `empty` | "The product walkthrough has its screens but no narration — writing a fresh one." |
+| `code` is `empty` | "The code walkthrough was started but its sections never landed — writing a fresh one." |
+| The app is not reachable, so the product walkthrough leaves scope (§1) | "Your dev server isn't answering at `<url>`, so this run writes the code walkthrough only." |
+| No browser and none installable, so the product walkthrough leaves scope (§1) | "I couldn't get a browser for the product tour to drive — `<the gate's detail>` — so this run writes the code walkthrough only." |
+
+For a `stale` row, say `changesBehind` rather than making the human infer the gap — it counts in **Changes**, the same unit the tour's own "N changes behind" badge counts, so the session and the screen say one number for one fact.
 
 Say nothing about a first run being missing or empty — a branch with no walkthrough yet is simply a clean start.
 
@@ -235,7 +212,7 @@ First **read each tour back as a table of contents** — its section titles, in 
 Then ensure a docent server is running for this repo and open the browser. `docent serve` renders `.docent/` live and re-renders each write over SSE, so a freshly written tour lands on screen the moment it exists. Check first, reuse if you can:
 
 ```bash
-npx -y @angusfretwell/docent@latest status          # → { "serving": true, "url": "http://127.0.0.1:…/" }  or  { "serving": false }
+npx -y @angusfretwell/docent@latest status   # → { "serving": true, "url": "http://127.0.0.1:…/" }; non-zero when nothing is serving
 ```
 
 - **Already serving** → reuse it; open its `url`. Never start a second server.
@@ -243,15 +220,18 @@ npx -y @angusfretwell/docent@latest status          # → { "serving": true, "ur
 
   ```bash
   npx -y @angusfretwell/docent@latest serve >/dev/null 2>&1 &   # backgrounded; leave it running
-  for _ in $(seq 50); do           # `docent serve` records its address on boot; poll it, bounded (~10s)
-    npx -y @angusfretwell/docent@latest status | grep -q '"serving": true' && break
+  attempt=0
+  until npx -y @angusfretwell/docent@latest status >/dev/null 2>&1 || [ "$attempt" -ge 50 ]; do
+    attempt=$((attempt + 1))       # `docent serve` records its address on boot; poll for it, bounded (~10s)
     sleep 0.2
   done
-  npx -y @angusfretwell/docent@latest status | grep -q '"serving": true' || {
+  npx -y @angusfretwell/docent@latest status || {
     echo "docent serve did not come up within ~10s — run 'npx -y @angusfretwell/docent@latest serve' in this repo to see the boot error, then re-run /docent" >&2
     exit 1
   }
   ```
+
+  The last `status` is both the timeout check and where the `url` to open comes from.
 
 Open the browser at the served `url`; the tour you just wrote is on its walkthrough tab. Starting `docent serve` is docent's own process — distinct from the app under review, which you never spawn; the no-spawn rule is about the app being reviewed, not about docent itself.
 
@@ -275,6 +255,6 @@ Open the browser at the served `url`; the tour you just wrote is on its walkthro
 - **The app drops mid-capture.** The executor stops rather than emitting a broken capture, and comes back with whatever it landed. Author over those captures if there are any; otherwise report which walkthrough could not be written and why. A code walkthrough written this run still stands.
 - **The code walkthrough's author comes back with no receipt (§4).** Say the code walkthrough was not written, and what came back instead. Do not read the diff and write it yourself — carry on to §5, since the two walkthroughs do not depend on each other and a run that lands one tour beats a run that lands none.
 - **The planner comes back with no shot list (§4).** There is nothing for the executor to walk, so the product walkthrough is not written this run. Say so and carry on to §6 — planning it yourself means reading the change in this context, which costs more than the tour it would save.
-- **The executor lands no captures (§5).** Do not dispatch the author: a tour of nothing is worse than no tour. Report the screens it could not reach, in the executor's own words. The empty shell it left behind has no sections, so §3 does not count it as a walkthrough for this head and the next run plans and drives afresh.
-- **The product author comes back with no receipt (§5).** The shell and its captures are on disk with no prose over them. Say the product tour has its screens but no narration, and that re-running `/docent` writes a fresh one — §3's non-empty-`sections` clause is what makes that true. Never narrate it yourself from the captures, and never append onto that shell later.
+- **The executor lands no captures (§5).** Do not dispatch the author: a tour of nothing is worse than no tour. Report the screens it could not reach, in the executor's own words. The empty shell it left behind has no sections, so §3 reads it as `empty` rather than as a walkthrough for this head, and the next run plans and drives afresh.
+- **The product author comes back with no receipt (§5).** The shell and its captures are on disk with no prose over them. Say the product tour has its screens but no narration, and that re-running `/docent` writes a fresh one — §3's `empty` state is what makes that true. Never narrate it yourself from the captures, and never append onto that shell later.
 - **`docent serve` never comes up (§6).** The serve-boot poll is bounded; on timeout, hard stop with an actionable message rather than spinning forever. The walkthroughs are already written and on disk — re-run `/docent` once the server starts, or open the tour manually.
