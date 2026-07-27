@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import type { Anchor } from "@shared/schemas/comment";
 
 import { itemId, parsePatchFiles } from "./diff";
-import { anchorDiffTarget } from "./diff-target";
+import { anchorDiffTarget, rendersRange } from "./diff-target";
 
 const HEAD = "bbbb222";
 const BASE = "aaaa111";
@@ -21,8 +21,35 @@ const patch = [
   "",
 ].join("\n");
 
+// The sides sit at different line numbers, so a range placed on one of them
+// cannot pass for the other.
+const sidesApartPatch = [
+  "diff --git a/src/moved.ts b/src/moved.ts",
+  `index ${BASE}..${HEAD} 100644`,
+  "--- a/src/moved.ts",
+  "+++ b/src/moved.ts",
+  "@@ -10,2 +20,3 @@",
+  " ten",
+  "-old",
+  "+new",
+  "+extra",
+  "",
+].join("\n");
+
 const files = parsePatchFiles(patch);
 const item = itemId("src/a.ts", 0);
+
+function fileDiffOf(patchText: string) {
+  const [entry] = parsePatchFiles(patchText);
+
+  if (entry === undefined) {
+    throw new Error("patch parsed to no files");
+  }
+
+  return entry.file;
+}
+
+const sidesApart = fileDiffOf(sidesApartPatch);
 
 function lineAnchor(
   overrides: Partial<Extract<Anchor, { kind: "line" }>> = {}
@@ -36,6 +63,28 @@ function lineAnchor(
     ...overrides,
   };
 }
+
+describe("rendersRange", () => {
+  test("a range inside a hunk renders", () => {
+    expect(rendersRange(sidesApart, "head", [20, 22])).toBe(true);
+  });
+
+  test("a range past every hunk renders nowhere", () => {
+    expect(rendersRange(sidesApart, "head", [40, 41])).toBe(false);
+  });
+
+  test("a range that runs off the end of its hunk does not render", () => {
+    expect(rendersRange(sidesApart, "head", [22, 23])).toBe(false);
+  });
+
+  test("a base range renders against the deleted lines", () => {
+    expect(rendersRange(sidesApart, "base", [10, 11])).toBe(true);
+  });
+
+  test("the added lines of a hunk do not render on the base side", () => {
+    expect(rendersRange(sidesApart, "base", [20, 21])).toBe(false);
+  });
+});
 
 describe("anchorDiffTarget", () => {
   test("a live line anchor targets its line on the additions side", () => {

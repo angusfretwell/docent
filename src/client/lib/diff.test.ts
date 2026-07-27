@@ -70,6 +70,12 @@ describe("parsePatchFiles", () => {
       "src/z.ts:0",
     ]);
   });
+
+  test("reads a file as only the hunks its patch carries", () => {
+    const file = fileAt(0);
+
+    expect(file.file.isPartial).toBe(true);
+  });
 });
 
 describe("expansionBlobs", () => {
@@ -102,6 +108,18 @@ describe("withBlobContents", () => {
     const expanded = withBlobContents(fileAt(0), new Map([["aaaa111", base]]));
 
     expect(expanded.file.additionLines).toEqual(["new\n"]);
+  });
+
+  test("reads the file whole once both of its blobs are on hand", () => {
+    const expanded = withBlobContents(fileAt(0), contents);
+
+    expect(expanded.file.isPartial).toBe(false);
+  });
+
+  test("leaves the file partial while a blob is still missing", () => {
+    const expanded = withBlobContents(fileAt(0), new Map([["aaaa111", base]]));
+
+    expect(expanded.file.isPartial).toBe(true);
   });
 
   test("re-versions the item so the rendered diff picks up the extra lines", () => {
