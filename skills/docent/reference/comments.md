@@ -10,7 +10,7 @@ Run it from inside the repo under review (any subdirectory). It resolves the rep
 
 Every subcommand prints machine-readable JSON on stdout. Errors go to stderr and exit non-zero.
 
-**Non-gating** — the files under `.docent/` stay plain and directly writable; the CLI is the canonical, convenient path (ULID ids, anchor construction with git-resolved content `blobSha`, append semantics, Status derivation), never a lock. A running `docent serve` fs-watches every write, CLI-made or direct, and re-renders live over SSE, so each record is visible in the UI as it lands. Prefer the CLI: it validates against the same schema the server uses. Hand-authoring is the fallback when it isn't available.
+**CLI-only** — every write goes through the CLI: it issues the ULID ids, constructs anchors with git-resolved content `blobSha`, appends, and derives Status. A running `docent serve` fs-watches every write and re-renders live over SSE, so each record is visible in the UI as it lands.
 
 ### `docent comment list` — fetch
 
@@ -61,11 +61,11 @@ Appends a reply record. **Prose only** — a reply is the one place an outcome g
 
 ### `docent comment action` — hand the turn back
 
-Appends an action record → **actioned**. No body: write the `reply` that explains the outcome first, then `action` to move the Comment. `actioned` is deliberately **broad** — it means _"I took my turn, over to you"_, whether you fixed it, declined it, or asked a question; the distinction lives in the reply prose, not an enum. Without the `action`, the Comment stays `open` and the next fetch picks it up again — a decline you never handed back gets re-attempted forever.
+Appends an action record → **actioned**. No body: write the `reply` that explains the outcome first, then `action` to move the Comment.
 
 ### `docent comment resolve` — close a Comment
 
-Appends a resolve record → **resolved**. No body; if the close needs a reason, `reply` it first. Resolution is **unconstrained**: any actor may resolve any Comment — safe because a resolve is append-only, attributed, and **reopenable** (a later reply reopens the Comment). Whether a given actor _should_ resolve is a role question: a verify pass resolves; a fixer never resolves what it just fixed.
+Appends a resolve record → **resolved**. No body; if the close needs a reason, `reply` it first. Any actor may resolve any Comment, and a later reply reopens it.
 
 ### `docent comment reopen` — return a resolved Comment to open
 
@@ -110,7 +110,7 @@ Pull Comments out of the Review and into your session so your own fixing process
 
 Record what the session produced into the Review. The outcomes come from whatever process you already ran — your own review pass, an ad-hoc conversation, another tool, or a fix pass over Comments pulled via `--read`. This flow **transcribes**; it reviews nothing and fixes nothing of its own.
 
-1. **Take stock of the session — record only what happened.** Never invent a Comment the session didn't raise, a hand-back for work it didn't do, or a resolution it didn't verify. Sort what actually happened:
+1. **Take stock of the session — record only what happened.** Never record a resolution the session didn't verify. Sort what actually happened:
 
    | The session… | Record it as | CLI |
    | --- | --- | --- |
