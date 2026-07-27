@@ -55,7 +55,7 @@ Every `agent-browser` call carries `--session <name>`, so the run cannot land in
 ```bash
 session="$(npx -y agent-browser@latest session id --scope worktree --prefix docent)"   # → docent-<hash of this worktree>
 npx -y agent-browser@latest --session "$session" open        # about:blank first, so the viewport applies to the first paint
-npx -y agent-browser@latest --session "$session" set viewport <w> <h>    # e.g. 1280 800
+npx -y agent-browser@latest --session "$session" set viewport <w> <h>    # e.g. 1280 1280
 ```
 
 Pass the flag on every call — shell state does not reliably survive between commands, so an exported `AGENT_BROWSER_SESSION` can quietly stop applying halfway through a run.
@@ -158,11 +158,11 @@ Register each temp media file (§5) with `docent capture add` — the single hom
 ```bash
 # screenshot: full-page CSS-pixel document size rides --dims
 npx -y @angusfretwell/docent@latest capture add --walkthrough wlk_… --kind screenshot --media <tmp>.rrweb.json \
-  --route /signup --viewport 1280x800 --dims 1280x2400 --title "Empty signup form"
+  --route /signup --viewport 1280x1280 --dims 1280x2400 --title "Empty signup form"
 
 # recording: --duration-ms rides instead of --dims
 npx -y @angusfretwell/docent@latest capture add --walkthrough wlk_… --kind recording --media <tmp>.rrweb.json \
-  --route /signup --viewport 1280x800 --duration-ms 8200 --title "Submitting the signup"
+  --route /signup --viewport 1280x1280 --duration-ms 8200 --title "Submitting the signup"
 #   → { "captureId": "cap_…", "media": "<sha>", "registry": { … }, "walkthroughId": "wlk_…" }
 ```
 

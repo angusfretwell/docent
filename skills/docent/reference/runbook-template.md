@@ -10,7 +10,7 @@ Only what a capture needs, and stated plainly enough that an agent with no human
 
 - **Serving** — how the app is served: the command (if agent-launched) and the base URL / port.
 - **Reaching a usable state** — login steps or test credentials, and any data seeding, needed before the flow under review is walkable.
-- **Viewport default** — the app's stable capture viewport, `[width, height]` (overridable per-capture, so this is just the default).
+- **Viewport default** — the app's stable capture viewport, `[width, height]`. `1280 x 1280` unless the repo says otherwise: it is never asked for, and a shot needing a different frame overrides it per-capture.
 
 Starting route is deliberately **absent** — routes are chosen per shot from the change under review, never a runbook property.
 
@@ -31,7 +31,7 @@ Starting route is deliberately **absent** — routes are chosen per shot from th
 
 ## Viewport
 
-- Default: 1280 x 800
+- Default: 1280 x 1280
 ```
 
 Keep it terse and true. A capture that finds it wrong (a changed port, a broken login) reports that as an obstacle and carries on rather than editing it: correcting the runbook happens where somebody can be asked what the truth is, which is the preflight, and the preflight rewrites it where the human says something other than what is recorded here.
