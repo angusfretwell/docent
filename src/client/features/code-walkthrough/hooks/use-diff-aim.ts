@@ -5,6 +5,7 @@ import { rendersRange } from "@client/lib/diff-target";
 import type {
   CodeView,
   CodeViewRenderedDiffItem,
+  CodeViewScrollTarget,
   SelectionSide,
 } from "@pierre/diffs";
 import type { CodeViewHandle } from "@pierre/diffs/react";
@@ -34,7 +35,7 @@ function sideOf(range: WalkthroughRange): SelectionSide {
  * asked for them: expansion supplies the lines, `expandUnchanged` puts them on
  * screen, and neither alone is enough.
  */
-function locatable(
+function canPlace(
   file: DiffFile,
   range: WalkthroughRange,
   expandUnchanged: boolean
@@ -44,6 +45,36 @@ function locatable(
   }
 
   return rendersRange(file.file, range.side, range.lines);
+}
+
+/**
+ * Where an aim travels. A line the viewer never rendered resolves to an invented
+ * row, so an aim it cannot place travels to the file and waits: the blobs land,
+ * the file expands, and the effect runs again with somewhere real to point.
+ */
+function aimFor({
+  id,
+  line,
+  placeable,
+  side,
+}: {
+  id: string;
+  line: number;
+  placeable: boolean;
+  side: SelectionSide;
+}): CodeViewScrollTarget {
+  if (!placeable) {
+    return { align: "start", behavior: "smooth-auto", id, type: "item" };
+  }
+
+  return {
+    align: "center",
+    behavior: "smooth-auto",
+    id,
+    lineNumber: line,
+    side,
+    type: "line",
+  };
 }
 
 /** A range's extent in the scroller's own coordinates, so it can be compared against the scroll position. */
@@ -115,10 +146,10 @@ function rangeUnderRead(
 
       // Read off the item the measurement is taken from, so this cannot answer
       // for a viewer configured differently from the one on screen. A hunk the
-      // reader expanded by hand is not visible here and reads as unlocatable,
+      // reader expanded by hand is not visible here and reads as unplaceable,
       // which costs a report rather than inventing one.
       if (
-        !locatable(file, range, item.instance.options.expandUnchanged === true)
+        !canPlace(file, range, item.instance.options.expandUnchanged === true)
       ) {
         continue;
       }
@@ -232,13 +263,13 @@ export function useDiffAim({
     activeRange === undefined ? "additions" : sideOf(activeRange);
 
   // Expanding the file moves every row below the gap, so an aim taken while it
-  // was partial now points above where the range sits and has to be taken again.
-  const targetPartial = targetFile?.file.isPartial;
+  // was partial now points above where the range sits.
+  const aimedWhilePartial = targetFile?.file.isPartial;
 
-  const targetLocatable =
+  const canPlaceTarget =
     targetFile !== undefined &&
     activeRange !== undefined &&
-    locatable(targetFile, activeRange, expandUnchanged);
+    canPlace(targetFile, activeRange, expandUnchanged);
 
   useEffect(() => {
     const self = reached.current;
@@ -268,36 +299,24 @@ export function useDiffAim({
     settle.current = window.setTimeout(stopArriving, SETTLE_MS);
     pushQuiet();
 
-    // A line the viewer never rendered resolves to an invented row, so an aim
-    // it cannot place travels to the file and waits: the blobs land, the file
-    // expands, and the effect runs again with somewhere real to point.
     viewRef.current?.scrollTo(
-      targetLocatable
-        ? {
-            align: "center",
-            behavior: "smooth-auto",
-            id: targetId,
-            lineNumber: targetLine,
-            side: targetSide,
-            type: "line",
-          }
-        : {
-            align: "start",
-            behavior: "smooth-auto",
-            id: targetId,
-            type: "item",
-          }
+      aimFor({
+        id: targetId,
+        line: targetLine,
+        placeable: canPlaceTarget,
+        side: targetSide,
+      })
     );
   }, [
     activeKey,
+    aimedWhilePartial,
+    canPlaceTarget,
     pushQuiet,
     reasserted,
     stopArriving,
     targetEndLine,
     targetId,
     targetLine,
-    targetLocatable,
-    targetPartial,
     targetSide,
     viewRef,
   ]);
@@ -353,7 +372,7 @@ export function useDiffAim({
     targetId === undefined ||
     targetLine === undefined ||
     targetEndLine === undefined ||
-    !targetLocatable
+    !canPlaceTarget
       ? null
       : {
           itemId: targetId,
