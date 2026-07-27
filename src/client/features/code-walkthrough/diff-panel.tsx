@@ -18,6 +18,13 @@ import { useRef } from "react";
 
 import { useDiffAim } from "./hooks/use-diff-aim";
 
+/**
+ * The tour points at any line of a file, not just a changed one, so this panel
+ * renders whole files. The aim has to be told the same thing the view is: one
+ * decides where a callout can land, the other whether it is on screen to land on.
+ */
+const EXPAND_UNCHANGED = true;
+
 export function CodeWalkthroughDiffPanel({
   activeKey,
   driftFor,
@@ -54,6 +61,7 @@ export function CodeWalkthroughDiffPanel({
 
   const { focus, onScroll: handleScroll } = useDiffAim({
     activeKey,
+    expandUnchanged: EXPAND_UNCHANGED,
     files,
     onReach,
     ranges,
@@ -75,7 +83,7 @@ export function CodeWalkthroughDiffPanel({
         disableBackground
         enableGutterUtility={!compose.composing}
         enableLineSelection={!compose.composing}
-        expandUnchanged
+        expandUnchanged={EXPAND_UNCHANGED}
         focus={focus}
         items={items}
         onGutterUtilityClick={(range, context) =>

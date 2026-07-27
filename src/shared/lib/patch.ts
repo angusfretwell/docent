@@ -5,20 +5,15 @@ export function isRealObjectId(id?: string): id is string {
 /** Content lines are prefixed (+/-/space), so a file whose own content contains `diff --git` never triggers a false split. */
 const DIFF_HEADER = /^diff --git /m;
 
-/** In patch order — the same order `processPatch` returns files, so the two zip by index. */
+/**
+ * Blocks in patch order, which is what callers mint stable per-file ids from.
+ * Whatever precedes the first header is commit metadata, not a file, so the
+ * leading split part is always discarded.
+ */
 export function parsePatchBlocks(patch: string): string[] {
-  if (patch.trim() === "") {
-    return [];
-  }
-  const blocks: string[] = [];
-  const parts = patch.split(DIFF_HEADER);
-  for (const part of parts) {
-    if (part === "") {
-      continue;
-    }
-    blocks.push(`diff --git ${part}`);
-  }
-  return blocks;
+  const [, ...parts] = patch.split(DIFF_HEADER);
+
+  return parts.map((part) => `diff --git ${part}`);
 }
 
 const BYTE_UNITS = ["B", "KB", "MB", "GB"] as const;

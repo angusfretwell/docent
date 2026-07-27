@@ -27,7 +27,10 @@ export function useExpandedFiles(
   blobsAvailable = true
 ): DiffFile[] {
   const shas = useMemo(
-    () => (blobsAvailable ? unique(files.flatMap(expansionBlobs)) : []),
+    () =>
+      blobsAvailable
+        ? unique(files.flatMap((file) => expansionBlobs(file) ?? []))
+        : [],
     [blobsAvailable, files]
   );
 

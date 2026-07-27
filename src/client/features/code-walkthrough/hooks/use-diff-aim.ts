@@ -1,7 +1,7 @@
 import type { CodeViewFocus } from "@client/features/code-view/focus";
 import type { DiffFile } from "@client/lib/diff";
 import type { LineDecoration } from "@client/lib/diff-annotations";
-import { rendersLine } from "@client/lib/diff-target";
+import { rendersRange } from "@client/lib/diff-target";
 import type {
   CodeView,
   CodeViewRenderedDiffItem,
@@ -26,21 +26,24 @@ function sideOf(range: WalkthroughRange): SelectionSide {
 }
 
 /**
- * Whether the viewer can answer where a range sits. A partial file renders only
- * its hunks, and asking for a line outside them extrapolates a position rather
- * than declining, so the band would read as real while pointing nowhere near
- * the range. Expansion resolves this by rendering the gaps, not by widening the
- * hunks, which is why the file's own partial state has to be consulted.
+ * Whether the viewer can answer where a range sits. Asked for a line it never
+ * rendered, it extrapolates a position rather than declining, so the answer
+ * reads as real while pointing nowhere near the range.
+ *
+ * The gaps are rendered only when the file has both its blobs *and* the caller
+ * asked for them: expansion supplies the lines, `expandUnchanged` puts them on
+ * screen, and neither alone is enough.
  */
-function locatable(file: DiffFile, range: WalkthroughRange): boolean {
-  if (!file.file.isPartial) {
+function locatable(
+  file: DiffFile,
+  range: WalkthroughRange,
+  expandUnchanged: boolean
+): boolean {
+  if (expandUnchanged && !file.file.isPartial) {
     return true;
   }
 
-  return (
-    rendersLine(file.file, range.side, range.lines[0]) &&
-    rendersLine(file.file, range.side, range.lines[1])
-  );
+  return rendersRange(file.file, range.side, range.lines);
 }
 
 /** A range's extent in the scroller's own coordinates, so it can be compared against the scroll position. */
@@ -110,7 +113,13 @@ function rangeUnderRead(
         continue;
       }
 
-      if (!locatable(file, range)) {
+      // Read off the item the measurement is taken from, so this cannot answer
+      // for a viewer configured differently from the one on screen. A hunk the
+      // reader expanded by hand is not visible here and reads as unlocatable,
+      // which costs a report rather than inventing one.
+      if (
+        !locatable(file, range, item.instance.options.expandUnchanged === true)
+      ) {
         continue;
       }
 
@@ -148,6 +157,7 @@ export interface DiffAim {
  */
 export function useDiffAim({
   activeKey,
+  expandUnchanged,
   files,
   onReach,
   ranges,
@@ -155,6 +165,11 @@ export function useDiffAim({
   viewRef,
 }: {
   activeKey: string | undefined;
+  /**
+   * Whatever the same caller hands the code view. An aim is taken before the
+   * target is rendered, so unlike a measurement it has no item to ask.
+   */
+  expandUnchanged: boolean;
   files: DiffFile[];
   onReach: (key: string) => void;
   ranges: ReadonlyMap<string, WalkthroughRange>;
@@ -220,6 +235,11 @@ export function useDiffAim({
   // was partial now points above where the range sits and has to be taken again.
   const targetPartial = targetFile?.file.isPartial;
 
+  const targetLocatable =
+    targetFile !== undefined &&
+    activeRange !== undefined &&
+    locatable(targetFile, activeRange, expandUnchanged);
+
   useEffect(() => {
     const self = reached.current;
     const sameAim =
@@ -248,14 +268,26 @@ export function useDiffAim({
     settle.current = window.setTimeout(stopArriving, SETTLE_MS);
     pushQuiet();
 
-    viewRef.current?.scrollTo({
-      align: "center",
-      behavior: "smooth-auto",
-      id: targetId,
-      lineNumber: targetLine,
-      side: targetSide,
-      type: "line",
-    });
+    // A line the viewer never rendered resolves to an invented row, so an aim
+    // it cannot place travels to the file and waits: the blobs land, the file
+    // expands, and the effect runs again with somewhere real to point.
+    viewRef.current?.scrollTo(
+      targetLocatable
+        ? {
+            align: "center",
+            behavior: "smooth-auto",
+            id: targetId,
+            lineNumber: targetLine,
+            side: targetSide,
+            type: "line",
+          }
+        : {
+            align: "start",
+            behavior: "smooth-auto",
+            id: targetId,
+            type: "item",
+          }
+    );
   }, [
     activeKey,
     pushQuiet,
@@ -264,6 +296,7 @@ export function useDiffAim({
     targetEndLine,
     targetId,
     targetLine,
+    targetLocatable,
     targetPartial,
     targetSide,
     viewRef,
@@ -314,10 +347,13 @@ export function useDiffAim({
     [measure, pushQuiet]
   );
 
+  // Painting reaches for the same invented rows the aim does, so an unplaceable
+  // range marks nothing rather than holding the reader's eye on the wrong lines.
   const focus: CodeViewFocus | null =
     targetId === undefined ||
     targetLine === undefined ||
-    targetEndLine === undefined
+    targetEndLine === undefined ||
+    !targetLocatable
       ? null
       : {
           itemId: targetId,

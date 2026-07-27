@@ -53,6 +53,12 @@ index 1..2 100644
   test("empty patch yields no blocks", () => {
     expect(parsePatchBlocks("")).toHaveLength(0);
   });
+
+  test("commit metadata before the first header is not a block of its own", () => {
+    const blocks = parsePatchBlocks(`commit 8553878\nAuthor: A\n\n${NORMAL}`);
+
+    expect(blocks).toHaveLength(1);
+  });
 });
 
 describe("formatBytes", () => {

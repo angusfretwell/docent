@@ -82,7 +82,7 @@ describe("expansionBlobs", () => {
   test("names nothing for a file that was added", () => {
     const blobs = expansionBlobs(fileAt(1));
 
-    expect(blobs).toEqual([]);
+    expect(blobs).toBeUndefined();
   });
 });
 

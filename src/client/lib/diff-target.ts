@@ -34,7 +34,7 @@ function fileFor(
 
 // A patch carries only its hunks, so a line outside every one of them has no row
 // to land on: the viewer resolves it to nothing, or to a row it does not mean.
-export function rendersLine(
+function rendersLine(
   fileDiff: FileDiffMetadata,
   side: Side,
   line: number
@@ -45,6 +45,17 @@ export function rendersLine(
 
     return line >= start && line < start + count;
   });
+}
+
+export function rendersRange(
+  fileDiff: FileDiffMetadata,
+  side: Side,
+  lines: readonly [number, number]
+): boolean {
+  return (
+    rendersLine(fileDiff, side, lines[0]) &&
+    rendersLine(fileDiff, side, lines[1])
+  );
 }
 
 // Drift decides where a line anchor stands, the rule the inline annotation

@@ -117,16 +117,18 @@ export function parsePatchFiles(patch: string): DiffFile[] {
   return sortInTreeOrder(files);
 }
 
-/** Blobs needed to render this file whole, in base-then-head order so callers can destructure the pair. */
-export function expansionBlobs({ file }: DiffFile): string[] {
+/** Blobs needed to render this file whole, base then head, or nothing when it cannot be. */
+export function expansionBlobs({
+  file,
+}: DiffFile): [string, string] | undefined {
   const { newObjectId, prevObjectId } = file;
 
-  const hasUnchangedContext = file.hunks.length > 0;
+  const hasHunks = file.hunks.length > 0;
   const hasBothBlobs =
     isRealObjectId(prevObjectId) && isRealObjectId(newObjectId);
 
-  if (!hasUnchangedContext || !hasBothBlobs) {
-    return [];
+  if (!hasHunks || !hasBothBlobs) {
+    return undefined;
   }
 
   return [prevObjectId, newObjectId];
@@ -137,9 +139,15 @@ export function withBlobContents(
   entry: DiffFile,
   contents: ReadonlyMap<string, string>
 ): DiffFile {
-  const [base, head] = expansionBlobs(entry);
-  const oldContents = base === undefined ? undefined : contents.get(base);
-  const newContents = head === undefined ? undefined : contents.get(head);
+  const blobs = expansionBlobs(entry);
+
+  if (blobs === undefined) {
+    return entry;
+  }
+
+  const [base, head] = blobs;
+  const oldContents = contents.get(base);
+  const newContents = contents.get(head);
 
   if (oldContents === undefined || newContents === undefined) {
     return entry;
@@ -148,7 +156,10 @@ export function withBlobContents(
   const file = processFile(entry.patch, {
     isGitDiff: true,
     newFile: { contents: newContents, name: entry.path },
-    oldFile: { contents: oldContents, name: entry.path },
+    oldFile: {
+      contents: oldContents,
+      name: entry.file.prevName ?? entry.path,
+    },
   });
 
   return file === undefined
