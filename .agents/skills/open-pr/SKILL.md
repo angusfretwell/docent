@@ -46,19 +46,19 @@ Push the branch, then create the PR or edit the existing one. On a new PR, edit 
 
 A reference to the issue(s) this PR closes (`Closes <id>`); omit this line when none applies.
 
-### Overview
+## Overview
 
-Strictly user-facing: what someone using the app sees or experiences differently. Refactors, component restructuring, and other implementation details belong in Changes. For purely internal PRs, keep it brief ("No user-facing changes."). If there's more than one user-facing theme, add a `####` subheading per theme with short prose under each.
+Strictly user-facing: what someone using the app sees or experiences differently. Refactors, component restructuring, and other implementation details belong in Changes. For purely internal PRs, keep it brief ("No user-facing changes."). If there's more than one user-facing theme, add a `###` subheading per theme with short prose under each.
 
-### Changes
+## Changes
 
-Grouped by unit of work — a `####` subheading per group with a short paragraph under each; a one-theme PR can be a single paragraph. Include the _why_ behind each change when the Overview doesn't make it obvious. Link files, symbols, and commits into the PR's diff so reviewers can jump straight to them — see link forms below.
+Grouped by unit of work — a `###` subheading per group with a short paragraph under each; a one-theme PR can be a single paragraph. Include the _why_ behind each change when the Overview doesn't make it obvious. Link files, symbols, and commits into the PR's diff so reviewers can jump straight to them — see link forms below.
 
-### Evidence
+## Evidence
 
 Only material the session already produced — screenshots, recordings, test output. Omit the section when there's none.
 
-### To-do
+## To-do
 
 Non-obvious tasks needed to ship: other PRs, infra/config, migrations, env vars. Short checkbox bullets (`- [ ]`). Omit the section when there's nothing to call out — generic local-testing steps don't count.
 

@@ -14,23 +14,17 @@ The issue tracker should have been provided to you; if it wasn't, stop and ask.
 
 ### 1. Plan
 
-List the tracker's open issues labeled `ready-for-agent`. Build a dependency graph: issue B is blocked by issue A when the issue text says so, and also when
+List the tracker's open issues labeled `ready-for-agent`. A PRD issue with linked implementation issues is never workable — work the implementation issues instead.
 
-- B needs code or infrastructure that A introduces,
-- B and A modify overlapping files or modules, so concurrent work would likely merge-conflict, or
-- B's requirements depend on a decision or API shape A will establish.
+Build a dependency graph over the issues and find the frontier per `/dependency-graph`, treating each issue as a work item. An issue that already has an open PR resumes at step 3 (review) — the PR's comments carry any prior-round state.
 
-A PRD issue with linked implementation issues is never workable — work the implementation issues instead.
-
-The **frontier** is the set of issues with zero blockers among open issues. An issue that already has an open PR resumes at step 3 (review) — the PR's comments carry any prior-round state.
-
-Done when: every open `ready-for-agent` issue is classified as frontier, blocked (by which issue), or PRD.
+Done when: every open `ready-for-agent` issue is classified as frontier, blocked (by which issues), or PRD.
 
 ### 2. Dispatch implementers
 
 Launch one implementer per frontier issue, in the background — at most 5 issues **in flight** at once; the rest wait for a free slot. Prompt each with `<implementer-prompt>`.
 
-When an issue merges or stops, its slot frees: replan first — a merge can unblock issues — then dispatch the next frontier issue into it.
+When an issue merges or stops, its slot frees: replan first, then dispatch the next frontier issue into it.
 
 Done when: every frontier issue has exactly one implementer or is waiting for a slot.
 
@@ -103,7 +97,7 @@ You fix issue {{ISSUE_ID}}'s open PR — review findings, failing checks, or a m
 1. Enter the issue's worktree — the one on branch `afk/{{ISSUE_ID}}` — and confirm `git status` shows that branch. Every later step runs from here.
 2. Fetch issue {{ISSUE_ID}} from the tracker for context — title, body, and comments all count.
 3. Address the named case:
-   - **Review findings** — fetch the PR's most recent comment and address every item: make the fix it describes; where none is described, fix what it names.
+   - **Review findings** — fetch the PR's most recent comment and address every item: make the fix it describes; where none is described, fix what it names. Where a finding has a testable seam, fix it with `/tdd` — the finding is the red test.
    - **Failing checks** — fetch the failing check's output from the PR (`gh pr checks`, then the failing run's log), reproduce locally where possible, fix, and confirm the command passes.
    - **Merge conflict** — fetch and rebase onto the default branch, resolving with `/resolving-merge-conflicts`.
 4. Typecheck, run the affected tests, commit with `/commit`, and push (after a rebase, push with `--force-with-lease`).
