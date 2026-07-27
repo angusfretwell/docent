@@ -21,6 +21,7 @@
 
 import path from "node:path";
 
+import { ensureRecorder } from "./build-recorder";
 import { ensureDiffWorker } from "./build-worker";
 
 const PORT = process.env.PORT ?? "8037";
@@ -35,6 +36,7 @@ const pathArgument = process.argv.at(2);
 const target = pathArgument ? path.resolve(pathArgument) : fixture;
 
 await ensureDiffWorker();
+await ensureRecorder();
 
 const server = Bun.spawn(["bun", "--watch", entry, "serve", target], {
   env: { ...process.env, PORT },

@@ -45,7 +45,7 @@ jobs:
           cp ../LICENSE LICENSE
         working-directory: npm
 
-      - run: bun run --sequential build:worker build:release
+      - run: bun run --sequential build:worker build:recorder build:release
 
       - name: Create GitHub Release
         run: |

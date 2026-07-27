@@ -4,7 +4,8 @@
  * Cross-compile the per-platform release binaries into `dist/release/`, named
  * exactly as the npm shim requests them (`assetNameFor`), so a GitHub Release
  * that uploads this directory serves every asset `npx @angusfretwell/docent`
- * downloads on first run. Run by the release workflow after `build:worker`.
+ * downloads on first run. Run by the release workflow after `build:worker` and
+ * `build:recorder`, whose bundles the binary embeds.
  */
 
 import path from "node:path";

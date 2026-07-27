@@ -9,6 +9,7 @@ import { VERSION } from "../version";
 import { captureCommand } from "./capture";
 import { commentCommand } from "./comment";
 import { renameCommand } from "./rename";
+import { rrwebCommand } from "./rrweb";
 import { statusCommand } from "./status";
 import { WorkingDirectory } from "./usage";
 import { validateCommand } from "./validate";
@@ -74,6 +75,7 @@ function docentCli(entry: EntryOptions) {
       renameCommand,
       validateCommand,
       statusCommand,
+      rrwebCommand(entry.recorderBundle),
     ])
   );
 }

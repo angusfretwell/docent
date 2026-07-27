@@ -14,6 +14,8 @@ export interface EntryOptions {
   index: HTMLBundle;
   /** The preferred port; serving climbs past it when it is already taken. */
   port: number;
+  /** The rrweb recorder `docent rrweb` prints; never served, only emitted. */
+  recorderBundle: string;
   workerBundle: string;
 }
 

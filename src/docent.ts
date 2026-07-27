@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 
+import recorderBundle from "../dist/recorder/rrweb-recorder.js" with { type: "file" };
 import workerBundle from "../dist/worker/diff-worker.js" with { type: "file" };
 import { runMain } from "./cli/main";
 import index from "./client/index.html";
@@ -12,5 +13,6 @@ runMain({
   development: isDevelopment ? { console: true, hmr: true } : false,
   index,
   port,
+  recorderBundle,
   workerBundle,
 });

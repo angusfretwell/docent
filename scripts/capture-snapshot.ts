@@ -45,6 +45,7 @@ import type {
   DemoSnapshot,
   RecordedResponse,
 } from "../src/website/demo/snapshot";
+import { ensureRecorder } from "./build-recorder";
 import { ensureDiffWorker } from "./build-worker";
 import { materializeFixture } from "./prepare-fixture";
 
@@ -482,6 +483,7 @@ async function recordTour(): Promise<DemoSnapshot> {
 }
 
 await ensureDiffWorker();
+await ensureRecorder();
 materializeFixture(fixtureDir);
 dirtyWorktree();
 
