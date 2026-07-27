@@ -1,3 +1,4 @@
+import { cn } from "@client/lib/utils";
 import type React from "react";
 
 import {
@@ -17,7 +18,7 @@ export function Empty({
   icon: React.ReactNode;
 }) {
   return (
-    <BaseEmpty className={className}>
+    <BaseEmpty className={cn("rounded-2xl border-dashed", className)}>
       <EmptyHeader>
         <EmptyMedia variant="icon">{icon}</EmptyMedia>
         <EmptyDescription>{children}</EmptyDescription>

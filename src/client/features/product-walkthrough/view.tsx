@@ -101,8 +101,8 @@ export function ProductWalkthroughView() {
 
   if (walkthrough === undefined) {
     return (
-      <Empty icon={<Pointer />}>
-        No product walkthrough has been authored for this branch yet.
+      <Empty icon={<Pointer />} className="h-full border">
+        A product walkthrough hasn&rsquo;t been authored for this change yet.
       </Empty>
     );
   }

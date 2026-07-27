@@ -7,7 +7,7 @@ import { captureLabel } from "@client/features/walkthrough/lib/walkthrough";
 import { cn } from "@client/lib/utils";
 import type { FoldedComment } from "@shared/lib/comment";
 import type { WalkthroughId } from "@shared/schemas/ids";
-import { Image } from "lucide-react";
+import { SquareDashedMousePointer } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const CROSSFADE_MS = 200;
@@ -75,25 +75,35 @@ export function ProductWalkthroughCapturePanel({
 
   const captioned = active ?? leaving;
 
-  if (captioned === undefined) {
-    return (
-      <Empty icon={<Image />}>No capture for this part of the tour.</Empty>
-    );
-  }
-
   const keys = [...captures.keys()];
   const index = activeKey === undefined ? -1 : keys.indexOf(activeKey);
   const previousKey = keys[index - 1];
   const nextKey = keys[index + 1];
 
+  const navigation = {
+    onNext: nextKey === undefined ? undefined : () => onSelect(nextKey),
+    onPrevious:
+      previousKey === undefined ? undefined : () => onSelect(previousKey),
+  };
+
+  if (captioned === undefined) {
+    return (
+      <CaptureFrame {...navigation}>
+        <Empty
+          className="h-full bg-background"
+          icon={<SquareDashedMousePointer />}
+        >
+          No capture for this part of the walkthrough.
+        </Empty>
+      </CaptureFrame>
+    );
+  }
+
   return (
     <CaptureFrame
       capture={captioned.capture}
       label={captureLabel(captioned)}
-      onNext={nextKey === undefined ? undefined : () => onSelect(nextKey)}
-      onPrevious={
-        previousKey === undefined ? undefined : () => onSelect(previousKey)
-      }
+      {...navigation}
     >
       {layers.map(({ fading, key, placed }) => (
         <div

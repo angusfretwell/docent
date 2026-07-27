@@ -8,7 +8,7 @@ import prettyMilliseconds from "pretty-ms";
 import type { ReactNode } from "react";
 
 interface CaptionProps {
-  label: string;
+  label?: string;
   onNext?: () => void;
   onPrevious?: () => void;
 }
@@ -18,8 +18,8 @@ function CaptureCaption({
   label,
   onNext,
   onPrevious,
-}: { capture: Capture } & CaptionProps) {
-  const duration = capture.durationMs ?? 0;
+}: { capture?: Capture } & CaptionProps) {
+  const duration = capture?.durationMs ?? 0;
 
   return (
     <div className="flex h-11 shrink-0 items-center gap-2 border-b px-3">
@@ -47,15 +47,17 @@ function CaptureCaption({
 
       <span className="flex shrink-0 items-center gap-1.5 text-sm tabular-nums">
         <span>{label}</span>
-        {capture.kind === "recording" && duration > 0
+        {capture?.kind === "recording" && duration > 0
           ? ` · ${prettyMilliseconds(duration, { secondsDecimalDigits: 1 })}`
           : ""}
       </span>
 
-      <Badge variant="secondary" className="ml-auto font-mono">
-        <Globe />
-        {capture.route}
-      </Badge>
+      {capture?.route && (
+        <Badge variant="secondary" className="ml-auto font-mono">
+          <Globe />
+          {capture.route}
+        </Badge>
+      )}
     </div>
   );
 }
@@ -64,7 +66,7 @@ export function CaptureFrame({
   capture,
   children,
   ...caption
-}: { capture: Capture; children: ReactNode } & CaptionProps) {
+}: { capture?: Capture; children: ReactNode } & CaptionProps) {
   return (
     <Pane>
       <CaptureCaption capture={capture} {...caption} />

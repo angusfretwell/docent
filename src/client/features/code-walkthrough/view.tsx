@@ -93,8 +93,8 @@ export function CodeWalkthroughView() {
 
   if (walkthrough === undefined) {
     return (
-      <Empty icon={<Code2 />}>
-        No code walkthrough has been authored for this branch yet.
+      <Empty icon={<Code2 />} className="h-full border">
+        A code walkthrough hasn&rsquo;t been authored for this change yet.
       </Empty>
     );
   }
