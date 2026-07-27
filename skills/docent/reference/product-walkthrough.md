@@ -1,8 +1,8 @@
 # Authoring the product walkthrough
 
-The **editorial half** of the product walkthrough. Reads the **already-produced captures** ([capture.md](capture.md) drove them) and drops the tour's sections — prose with `{{capture:i}}` interleave and pinned `callouts[]`. It **touches no browser**: capture is expensive and separable, so this half re-runs cheaply against the same captures — structure and narration iterate without re-driving anything. Comments belong to the review loop ([comments.md](comments.md)).
+The **editorial half** of the product walkthrough. Reads the **already-produced captures** ([capture.md](capture.md) drove them) and drops the tour's sections — prose with `{{capture:i}}` interleave and pinned `callouts[]`. It **touches no browser**: capture is expensive and separable, so this half re-runs cheaply against the same captures — structure and narration iterate without re-driving anything.
 
-You are dispatched with this file, a repository, and the captures. Nobody watches you work and there is nobody to ask, so every call here is yours to make and to close.
+You run **unattended** — there is no human to ask, so judge what this brief leaves open and move.
 
 **You are not reviewing this change** — you are showing the person who is about to what the app now does. Nothing you think about the implementation is reported, through any channel; review is a separate flow the human drives.
 
@@ -10,13 +10,13 @@ You are dispatched with this file, a repository, and the captures. Nobody watche
 
 ## What you are given
 
-- **The skill's absolute base directory** — where this brief lives: it is `<base>/reference/product-walkthrough.md`, and every file it links to, [voice.md](voice.md) first among them, is a sibling under `<base>/reference/`. Resolve them there. Your cwd is the repository under review, so a bare relative path looks for the voice guide inside somebody else's tree and comes back empty.
+- **The skill's absolute base directory** — this brief is `<base>/reference/product-walkthrough.md` and every file it links to, [voice.md](voice.md) first among them, is a sibling; resolve every path against `<base>`, never your cwd, which is the repository under review, where a relative path comes back empty.
 - **The repository's absolute root** — run the CLI there, and find the walkthrough's manifest under it.
 - **The product walkthrough's id** — the captures-only shell the executor filled, which you author into.
 - **A short intent brief** — two or three sentences on what this change lets a person do, and what it replaced. It is your only account of the branch and it was written for you; the captures are everything else you need.
 - **A focus, sometimes** — a concern the human scoped the run to. It steers which captures you foreground and how you order them. Default is a general reviewer's tour.
 
-**You read no diff at all** — not the hunks, not `git log`, not `--stat`, not the source. This is load-bearing and it will look like an omission: a product tour written with the change open comes out a code tour with pictures, narrating what the branch did to the source rather than what a person can now do, and the source is the thing this reader can already see one tab over ([ADR 0004](../../../docs/adr/0004-docent-skill-runs-as-an-orchestrator-with-phase-subagents.md)). The captures carry the product. Reaching for git here restores the material that turns an author into a reviewer.
+**You read no diff at all** — not the hunks, not `git log`, not `--stat`, not the source. This is load-bearing and it will look like an omission: a product tour written with the change open comes out a code tour with pictures, narrating what the branch did to the source rather than what a person can now do, and the source is the thing this reader can already see one tab over. The captures carry the product. Reaching for git here restores the material that turns an author into a reviewer.
 
 ## What you return
 
@@ -96,9 +96,7 @@ npx -y @angusfretwell/docent@latest walkthrough rename --walkthrough wlk_… --t
 #   → { "title": "…", "walkthroughId": "wlk_…" }
 ```
 
-`rename` is why you need no file-write access: the title goes through the same validated write path as every section, so nothing here is ever hand-edited into `manifest.json`.
-
-The tour is done when the title is set and every section is dropped in order. If `docent serve` is running, the Product walkthrough tab shows each section, capture, and callout pin appear live. Schemas are validated on write, so a tour that lands renders with no hand-editing. Then return the receipt.
+The tour is done when the title is set and every section is dropped in order. Schemas are validated on write, so a tour that lands renders with no hand-editing. Then return the receipt.
 
 ## Stop conditions
 
@@ -108,7 +106,5 @@ The tour is done when the title is set and every section is dropped in order. If
 
 - **No browser.** This half only narrates; driving is [capture.md](capture.md)'s job, and re-driving is the run's call, not yours.
 - **No file writes.** Every write you make goes through the `docent` CLI — `add-section` and `rename` — so a walkthrough file is never hand-authored.
-- **Walkthroughs only, never Comments.** Author Callouts; leave Comments to the review loop.
 - **Only ever author into the captures-only shell you were handed** — never re-narrate a tour that already has sections. `add-section` appends, so authoring onto a narrated walkthrough grows it rather than replacing it; a fresh one is the run's to create, never yours.
-- **Not your decision whether to write.** You were dispatched because there is no product walkthrough for this head; that call was already made. Committing is the human's git workflow, and out of scope.
-- **No questions.** You have no human to ask. Where this brief leaves something to judgment, judge it and move.
+- **No git writes.** Committing is the human's workflow, and out of scope.

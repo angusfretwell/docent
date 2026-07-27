@@ -2,8 +2,6 @@
 
 Walks a **served, reachable** app to each state on a shot list and records it — the capture half of the product walkthrough. You are the executor: the shots were chosen for you ([capture-plan.md](capture-plan.md)) and the prose is written after you ([product-walkthrough.md](product-walkthrough.md)). You **drive**, not author — you produce captures only.
 
-The work here is deliberately mechanical: every judgment call about what is worth showing was made before you were dispatched. Reaching a named state is the one thing you decide, and you decide it from the page in front of you.
-
 Two invariants hold for every capture:
 
 - **Zero changes to the app under review.** rrweb is driver-injected at capture time; the app takes no code change and no runtime dependency on docent — it only has to be served and reachable.
@@ -17,11 +15,9 @@ Before driving, load its own reference — the command shapes shown here are ill
 npx -y agent-browser@latest skills get core --full   # full command reference (matches installed version)
 ```
 
-The preflight settled that a browser exists before you were dispatched ([SKILL.md](../SKILL.md), "Preflight — settle how the app is served"), so `install` is not yours to run. Where Chrome has gone missing anyway, that is a hard stop reported as such — not a download you start mid-capture.
-
 ## What you are given
 
-- **The skill's absolute base directory** — where this brief lives: it is `<base>/reference/capture.md`, every file it links to is a sibling under `<base>/reference/`, and the scripts it calls are under `<base>/scripts/`. Resolve them there. Your cwd is the repository under review, so a bare relative path looks inside somebody else's tree and comes back empty.
+- **The skill's absolute base directory** — this brief is `<base>/reference/capture.md`, every file it links to is a sibling, and the scripts it calls are under `<base>/scripts/`; resolve every path against `<base>`, never your cwd, which is the repository under review, where a relative path comes back empty.
 - **The repository's absolute root** — run the CLI there, and find the runbook at `.docent/capture.md` under it.
 - **The shot list** — an ordered set of states to reach, each with a title, a kind (screenshot or recording), and sometimes a hint. It arrives in your prompt because it was produced this run and written down nowhere else.
 
@@ -42,7 +38,7 @@ An **obstacle** is anything that made the tour less truthful: a shot you could n
 
 ## 1. Read the runbook — your setup, already settled
 
-`.docent/capture.md` at the repository root is the serving runbook: base URL, viewport default, and the login or seeding steps that reach a usable state (see [runbook-template.md](runbook-template.md) for its shape). It was authored by the run before you were dispatched, so treat it as **input** — you neither add to it nor correct it.
+`.docent/capture.md` at the repository root is the serving runbook: base URL, viewport default, and the login or seeding steps that reach a usable state. It was authored by the run before you were dispatched, so treat it as **input** — you neither add to it nor correct it.
 
 **Done when** you hold the base URL, the viewport default, and the steps to a usable app state.
 
@@ -73,7 +69,7 @@ Get the app to a verified-rendered state before capturing. **Never emit a broken
   npx -y agent-browser@latest --session "$session" snapshot -i
   ```
 
-- **On failure** → **hard stop** and report `app not reachable at <url>`. Do not capture anything, and do not go looking for the app on another port.
+- **On failure** → **hard stop** and report `app not reachable at <url>`. The runbook's base URL is the only one you try; another port is a different app.
 
 ## 4. Create the walkthrough shell
 
@@ -92,7 +88,7 @@ It is minted here, after §3 and not before it, so a run that hard-stops on an u
 
 Take the shots in the order given, one at a time, and register each (§6) before moving on, so a shot you cannot reach costs only itself.
 
-**Both** capture kinds are rrweb event streams — a screenshot is a DOM snapshot, not a raster, so it stays sharp at any zoom when the Review renders it. Three scripts under `<base>/scripts/` produce them, and each injects the recorder itself, so nothing about rrweb is yours to remember.
+**Both** capture kinds are rrweb event streams — a screenshot is a DOM snapshot, not a raster. Three scripts under `<base>/scripts/` produce them, and each injects the recorder itself, so nothing about rrweb is yours to remember.
 
 Each shot starts with a page load:
 
@@ -102,7 +98,7 @@ npx -y agent-browser@latest --session "$session" open "<base-url><route you thin
 
 Then drive the way you already work — `snapshot -i` to read the page live (accessibility tree, element refs, disabled states visible), act on what you see, re-snapshot after any DOM change. Refs expire on navigation; re-snapshot. A shot's hint is a lead, not an instruction — the page overrules it.
 
-- **Three attempts per shot, then record it unreachable and move to the next.** An attempt is one honest run at the state: navigate, drive, look. On the third failure, name that shot in `obstacles` and go on to the next one. The budget is the point — grinding on a state the app will not produce burns the run on full accessibility trees and lands no tour at all, and the shot list has other shots that will work.
+- **Three attempts per shot, then record it unreachable and move to the next.** An attempt is one honest run at the state: navigate, drive, look. On the third failure, name that shot in `obstacles` and go on to the next one.
 - **Reach the state you were given, or report it missing.** Where two paths lead to the same state, take either. Where the state itself is not there, that is the obstacle — never substitute a different screen that looks similar, and never invent a shot the plan did not ask for. A capture that is not the state it claims to be is worse than a shot the tour is honestly missing, because the author cannot tell.
 - **Screenshot** — once the page is in the state you want:
 
@@ -125,7 +121,7 @@ Then drive the way you already work — `snapshot -i` to read the page live (acc
 
 ## 6. Register the capture
 
-Register each temp media file (§5) with `docent capture add` — the single home for asset inlining, content-sha addressing and append semantics. It fetches every asset the stream still points at (fonts, images, sheets rrweb could not read) and rewrites each to a `data:` URI, content-addresses the resulting bytes into `captures/<sha>.rrweb.json` (the filename **is** the sha-256 of the bytes, which dedups byte-identical screens across runs and freezes the exact bytes an anchor points at), issues the `cap_` id, and appends the validated `captures[]` registry entry to the manifest:
+Register each temp media file (§5) with `docent capture add`. It inlines every asset the stream still points at, content-addresses the bytes into `captures/<sha>.rrweb.json`, issues the `cap_` id, and appends the validated `captures[]` registry entry to the manifest:
 
 ```bash
 # screenshot: full-page CSS-pixel document size rides --dims
@@ -140,7 +136,7 @@ npx -y @angusfretwell/docent@latest capture add --walkthrough wlk_… --kind rec
 
 `assets` is the inlining receipt. Registration never fails over an asset: anything unreachable is left as the URL it was and named in `skipped`. A capture that comes back with `skipped` entries replays with holes in it, so report that as an obstacle — the URL and the reason, verbatim. Never hand-edit a stream to patch an asset: this is the one place that rewriting happens, and a stream you touched no longer hashes to the bytes the registry recorded.
 
-`--dims` is for screenshots and `--duration-ms` for recordings; the mismatch is refused, as is any capture on a code walkthrough. `--media` is a file path read relative to the cwd. `--route` and `--viewport` record where you actually were, which is what the Review shows. `--title` is the shot's title from the plan — a short descriptive name for the state ("Empty signup form"), shown in place of the generic "Screenshot 1" / "Recording 1". Always pass the plan's title, unchanged: a capture that is not the state its title claims is an obstacle on your receipt, never a retitle, because a retitled capture makes that gap invisible to the author. All captures are born against the walkthrough's `bornChangeId`. The CLI is non-gating (the files stay plain and hand-writable), but prefer it: it validates against the same schemas the server renders.
+`--dims` is for screenshots and `--duration-ms` for recordings; the mismatch is refused, as is any capture on a code walkthrough. `--media` is a file path read relative to the cwd. `--route` and `--viewport` record where you actually were, which is what the Review shows. `--title` is the shot's title from the plan — a short descriptive name for the state ("Empty signup form"), shown in place of the generic "Screenshot 1" / "Recording 1". Always pass the plan's title, unchanged: a capture that is not the state its title claims is an obstacle on your receipt, never a retitle, because a retitled capture makes that gap invisible to the author. All captures are born against the walkthrough's `bornChangeId`. Every write goes through the CLI; it validates against the same schemas the server renders.
 
 ## 7. Teardown
 

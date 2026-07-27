@@ -1,10 +1,10 @@
 # The walkthrough voice
 
-Shared by both authoring flows — [code-walkthrough.md](code-walkthrough.md) and [product-walkthrough.md](product-walkthrough.md) — so the two tours read as one tour ([ADR 0004](../../../docs/adr/0004-docent-skill-runs-as-an-orchestrator-with-phase-subagents.md)). It owns prose only: what to select and how to drop it stays with each authoring file.
+Shared by both authoring flows — [code-walkthrough.md](code-walkthrough.md) and [product-walkthrough.md](product-walkthrough.md) — so the two tours read as one tour. It owns prose only: what to select and how to drop it stays with each authoring file.
 
-The reader already has the diff — or the capture — open in the panel beside your sentence. **The deletion test:** imagine the prose gone and only that panel left. If the reader loses nothing, do not write it. It is [comment-standards.md](../../../docs/comment-standards.md)'s test one level up: a comment narrates a line, a walkthrough narrates a change.
+The reader already has the diff — or the capture — open in the panel beside your sentence. **The deletion test:** imagine the prose gone and only that panel left. If the reader loses nothing, do not write it.
 
-You are describing, never assessing. Opinions about the code belong to the review loop ([comments.md](comments.md)); a tour that grades the change has stopped being a tour.
+You are describing, never assessing. Opinions about the code belong to the review loop; a tour that grades the change has stopped being a tour.
 
 ## What earns its place
 
