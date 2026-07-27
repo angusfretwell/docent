@@ -20,7 +20,7 @@ import demo from "../src/website/demo/index.html";
 import landing from "../src/website/index.html";
 
 const root = path.join(import.meta.dir, "..");
-const port = Number(process.env.PORT ?? 4802);
+const port = Number(process.env.PORT ?? 8038);
 
 function fileRoute(file: string, contentType: string) {
   return async () => {

@@ -5,7 +5,7 @@
       "name": "docent-dev",
       "runtimeExecutable": "bun",
       "runtimeArgs": ["run", "dev"],
-      "port": 4801,
+      "port": 8037,
       "autoPort": true
     }
   ]

@@ -23,7 +23,7 @@ import path from "node:path";
 
 import { ensureDiffWorker } from "./build-worker";
 
-const PORT = process.env.PORT ?? "4801";
+const PORT = process.env.PORT ?? "8037";
 
 const root = path.join(import.meta.dir, "..");
 const entry = path.join(root, "src", "docent.ts");

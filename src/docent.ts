@@ -3,8 +3,9 @@
 import workerBundle from "../dist/worker/diff-worker.js" with { type: "file" };
 import { runMain } from "./cli/main";
 import index from "./client/index.html";
+import { DEFAULT_PORT } from "./serve/port";
 
-const port = Number(process.env.PORT) || 0;
+const port = Number(process.env.PORT) || DEFAULT_PORT;
 const isDevelopment = process.env.NODE_ENV !== "production";
 
 runMain({

@@ -1,7 +1,7 @@
 /**
- * `docent serve` binds an OS-picked port, so there is no fixed port to probe: it
- * records its live URL to `.docent/serve.json` on boot and removes it on
- * shutdown. Detection reads that address and confirms the server is alive *and*
+ * `docent serve` climbs to the first free port, so there is no fixed port to
+ * probe: it records its live URL to `.docent/serve.json` on boot and removes it
+ * on shutdown. Detection reads that address and confirms the server is alive *and*
  * serving this repo via `GET /api/health` — a stale file simply fails the probe,
  * so no cleanup lock is load-bearing (agent-integration.md §3.1).
  */

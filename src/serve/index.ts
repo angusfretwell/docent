@@ -7,10 +7,12 @@ import { webHandler } from "../api/index";
 import { resolveChange } from "../core/git";
 import { VERSION } from "../version";
 import { removeServeAddress, writeServeAddress } from "./address";
+import { resolvePort } from "./port";
 
 export interface EntryOptions {
   development: boolean | { console?: boolean; hmr?: boolean };
   index: HTMLBundle;
+  /** The preferred port; serving climbs past it when it is already taken. */
   port: number;
   workerBundle: string;
 }
@@ -39,13 +41,15 @@ export const serve = Effect.fn("serve")(function* serve(
   // request, so wrap to drop the second argument.
   const { handler } = webHandler({ cwd: target });
 
+  const port = yield* resolvePort(entry.port);
+
   const server = yield* Effect.sync(() =>
     Bun.serve({
       development: entry.development,
       fetch: (request) => handler(request),
       // Never drop the long-lived SSE connection for being idle.
       idleTimeout: 0,
-      port: entry.port,
+      port,
       routes: {
         // SPA catch-all: Bun matches routes by specificity (exact > wildcard >
         // catch-all), not key order, so the more specific routes below still win.
