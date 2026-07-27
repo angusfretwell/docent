@@ -47,6 +47,17 @@ function rendersLine(
   });
 }
 
+export function rendersRange(
+  fileDiff: FileDiffMetadata,
+  side: Side,
+  lines: readonly [number, number]
+): boolean {
+  return (
+    rendersLine(fileDiff, side, lines[0]) &&
+    rendersLine(fileDiff, side, lines[1])
+  );
+}
+
 // Drift decides where a line anchor stands, the rule the inline annotation
 // follows too, so a jump lands on the row the comment is drawn against. Outdated
 // code stands nowhere in the change, and drift still resolving not yet anywhere.

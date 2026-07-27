@@ -7,24 +7,27 @@ import type { WalkthroughPane } from "@client/features/walkthrough/layout";
 import {
   codeSteps,
   rangesByKey,
-  walkthroughPaths,
 } from "@client/features/walkthrough/lib/walkthrough";
 import { StepProse } from "@client/features/walkthrough/prose";
 import { WalkthroughStaleness } from "@client/features/walkthrough/staleness";
 import { useDrift } from "@client/hooks/use-drift";
 import { commentsBySection, sectionKey } from "@client/lib/comment-sections";
-import { parsePatchFiles } from "@client/lib/diff";
 import { basename } from "@client/lib/utils";
 import { diffQueryOptions } from "@client/queries/diff";
 import { reviewQueryOptions } from "@client/queries/review";
 import { latestCodeWalkthrough } from "@shared/lib/identity-drift";
 import { walkthroughStaleness } from "@shared/lib/walkthrough-callouts";
 import type { WalkthroughId } from "@shared/schemas/ids";
+import type { WalkthroughEntry } from "@shared/schemas/review";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Code2, FileCode, GitCompare } from "lucide-react";
 import { useRef, useState } from "react";
 
 import { CodeWalkthroughDiffPanel } from "./diff-panel";
+import { useWalkthroughFiles } from "./hooks/use-walkthrough-files";
+
+// Shared so `sections` keeps one identity across renders: `useWalkthroughFiles` memoizes on it, and a fresh `[]` would re-parse the patch every render.
+const NO_SECTIONS: WalkthroughEntry["sections"] = [];
 
 export function CodeWalkthroughView() {
   const { data: change } = useSuspenseQuery(diffQueryOptions);
@@ -33,7 +36,7 @@ export function CodeWalkthroughView() {
   const { visible } = useComments();
 
   const walkthrough = latestCodeWalkthrough(review.walkthroughs);
-  const sections = walkthrough?.sections ?? [];
+  const sections = walkthrough?.sections ?? NO_SECTIONS;
 
   const bySection = commentsBySection(visible.map((entry) => entry.comment));
 
@@ -56,7 +59,7 @@ export function CodeWalkthroughView() {
 
   const steps = codeSteps(sections);
   const ranges = rangesByKey(sections);
-  const paths = walkthroughPaths(sections);
+  const files = useWalkthroughFiles(change.patch, sections);
 
   function labelTarget(key: string) {
     const range = ranges.get(key);
@@ -78,18 +81,6 @@ export function CodeWalkthroughView() {
     setReasserted((count) => count + 1);
     setPane("target");
   }
-
-  const referenceRank = new Map(
-    [...paths].map((path, index) => [path, index] as const)
-  );
-
-  const files = parsePatchFiles(change.patch)
-    .filter((file) => paths.has(file.path))
-    .toSorted(
-      (left, right) =>
-        (referenceRank.get(left.path) ?? 0) -
-        (referenceRank.get(right.path) ?? 0)
-    );
 
   if (walkthrough === undefined) {
     return (

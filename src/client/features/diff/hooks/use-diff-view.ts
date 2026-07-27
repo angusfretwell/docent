@@ -3,6 +3,7 @@ import {
   matchesFilters,
 } from "@client/features/file-tree/lib/filters";
 import { useDrift } from "@client/hooks/use-drift";
+import { useExpandedFiles } from "@client/hooks/use-expanded-files";
 import { parsePatchFiles, statusForChange } from "@client/lib/diff";
 import { diffQueryOptions } from "@client/queries/diff";
 import { pendingQueryOptions } from "@client/queries/pending";
@@ -28,6 +29,7 @@ export function useDiffView() {
   const showPending = view === "pending" && pending.dirty;
 
   const patch = showPending ? pending.patch : change.patch;
+  const blobsAvailable = !showPending;
 
   // Drift is defined against the current Change (data-model.md §6), so it reads
   // off the branch patch even in the Pending preview.
@@ -37,7 +39,8 @@ export function useDiffView() {
     walkthroughs: review.walkthroughs,
   });
 
-  const files = useMemo(() => parsePatchFiles(patch), [patch]);
+  const parsed = useMemo(() => parsePatchFiles(patch), [patch]);
+  const files = useExpandedFiles(parsed, blobsAvailable);
   const fileById = useMemo(
     () => new Map(files.map((file) => [file.id, file])),
     [files]

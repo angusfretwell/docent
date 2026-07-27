@@ -1,9 +1,11 @@
 import type { CodeViewFocus } from "@client/features/code-view/focus";
 import type { DiffFile } from "@client/lib/diff";
 import type { LineDecoration } from "@client/lib/diff-annotations";
+import { rendersRange } from "@client/lib/diff-target";
 import type {
   CodeView,
   CodeViewRenderedDiffItem,
+  CodeViewScrollTarget,
   SelectionSide,
 } from "@pierre/diffs";
 import type { CodeViewHandle } from "@pierre/diffs/react";
@@ -22,6 +24,57 @@ const SETTLE_MS = 1000;
 
 function sideOf(range: WalkthroughRange): SelectionSide {
   return range.side === "base" ? "deletions" : "additions";
+}
+
+/**
+ * Whether the viewer can answer where a range sits. Asked for a line it never
+ * rendered, it extrapolates a position rather than declining, so the answer
+ * reads as real while pointing nowhere near the range.
+ *
+ * The gaps are rendered only when the file has both its blobs *and* the caller
+ * asked for them: expansion supplies the lines, `expandUnchanged` puts them on
+ * screen, and neither alone is enough.
+ */
+function canPlace(
+  file: DiffFile,
+  range: WalkthroughRange,
+  expandUnchanged: boolean
+): boolean {
+  if (expandUnchanged && !file.file.isPartial) {
+    return true;
+  }
+
+  return rendersRange(file.file, range.side, range.lines);
+}
+
+/**
+ * Where an aim travels. A line the viewer never rendered resolves to an invented
+ * row, so an aim it cannot place travels to the file and waits: the blobs land,
+ * the file expands, and the effect runs again with somewhere real to point.
+ */
+function aimFor({
+  id,
+  line,
+  placeable,
+  side,
+}: {
+  id: string;
+  line: number;
+  placeable: boolean;
+  side: SelectionSide;
+}): CodeViewScrollTarget {
+  if (!placeable) {
+    return { align: "start", behavior: "smooth-auto", id, type: "item" };
+  }
+
+  return {
+    align: "center",
+    behavior: "smooth-auto",
+    id,
+    lineNumber: line,
+    side,
+    type: "line",
+  };
 }
 
 /** A range's extent in the scroller's own coordinates, so it can be compared against the scroll position. */
@@ -68,7 +121,7 @@ function readTopOf(viewer: CodeView<LineDecoration>): number {
 function rangeUnderRead(
   viewer: CodeView<LineDecoration>,
   ranges: ReadonlyMap<string, WalkthroughRange>,
-  itemIds: ReadonlyMap<string, string>
+  filesByPath: ReadonlyMap<string, DiffFile>
 ): string | undefined {
   const viewTop = viewer.getScrollTop();
   const viewBottom =
@@ -85,7 +138,19 @@ function rangeUnderRead(
     }
 
     for (const [key, range] of ranges) {
-      if (itemIds.get(range.file) !== item.id) {
+      const file = filesByPath.get(range.file);
+
+      if (file === undefined || file.id !== item.id) {
+        continue;
+      }
+
+      // Read off the item the measurement is taken from, so this cannot answer
+      // for a viewer configured differently from the one on screen. A hunk the
+      // reader expanded by hand is not visible here and reads as unplaceable,
+      // which costs a report rather than inventing one.
+      if (
+        !canPlace(file, range, item.instance.options.expandUnchanged === true)
+      ) {
         continue;
       }
 
@@ -123,6 +188,7 @@ export interface DiffAim {
  */
 export function useDiffAim({
   activeKey,
+  expandUnchanged,
   files,
   onReach,
   ranges,
@@ -130,6 +196,11 @@ export function useDiffAim({
   viewRef,
 }: {
   activeKey: string | undefined;
+  /**
+   * Whatever the same caller hands the code view. An aim is taken before the
+   * target is rendered, so unlike a measurement it has no item to ask.
+   */
+  expandUnchanged: boolean;
   files: DiffFile[];
   onReach: (key: string) => void;
   ranges: ReadonlyMap<string, WalkthroughRange>;
@@ -146,7 +217,7 @@ export function useDiffAim({
 
   const latest = useRef({
     activeKey,
-    itemIds: new Map<string, string>(),
+    filesByPath: new Map<string, DiffFile>(),
     onReach,
     ranges,
     reasserted,
@@ -155,7 +226,7 @@ export function useDiffAim({
   useEffect(() => {
     latest.current = {
       activeKey,
-      itemIds: new Map(files.map((file) => [file.path, file.id])),
+      filesByPath: new Map(files.map((file) => [file.path, file])),
       onReach,
       ranges,
       reasserted,
@@ -184,15 +255,32 @@ export function useDiffAim({
   const activeRange =
     activeKey === undefined ? undefined : ranges.get(activeKey);
 
-  const targetId = files.find((file) => file.path === activeRange?.file)?.id;
+  const targetFile = files.find((file) => file.path === activeRange?.file);
+  const targetId = targetFile?.id;
   const targetLine = activeRange?.lines[0];
   const targetEndLine = activeRange?.lines[1];
   const targetSide: SelectionSide =
     activeRange === undefined ? "additions" : sideOf(activeRange);
 
+  // Expanding the file moves every row below the gap, so an aim taken while it
+  // was partial now points above where the range sits.
+  const aimedWhilePartial = targetFile?.file.isPartial;
+
+  const canPlaceTarget =
+    targetFile !== undefined &&
+    activeRange !== undefined &&
+    canPlace(targetFile, activeRange, expandUnchanged);
+
   useEffect(() => {
     const self = reached.current;
-    reached.current = null;
+    const sameAim =
+      self !== null && self.key === activeKey && self.reasserted === reasserted;
+
+    // Only a change of aim retires the reader's own scroll; re-aiming the same
+    // range after an expansion must still defer to where they scrolled to.
+    if (!sameAim) {
+      reached.current = null;
+    }
 
     if (
       targetId === undefined ||
@@ -202,11 +290,7 @@ export function useDiffAim({
       return;
     }
 
-    if (
-      self !== null &&
-      self.key === activeKey &&
-      self.reasserted === reasserted
-    ) {
+    if (sameAim) {
       return;
     }
 
@@ -215,16 +299,18 @@ export function useDiffAim({
     settle.current = window.setTimeout(stopArriving, SETTLE_MS);
     pushQuiet();
 
-    viewRef.current?.scrollTo({
-      align: "center",
-      behavior: "smooth-auto",
-      id: targetId,
-      lineNumber: targetLine,
-      side: targetSide,
-      type: "line",
-    });
+    viewRef.current?.scrollTo(
+      aimFor({
+        id: targetId,
+        line: targetLine,
+        placeable: canPlaceTarget,
+        side: targetSide,
+      })
+    );
   }, [
     activeKey,
+    aimedWhilePartial,
+    canPlaceTarget,
     pushQuiet,
     reasserted,
     stopArriving,
@@ -244,7 +330,7 @@ export function useDiffAim({
       return;
     }
 
-    const key = rangeUnderRead(viewer, reading.ranges, reading.itemIds);
+    const key = rangeUnderRead(viewer, reading.ranges, reading.filesByPath);
 
     if (key === undefined || key === reading.activeKey) {
       return;
@@ -280,10 +366,13 @@ export function useDiffAim({
     [measure, pushQuiet]
   );
 
+  // Painting reaches for the same invented rows the aim does, so an unplaceable
+  // range marks nothing rather than holding the reader's eye on the wrong lines.
   const focus: CodeViewFocus | null =
     targetId === undefined ||
     targetLine === undefined ||
-    targetEndLine === undefined
+    targetEndLine === undefined ||
+    !canPlaceTarget
       ? null
       : {
           itemId: targetId,

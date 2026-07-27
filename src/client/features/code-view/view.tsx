@@ -60,6 +60,8 @@ interface AnnotatedCodeViewProps {
   enableGutterUtility?: boolean;
   enableLineSelection?: boolean;
   disableBackground?: boolean;
+  /** Render every file whole rather than as hunks. Inert until the file has been parsed against both blobs. */
+  expandUnchanged?: boolean;
   /** Lines to hold the reader's eye, dimming everything else. */
   focus?: CodeViewFocus | null;
   onScroll?: CodeViewProps<LineDecoration>["onScroll"];
@@ -79,6 +81,7 @@ export function AnnotatedCodeView({
   enableLineSelection,
   enableGutterUtility,
   disableBackground,
+  expandUnchanged,
   focus = null,
   onScroll,
   onToggleItemCollapsed,
@@ -131,6 +134,7 @@ export function AnnotatedCodeView({
       disableVirtualizationBuffers: true,
       enableGutterUtility,
       enableLineSelection,
+      expandUnchanged,
       layout: { gap: 0, paddingBottom: 0, paddingTop: 0 },
       onGutterUtilityClick,
       onPostRender: handlePostRender,
@@ -143,6 +147,7 @@ export function AnnotatedCodeView({
       disableBackground,
       enableGutterUtility,
       enableLineSelection,
+      expandUnchanged,
       handlePostRender,
       onGutterUtilityClick,
       wordWrap,
