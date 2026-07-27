@@ -65,10 +65,13 @@ export function diffItemVersion(
   );
 }
 
-function splitPatch(
-  patch: string
-): { file: FileDiffMetadata; slice: string }[] {
-  const files: { file: FileDiffMetadata; slice: string }[] = [];
+interface PatchedFile {
+  file: FileDiffMetadata;
+  slice: string;
+}
+
+function splitPatch(patch: string): PatchedFile[] {
+  const files: PatchedFile[] = [];
 
   for (const slice of parsePatchBlocks(patch)) {
     const file = processFile(slice, { isGitDiff: true });
