@@ -5,7 +5,7 @@ import { requestFromKey, requestKey } from "./snapshot";
 describe("requestKey", () => {
   test("an absolute url keys on its path, so a recording is origin-independent", () => {
     expect(
-      requestKey({ method: "GET", url: "http://localhost:4801/api/review" })
+      requestKey({ method: "GET", url: "http://localhost:8037/api/review" })
     ).toBe("GET /api/review");
   });
 
