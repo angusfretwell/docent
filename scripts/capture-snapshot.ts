@@ -254,14 +254,14 @@ async function visitPendingRanges(
   recorder: Recorder
 ): Promise<void> {
   await page
-    .getByRole("button", { name: /^(?<view>All commits|Pending changes)$/ })
+    .getByRole("button", { name: /^(?<view>Latest change|Pending changes)$/ })
     .click();
 
   for (const option of [
     "Pending changes",
     "Cumulative",
     "Standalone",
-    "All commits",
+    "Latest change",
   ]) {
     await page.getByRole("menuitemradio", { name: option }).click();
     await settle(page, recorder);
